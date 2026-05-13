@@ -4,388 +4,930 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>매매일지</title>
+
+<!-- Firebase SDK v10 -->
+<script type="importmap">
+{
+  "imports": {
+    "firebase/app":           "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js",
+    "firebase/auth":          "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js",
+    "firebase/firestore":     "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"
+  }
+}
+</script>
+
 <style>
-  :root {
-    --bg: #0f0f0f;
-    --surface: #1a1a1a;
-    --surface2: #222;
-    --border: #2e2e2e;
-    --accent: #4ade80;
-    --accent-dim: #166534;
-    --red: #f87171;
-    --red-dim: #7f1d1d;
-    --text: #f0f0f0;
-    --muted: #888;
-    --font: 'SF Pro Display', -apple-system, 'Segoe UI', sans-serif;
-    --mono: 'SF Mono', 'Fira Code', monospace;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--font);
-    min-height: 100vh;
-  }
+/* ── Reset & Base ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  /* Header */
-  .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--border);
-    position: sticky;
-    top: 0;
-    background: var(--bg);
-    z-index: 10;
-  }
-  .header h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.5px; }
-  .header h1 span { color: var(--accent); }
-  .status { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
-  .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
-  .status-dot.online { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+:root {
+  --bg:        #0d0f12;
+  --bg2:       #13161b;
+  --bg3:       #1a1e25;
+  --bg4:       #222830;
+  --border:    rgba(255,255,255,0.07);
+  --border2:   rgba(255,255,255,0.13);
+  --text:      #e8eaf0;
+  --text2:     #8b909e;
+  --text3:     #555b6a;
+  --accent:    #4f8fff;
+  --accent2:   #3a72e8;
+  --green:     #34d399;
+  --green-bg:  rgba(52,211,153,0.1);
+  --red:       #f87171;
+  --red-bg:    rgba(248,113,113,0.1);
+  --amber:     #fbbf24;
+  --amber-bg:  rgba(251,191,36,0.1);
+  --purple:    #a78bfa;
+  --purple-bg: rgba(167,139,250,0.1);
+  --coin-bg:   rgba(167,139,250,0.12);
+  --coin-c:    #c4b5fd;
+  --kor-bg:    rgba(52,211,153,0.12);
+  --kor-c:     #6ee7b7;
+  --us-bg:     rgba(79,143,255,0.12);
+  --us-c:      #93c5fd;
+  --open-bg:   rgba(251,191,36,0.12);
+  --open-c:    #fcd34d;
+  --radius-sm: 6px;
+  --radius:    10px;
+  --radius-lg: 14px;
+  --font:      'DM Sans', 'Noto Sans KR', sans-serif;
+  --font-mono: 'DM Mono', 'Fira Mono', monospace;
+}
 
-  /* Summary */
-  .summary {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1px;
-    background: var(--border);
-    border-bottom: 1px solid var(--border);
-  }
-  .summary-card {
-    background: var(--surface);
-    padding: 14px 16px;
-    text-align: center;
-  }
-  .summary-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
-  .summary-value { font-size: 20px; font-weight: 700; font-family: var(--mono); letter-spacing: -0.5px; }
-  .summary-value.up { color: var(--accent); }
-  .summary-value.down { color: var(--red); }
-  .summary-value.neutral { color: var(--text); }
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500&display=swap');
 
-  /* Form */
-  .form-wrap {
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-  }
-  .form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-bottom: 8px;
-  }
-  .form-row.three { grid-template-columns: 1fr 1fr 1fr; }
-  .field { display: flex; flex-direction: column; gap: 4px; }
-  .field label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
-  .field input, .field select, .field textarea {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: 14px;
-    padding: 8px 10px;
-    outline: none;
-    transition: border-color 0.15s;
-  }
-  .field input:focus, .field select:focus, .field textarea:focus {
-    border-color: var(--accent);
-  }
-  .field input[type="number"] { text-align: right; }
-  .field select option { background: var(--surface2); }
-  .field textarea { resize: vertical; min-height: 60px; font-size: 13px; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
 
-  .btn-submit {
-    width: 100%;
-    padding: 11px;
-    background: var(--accent-dim);
-    color: var(--accent);
-    border: 1px solid var(--accent);
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.15s, transform 0.1s;
-    margin-top: 4px;
-  }
-  .btn-submit:hover { background: #14532d; }
-  .btn-submit:active { transform: scale(0.99); }
-  .btn-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+/* ── Login Screen ── */
+#login-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  flex-direction: column;
+  gap: 24px;
+}
+.login-card {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-lg);
+  padding: 40px 48px;
+  text-align: center;
+  width: 340px;
+}
+.login-card h1 { font-size: 22px; font-weight: 600; margin-bottom: 6px; }
+.login-card p  { font-size: 13px; color: var(--text2); margin-bottom: 28px; }
+.btn-google {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; padding: 12px;
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--radius); color: var(--text);
+  font-size: 14px; font-family: var(--font); cursor: pointer;
+  transition: background .15s;
+}
+.btn-google:hover { background: var(--bg4); }
+.btn-google svg { width: 18px; height: 18px; flex-shrink: 0; }
 
-  /* List */
-  .list-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 20px 8px;
-  }
-  .list-header span { font-size: 12px; color: var(--muted); }
-  .filter-wrap { display: flex; gap: 6px; }
-  .filter-btn {
-    padding: 4px 10px;
-    border-radius: 20px;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--muted);
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .filter-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+/* ── App Shell ── */
+#app { display: none; max-width: 980px; margin: 0 auto; padding: 0 20px 40px; }
 
-  .trade-list { padding: 0 12px 80px; }
-  .trade-item {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 14px;
-    margin-bottom: 8px;
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    gap: 10px;
-    align-items: start;
-    animation: fadeIn 0.2s ease;
-  }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+/* ── Top Header ── */
+.top-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 0 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+.top-header h1 { font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
+.header-right { display: flex; align-items: center; gap: 10px; }
+.user-chip {
+  display: flex; align-items: center; gap: 7px;
+  padding: 5px 10px 5px 6px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 99px; font-size: 12px; color: var(--text2);
+}
+.user-chip img { width: 22px; height: 22px; border-radius: 50%; }
+.btn-signout {
+  padding: 5px 12px; background: transparent;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  color: var(--text2); font-size: 12px; cursor: pointer; font-family: var(--font);
+  transition: border-color .15s, color .15s;
+}
+.btn-signout:hover { border-color: var(--border2); color: var(--text); }
 
-  .trade-side {
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    flex-shrink: 0;
-  }
-  .trade-side.buy { background: var(--accent-dim); color: var(--accent); }
-  .trade-side.sell { background: var(--red-dim); color: var(--red); }
+/* ── Tab Bar ── */
+.tab-bar {
+  display: flex; gap: 2px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 3px;
+  margin-bottom: 24px;
+}
+.tab {
+  flex: 1; padding: 8px 0; text-align: center;
+  font-size: 13px; font-weight: 500; font-family: var(--font);
+  border-radius: 7px; border: none; background: transparent;
+  color: var(--text2); cursor: pointer; transition: all .15s;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+}
+.tab:hover { color: var(--text); }
+.tab.active { background: var(--bg4); color: var(--text); border: 1px solid var(--border2); }
+.tab svg { width: 14px; height: 14px; }
 
-  .trade-info { min-width: 0; }
-  .trade-name { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
-  .trade-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .trade-memo { font-size: 12px; color: var(--muted); margin-top: 4px; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* ── Screen ── */
+.screen { display: none; }
+.screen.active { display: block; }
 
-  .trade-right { text-align: right; flex-shrink: 0; }
-  .trade-pnl { font-size: 16px; font-weight: 700; font-family: var(--mono); }
-  .trade-pnl.up { color: var(--accent); }
-  .trade-pnl.down { color: var(--red); }
-  .trade-price { font-size: 12px; color: var(--muted); margin-top: 2px; font-family: var(--mono); }
-  .trade-delete {
-    background: none;
-    border: none;
-    color: var(--border);
-    cursor: pointer;
-    font-size: 16px;
-    padding: 2px 4px;
-    transition: color 0.15s;
-    margin-top: 4px;
-  }
-  .trade-delete:hover { color: var(--red); }
+/* ── Filter Bar ── */
+.fbar { display: flex; gap: 6px; flex-wrap: wrap; }
+.fchip {
+  padding: 5px 14px; border-radius: 99px; font-size: 12px;
+  border: 1px solid var(--border2); background: transparent;
+  color: var(--text2); cursor: pointer; font-family: var(--font);
+  transition: all .15s;
+}
+.fchip:hover { border-color: var(--accent); color: var(--text); }
+.fchip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
-  .empty-state {
-    text-align: center;
-    padding: 60px 20px;
-    color: var(--muted);
-    font-size: 14px;
-  }
-  .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+/* ── KPI Grid ── */
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+.kpi-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px;
+  transition: border-color .15s;
+}
+.kpi-card:hover { border-color: var(--border2); }
+.kpi-lbl { font-size: 11px; color: var(--text3); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em; }
+.kpi-val { font-size: 22px; font-weight: 600; color: var(--text); }
+.kpi-val.pos { color: var(--green); }
+.kpi-val.neg { color: var(--red); }
+.kpi-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
 
-  /* Auth */
-  .auth-screen {
-    max-width: 340px;
-    margin: 80px auto;
-    padding: 32px 24px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    text-align: center;
-  }
-  .auth-screen h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
-  .auth-screen p { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
-  .btn-google {
-    width: 100%;
-    padding: 12px;
-    background: #fff;
-    color: #333;
-    border: none;
-    border-radius: 8px;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    transition: background 0.15s;
-  }
-  .btn-google:hover { background: #f5f5f5; }
-  .google-icon { width: 20px; height: 20px; }
+/* ── Cards ── */
+.card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 18px 20px;
+  margin-bottom: 12px;
+}
+.card-title {
+  font-size: 11px; font-weight: 500; color: var(--text3);
+  text-transform: uppercase; letter-spacing: .06em;
+  margin-bottom: 14px;
+}
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
 
-  .loading {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-    color: var(--muted);
-    font-size: 14px;
-    gap: 10px;
-  }
-  .spinner {
-    width: 18px; height: 18px;
-    border: 2px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
+/* ── Stat Box (연속승패 등) ── */
+.stat-box {
+  background: var(--bg3); border-radius: var(--radius);
+  padding: 14px; text-align: center;
+}
+.stat-num { font-size: 22px; font-weight: 600; }
+.stat-lbl { font-size: 10px; color: var(--text3); margin-top: 3px; }
 
-  /* Mobile adjustments */
-  @media (max-width: 480px) {
-    .summary-value { font-size: 16px; }
-    .form-row { grid-template-columns: 1fr; }
-    .form-row.three { grid-template-columns: 1fr 1fr; }
-  }
+/* ── Bar Chart ── */
+.bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.bar-lbl { width: 58px; font-size: 11px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar-track { flex: 1; background: var(--bg3); border-radius: 3px; height: 6px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 3px; transition: width .4s cubic-bezier(.4,0,.2,1); }
+.bar-count { font-size: 11px; color: var(--text3); width: 32px; text-align: right; }
 
-  #app { display: none; }
-  #app.visible { display: block; }
-  #auth-screen { display: none; }
-  #auth-screen.visible { display: block; }
-  #loading-screen { display: flex; }
-  #loading-screen.hidden { display: none; }
+/* ── R Distribution ── */
+.r-dist-wrap { display: flex; align-items: flex-end; gap: 3px; height: 72px; }
+.r-dist-labels { display: flex; gap: 3px; margin-top: 5px; }
+.r-dist-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+.r-dist-bar { width: 100%; border-radius: 3px 3px 0 0; transition: height .4s cubic-bezier(.4,0,.2,1); }
+.r-dist-lbl { flex: 1; text-align: center; font-size: 9px; color: var(--text3); }
+
+/* ── Monthly Table ── */
+.monthly-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.monthly-table th {
+  text-align: left; padding: 7px 10px;
+  font-size: 10px; color: var(--text3); font-weight: 500;
+  text-transform: uppercase; letter-spacing: .04em;
+  border-bottom: 1px solid var(--border);
+}
+.monthly-table th:not(:first-child) { text-align: right; }
+.monthly-table td { padding: 9px 10px; border-bottom: 1px solid var(--border); }
+.monthly-table td:not(:first-child) { text-align: right; }
+.monthly-table tr:last-child td { border-bottom: none; }
+.monthly-table tr:hover td { background: var(--bg3); }
+
+/* ── Trade Table ── */
+.row-hd { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.trade-wrap { border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.trade-head {
+  display: grid;
+  grid-template-columns: 90px 52px 96px 78px 70px 54px 54px 1fr 60px;
+  padding: 9px 14px;
+  background: var(--bg3);
+  font-size: 10px; color: var(--text3); font-weight: 500;
+  text-transform: uppercase; letter-spacing: .04em;
+  border-bottom: 1px solid var(--border);
+}
+.trade-row {
+  display: grid;
+  grid-template-columns: 90px 52px 96px 78px 70px 54px 54px 1fr 60px;
+  padding: 11px 14px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+  align-items: center;
+  cursor: pointer;
+  transition: background .12s;
+}
+.trade-row:last-of-type { border-bottom: none; }
+.trade-row:hover { background: var(--bg3); }
+.trade-expand {
+  padding: 16px;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+  display: none;
+  animation: expandIn .15s ease;
+}
+@keyframes expandIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+.trade-actions { display: flex; gap: 5px; justify-content: flex-end; }
+.btn-edit, .btn-del {
+  padding: 4px 9px; font-size: 11px; border-radius: var(--radius-sm);
+  background: transparent; cursor: pointer; font-family: var(--font);
+  transition: all .12s;
+}
+.btn-edit { border: 1px solid var(--border2); color: var(--text2); }
+.btn-edit:hover { border-color: var(--accent); color: var(--accent); }
+.btn-del { border: 1px solid rgba(248,113,113,.25); color: var(--red); }
+.btn-del:hover { background: var(--red-bg); }
+
+/* ── Badge ── */
+.badge {
+  display: inline-block; padding: 2px 8px;
+  border-radius: 99px; font-size: 10px; font-weight: 500;
+}
+.b-coin   { background: var(--coin-bg);   color: var(--coin-c); }
+.b-kor    { background: var(--kor-bg);    color: var(--kor-c); }
+.b-us     { background: var(--us-bg);     color: var(--us-c); }
+.b-long   { background: var(--kor-bg);    color: var(--kor-c); }
+.b-short  { background: var(--red-bg);    color: var(--red); }
+.b-open   { background: var(--open-bg);   color: var(--open-c); }
+
+/* ── Memo / Chart expand ── */
+.memo-block {
+  background: var(--bg4); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 11px 14px;
+  margin-bottom: 12px;
+}
+.memo-header { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+.memo-text { font-size: 12px; color: var(--text2); line-height: 1.7; }
+.memo-text.empty { color: var(--text3); font-style: italic; }
+.chart-block-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; }
+.chart-link-box {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg4); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 16px;
+}
+.chart-link-box svg { width: 20px; height: 20px; color: var(--green); flex-shrink: 0; }
+.chart-link-box a { font-size: 12px; color: var(--accent); text-decoration: none; }
+.chart-link-box a:hover { text-decoration: underline; }
+.chart-empty { font-size: 12px; color: var(--text3); padding: 8px 0; }
+
+/* ── Button ── */
+.btn-add {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 16px;
+  background: var(--accent); color: #fff;
+  border: none; border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 500; font-family: var(--font);
+  cursor: pointer; transition: background .15s;
+}
+.btn-add:hover { background: var(--accent2); }
+.btn-add svg { width: 14px; height: 14px; }
+.btn-p {
+  background: var(--accent); color: #fff; border: none;
+  padding: 10px 22px; border-radius: var(--radius-sm);
+  font-size: 14px; font-weight: 500; font-family: var(--font);
+  cursor: pointer; transition: background .15s;
+}
+.btn-p:hover { background: var(--accent2); }
+.btn-s {
+  background: transparent; border: 1px solid var(--border2);
+  color: var(--text2); padding: 10px 22px;
+  border-radius: var(--radius-sm); font-size: 14px;
+  font-family: var(--font); cursor: pointer; transition: all .15s;
+}
+.btn-s:hover { border-color: var(--border2); color: var(--text); }
+.divider { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+
+/* ── Modal Overlay ── */
+.ov {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.65);
+  display: none; align-items: flex-start;
+  justify-content: center;
+  z-index: 100; padding: 32px 16px;
+  overflow-y: auto;
+  backdrop-filter: blur(3px);
+}
+.ov.open { display: flex; }
+.modal {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: var(--radius-lg);
+  width: 100%; max-width: 640px;
+  padding: 24px 28px; margin-bottom: 32px;
+  animation: modalIn .18s ease;
+}
+@keyframes modalIn { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.modal-hd { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.modal-title { font-size: 16px; font-weight: 600; }
+.modal-close {
+  background: none; border: none; cursor: pointer;
+  color: var(--text3); padding: 4px; border-radius: var(--radius-sm);
+  transition: color .12s;
+}
+.modal-close:hover { color: var(--text); }
+.modal-close svg { width: 18px; height: 18px; display: block; }
+
+/* ── Form ── */
+.sec-lbl { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; font-weight: 500; margin-bottom: 10px; }
+.fg2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.fg3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.fgrp { display: flex; flex-direction: column; gap: 5px; }
+.fgrp.full { grid-column: 1/-1; }
+.flbl { font-size: 12px; color: var(--text2); font-weight: 500; }
+.fslbl { font-size: 10px; color: var(--text3); font-weight: 400; }
+.hint { font-size: 10px; color: var(--text3); margin-top: 3px; }
+
+input[type=text], input[type=number], input[type=date],
+input[type=url], select, textarea {
+  width: 100%;
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); padding: 8px 11px;
+  color: var(--text); font-size: 13px; font-family: var(--font);
+  outline: none; transition: border-color .15s;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+input::placeholder, textarea::placeholder { color: var(--text3); }
+select option { background: var(--bg3); }
+
+input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15em; }
+
+.info-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 12px; background: var(--bg3);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-size: 13px;
+}
+.info-row-lbl { font-size: 11px; color: var(--text3); }
+.info-row-val { margin-left: auto; font-weight: 500; font-size: 13px; }
+
+.r-goal-box {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--green-bg);
+  border: 1px solid rgba(52,211,153,.2);
+  border-radius: var(--radius-sm);
+}
+.r-goal-lbl { font-size: 11px; color: var(--green); }
+.r-goal-mkt { font-size: 10px; color: rgba(52,211,153,.6); margin-top: 2px; }
+.r-goal-val { font-size: 20px; font-weight: 600; color: var(--green); }
+.r-calc-box {
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 12px 16px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.r-calc-lbl { font-size: 10px; color: var(--text3); }
+.r-calc-val { font-size: 20px; font-weight: 600; }
+.r-calc-sub { font-size: 10px; color: var(--text3); }
+
+.auto-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.auto-item { background: var(--bg3); border-radius: var(--radius-sm); padding: 10px 12px; }
+.auto-lbl { font-size: 10px; color: var(--text3); margin-bottom: 4px; }
+.auto-val { font-size: 14px; font-weight: 500; }
+
+/* ── Input with prefix ── */
+.input-wrap {
+  display: flex; align-items: center;
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); overflow: hidden;
+  transition: border-color .15s;
+}
+.input-wrap:focus-within { border-color: var(--accent); }
+.input-prefix {
+  padding: 0 10px; font-size: 12px; color: var(--text3);
+  background: var(--bg4); border-right: 1px solid var(--border);
+  height: 36px; display: flex; align-items: center;
+  flex-shrink: 0;
+}
+.input-wrap input {
+  border: none; background: transparent;
+  padding: 8px 10px; color: var(--text);
+  font-size: 12px; width: 100%; text-align: right;
+  border-radius: 0;
+}
+.input-wrap input:focus { border-color: transparent; }
+
+/* ── Settings Table ── */
+.mcols {
+  display: grid; grid-template-columns: 148px repeat(3, 1fr);
+  border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+}
+.mch {
+  padding: 9px 12px; background: var(--bg3);
+  font-size: 10px; color: var(--text3); font-weight: 500;
+  text-transform: uppercase; letter-spacing: .04em;
+  text-align: center; border-bottom: 1px solid var(--border);
+}
+.mch:first-child { text-align: left; }
+.mcc {
+  padding: 10px 12px; text-align: center;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+}
+.mcc:last-child { border-right: none; }
+.mcc.lbl { text-align: left; background: var(--bg3); font-size: 11px; color: var(--text2); }
+.mcc input { text-align: right; border: none; background: transparent; color: var(--text); font-size: 12px; width: 100%; font-family: var(--font); outline: none; }
+.srow {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 13px 0; border-bottom: 1px solid var(--border);
+}
+.srow:last-child { border-bottom: none; }
+
+/* ── Strategy List ── */
+.strategy-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.strategy-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 12px; background: var(--bg3);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.strategy-name { flex: 1; font-size: 13px; color: var(--text); }
+.strategy-edit-input { flex: 1; display: none; }
+.btn-icon {
+  padding: 4px 8px; font-size: 11px; border-radius: var(--radius-sm);
+  background: transparent; cursor: pointer; border: 1px solid var(--border2);
+  color: var(--text2); font-family: var(--font); transition: all .12s;
+}
+.btn-icon:hover { border-color: var(--accent); color: var(--accent); }
+.btn-icon.confirm { border-color: rgba(52,211,153,.3); color: var(--green); }
+.btn-icon.confirm:hover { background: var(--green-bg); }
+.btn-icon.danger { border-color: rgba(248,113,113,.25); color: var(--red); }
+.btn-icon.danger:hover { background: var(--red-bg); }
+
+/* ── Delete Confirm ── */
+.del-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.7);
+  z-index: 200; display: none; align-items: center; justify-content: center;
+}
+.del-overlay.open { display: flex; }
+.del-box {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: var(--radius-lg); padding: 24px 28px; width: 320px;
+  animation: modalIn .15s ease;
+}
+.del-box h3 { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+.del-box p  { font-size: 13px; color: var(--text2); margin-bottom: 20px; }
+.btn-danger {
+  background: var(--red); color: #fff; border: none;
+  padding: 10px 22px; border-radius: var(--radius-sm);
+  font-size: 14px; font-weight: 500; font-family: var(--font);
+  cursor: pointer;
+}
+
+/* ── Loading ── */
+#loading {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; flex-direction: column; gap: 14px;
+}
+.spinner {
+  width: 28px; height: 28px;
+  border: 2px solid var(--border2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Responsive ── */
+@media (max-width: 700px) {
+  .kpi-grid { grid-template-columns: 1fr 1fr; }
+  .grid-2  { grid-template-columns: 1fr; }
+  .trade-head, .trade-row { grid-template-columns: 80px 46px 80px 68px 60px 46px 1fr 52px; font-size: 11px; }
+  .trade-head > span:nth-child(7),
+  .trade-row  > span:nth-child(7) { display: none; }
+}
 </style>
 </head>
 <body>
 
 <!-- Loading -->
-<div id="loading-screen" class="loading">
+<div id="loading">
   <div class="spinner"></div>
-  <span>연결 중...</span>
+  <p style="font-size:13px;color:var(--text3);">불러오는 중...</p>
 </div>
 
-<!-- Auth -->
-<div id="auth-screen">
-  <div class="auth-screen">
-    <div style="font-size:40px;margin-bottom:16px">📈</div>
-    <h2>매매일지</h2>
-    <p>Google 계정으로 로그인하면<br>PC와 모바일이 자동으로 싱크됩니다</p>
-    <button class="btn-google" onclick="signIn()">
-      <svg class="google-icon" viewBox="0 0 24 24">
-        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+<!-- Login -->
+<div id="login-screen" style="display:none;">
+  <div class="login-card">
+    <h1>📈 매매일지</h1>
+    <p>거래 기록을 관리하고 분석하세요</p>
+    <button class="btn-google" id="btn-google-login">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
       </svg>
-      Google로 로그인
+      Google로 시작하기
     </button>
-    <p style="margin-top:16px;font-size:12px;color:#555">무료 · 광고 없음 · 데이터는 본인만 접근</p>
   </div>
 </div>
 
-<!-- Main App -->
+<!-- App -->
 <div id="app">
-  <div class="header">
-    <h1>매매<span>일지</span></h1>
-    <div style="display:flex;align-items:center;gap:12px">
-      <div class="status">
-        <div class="status-dot online" id="status-dot"></div>
-        <span id="status-text">동기화됨</span>
+  <!-- Header -->
+  <div class="top-header">
+    <h1>📈 매매일지</h1>
+    <div class="header-right">
+      <div class="user-chip" id="user-chip">
+        <img id="user-photo" src="" alt="" onerror="this.style.display='none'">
+        <span id="user-name"></span>
       </div>
-      <button onclick="signOut()" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;">로그아웃</button>
+      <button class="btn-signout" id="btn-signout">로그아웃</button>
     </div>
   </div>
 
-  <div class="summary">
-    <div class="summary-card">
-      <div class="summary-label">총 손익</div>
-      <div class="summary-value" id="total-pnl" class="neutral">-</div>
+  <!-- Tabs -->
+  <div class="tab-bar">
+    <button class="tab active" onclick="switchTab('dashboard')" id="tab-dashboard">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+      대시보드
+    </button>
+    <button class="tab" onclick="switchTab('log')" id="tab-log">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12M2 8h9M2 12h6"/></svg>
+      매매일지
+    </button>
+    <button class="tab" onclick="switchTab('settings')" id="tab-settings">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2.5"/><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.1 3.1l1.06 1.06M11.84 11.84l1.06 1.06M12.9 3.1l-1.06 1.06M4.16 11.84l-1.06 1.06"/></svg>
+      설정
+    </button>
+  </div>
+
+  <!-- ─── DASHBOARD ─── -->
+  <div class="screen active" id="screen-dashboard">
+    <div style="margin-bottom:16px;">
+      <div class="fbar" id="db-fbar">
+        <button class="fchip active" onclick="dbFilter(this,'all')">전체</button>
+        <button class="fchip" onclick="dbFilter(this,'coin')">코인</button>
+        <button class="fchip" onclick="dbFilter(this,'kor')">국장</button>
+        <button class="fchip" onclick="dbFilter(this,'us')">미장</button>
+      </div>
     </div>
-    <div class="summary-card">
-      <div class="summary-label">승률</div>
-      <div class="summary-value neutral" id="win-rate">-</div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-lbl">누적 손익</div><div class="kpi-val" id="d-pnl">—</div><div class="kpi-sub" id="d-pnl-s">원화환산 합계</div></div>
+      <div class="kpi-card"><div class="kpi-lbl">전체 승률</div><div class="kpi-val" id="d-wr">—</div><div class="kpi-sub" id="d-wr-s">—</div></div>
+      <div class="kpi-card"><div class="kpi-lbl">평균 R</div><div class="kpi-val" id="d-r">—</div><div class="kpi-sub" id="d-r-s">—</div></div>
+      <div class="kpi-card"><div class="kpi-lbl">총 거래수</div><div class="kpi-val" id="d-cnt">—</div><div class="kpi-sub" id="d-cnt-s">이번달</div></div>
     </div>
-    <div class="summary-card">
-      <div class="summary-label">거래 수</div>
-      <div class="summary-value neutral" id="trade-count">0</div>
+
+    <div class="grid-2" style="margin-bottom:12px;">
+      <div class="card">
+        <div class="card-title">연속 승패 & 드로다운</div>
+        <div class="grid-2" style="gap:8px;">
+          <div class="stat-box"><div class="stat-num pos" id="d-sw">—</div><div class="stat-lbl">최대 연속승</div></div>
+          <div class="stat-box"><div class="stat-num neg" id="d-sl">—</div><div class="stat-lbl">최대 연속패</div></div>
+          <div class="stat-box"><div class="stat-num neg" id="d-dd-pnl" style="font-size:14px;">—</div><div class="stat-lbl">최대 DD</div></div>
+          <div class="stat-box"><div class="stat-num neg" id="d-dd-r">—</div><div class="stat-lbl">최대 DD (R)</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">롱 / 숏</div>
+        <div class="grid-2" style="gap:8px;">
+          <div class="stat-box">
+            <div class="stat-num" id="d-long-cnt" style="font-size:17px;">—</div>
+            <div id="d-long-wr" style="font-size:11px;color:var(--text2);margin-top:3px;">—</div>
+            <div id="d-long-r"  style="font-size:11px;color:var(--text3);margin-top:1px;">—</div>
+            <div class="stat-lbl">롱</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="d-short-cnt" style="font-size:17px;">—</div>
+            <div id="d-short-wr" style="font-size:11px;color:var(--text2);margin-top:3px;">—</div>
+            <div id="d-short-r"  style="font-size:11px;color:var(--text3);margin-top:1px;">—</div>
+            <div class="stat-lbl">숏</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-bottom:12px;">
+      <div class="card">
+        <div class="card-title">R 분포</div>
+        <div class="r-dist-wrap" id="r-dist-bars"></div>
+        <div class="r-dist-labels" id="r-dist-labels"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">전략별</div>
+        <div id="db-strategy-bars"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">월별 성과</div>
+      <table class="monthly-table">
+        <thead>
+          <tr>
+            <th>월</th><th>거래수</th><th>승률</th>
+            <th>총 손익</th><th>평균 R</th><th>최대 이익</th><th>최대 손실</th>
+          </tr>
+        </thead>
+        <tbody id="monthly-tbody"></tbody>
+      </table>
     </div>
   </div>
 
-  <!-- Entry Form -->
-  <div class="form-wrap">
-    <div class="form-row">
-      <div class="field">
-        <label>종목</label>
-        <input type="text" id="f-name" placeholder="삼성전자, BTC..." autocomplete="off">
+  <!-- ─── LOG ─── -->
+  <div class="screen" id="screen-log">
+    <div class="row-hd">
+      <div class="fbar" id="log-fbar">
+        <button class="fchip active" onclick="logFilter(this,'all')">전체</button>
+        <button class="fchip" onclick="logFilter(this,'coin')">코인</button>
+        <button class="fchip" onclick="logFilter(this,'kor')">국장</button>
+        <button class="fchip" onclick="logFilter(this,'us')">미장</button>
+        <button class="fchip" onclick="logFilter(this,'long')">롱</button>
+        <button class="fchip" onclick="logFilter(this,'short')">숏</button>
       </div>
-      <div class="field">
-        <label>매매구분</label>
-        <select id="f-side">
-          <option value="buy">매수</option>
-          <option value="sell">매도</option>
-        </select>
-      </div>
+      <button class="btn-add" onclick="openModal()">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 1v12M1 7h12"/></svg>
+        새 거래
+      </button>
     </div>
-    <div class="form-row three">
-      <div class="field">
-        <label>진입가</label>
-        <input type="number" id="f-entry" placeholder="0" step="any">
+    <div class="trade-wrap">
+      <div class="trade-head">
+        <span>날짜/시간</span><span>시장</span><span>종목</span>
+        <span>전략/방향</span><span style="text-align:right;">손익</span>
+        <span style="text-align:right;">R</span><span>기간</span>
+        <span></span><span style="text-align:center;">관리</span>
       </div>
-      <div class="field">
-        <label>청산가</label>
-        <input type="number" id="f-exit" placeholder="0" step="any">
+      <div id="trade-body">
+        <div style="padding:32px;text-align:center;color:var(--text3);font-size:13px;">
+          거래 기록이 없습니다
+        </div>
       </div>
-      <div class="field">
-        <label>손익(₩)</label>
-        <input type="number" id="f-pnl" placeholder="0" step="any">
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="field">
-        <label>날짜</label>
-        <input type="date" id="f-date">
-      </div>
-      <div class="field">
-        <label>메모</label>
-        <input type="text" id="f-memo" placeholder="진입 이유, 실수 등...">
-      </div>
-    </div>
-    <button class="btn-submit" onclick="addTrade()" id="submit-btn">+ 기록 추가</button>
-  </div>
-
-  <!-- List -->
-  <div class="list-header">
-    <span id="list-label">최근 기록</span>
-    <div class="filter-wrap">
-      <button class="filter-btn active" onclick="setFilter('all', this)">전체</button>
-      <button class="filter-btn" onclick="setFilter('buy', this)">매수</button>
-      <button class="filter-btn" onclick="setFilter('sell', this)">매도</button>
     </div>
   </div>
 
-  <div class="trade-list" id="trade-list">
-    <div class="empty-state">
-      <div class="icon">📋</div>
-      <div>첫 거래를 기록해보세요</div>
+  <!-- ─── SETTINGS ─── -->
+  <div class="screen" id="screen-settings">
+    <div class="card">
+      <div class="card-title">시장별 파라미터</div>
+      <div class="mcols">
+        <div class="mch">항목</div><div class="mch">코인 ($)</div><div class="mch">국장 (₩)</div><div class="mch">미장 ($)</div>
+        <div class="mcc lbl">시드</div>
+        <div class="mcc"><div class="input-wrap"><span class="input-prefix">$</span><input type="text" id="cfg-seed-coin" value="3,000" onblur="fmtComma(this)" oninput="rawNum(this)"></div></div>
+        <div class="mcc"><div class="input-wrap"><span class="input-prefix">₩</span><input type="text" id="cfg-seed-kor"  value="1,000,000" onblur="fmtComma(this)" oninput="rawNum(this)"></div></div>
+        <div class="mcc"><div class="input-wrap"><span class="input-prefix">$</span><input type="text" id="cfg-seed-us"   value="1,000" onblur="fmtComma(this)" oninput="rawNum(this)"></div></div>
+
+        <div class="mcc lbl">목표 수익 비율</div>
+        <div class="mcc"><input type="text" id="cfg-goal-coin" value="40%"></div>
+        <div class="mcc"><input type="text" id="cfg-goal-kor"  value="30%"></div>
+        <div class="mcc"><input type="text" id="cfg-goal-us"   value="30%"></div>
+
+        <div class="mcc lbl">월 목표 평균 R</div>
+        <div class="mcc" style="color:var(--green);font-weight:500;" id="cfg-r-coin">+1.25R</div>
+        <div class="mcc" style="color:var(--green);font-weight:500;" id="cfg-r-kor">+1.75R</div>
+        <div class="mcc" style="color:var(--green);font-weight:500;" id="cfg-r-us">+1.52R</div>
+
+        <div class="mcc lbl">거래당 리스크</div>
+        <div class="mcc"><input type="text" id="cfg-risk-coin" value="1%"></div>
+        <div class="mcc"><input type="text" id="cfg-risk-kor"  value="1%"></div>
+        <div class="mcc"><input type="text" id="cfg-risk-us"   value="1%"></div>
+
+        <div class="mcc lbl">왕복 수수료</div>
+        <div class="mcc"><input type="text" id="cfg-fee-coin" value="0.01%"></div>
+        <div class="mcc"><input type="text" id="cfg-fee-kor"  value="0%"></div>
+        <div class="mcc"><input type="text" id="cfg-fee-us"   value="0%"></div>
+
+        <div class="mcc lbl">목표 승률</div>
+        <div class="mcc"><input type="text" id="cfg-wr-coin" value="50%"></div>
+        <div class="mcc"><input type="text" id="cfg-wr-kor"  value="50%"></div>
+        <div class="mcc"><input type="text" id="cfg-wr-us"   value="50%"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">공통 환율 기본값 <span style="text-transform:none;letter-spacing:0;font-size:10px;color:var(--text3);">— 거래 입력 시 미입력이면 이 값 사용</span></div>
+      <div class="srow">
+        <div><div style="font-size:13px;">업비트 테더 (USDT/KRW)</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">코인 시장 원화 환산 기본값</div></div>
+        <div class="input-wrap" style="width:150px;"><span class="input-prefix">₩</span><input type="text" id="cfg-tether" value="1,482" onblur="fmtComma(this)" oninput="rawNum(this)"></div>
+      </div>
+      <div class="srow">
+        <div><div style="font-size:13px;">원/달러 환율 (USD/KRW)</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">미장 원화 환산 기본값</div></div>
+        <div class="input-wrap" style="width:150px;"><span class="input-prefix">₩</span><input type="text" id="cfg-usd" value="1,491" onblur="fmtComma(this)" oninput="rawNum(this)"></div>
+      </div>
+      <div class="srow">
+        <div><div style="font-size:13px;">월 목표 수익 합계</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">전체 시장 합산 목표</div></div>
+        <div class="input-wrap" style="width:180px;"><span class="input-prefix">₩</span><input type="text" id="cfg-total-goal" value="500,000" onblur="fmtComma(this)" oninput="rawNum(this)"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div class="card-title" style="margin-bottom:0;">전략 관리</div>
+        <span style="font-size:11px;color:var(--text3);">입력 폼의 전략 목록에 반영됩니다</span>
+      </div>
+      <div class="strategy-list" id="strategy-list"></div>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="new-strategy-input" placeholder="새 전략 이름 입력..." style="flex:1;font-size:13px;">
+        <button class="btn-p" style="padding:9px 18px;font-size:13px;" onclick="addStrategy()">+ 추가</button>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;">
+      <button class="btn-p" onclick="saveSettings()">설정 저장</button>
     </div>
   </div>
 </div>
 
-<!-- Firebase SDK -->
-<script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut, onAuthStateChanged }
-  from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp }
-  from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+<!-- ─── 입력/수정 모달 ─── -->
+<div class="ov" id="modal-ov" onclick="bgClose(event)">
+<div class="modal">
+  <div class="modal-hd">
+    <span class="modal-title" id="modal-title-txt">새 거래 입력</span>
+    <button class="modal-close" onclick="closeModal()">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 2l12 12M14 2L2 14"/></svg>
+    </button>
+  </div>
 
-// ============================================================
-// 🔧 여기에 Firebase 설정을 붙여넣으세요
-// Firebase Console > 프로젝트 설정 > 앱 추가 > 웹앱 에서 복사
-// ============================================================
+  <input type="hidden" id="m-edit-id">
+
+  <p class="sec-lbl">기본 정보</p>
+  <div class="fg3" style="margin-bottom:12px;">
+    <div class="fgrp">
+      <label class="flbl">시장</label>
+      <select id="m-market" onchange="onMarketChange()">
+        <option value="coin">코인 ($)</option>
+        <option value="kor">국장 (₩)</option>
+        <option value="us">미장 ($)</option>
+      </select>
+    </div>
+    <div class="fgrp">
+      <label class="flbl">전략</label>
+      <select id="m-strategy"></select>
+    </div>
+    <div class="fgrp">
+      <label class="flbl">방향</label>
+      <select id="m-dir">
+        <option value="short">숏</option>
+        <option value="long">롱</option>
+      </select>
+    </div>
+    <div class="fgrp full">
+      <label class="flbl">종목명</label>
+      <input type="text" id="m-symbol" placeholder="BTCUSDT, 삼성전자, TSLA...">
+    </div>
+  </div>
+
+  <div class="divider"></div>
+  <p class="sec-lbl">날짜 & 시간</p>
+  <div class="fg2" style="margin-bottom:8px;">
+    <div class="fgrp">
+      <label class="flbl">시작 날짜</label>
+      <input type="date" id="m-date-start">
+    </div>
+    <div class="fgrp">
+      <label class="flbl">종료 날짜 <span class="fslbl">당일이면 비워두기</span></label>
+      <input type="date" id="m-date-end">
+    </div>
+    <div class="fgrp">
+      <label class="flbl">시작 시간</label>
+      <input type="text" id="m-time-start" class="mono" placeholder="2030" maxlength="4" inputmode="numeric" oninput="calcDur()">
+    </div>
+    <div class="fgrp">
+      <label class="flbl">종료 시간 <span class="fslbl">미청산이면 비워두기</span></label>
+      <input type="text" id="m-time-end" class="mono" placeholder="2201" maxlength="4" inputmode="numeric" oninput="calcDur()">
+    </div>
+  </div>
+  <div class="info-row" style="margin-bottom:12px;">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--text3);"><circle cx="7" cy="7" r="6"/><path d="M7 4v3.5l2 1.5"/></svg>
+    <span class="info-row-lbl">기간 (자동계산)</span>
+    <span class="info-row-val" id="dur-out" style="color:var(--text2);">시간 입력 후 표시</span>
+  </div>
+
+  <div class="divider"></div>
+  <p class="sec-lbl">손익 & 시드</p>
+  <div class="fg2" style="margin-bottom:10px;">
+    <div class="fgrp">
+      <label class="flbl">손익 <span class="fslbl">$ 또는 ₩</span></label>
+      <input type="number" id="m-pnl" placeholder="-8.41" oninput="calcR()">
+    </div>
+    <div class="fgrp">
+      <label class="flbl">시드 <span class="fslbl">거래 시작 잔액</span></label>
+      <input type="number" id="m-seed" placeholder="3055" oninput="calcR()">
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+    <div class="r-goal-box">
+      <div><div class="r-goal-lbl">월 목표 R</div><div class="r-goal-mkt" id="r-goal-mkt">코인 기준</div></div>
+      <div class="r-goal-val" id="r-goal-val">+1.25R</div>
+    </div>
+    <div class="r-calc-box">
+      <div class="r-calc-lbl">이번 거래 R (자동)</div>
+      <div class="r-calc-val" id="r-out">— R</div>
+      <div class="r-calc-sub">손익 ÷ (시드 × 리스크%)</div>
+    </div>
+  </div>
+
+  <!-- 환율 섹션 (코인/미장만) -->
+  <div id="rate-section">
+    <div class="divider"></div>
+    <p class="sec-lbl">환율 <span style="text-transform:none;letter-spacing:0;font-size:10px;color:var(--text3);">비워두면 설정 기본값 적용</span></p>
+    <div id="rate-coin-row" class="fg2" style="margin-bottom:4px;">
+      <div class="fgrp">
+        <label class="flbl">테더 (USDT/KRW)</label>
+        <input type="number" id="m-tether" placeholder="기본값: 1,482" oninput="calcR()">
+      </div>
+      <div class="fgrp" style="justify-content:flex-end;padding-top:18px;">
+        <div class="info-row">
+          <span class="info-row-lbl">원화환산 (자동)</span>
+          <span class="info-row-val" id="krw-coin">— ₩</span>
+        </div>
+      </div>
+    </div>
+    <div id="rate-us-row" class="fg2" style="margin-bottom:4px;display:none;">
+      <div class="fgrp">
+        <label class="flbl">원/달러 환율</label>
+        <input type="number" id="m-usd" placeholder="기본값: 1,491" oninput="calcR()">
+      </div>
+      <div class="fgrp" style="justify-content:flex-end;padding-top:18px;">
+        <div class="info-row">
+          <span class="info-row-lbl">원화환산 (자동)</span>
+          <span class="info-row-val" id="krw-us">— ₩</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+  <div class="fgrp full" style="margin-bottom:12px;">
+    <label class="flbl">메모</label>
+    <textarea id="m-memo" rows="2" placeholder="진입 근거, 반성, 개선점..."></textarea>
+  </div>
+
+  <div class="divider"></div>
+  <p class="sec-lbl">차트 이미지 <span style="text-transform:none;letter-spacing:0;font-size:10px;color:var(--text3);">선택 — 구글 드라이브 공유 링크</span></p>
+  <div class="fgrp full" style="margin-bottom:16px;">
+    <label class="flbl">구글 드라이브 링크</label>
+    <input type="url" id="m-chart-url" placeholder="https://drive.google.com/file/d/...">
+    <span class="hint">드라이브 파일 우클릭 → 공유 → 링크 복사 후 붙여넣기</span>
+  </div>
+
+  <div class="divider"></div>
+  <p class="sec-lbl">자동 계산 요약</p>
+  <div class="auto-grid" style="margin-bottom:20px;">
+    <div class="auto-item"><div class="auto-lbl">N (번호)</div><div class="auto-val" id="auto-n">—</div></div>
+    <div class="auto-item"><div class="auto-lbl">요일</div><div class="auto-val" id="auto-dow">—</div></div>
+    <div class="auto-item"><div class="auto-lbl">원화환산</div><div class="auto-val" id="krw-summary">— ₩</div></div>
+    <div class="auto-item"><div class="auto-lbl">기간</div><div class="auto-val" id="dur-summary">—</div></div>
+  </div>
+
+  <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
+    <button class="btn-s" onclick="closeModal()">취소</button>
+    <button class="btn-s" onclick="saveTrade(true)">오픈 포지션 저장</button>
+    <button class="btn-p" onclick="saveTrade(false)">저장</button>
+  </div>
+</div>
+</div>
+
+<!-- ─── 삭제 확인 ─── -->
+<div class="del-overlay" id="del-overlay">
+  <div class="del-box">
+    <h3>거래 삭제</h3>
+    <p>이 거래 기록을 삭제할까요? 되돌릴 수 없습니다.</p>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn-s" onclick="closeDel()">취소</button>
+      <button class="btn-danger" onclick="doDelete()">삭제</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Firebase Logic ─── -->
+<script type="module">
+import { initializeApp }                          from 'firebase/app';
+import { getAuth, GoogleAuthProvider,
+         signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, collection, doc,
+         addDoc, setDoc, deleteDoc, getDocs,
+         onSnapshot, query, orderBy, getDoc }    from 'firebase/firestore';
+
+// ── Firebase Config ──────────────────────────────────────────────────────────
+// 아래 값을 본인의 Firebase 프로젝트 설정으로 교체하세요
 const firebaseConfig = {
   apiKey: "AIzaSyBJt7-rMw-mhmGu5GX2-aR7gNtrg_a4k1w",
   authDomain: "tradingjournal-f6afc.firebaseapp.com",
@@ -395,164 +937,709 @@ const firebaseConfig = {
   appId: "1:673545133862:web:90ec278804c2b035e96be7",
   measurementId: "G-Y1TSX20W9C"
 };
-// ============================================================
+// ─────────────────────────────────────────────────────────────────────────────
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+const fbApp  = initializeApp(firebaseConfig);
+const auth   = getAuth(fbApp);
+const db     = getFirestore(fbApp);
+const DAYS   = ['일','월','화','수','목','금','토'];
+const STRATEGIES_DEFAULT = ['역추세','OB','FVG','돌파','뇌동'];
+const R_GOALS = { coin: 1.25, kor: 1.75, us: 1.52 };
+const R_LABELS = ['≤-2','-2~-1.5','-1~0','0~1','1~2','2~3','≥3'];
+const R_COLORS = ['#f87171','#f87171','#6b7280','#34d399','#34d399','#34d399','#34d399'];
+const BAR_COLORS = ['#a78bfa','#f87171','#4f8fff','#34d399','#fbbf24'];
 
-let currentUser = null;
-let allTrades = [];
-let currentFilter = 'all';
-let unsubscribe = null;
+// ── State ────────────────────────────────────────────────────────────────────
+let currentUid  = null;
+let trades      = [];           // 모든 거래 (Firestore 실시간)
+let settings    = {};           // 설정
+let strategies  = [...STRATEGIES_DEFAULT];
+let dbMarket    = 'all';        // 대시보드 필터
+let logMarket   = 'all';        // 매매일지 필터
+let delTargetId = null;
+let unsubTrades = null;
 
-// Auth
-window.signIn = async () => {
-  const provider = new GoogleAuthProvider();
-  try { await signInWithPopup(auth, provider); }
-  catch(e) { alert('로그인 실패: ' + e.message); }
-};
-
-window.signOut = async () => {
-  if (unsubscribe) unsubscribe();
-  await fbSignOut(auth);
-};
-
-onAuthStateChanged(auth, user => {
-  document.getElementById('loading-screen').classList.add('hidden');
+// ── Auth ─────────────────────────────────────────────────────────────────────
+onAuthStateChanged(auth, async user => {
+  document.getElementById('loading').style.display = 'none';
   if (user) {
-    currentUser = user;
-    document.getElementById('auth-screen').classList.remove('visible');
-    document.getElementById('app').classList.add('visible');
+    currentUid = user.uid;
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('user-name').textContent = user.displayName || user.email;
+    const photo = document.getElementById('user-photo');
+    if (user.photoURL) photo.src = user.photoURL;
+    await loadSettings();
     subscribeToTrades();
   } else {
-    currentUser = null;
-    document.getElementById('app').classList.remove('visible');
-    document.getElementById('auth-screen').classList.add('visible');
-    allTrades = [];
-    renderTrades();
+    currentUid = null;
+    if (unsubTrades) { unsubTrades(); unsubTrades = null; }
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
   }
 });
 
-// Realtime listener
+document.getElementById('btn-google-login').onclick = async () => {
+  try {
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(auth, provider);
+  } catch(e) { console.error(e); }
+};
+document.getElementById('btn-signout').onclick = () => signOut(auth);
+
+// ── Firestore: Trades ────────────────────────────────────────────────────────
 function subscribeToTrades() {
-  if (unsubscribe) unsubscribe();
   const q = query(
-    collection(db, 'users', currentUser.uid, 'trades'),
-    orderBy('date', 'desc')
+    collection(db, 'users', currentUid, 'trades'),
+    orderBy('dateStart', 'desc')
   );
-  unsubscribe = onSnapshot(q, snap => {
-    allTrades = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  unsubTrades = onSnapshot(q, snap => {
+    trades = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderTrades();
-    updateSummary();
-  }, err => {
-    console.error(err);
-    document.getElementById('status-text').textContent = '오류';
-    document.getElementById('status-dot').classList.remove('online');
+    renderDashboard();
   });
 }
 
-// Add trade
-window.addTrade = async () => {
-  const name = document.getElementById('f-name').value.trim();
-  const side = document.getElementById('f-side').value;
-  const entry = parseFloat(document.getElementById('f-entry').value) || 0;
-  const exit = parseFloat(document.getElementById('f-exit').value) || 0;
-  const pnl = parseFloat(document.getElementById('f-pnl').value) || 0;
-  const date = document.getElementById('f-date').value;
-  const memo = document.getElementById('f-memo').value.trim();
-
-  if (!name || !date) { alert('종목명과 날짜는 필수입니다'); return; }
-
-  const btn = document.getElementById('submit-btn');
-  btn.disabled = true;
-  btn.textContent = '저장 중...';
-
+async function loadSettings() {
   try {
-    await addDoc(collection(db, 'users', currentUser.uid, 'trades'), {
-      name, side, entry, exit, pnl, date, memo,
-      createdAt: serverTimestamp()
-    });
-    // Reset form (keep date & side)
-    document.getElementById('f-name').value = '';
-    document.getElementById('f-entry').value = '';
-    document.getElementById('f-exit').value = '';
-    document.getElementById('f-pnl').value = '';
-    document.getElementById('f-memo').value = '';
-  } catch(e) {
-    alert('저장 실패: ' + e.message);
+    const snap = await getDoc(doc(db, 'users', currentUid, 'config', 'settings'));
+    if (snap.exists()) {
+      settings = snap.data();
+      strategies = settings.strategies || [...STRATEGIES_DEFAULT];
+    } else {
+      settings = {};
+      strategies = [...STRATEGIES_DEFAULT];
+    }
+    applySettingsToUI();
+    renderStrategies();
+    syncStrategySelect();
+  } catch(e) { console.error(e); }
+}
+
+window.saveSettings = async function() {
+  const cfg = {
+    seedCoin:   parseNum('cfg-seed-coin'),
+    seedKor:    parseNum('cfg-seed-kor'),
+    seedUs:     parseNum('cfg-seed-us'),
+    goalCoin:   v('cfg-goal-coin'),
+    goalKor:    v('cfg-goal-kor'),
+    goalUs:     v('cfg-goal-us'),
+    riskCoin:   v('cfg-risk-coin'),
+    riskKor:    v('cfg-risk-kor'),
+    riskUs:     v('cfg-risk-us'),
+    feeCoin:    v('cfg-fee-coin'),
+    feeKor:     v('cfg-fee-kor'),
+    feeUs:      v('cfg-fee-us'),
+    wrCoin:     v('cfg-wr-coin'),
+    wrKor:      v('cfg-wr-kor'),
+    wrUs:       v('cfg-wr-us'),
+    tether:     parseNum('cfg-tether'),
+    usdRate:    parseNum('cfg-usd'),
+    totalGoal:  parseNum('cfg-total-goal'),
+    strategies: strategies,
+  };
+  settings = cfg;
+  await setDoc(doc(db, 'users', currentUid, 'config', 'settings'), cfg);
+  alert('설정이 저장되었습니다.');
+  renderDashboard();
+};
+
+function applySettingsToUI() {
+  const s = settings;
+  if (!s) return;
+  if (s.seedCoin)  setFmt('cfg-seed-coin', s.seedCoin);
+  if (s.seedKor)   setFmt('cfg-seed-kor',  s.seedKor);
+  if (s.seedUs)    setFmt('cfg-seed-us',   s.seedUs);
+  if (s.goalCoin)  sv('cfg-goal-coin', s.goalCoin);
+  if (s.goalKor)   sv('cfg-goal-kor',  s.goalKor);
+  if (s.goalUs)    sv('cfg-goal-us',   s.goalUs);
+  if (s.riskCoin)  sv('cfg-risk-coin', s.riskCoin);
+  if (s.riskKor)   sv('cfg-risk-kor',  s.riskKor);
+  if (s.riskUs)    sv('cfg-risk-us',   s.riskUs);
+  if (s.feeCoin)   sv('cfg-fee-coin',  s.feeCoin);
+  if (s.feeKor)    sv('cfg-fee-kor',   s.feeKor);
+  if (s.feeUs)     sv('cfg-fee-us',    s.feeUs);
+  if (s.wrCoin)    sv('cfg-wr-coin',   s.wrCoin);
+  if (s.wrKor)     sv('cfg-wr-kor',    s.wrKor);
+  if (s.wrUs)      sv('cfg-wr-us',     s.wrUs);
+  if (s.tether)    setFmt('cfg-tether',     s.tether);
+  if (s.usdRate)   setFmt('cfg-usd',        s.usdRate);
+  if (s.totalGoal) setFmt('cfg-total-goal', s.totalGoal);
+}
+
+// ── Trade CRUD ───────────────────────────────────────────────────────────────
+window.saveTrade = async function(isOpen) {
+  const editId  = v('m-edit-id');
+  const market  = v('m-market');
+  const dateS   = v('m-date-start');
+  const timeS   = v('m-time-start');
+
+  if (!dateS || !v('m-symbol').trim()) {
+    alert('날짜와 종목명은 필수입니다.'); return;
   }
-  btn.disabled = false;
-  btn.textContent = '+ 기록 추가';
+
+  const pnl   = parseFloat(v('m-pnl'))  || null;
+  const seed  = parseFloat(v('m-seed')) || null;
+  const risk  = getRiskPct(market);
+  const rVal  = (pnl !== null && seed) ? pnl / (seed * risk / 100) : null;
+  const tetherRate = parseFloat(v('m-tether')) || getTether();
+  const usdRate    = parseFloat(v('m-usd'))    || getUsdRate();
+  let   krw = null;
+  if (pnl !== null) {
+    if (market === 'coin') krw = pnl * tetherRate;
+    else if (market === 'us') krw = pnl * usdRate;
+    else krw = pnl;
+  }
+
+  // 당일 시장별 N 계산
+  const sameDay = trades.filter(t =>
+    t.market === market && t.dateStart === dateS && (!editId || t.id !== editId)
+  );
+  const n = sameDay.length + (editId ? 0 : 1);
+
+  const dow = dateS ? DAYS[new Date(dateS + 'T12:00:00').getDay()] : '';
+  const dur = calcDurValue();
+
+  const data = {
+    market,
+    strategy:  v('m-strategy'),
+    dir:       v('m-dir'),
+    symbol:    v('m-symbol').trim(),
+    dateStart: dateS,
+    dateEnd:   v('m-date-end') || null,
+    timeStart: timeS || null,
+    timeEnd:   v('m-time-end') || null,
+    duration:  dur || null,
+    pnl,
+    seed,
+    rVal,
+    krw,
+    memo:      v('m-memo').trim() || null,
+    chartUrl:  v('m-chart-url').trim() || null,
+    isOpen:    isOpen || (!v('m-time-end') && !v('m-date-end') && pnl === null),
+    dow,
+    n,
+    tetherRate: market === 'coin' ? tetherRate : null,
+    usdRate:    market === 'us'   ? usdRate    : null,
+    updatedAt:  Date.now(),
+  };
+
+  if (editId) {
+    await setDoc(doc(db, 'users', currentUid, 'trades', editId), data);
+  } else {
+    data.createdAt = Date.now();
+    await addDoc(collection(db, 'users', currentUid, 'trades'), data);
+  }
+  closeModal();
 };
 
-// Delete trade
-window.deleteTrade = async (id) => {
-  if (!confirm('삭제할까요?')) return;
-  await deleteDoc(doc(db, 'users', currentUser.uid, 'trades', id));
+window.doDelete = async function() {
+  if (!delTargetId) return;
+  await deleteDoc(doc(db, 'users', currentUid, 'trades', delTargetId));
+  closeDel();
 };
 
-// Filter
-window.setFilter = (filter, el) => {
-  currentFilter = filter;
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+// ── Render: Trades ───────────────────────────────────────────────────────────
+function renderTrades() {
+  const body = document.getElementById('trade-body');
+  const filtered = filterTrades(trades, logMarket);
+  if (!filtered.length) {
+    body.innerHTML = `<div style="padding:32px;text-align:center;color:var(--text3);font-size:13px;">거래 기록이 없습니다</div>`;
+    return;
+  }
+  body.innerHTML = filtered.map(t => buildTradeRow(t)).join('');
+}
+
+function filterTrades(list, f) {
+  if (f === 'all') return list;
+  if (f === 'long' || f === 'short') return list.filter(t => t.dir === f);
+  return list.filter(t => t.market === f);
+}
+
+function buildTradeRow(t) {
+  const mktBadge = `<span class="badge b-${t.market}">${{coin:'코인',kor:'국장',us:'미장'}[t.market]||t.market}</span>`;
+  const dirBadge = t.isOpen
+    ? `<span class="badge b-open">오픈</span>`
+    : `<span class="badge b-${t.dir}">${t.dir === 'long' ? '롱' : '숏'}</span>`;
+  const pnlStr = t.pnl === null ? '<span style="color:var(--text3)">미결</span>'
+    : `<span style="color:${t.pnl>=0?'var(--green)':'var(--red)'};font-weight:500;">${t.pnl>=0?'+':''}${t.pnl?.toFixed(2)}${t.market==='kor'?'₩':'$'}</span>`;
+  const rStr = t.rVal === null ? '<span style="color:var(--text3)">—</span>'
+    : `<span style="color:${t.rVal>=0?'var(--green)':'var(--red)'};">${t.rVal>=0?'+':''}${t.rVal?.toFixed(2)}R</span>`;
+
+  const timeStr = t.timeStart
+    ? (t.timeEnd ? `${fmtTime(t.timeStart)}~${fmtTime(t.timeEnd)}` : `${fmtTime(t.timeStart)} ~`)
+    : '';
+
+  const memo = t.memo || '';
+  const chartSection = t.chartUrl
+    ? `<div class="chart-block-label">차트 이미지</div>
+       <div class="chart-link-box">
+         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M12 8v4l3 3"/></svg>
+         <a href="${t.chartUrl}" target="_blank" rel="noopener">구글 드라이브에서 차트 보기</a>
+       </div>`
+    : `<div class="chart-block-label">차트 이미지</div><div class="chart-empty">차트 이미지 없음</div>`;
+
+  const expandHtml = `
+    <div class="memo-block">
+      <div class="memo-header">메모</div>
+      <div class="memo-text ${memo?'':'empty'}">${memo || '메모 없음'}</div>
+    </div>
+    ${chartSection}`;
+
+  return `
+    <div class="trade-row" id="row-${t.id}" data-market="${t.market}" data-dir="${t.dir||''}"
+         onclick="toggleExp('${t.id}',event)">
+      <div><div>${fmtDate(t.dateStart)}</div><div style="font-size:10px;color:var(--text3);">${timeStr}</div></div>
+      ${mktBadge}
+      <span style="font-weight:500;">${t.symbol}</span>
+      <div style="display:flex;flex-direction:column;gap:3px;">${dirBadge}<span style="font-size:10px;color:var(--text3);">${t.strategy||''}</span></div>
+      <span style="text-align:right;">${pnlStr}</span>
+      <span style="text-align:right;">${rStr}</span>
+      <span style="font-size:11px;color:var(--text3);">${t.duration||'—'}</span>
+      <span></span>
+      <div class="trade-actions">
+        <button class="btn-edit" onclick="openEdit('${t.id}',event)">✏</button>
+        <button class="btn-del"  onclick="confirmDel('${t.id}',event)">🗑</button>
+      </div>
+    </div>
+    <div class="trade-expand" id="exp-${t.id}">${expandHtml}</div>`;
+}
+
+// ── Render: Dashboard ────────────────────────────────────────────────────────
+function renderDashboard() {
+  const filtered = filterTrades(trades, dbMarket);
+  const closed   = filtered.filter(t => !t.isOpen && t.pnl !== null);
+  const wins     = closed.filter(t => t.pnl > 0);
+  const losses   = closed.filter(t => t.pnl <= 0);
+  const wr       = closed.length ? (wins.length / closed.length * 100).toFixed(1) : '—';
+  const avgR     = closed.length ? (closed.reduce((s,t) => s + (t.rVal||0), 0) / closed.length) : null;
+
+  // 누적 손익 (원화)
+  const totalKrw = filtered.filter(t => t.krw !== null).reduce((s,t) => s + (t.krw||0), 0);
+
+  // 시장 단위 손익
+  let pnlDisplay = '—';
+  if (dbMarket === 'all') {
+    pnlDisplay = (totalKrw >= 0 ? '+' : '') + '₩' + Math.round(totalKrw).toLocaleString('ko-KR');
+  } else {
+    const sum = closed.reduce((s,t) => s + (t.pnl||0), 0);
+    const sym = dbMarket === 'kor' ? '₩' : '$';
+    pnlDisplay = (sum >= 0 ? '+' : '') + sym + Math.abs(sum).toFixed(2);
+  }
+
+  setText('d-pnl', pnlDisplay, totalKrw >= 0 ? 'pos' : 'neg');
+  document.getElementById('d-pnl-s').textContent = dbMarket === 'all' ? '원화환산 합계' : `${dbMarket==='coin'?'코인':dbMarket==='kor'?'국장':'미장'} 누적`;
+  setText('d-wr',  wr === '—' ? '—' : wr + '%');
+  document.getElementById('d-wr-s').textContent = closed.length ? `${wins.length}승 ${losses.length}패 (미결 ${filtered.filter(t=>t.isOpen).length})` : '거래 없음';
+  setText('d-r',   avgR === null ? '—' : (avgR >= 0 ? '+' : '') + avgR.toFixed(2) + 'R', avgR === null ? '' : avgR >= 0 ? 'pos' : 'neg');
+
+  const goalR = R_GOALS[dbMarket] || 1.25;
+  document.getElementById('d-r-s').textContent = `목표 +${goalR}R`;
+  setText('d-cnt', String(filtered.length));
+
+  // 연속 승패
+  let sw = 0, sl = 0, cur = 0;
+  closed.forEach(t => {
+    if (t.pnl > 0) { cur = Math.max(0, cur) + 1; sw = Math.max(sw, cur); }
+    else            { cur = Math.min(0, cur) - 1; sl = Math.max(sl, -cur); }
+  });
+  document.getElementById('d-sw').textContent = sw;
+  document.getElementById('d-sl').textContent = sl;
+
+  // 최대 DD
+  let peak = 0, dd = 0, ddR = 0, cum = 0, cumR = 0;
+  closed.forEach(t => {
+    cum  += t.krw  || 0;
+    cumR += t.rVal || 0;
+    peak  = Math.max(peak, cum);
+    dd    = Math.min(dd,   cum - peak);
+    ddR   = Math.min(ddR,  cumR);
+  });
+  const ddStr = dd === 0 ? '—' : (dd >= 0 ? '+' : '') + '₩' + Math.round(Math.abs(dd)).toLocaleString('ko-KR');
+  document.getElementById('d-dd-pnl').textContent = dd < 0 ? '-₩' + Math.round(-dd).toLocaleString('ko-KR') : '—';
+  document.getElementById('d-dd-r').textContent   = ddR < 0 ? ddR.toFixed(2) + 'R' : '—';
+
+  // 롱/숏
+  const longs  = filtered.filter(t => t.dir === 'long'  && !t.isOpen && t.pnl !== null);
+  const shorts = filtered.filter(t => t.dir === 'short' && !t.isOpen && t.pnl !== null);
+  document.getElementById('d-long-cnt').textContent  = longs.length + '건';
+  document.getElementById('d-short-cnt').textContent = shorts.length + '건';
+  const longWr  = longs.length  ? (longs.filter(t=>t.pnl>0).length/longs.length*100).toFixed(0)+'%' : '—';
+  const shortWr = shorts.length ? (shorts.filter(t=>t.pnl>0).length/shorts.length*100).toFixed(0)+'%' : '—';
+  const longR   = longs.length  ? (longs.reduce((s,t)=>s+(t.rVal||0),0)/longs.length).toFixed(2)+'R' : '—';
+  const shortR  = shorts.length ? (shorts.reduce((s,t)=>s+(t.rVal||0),0)/shorts.length).toFixed(2)+'R' : '—';
+  document.getElementById('d-long-wr').textContent  = '승률 ' + longWr;
+  document.getElementById('d-short-wr').textContent = '승률 ' + shortWr;
+  document.getElementById('d-long-r').textContent   = longR;
+  document.getElementById('d-short-r').textContent  = shortR;
+
+  // R 분포
+  const rBuckets = [0,0,0,0,0,0,0];
+  closed.forEach(t => {
+    const r = t.rVal || 0;
+    if      (r <= -2)   rBuckets[0]++;
+    else if (r <= -1.5) rBuckets[1]++;
+    else if (r <= 0)    rBuckets[2]++;
+    else if (r <= 1)    rBuckets[3]++;
+    else if (r <= 2)    rBuckets[4]++;
+    else if (r <= 3)    rBuckets[5]++;
+    else                rBuckets[6]++;
+  });
+  renderRDist(rBuckets);
+
+  // 전략별
+  const stratMap = {};
+  filtered.forEach(t => {
+    if (t.strategy) stratMap[t.strategy] = (stratMap[t.strategy]||0) + 1;
+  });
+  const stratData = strategies.map(s => ({ n: s, c: stratMap[s] || 0 }));
+  renderStrategyBars(stratData);
+
+  // 월별
+  renderMonthly(filtered);
+}
+
+function renderRDist(dist) {
+  const bars = document.getElementById('r-dist-bars');
+  const lbls = document.getElementById('r-dist-labels');
+  const max  = Math.max(...dist, 1);
+  bars.innerHTML = dist.map((v,i) =>
+    `<div class="r-dist-col"><div class="r-dist-bar" style="height:${Math.max(3,Math.round(v/max*68))}px;background:${R_COLORS[i]};"></div></div>`
+  ).join('');
+  lbls.innerHTML = R_LABELS.map(l =>
+    `<div class="r-dist-lbl">${l}</div>`
+  ).join('');
+}
+
+function renderStrategyBars(data) {
+  const max = Math.max(...data.map(d => d.c), 1);
+  document.getElementById('db-strategy-bars').innerHTML = data.map((d,i) =>
+    `<div class="bar-row">
+       <div class="bar-lbl" title="${d.n}">${d.n}</div>
+       <div class="bar-track"><div class="bar-fill" style="width:${d.c===0?0:Math.max(4,Math.round(d.c/max*100))}%;background:${BAR_COLORS[i%BAR_COLORS.length]};"></div></div>
+       <div class="bar-count">${d.c}건</div>
+     </div>`
+  ).join('');
+}
+
+function renderMonthly(list) {
+  const months = {};
+  list.filter(t => !t.isOpen && t.pnl !== null).forEach(t => {
+    const m = t.dateStart ? t.dateStart.slice(0,7) : '—';
+    if (!months[m]) months[m] = { cnt:0, wins:0, pnlSum:0, rSum:0, maxPnl:-Infinity, minPnl:Infinity };
+    months[m].cnt++;
+    if (t.pnl > 0) months[m].wins++;
+    months[m].pnlSum += t.krw || 0;
+    months[m].rSum   += t.rVal || 0;
+    months[m].maxPnl = Math.max(months[m].maxPnl, t.pnl || 0);
+    months[m].minPnl = Math.min(months[m].minPnl, t.pnl || 0);
+  });
+  const tbody = document.getElementById('monthly-tbody');
+  const entries = Object.entries(months).sort((a,b) => b[0].localeCompare(a[0]));
+  if (!entries.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3);">데이터 없음</td></tr>'; return; }
+  tbody.innerHTML = entries.map(([m, d]) => {
+    const wr = (d.wins / d.cnt * 100).toFixed(0) + '%';
+    const ar = (d.rSum / d.cnt).toFixed(2) + 'R';
+    const pnlC = d.pnlSum >= 0 ? 'var(--green)' : 'var(--red)';
+    const rC   = d.rSum  >= 0 ? 'var(--green)' : 'var(--red)';
+    const mLabel = m !== '—' ? m.slice(5) + '월' : '—';
+    const maxStr = d.maxPnl === -Infinity ? '—' : (d.maxPnl >= 0 ? '+' : '') + d.maxPnl.toFixed(2);
+    const minStr = d.minPnl ===  Infinity ? '—' : d.minPnl.toFixed(2);
+    return `<tr>
+      <td style="font-weight:500;">${mLabel}</td>
+      <td style="text-align:right;">${d.cnt}</td>
+      <td style="text-align:right;">${wr}</td>
+      <td style="text-align:right;color:${pnlC};">${d.pnlSum>=0?'+':''}₩${Math.round(Math.abs(d.pnlSum)).toLocaleString('ko-KR')}</td>
+      <td style="text-align:right;color:${rC};">${ar}</td>
+      <td style="text-align:right;color:var(--green);">${maxStr}</td>
+      <td style="text-align:right;color:var(--red);">${minStr}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── UI Helpers ───────────────────────────────────────────────────────────────
+window.switchTab = function(n) {
+  ['dashboard','log','settings'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('active', t===n);
+    document.getElementById('screen-'+t).classList.toggle('active', t===n);
+  });
+};
+
+window.dbFilter = function(el, m) {
+  dbMarket = m;
+  el.closest('.fbar').querySelectorAll('.fchip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderDashboard();
+};
+
+window.logFilter = function(el, f) {
+  logMarket = f;
+  el.closest('.fbar').querySelectorAll('.fchip').forEach(c => c.classList.remove('active'));
   el.classList.add('active');
   renderTrades();
 };
 
-function renderTrades() {
-  const list = document.getElementById('trade-list');
-  const filtered = currentFilter === 'all' ? allTrades
-    : allTrades.filter(t => t.side === currentFilter);
+window.toggleExp = function(id, e) {
+  if (e.target.closest('.trade-actions')) return;
+  const el = document.getElementById('exp-' + id);
+  if (el) el.style.display = el.style.display === 'block' ? 'none' : 'block';
+};
 
-  document.getElementById('list-label').textContent =
-    `${filtered.length}건`;
+// ── Modal ────────────────────────────────────────────────────────────────────
+window.openModal = function() {
+  clearModal();
+  sv('m-edit-id', '');
+  document.getElementById('modal-title-txt').textContent = '새 거래 입력';
+  // 날짜 오늘 기본값
+  sv('m-date-start', new Date().toISOString().slice(0,10));
+  updateAutoN();
+  document.getElementById('modal-ov').classList.add('open');
+};
 
-  if (filtered.length === 0) {
-    list.innerHTML = `<div class="empty-state"><div class="icon">📋</div><div>기록이 없습니다</div></div>`;
-    return;
+window.openEdit = function(id, e) {
+  e.stopPropagation();
+  const t = trades.find(x => x.id === id);
+  if (!t) return;
+  clearModal();
+  sv('m-edit-id',     t.id);
+  sv('m-market',      t.market);
+  sv('m-strategy',    t.strategy);
+  sv('m-dir',         t.dir);
+  sv('m-symbol',      t.symbol);
+  sv('m-date-start',  t.dateStart || '');
+  sv('m-date-end',    t.dateEnd   || '');
+  sv('m-time-start',  t.timeStart || '');
+  sv('m-time-end',    t.timeEnd   || '');
+  if (t.pnl  !== null && t.pnl  !== undefined) sv('m-pnl',    String(t.pnl));
+  if (t.seed !== null && t.seed !== undefined) sv('m-seed',   String(t.seed));
+  if (t.tetherRate) sv('m-tether', String(t.tetherRate));
+  if (t.usdRate)    sv('m-usd',    String(t.usdRate));
+  sv('m-memo',      t.memo      || '');
+  sv('m-chart-url', t.chartUrl  || '');
+  document.getElementById('modal-title-txt').textContent = '거래 수정';
+  onMarketChange();
+  calcDur(); calcR();
+  document.getElementById('modal-ov').classList.add('open');
+};
+
+window.closeModal = function() {
+  document.getElementById('modal-ov').classList.remove('open');
+};
+window.bgClose = function(e) {
+  if (e.target === document.getElementById('modal-ov')) closeModal();
+};
+
+function clearModal() {
+  ['m-edit-id','m-symbol','m-date-start','m-date-end',
+   'm-time-start','m-time-end','m-pnl','m-seed',
+   'm-tether','m-usd','m-memo','m-chart-url'].forEach(id => sv(id,''));
+  sv('m-market','coin'); sv('m-dir','short');
+  onMarketChange();
+  document.getElementById('dur-out').textContent = '시간 입력 후 표시';
+  document.getElementById('r-out').textContent = '— R';
+  document.getElementById('r-out').style.color = '';
+  ['krw-coin','krw-us','krw-summary'].forEach(id => { const el=ge(id); if(el){el.textContent='— ₩';el.style.color='';} });
+  document.getElementById('dur-summary').textContent = '—';
+  document.getElementById('auto-n').textContent = '—';
+  document.getElementById('auto-dow').textContent = '—';
+}
+
+window.confirmDel = function(id, e) {
+  e.stopPropagation();
+  delTargetId = id;
+  document.getElementById('del-overlay').classList.add('open');
+};
+window.closeDel = function() {
+  document.getElementById('del-overlay').classList.remove('open');
+  delTargetId = null;
+};
+
+// ── Form Calculations ────────────────────────────────────────────────────────
+window.onMarketChange = function() {
+  const m = v('m-market');
+  const goals = { coin: '+1.25R', kor: '+1.75R', us: '+1.52R' };
+  const lbls  = { coin: '코인 기준', kor: '국장 기준', us: '미장 기준' };
+  ge('r-goal-val').textContent = goals[m] || '+1.25R';
+  ge('r-goal-mkt').textContent = lbls[m]  || '';
+  ge('rate-coin-row').style.display = m === 'coin' ? '' : 'none';
+  ge('rate-us-row').style.display   = m === 'us'   ? '' : 'none';
+  ge('rate-section').style.display  = m === 'kor'  ? 'none' : '';
+  calcR();
+  updateAutoN();
+};
+
+window.calcDur = function() {
+  const s = v('m-time-start'), e = v('m-time-end');
+  const el = ge('dur-out'), ds = ge('dur-summary');
+  const result = calcDurValue();
+  el.textContent = result || '시간 입력 후 표시';
+  if (ds) ds.textContent = result || '—';
+};
+
+function calcDurValue() {
+  const s = v('m-time-start'), e = v('m-time-end');
+  if (s.length === 4 && e.length === 4) {
+    const sh = +s.slice(0,2), sm = +s.slice(2,4), eh = +e.slice(0,2), em = +e.slice(2,4);
+    if (!isNaN(sh+sm+eh+em)) {
+      let d = (eh*60+em)-(sh*60+sm); if(d<0) d+=1440;
+      const h = Math.floor(d/60), min = d%60;
+
+      // 날짜가 다른 경우 경과일 포함
+      const ds = v('m-date-start'), de = v('m-date-end');
+      if (ds && de && ds !== de) {
+        const days = Math.round((new Date(de)-new Date(ds))/(1000*60*60*24));
+        if (days > 0) return `${days}일 ${h?h+'h':''}${min?min+'m':''}`.trim();
+      }
+      return h > 0 ? (min > 0 ? `${h}h ${min}m` : `${h}h`) : `${min}m`;
+    }
+  }
+  // 날짜만으로 기간 계산 (스윙)
+  const ds2 = v('m-date-start'), de2 = v('m-date-end');
+  if (ds2 && de2 && ds2 !== de2) {
+    const days = Math.round((new Date(de2)-new Date(ds2))/(1000*60*60*24));
+    if (days > 0) return `${days}일`;
+  }
+  return '';
+}
+
+window.calcR = function() {
+  const pnl  = parseFloat(v('m-pnl'));
+  const seed = parseFloat(v('m-seed'));
+  const mkt  = v('m-market');
+  const risk = getRiskPct(mkt);
+  const rEl  = ge('r-out');
+  const cfgT = getTether();
+  const cfgU = getUsdRate();
+  const tether = parseFloat(v('m-tether')) || cfgT;
+  const usd    = parseFloat(v('m-usd'))    || cfgU;
+
+  if (!isNaN(pnl) && !isNaN(seed) && seed > 0) {
+    const r = pnl / (seed * risk / 100);
+    rEl.textContent = (r>=0?'+':'') + r.toFixed(2) + 'R';
+    rEl.style.color = r >= 0 ? 'var(--green)' : 'var(--red)';
+    let krw = mkt==='coin' ? pnl*tether : mkt==='us' ? pnl*usd : pnl;
+    const txt = (krw>=0?'+':'') + '₩' + Math.round(krw).toLocaleString('ko-KR');
+    ['krw-coin','krw-us','krw-summary'].forEach(id => {
+      const el = ge(id); if(el){el.textContent=txt; el.style.color=krw>=0?'var(--green)':'var(--red)';}
+    });
+  } else {
+    rEl.textContent = '— R'; rEl.style.color = '';
+    ['krw-coin','krw-us','krw-summary'].forEach(id => { const el=ge(id); if(el){el.textContent='— ₩';el.style.color='';} });
   }
 
-  list.innerHTML = filtered.map(t => {
-    const isUp = t.pnl >= 0;
-    const pnlStr = (isUp ? '+' : '') + t.pnl.toLocaleString() + '원';
-    const sideLabel = t.side === 'buy' ? '매수' : '매도';
-    const priceStr = t.entry && t.exit ? `${t.entry.toLocaleString()} → ${t.exit.toLocaleString()}` : '';
-    return `
-    <div class="trade-item">
-      <div class="trade-side ${t.side}">${sideLabel}</div>
-      <div class="trade-info">
-        <div class="trade-name">${escHtml(t.name)}</div>
-        <div class="trade-meta">${t.date}${priceStr ? ' · ' + priceStr : ''}</div>
-        ${t.memo ? `<div class="trade-memo">${escHtml(t.memo)}</div>` : ''}
-      </div>
-      <div class="trade-right">
-        <div class="trade-pnl ${isUp ? 'up' : 'down'}">${pnlStr}</div>
-        <button class="trade-delete" onclick="deleteTrade('${t.id}')">×</button>
-      </div>
-    </div>`;
-  }).join('');
+  // 요일 자동
+  const ds = v('m-date-start');
+  if (ds) {
+    const dow = DAYS[new Date(ds+'T12:00:00').getDay()];
+    ge('auto-dow').textContent = dow + '요일';
+  }
+};
+
+function updateAutoN() {
+  const market = v('m-market');
+  const dateS  = v('m-date-start');
+  const editId = v('m-edit-id');
+  if (!dateS) { ge('auto-n').textContent = '—'; return; }
+  const same = trades.filter(t => t.market === market && t.dateStart === dateS && (!editId || t.id !== editId));
+  ge('auto-n').textContent = same.length + 1;
 }
 
-function updateSummary() {
-  const total = allTrades.reduce((s, t) => s + (t.pnl || 0), 0);
-  const wins = allTrades.filter(t => t.pnl > 0).length;
-  const rate = allTrades.length ? Math.round(wins / allTrades.length * 100) : null;
+// ── Strategy ─────────────────────────────────────────────────────────────────
+window.renderStrategies = function() {
+  const list = document.getElementById('strategy-list');
+  list.innerHTML = '';
+  strategies.forEach((s, i) => {
+    const item = document.createElement('div');
+    item.className = 'strategy-item';
+    item.innerHTML = `
+      <span class="strategy-name" id="sname-${i}">${s}</span>
+      <input class="strategy-edit-input" id="sedit-${i}" value="${s}" onkeydown="if(event.key==='Enter')saveStrategy(${i})">
+      <button class="btn-icon" id="sedit-btn-${i}" onclick="startEditS(${i})">✏</button>
+      <button class="btn-icon confirm" id="ssave-btn-${i}" style="display:none;" onclick="saveStrategy(${i})">✓</button>
+      <button class="btn-icon danger" onclick="removeStrategy(${i})">✕</button>`;
+    list.appendChild(item);
+  });
+};
 
-  const pnlEl = document.getElementById('total-pnl');
-  pnlEl.textContent = (total >= 0 ? '+' : '') + total.toLocaleString() + '원';
-  pnlEl.className = 'summary-value ' + (total > 0 ? 'up' : total < 0 ? 'down' : 'neutral');
-
-  document.getElementById('win-rate').textContent = rate !== null ? rate + '%' : '-';
-  document.getElementById('trade-count').textContent = allTrades.length;
+window.startEditS = function(i) {
+  ge('sname-'+i).style.display = 'none';
+  ge('sedit-'+i).style.display = 'block';
+  ge('sedit-btn-'+i).style.display = 'none';
+  ge('ssave-btn-'+i).style.display = '';
+  ge('sedit-'+i).focus();
+};
+window.saveStrategy = function(i) {
+  const val = ge('sedit-'+i).value.trim();
+  if (val) { strategies[i] = val; renderStrategies(); syncStrategySelect(); }
+};
+window.removeStrategy = function(i) {
+  if (strategies.length <= 1) { alert('최소 1개 전략이 필요합니다.'); return; }
+  strategies.splice(i, 1);
+  renderStrategies(); syncStrategySelect();
+};
+window.addStrategy = function() {
+  const inp = ge('new-strategy-input');
+  const val = inp.value.trim();
+  if (!val) return;
+  strategies.push(val); inp.value = '';
+  renderStrategies(); syncStrategySelect();
+};
+function syncStrategySelect() {
+  const sel = ge('m-strategy'); if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = strategies.map(s => `<option value="${s}">${s}</option>`).join('');
+  if (strategies.includes(cur)) sel.value = cur;
 }
 
-function escHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+// ── Settings helpers ─────────────────────────────────────────────────────────
+window.fmtComma = function(el) {
+  const raw = parseFloat(el.value.replace(/,/g,''));
+  if (!isNaN(raw)) el.value = raw.toLocaleString('ko-KR');
+};
+window.rawNum = function(el) {
+  const p = el.selectionStart;
+  el.value = el.value.replace(/[^0-9.]/g,'');
+  try { el.setSelectionRange(p, p); } catch(e){}
+};
+
+// ── Utility ──────────────────────────────────────────────────────────────────
+function v(id)   { const el=ge(id); return el ? el.value : ''; }
+function sv(id, val) { const el=ge(id); if(el) el.value=val; }
+function ge(id)  { return document.getElementById(id); }
+function setText(id, txt, cls='') {
+  const el = ge(id); if (!el) return;
+  el.textContent = txt;
+  el.className = 'kpi-val ' + cls;
+}
+function setFmt(id, num) {
+  const el = ge(id); if (!el) return;
+  el.value = Number(num).toLocaleString('ko-KR');
+}
+function parseNum(id) {
+  return parseFloat((v(id)||'').replace(/,/g,'')) || 0;
+}
+function getTether()  { return parseNum('cfg-tether')  || (settings.tether  || 1482); }
+function getUsdRate() { return parseNum('cfg-usd')     || (settings.usdRate || 1491); }
+function getRiskPct(market) {
+  const riskStr = {coin: v('cfg-risk-coin'), kor: v('cfg-risk-kor'), us: v('cfg-risk-us')}[market] || '1%';
+  return parseFloat(riskStr) || 1;
+}
+function fmtDate(d) {
+  if (!d) return '—';
+  const dt = new Date(d + 'T12:00:00');
+  return `${(dt.getMonth()+1).toString().padStart(2,'0')}/${dt.getDate().toString().padStart(2,'0')} ${DAYS[dt.getDay()]}`;
+}
+function fmtTime(t) {
+  if (!t || t.length < 4) return '';
+  return t.slice(0,2) + ':' + t.slice(2,4);
 }
 
-// Set default date to today
-document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
+// ── Init ─────────────────────────────────────────────────────────────────────
+renderStrategies();
+renderRDist([0,0,0,0,0,0,0]);
+renderStrategyBars(strategies.map(s => ({n:s,c:0})));
+document.getElementById('m-date-start').value = new Date().toISOString().slice(0,10);
+
 </script>
 </body>
 </html>
