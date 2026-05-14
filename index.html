@@ -516,7 +516,7 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
 
 /* ── Toast ── */
 .toast {
-  position: fixed; bottom: 80px; left: 50%;
+  position: fixed; bottom: 24px; left: 50%;
   transform: translateX(-50%) translateY(8px);
   background: var(--bg4); border: 1px solid var(--border2);
   color: var(--text); font-size: 13px; padding: 10px 20px;
@@ -525,28 +525,6 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
   white-space: nowrap;
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-/* ── Bottom Nav (모바일) ── */
-.bottom-nav {
-  display: none;
-  position: fixed; bottom: 0; left: 0; right: 0;
-  height: 60px;
-  background: var(--bg2); border-top: 1px solid var(--border2);
-  z-index: 200;
-  padding-bottom: env(safe-area-inset-bottom);
-}
-.bottom-nav-inner {
-  display: flex; height: 100%;
-}
-.bnav-item {
-  flex: 1; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 3px;
-  font-size: 10px; color: var(--text3);
-  background: none; border: none; cursor: pointer;
-  font-family: var(--font); transition: color .15s;
-}
-.bnav-item svg { width: 20px; height: 20px; }
-.bnav-item.active { color: var(--accent); }
 
 /* ── 카드형 거래 행 (모바일 전용) ── */
 .trade-card {
@@ -559,90 +537,132 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
 .trade-card:hover { background: var(--bg3); }
 .trade-card:last-of-type { border-bottom: none; }
 .tc-top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-.tc-symbol { font-size: 15px; font-weight: 600; color: var(--text); flex: 1; }
-.tc-pnl { font-size: 15px; font-weight: 600; }
+.tc-symbol { font-size: 15px; font-weight: 600; color: var(--text); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tc-pnl { font-size: 15px; font-weight: 600; flex-shrink: 0; }
 .tc-bot { display: flex; align-items: center; gap: 6px; }
-.tc-meta { font-size: 11px; color: var(--text3); margin-left: auto; }
+.tc-meta { font-size: 11px; color: var(--text3); margin-left: auto; flex-shrink: 0; }
+
+/* ── FAB (새 거래 플로팅 버튼) ── */
+.fab {
+  display: none;
+  position: fixed; bottom: 24px; right: 20px;
+  width: 56px; height: 56px;
+  background: var(--accent); color: #fff;
+  border: none; border-radius: 50%;
+  font-size: 28px; line-height: 1;
+  cursor: pointer; z-index: 150;
+  box-shadow: 0 4px 16px rgba(79,143,255,.4);
+  transition: background .15s, transform .15s;
+  align-items: center; justify-content: center;
+}
+.fab:hover { background: var(--accent2); transform: scale(1.06); }
+.fab:active { transform: scale(.96); }
+
+/* ── 아코디언 (시장 설정) ── */
+.accordion-item {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-md); margin-bottom: 8px; overflow: hidden;
+}
+.accordion-trigger {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; cursor: pointer; transition: background .12s;
+  border: none; background: transparent; width: 100%;
+  text-align: left; font-family: var(--font);
+}
+.accordion-trigger:hover { background: var(--bg4); }
+.accordion-trigger.open { border-bottom: 1px solid var(--border); }
+.acc-title { display: flex; align-items: center; gap: 10px; }
+.acc-seed { font-size: 12px; color: var(--text3); }
+.acc-arrow { font-size: 16px; color: var(--text3); transition: transform .2s; }
+.accordion-trigger.open .acc-arrow { transform: rotate(90deg); }
+.accordion-body { display: none; padding: 14px 16px; }
+.accordion-body.open { display: block; }
+.acc-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 0; border-bottom: 1px solid var(--border);
+}
+.acc-row:last-child { border-bottom: none; }
+.acc-lbl { font-size: 13px; color: var(--text2); }
+.acc-val { font-size: 13px; font-weight: 500; color: var(--text); }
+.acc-input { background: var(--bg4); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 6px 10px; color: var(--text); font-size: 13px; font-family: var(--font); text-align: right; width: 130px; outline: none; transition: border-color .15s; }
+.acc-input:focus { border-color: var(--accent); }
+
+/* ── 월별 그래프 ── */
+.chart-tab-bar { display: flex; gap: 4px; margin-bottom: 14px; }
+.chart-tab { flex: 1; padding: 7px 0; text-align: center; font-size: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: transparent; color: var(--text3); cursor: pointer; font-family: var(--font); transition: all .15s; }
+.chart-tab.active { background: var(--bg4); color: var(--text); border-color: var(--border2); }
+.chart-canvas-wrap { position: relative; width: 100%; }
+#monthly-line-canvas, #monthly-bar-canvas { width: 100% !important; }
 
 /* ── Responsive ── */
 @media (max-width: 700px) {
-  /* 전체 여백 */
-  #app { padding: 0 14px 80px; }
-
-  /* 헤더 */
+  #app { padding: 0 14px 32px; }
   .top-header { padding: 14px 0 12px; }
   .top-header h1 { font-size: 15px; }
   .user-chip span { display: none; }
 
-  /* 탭바: 상단 숨기고 하단 표시 */
-  .tab-bar { display: none; }
-  .bottom-nav { display: flex; }
+  /* 탭바 유지 (상단) */
+  .tab-bar { display: flex; }
+  .tab { font-size: 12px; padding: 8px 4px; }
 
-  /* KPI: 4열 → 2×2 */
-  .kpi-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-bottom: 12px;
-  }
+  /* KPI 2×2 */
+  .kpi-grid { grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
   .kpi-val { font-size: 18px; }
   .kpi-card { padding: 13px 14px; }
 
-  /* 카드 그리드: 2열 → 1열 */
+  /* 카드 그리드 1열 */
   .grid-2 { grid-template-columns: 1fr; gap: 8px; }
+  .g2-dashboard { grid-template-columns: 1fr !important; }
 
-  /* 테이블형 거래 행: 숨김 */
+  /* 테이블 행 숨김, 카드 표시 */
   .trade-head { display: none; }
   .trade-row  { display: none; }
-
-  /* 카드형 거래 행: 표시 */
   .trade-card { display: block; }
 
-  /* 모달: 전체화면 */
+  /* 매매일지 상단 필터만 (버튼 제거) */
+  .row-hd { align-items: flex-start; }
+  .btn-add-desktop { display: none; }
+
+  /* FAB 표시 */
+  .fab { display: flex; }
+
+  /* 모달: 바텀시트 */
   .ov { padding: 0; align-items: flex-end; }
   .modal {
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     max-width: 100%; margin-bottom: 0;
     max-height: 92vh; overflow-y: auto;
-    padding: 20px 20px 32px;
+    padding: 20px 20px 40px;
   }
 
-  /* 입력 요소 터치 타겟 44px 이상 */
+  /* 터치 타겟 */
   input[type=text], input[type=number], input[type=date],
-  input[type=url], select, textarea {
-    min-height: 48px; font-size: 16px;
-  }
+  input[type=url], select, textarea { min-height: 48px; font-size: 16px; }
   textarea { min-height: 80px; }
   input.mono { font-size: 18px; }
+  .acc-input { min-height: 44px; width: 100%; }
+  .acc-row { flex-direction: column; align-items: flex-start; gap: 6px; }
 
-  /* 설정 테이블: 스크롤 */
-  .mcols-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  .mcols { min-width: 480px; }
-
-  /* 환율 행: 세로 배치 */
+  /* 설정 환율 */
   .srow { flex-direction: column; align-items: flex-start; gap: 8px; }
   .srow .input-wrap { width: 100% !important; }
 
   /* 버튼 */
   .btn-p, .btn-s, .btn-danger { min-height: 48px; font-size: 15px; }
-  .btn-add { padding: 10px 16px; min-height: 44px; }
 
-  /* 자동계산 요약: 2×2 */
+  /* 자동계산 2×2 */
   .auto-grid { grid-template-columns: 1fr 1fr; }
 
   /* 필터 칩 */
-  .fchip { padding: 6px 14px; font-size: 13px; min-height: 36px; }
+  .fchip { padding: 6px 12px; font-size: 12px; min-height: 36px; }
 
-  /* 삭제 박스 */
   .del-box { width: calc(100vw - 40px); }
-
-  /* R 분포 + 전략: 1열 */
-  .g2-dashboard { grid-template-columns: 1fr !important; }
 }
 
-/* ── 데스크탑: 카드형 숨김 ── */
 @media (min-width: 701px) {
   .trade-card { display: none; }
-  .bottom-nav { display: none; }
+  .fab { display: none; }
+  .btn-add-desktop { display: flex; }
 }
 </style>
 </head>
@@ -760,19 +780,44 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-title">월별 성과</div>
-      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
-      <table class="monthly-table" style="min-width:480px;">
-        <thead>
-          <tr>
-            <th>월</th><th>거래수</th><th>승률</th>
-            <th>총 손익</th><th>평균 R</th><th>최대 이익</th><th>최대 손실</th>
-          </tr>
-        </thead>
-        <tbody id="monthly-tbody"></tbody>
-      </table>
+    <div class="card" id="monthly-chart-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div class="card-title" style="margin-bottom:0;">월별 성과</div>
+        <div class="chart-tab-bar" style="margin-bottom:0;width:auto;gap:4px;">
+          <button class="chart-tab active" id="ctab-r"   onclick="switchChartTab('r')">R 누적</button>
+          <button class="chart-tab"        id="ctab-pnl" onclick="switchChartTab('pnl')">손익</button>
+        </div>
       </div>
+
+      <!-- R 누적 라인차트 -->
+      <div id="chart-r-wrap" class="chart-canvas-wrap">
+        <canvas id="monthly-line-canvas" height="160"></canvas>
+        <div id="chart-r-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;"></div>
+      </div>
+
+      <!-- 손익 바차트 -->
+      <div id="chart-pnl-wrap" class="chart-canvas-wrap" style="display:none;">
+        <canvas id="monthly-bar-canvas" height="160"></canvas>
+        <div id="chart-pnl-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;"></div>
+      </div>
+
+      <!-- 상세 테이블 (공통) -->
+      <details style="margin-top:14px;">
+        <summary style="font-size:11px;color:var(--text3);cursor:pointer;user-select:none;list-style:none;display:flex;align-items:center;gap:4px;">
+          <span>▸</span> 상세 데이터 보기
+        </summary>
+        <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:10px;">
+          <table class="monthly-table" style="min-width:440px;">
+            <thead>
+              <tr>
+                <th>월</th><th>거래수</th><th>승률</th>
+                <th>총 손익</th><th>평균 R</th><th>최대 이익</th><th>최대 손실</th>
+              </tr>
+            </thead>
+            <tbody id="monthly-tbody"></tbody>
+          </table>
+        </div>
+      </details>
     </div>
   </div>
 
@@ -787,7 +832,7 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
         <button class="fchip" onclick="logFilter(this,'long')">롱</button>
         <button class="fchip" onclick="logFilter(this,'short')">숏</button>
       </div>
-      <button class="btn-add" onclick="openModal()">
+      <button class="btn-add btn-add-desktop" onclick="openModal()">
         <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 1v12M1 7h12"/></svg>
         새 거래
       </button>
@@ -811,38 +856,126 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
   <div class="screen" id="screen-settings">
     <div class="card">
       <div class="card-title">시장별 파라미터</div>
-      <div class="mcols-wrap"><div class="mcols">
-        <div class="mch">항목</div><div class="mch">코인 ($)</div><div class="mch">국장 (₩)</div><div class="mch">미장 ($)</div>
-        <div class="mcc lbl">시드</div>
-        <div class="mcc"><div class="input-wrap"><span class="input-prefix">$</span><input type="text" id="cfg-seed-coin" value="3,000" onblur="fmtComma(this)" oninput="rawNum(this)"></div></div>
-        <div class="mcc"><div class="input-wrap"><span class="input-prefix">₩</span><input type="text" id="cfg-seed-kor"  value="1,000,000" onblur="fmtComma(this)" oninput="rawNum(this)"></div></div>
-        <div class="mcc"><div class="input-wrap"><span class="input-prefix">$</span><input type="text" id="cfg-seed-us"   value="1,000" onblur="fmtComma(this)" oninput="rawNum(this)"></div></div>
 
-        <div class="mcc lbl">목표 수익 비율</div>
-        <div class="mcc"><input type="text" id="cfg-goal-coin" value="40%"></div>
-        <div class="mcc"><input type="text" id="cfg-goal-kor"  value="30%"></div>
-        <div class="mcc"><input type="text" id="cfg-goal-us"   value="30%"></div>
+      <!-- 코인 아코디언 -->
+      <div class="accordion-item">
+        <button class="accordion-trigger" onclick="toggleAcc('acc-coin',this)">
+          <div class="acc-title">
+            <span class="badge b-coin">코인 $</span>
+            <span class="acc-seed" id="acc-seed-coin-preview">시드 $3,000</span>
+          </div>
+          <span class="acc-arrow">›</span>
+        </button>
+        <div class="accordion-body" id="acc-coin">
+          <div class="acc-row">
+            <span class="acc-lbl">시드</span>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="font-size:12px;color:var(--text3);">$</span>
+              <input class="acc-input" type="text" id="cfg-seed-coin" value="3,000" onblur="fmtComma(this);updateAccPreview('coin')" oninput="rawNum(this)">
+            </div>
+          </div>
+          <div class="acc-row">
+            <span class="acc-lbl">목표 수익 비율</span>
+            <input class="acc-input" type="text" id="cfg-goal-coin" value="40%">
+          </div>
+          <div class="acc-row">
+            <span class="acc-lbl">월 목표 평균 R</span>
+            <span class="acc-val" style="color:var(--green);" id="cfg-r-coin">+1.25R</span>
+          </div>
+          <div class="acc-row">
+            <span class="acc-lbl">거래당 리스크</span>
+            <input class="acc-input" type="text" id="cfg-risk-coin" value="1%">
+          </div>
+          <div class="acc-row">
+            <span class="acc-lbl">왕복 수수료</span>
+            <input class="acc-input" type="text" id="cfg-fee-coin" value="0.01%">
+          </div>
+          <div class="acc-row">
+            <span class="acc-lbl">목표 승률</span>
+            <input class="acc-input" type="text" id="cfg-wr-coin" value="50%">
+          </div>
+        </div>
+      </div>
 
-        <div class="mcc lbl">월 목표 평균 R</div>
-        <div class="mcc" style="color:var(--green);font-weight:500;" id="cfg-r-coin">+1.25R</div>
-        <div class="mcc" style="color:var(--green);font-weight:500;" id="cfg-r-kor">+1.75R</div>
-        <div class="mcc" style="color:var(--green);font-weight:500;" id="cfg-r-us">+1.52R</div>
+      <!-- 국장 아코디언 -->
+      <div class="accordion-item">
+        <button class="accordion-trigger" onclick="toggleAcc('acc-kor',this)">
+          <div class="acc-title">
+            <span class="badge b-kor">국장 ₩</span>
+            <span class="acc-seed" id="acc-seed-kor-preview">시드 ₩1,000,000</span>
+          </div>
+          <span class="acc-arrow">›</span>
+        </button>
+        <div class="accordion-body" id="acc-kor">
+          <div class="acc-row">
+            <span class="acc-lbl">시드</span>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="font-size:12px;color:var(--text3);">₩</span>
+              <input class="acc-input" type="text" id="cfg-seed-kor" value="1,000,000" onblur="fmtComma(this);updateAccPreview('kor')" oninput="rawNum(this)">
+            </div>
+          </div>
+          <div class="acc-row">
+            <span class="acc-lbl">목표 수익 비율</span>
+            <input class="acc-input" type="text" id="cfg-goal-kor" value="30%">
+          </div>
+          <div class="acc-row">
+            <span class="acc-lbl">월 목표 평균 R</span>
+            <span class="acc-val" style="color:var(--green);" id="cfg-r-kor">+1.75R</span>
+          </div>
+          <div class="acc-row">
+            <span class="acc-lbl">거래당 리스크</span>
+            <input class="acc-input" type="text" id="cfg-risk-kor" value="1%">
+          </div>
+          <div class="acc-row">
+            <span class="acc-lbl">왕복 수수료</span>
+            <input class="acc-input" type="text" id="cfg-fee-kor" value="0%">
+          </div>
+          <div class="acc-row">
+            <span class="acc-lbl">목표 승률</span>
+            <input class="acc-input" type="text" id="cfg-wr-kor" value="50%">
+          </div>
+        </div>
+      </div>
 
-        <div class="mcc lbl">거래당 리스크</div>
-        <div class="mcc"><input type="text" id="cfg-risk-coin" value="1%"></div>
-        <div class="mcc"><input type="text" id="cfg-risk-kor"  value="1%"></div>
-        <div class="mcc"><input type="text" id="cfg-risk-us"   value="1%"></div>
-
-        <div class="mcc lbl">왕복 수수료</div>
-        <div class="mcc"><input type="text" id="cfg-fee-coin" value="0.01%"></div>
-        <div class="mcc"><input type="text" id="cfg-fee-kor"  value="0%"></div>
-        <div class="mcc"><input type="text" id="cfg-fee-us"   value="0%"></div>
-
-        <div class="mcc lbl">목표 승률</div>
-        <div class="mcc"><input type="text" id="cfg-wr-coin" value="50%"></div>
-        <div class="mcc"><input type="text" id="cfg-wr-kor"  value="50%"></div>
-        <div class="mcc"><input type="text" id="cfg-wr-us"   value="50%"></div>
-      </div></div><!-- /mcols-wrap -->
+      <!-- 미장 아코디언 -->
+      <div class="accordion-item">
+        <button class="accordion-trigger" onclick="toggleAcc('acc-us',this)">
+          <div class="acc-title">
+            <span class="badge b-us">미장 $</span>
+            <span class="acc-seed" id="acc-seed-us-preview">시드 $1,000</span>
+          </div>
+          <span class="acc-arrow">›</span>
+        </button>
+        <div class="accordion-body" id="acc-us">
+          <div class="acc-row">
+            <span class="acc-lbl">시드</span>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="font-size:12px;color:var(--text3);">$</span>
+              <input class="acc-input" type="text" id="cfg-seed-us" value="1,000" onblur="fmtComma(this);updateAccPreview('us')" oninput="rawNum(this)">
+            </div>
+          </div>
+          <div class="acc-row">
+            <span class="acc-lbl">목표 수익 비율</span>
+            <input class="acc-input" type="text" id="cfg-goal-us" value="30%">
+          </div>
+          <div class="acc-row">
+            <span class="acc-lbl">월 목표 평균 R</span>
+            <span class="acc-val" style="color:var(--green);" id="cfg-r-us">+1.52R</span>
+          </div>
+          <div class="acc-row">
+            <span class="acc-lbl">거래당 리스크</span>
+            <input class="acc-input" type="text" id="cfg-risk-us" value="1%">
+          </div>
+          <div class="acc-row">
+            <span class="acc-lbl">왕복 수수료</span>
+            <input class="acc-input" type="text" id="cfg-fee-us" value="0%">
+          </div>
+          <div class="acc-row">
+            <span class="acc-lbl">목표 승률</span>
+            <input class="acc-input" type="text" id="cfg-wr-us" value="50%">
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -1041,33 +1174,14 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
   </div>
 </div>
 
-<!-- ─── 하단 네비게이션 (모바일) ─── -->
-<nav class="bottom-nav" id="bottom-nav">
-  <div class="bottom-nav-inner">
-    <button class="bnav-item active" id="bnav-dashboard" onclick="switchTab('dashboard')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
-        <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
-      </svg>
-      대시보드
-    </button>
-    <button class="bnav-item" id="bnav-log" onclick="switchTab('log')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <path d="M4 6h16M4 12h12M4 18h8"/>
-      </svg>
-      매매일지
-    </button>
-    <button class="bnav-item" id="bnav-settings" onclick="switchTab('settings')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
-      </svg>
-      설정
-    </button>
-  </div>
-</nav>
+<!-- ─── FAB (모바일 새 거래) ─── -->
+<button class="fab" onclick="openModal()" aria-label="새 거래 입력">+</button>
 
 <!-- ─── 토스트 ─── -->
 <div class="toast" id="toast"></div>
+
+<!-- Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 
 <!-- ─── Firebase Logic ─── -->
 <script type="module">
@@ -1081,13 +1195,12 @@ import { getFirestore, collection, doc,
 // ── Firebase Config ──────────────────────────────────────────────────────────
 // 아래 값을 본인의 Firebase 프로젝트 설정으로 교체하세요
 const firebaseConfig = {
-  apiKey: "AIzaSyBJt7-rMw-mhmGu5GX2-aR7gNtrg_a4k1w",
-  authDomain: "tradingjournal-f6afc.firebaseapp.com",
-  projectId: "tradingjournal-f6afc",
-  storageBucket: "tradingjournal-f6afc.firebasestorage.app",
-  messagingSenderId: "673545133862",
-  appId: "1:673545133862:web:90ec278804c2b035e96be7",
-  measurementId: "G-Y1TSX20W9C"
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "YOUR_AUTH_DOMAIN",
+  projectId:         "YOUR_PROJECT_ID",
+  storageBucket:     "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId:             "YOUR_APP_ID"
 };
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1508,49 +1621,172 @@ function renderStrategyBars(data) {
   ).join('');
 }
 
+let lineChart = null;
+let barChart  = null;
+
 function renderMonthly(list) {
   const months = {};
   list.filter(t => !t.isOpen && t.pnl !== null).forEach(t => {
     const m = t.dateStart ? t.dateStart.slice(0,7) : '—';
-    if (!months[m]) months[m] = { cnt:0, wins:0, pnlSum:0, rSum:0, maxPnl:-Infinity, minPnl:Infinity };
+    if (!months[m]) months[m] = { cnt:0, wins:0, pnlSum:0, rSum:0, rCum:0, maxPnl:-Infinity, minPnl:Infinity };
     months[m].cnt++;
     if (t.pnl > 0) months[m].wins++;
-    months[m].pnlSum += t.krw || 0;
-    months[m].rSum   += t.rVal || 0;
-    months[m].maxPnl = Math.max(months[m].maxPnl, t.pnl || 0);
-    months[m].minPnl = Math.min(months[m].minPnl, t.pnl || 0);
+    months[m].pnlSum += t.krw   || 0;
+    months[m].rSum   += t.rVal  || 0;
+    months[m].maxPnl  = Math.max(months[m].maxPnl, t.pnl || 0);
+    months[m].minPnl  = Math.min(months[m].minPnl, t.pnl || 0);
   });
+
+  const entries = Object.entries(months).sort((a,b) => a[0].localeCompare(b[0]));
+
+  // 누적 R 계산
+  let cumR = 0;
+  entries.forEach(([,d]) => { cumR += d.rSum; d.rCum = parseFloat(cumR.toFixed(2)); });
+
+  const labels    = entries.map(([m]) => m.slice(5) + '월');
+  const pnlData   = entries.map(([,d]) => Math.round(d.pnlSum));
+  const rCumData  = entries.map(([,d]) => d.rCum);
+  const pnlColors = pnlData.map(v => v >= 0 ? 'rgba(52,211,153,0.8)' : 'rgba(248,113,113,0.8)');
+
+  // ── 라인차트 (R 누적) ──
+  const lineCtx = document.getElementById('monthly-line-canvas');
+  if (lineCtx) {
+    if (lineChart) lineChart.destroy();
+    lineChart = new Chart(lineCtx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          data: rCumData,
+          borderColor: '#34d399',
+          backgroundColor: 'rgba(52,211,153,0.08)',
+          borderWidth: 2,
+          pointBackgroundColor: '#34d399',
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          fill: true,
+          tension: 0.35,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false }, tooltip: {
+          callbacks: { label: ctx => (ctx.parsed.y >= 0 ? '+' : '') + ctx.parsed.y.toFixed(2) + 'R' }
+        }},
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#555b6a', font: { size: 11 } } },
+          y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#555b6a', font: { size: 11 }, callback: v => v.toFixed(1) + 'R' }, beginAtZero: false }
+        }
+      }
+    });
+    // R 누적 요약
+    const latestR = rCumData[rCumData.length-1] || 0;
+    const avgR    = entries.length ? (entries[entries.length-1][1].rSum / entries[entries.length-1][1].cnt) : 0;
+    const bestM   = entries.length ? entries.reduce((best,cur) => cur[1].rSum > best[1].rSum ? cur : best) : null;
+    document.getElementById('chart-r-summary').innerHTML = [
+      { l: '누적 R', v: (latestR>=0?'+':'')+latestR.toFixed(2)+'R', c: latestR>=0?'var(--green)':'var(--red)' },
+      { l: '이번달 평균 R', v: (avgR>=0?'+':'')+avgR.toFixed(2)+'R', c: avgR>=0?'var(--green)':'var(--red)' },
+      { l: '최고 월', v: bestM ? bestM[0].slice(5)+'월' : '—', c: 'var(--text)' },
+    ].map(s => `<div style="background:var(--bg3);border-radius:var(--radius-sm);padding:10px 12px;">
+      <div style="font-size:10px;color:var(--text3);margin-bottom:4px;">${s.l}</div>
+      <div style="font-size:14px;font-weight:600;color:${s.c};">${s.v}</div>
+    </div>`).join('');
+  }
+
+  // ── 바차트 (월별 손익) ──
+  const barCtx = document.getElementById('monthly-bar-canvas');
+  if (barCtx) {
+    if (barChart) barChart.destroy();
+    barChart = new Chart(barCtx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          data: pnlData,
+          backgroundColor: pnlColors,
+          borderRadius: 4,
+          borderSkipped: false,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false }, tooltip: {
+          callbacks: { label: ctx => (ctx.parsed.y >= 0 ? '+' : '') + '₩' + Math.abs(ctx.parsed.y).toLocaleString('ko-KR') }
+        }},
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#555b6a', font: { size: 11 } } },
+          y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#555b6a', font: { size: 11 }, callback: v => (Math.abs(v) >= 10000 ? (v/10000).toFixed(0)+'만' : v.toLocaleString()) } }
+        }
+      }
+    });
+    // 손익 요약
+    const totalPnl = pnlData.reduce((s,v) => s+v, 0);
+    const lastPnl  = pnlData[pnlData.length-1] || 0;
+    const winRate  = entries.length ? (entries[entries.length-1][1].wins / entries[entries.length-1][1].cnt * 100).toFixed(0) + '%' : '—';
+    document.getElementById('chart-pnl-summary').innerHTML = [
+      { l: '누적 손익', v: (totalPnl>=0?'+':'')+'₩'+Math.round(Math.abs(totalPnl)).toLocaleString('ko-KR'), c: totalPnl>=0?'var(--green)':'var(--red)' },
+      { l: '이번달 손익', v: (lastPnl>=0?'+':'')+'₩'+Math.round(Math.abs(lastPnl)).toLocaleString('ko-KR'), c: lastPnl>=0?'var(--green)':'var(--red)' },
+      { l: '이번달 승률', v: winRate, c: 'var(--text)' },
+    ].map(s => `<div style="background:var(--bg3);border-radius:var(--radius-sm);padding:10px 12px;">
+      <div style="font-size:10px;color:var(--text3);margin-bottom:4px;">${s.l}</div>
+      <div style="font-size:14px;font-weight:600;color:${s.c};">${s.v}</div>
+    </div>`).join('');
+  }
+
+  // ── 테이블 ──
   const tbody = document.getElementById('monthly-tbody');
-  const entries = Object.entries(months).sort((a,b) => b[0].localeCompare(a[0]));
-  if (!entries.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3);">데이터 없음</td></tr>'; return; }
-  tbody.innerHTML = entries.map(([m, d]) => {
-    const wr = (d.wins / d.cnt * 100).toFixed(0) + '%';
-    const ar = (d.rSum / d.cnt).toFixed(2) + 'R';
-    const pnlC = d.pnlSum >= 0 ? 'var(--green)' : 'var(--red)';
-    const rC   = d.rSum  >= 0 ? 'var(--green)' : 'var(--red)';
-    const mLabel = m !== '—' ? m.slice(5) + '월' : '—';
-    const maxStr = d.maxPnl === -Infinity ? '—' : (d.maxPnl >= 0 ? '+' : '') + d.maxPnl.toFixed(2);
-    const minStr = d.minPnl ===  Infinity ? '—' : d.minPnl.toFixed(2);
+  const sortedDesc = [...entries].reverse();
+  if (!sortedDesc.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3);">데이터 없음</td></tr>'; return; }
+  tbody.innerHTML = sortedDesc.map(([m, d]) => {
+    const wr  = (d.wins/d.cnt*100).toFixed(0)+'%';
+    const ar  = (d.rSum/d.cnt).toFixed(2)+'R';
+    const pC  = d.pnlSum>=0?'var(--green)':'var(--red)';
+    const rC  = d.rSum>=0?'var(--green)':'var(--red)';
+    const mL  = m !== '—' ? m.slice(5)+'월' : '—';
+    const mx  = d.maxPnl===-Infinity?'—':(d.maxPnl>=0?'+':'')+d.maxPnl.toFixed(2);
+    const mn  = d.minPnl===Infinity?'—':d.minPnl.toFixed(2);
     return `<tr>
-      <td style="font-weight:500;">${mLabel}</td>
+      <td style="font-weight:500;">${mL}</td>
       <td style="text-align:right;">${d.cnt}</td>
       <td style="text-align:right;">${wr}</td>
-      <td style="text-align:right;color:${pnlC};">${d.pnlSum>=0?'+':''}₩${Math.round(Math.abs(d.pnlSum)).toLocaleString('ko-KR')}</td>
+      <td style="text-align:right;color:${pC};">${d.pnlSum>=0?'+':''}₩${Math.round(Math.abs(d.pnlSum)).toLocaleString('ko-KR')}</td>
       <td style="text-align:right;color:${rC};">${ar}</td>
-      <td style="text-align:right;color:var(--green);">${maxStr}</td>
-      <td style="text-align:right;color:var(--red);">${minStr}</td>
+      <td style="text-align:right;color:var(--green);">${mx}</td>
+      <td style="text-align:right;color:var(--red);">${mn}</td>
     </tr>`;
   }).join('');
 }
+
+window.switchChartTab = function(tab) {
+  document.getElementById('ctab-r').classList.toggle('active',   tab==='r');
+  document.getElementById('ctab-pnl').classList.toggle('active', tab==='pnl');
+  document.getElementById('chart-r-wrap').style.display   = tab==='r'   ? 'block' : 'none';
+  document.getElementById('chart-pnl-wrap').style.display = tab==='pnl' ? 'block' : 'none';
+};
+
+window.toggleAcc = function(id, btn) {
+  const body = document.getElementById(id);
+  const open = body.classList.toggle('open');
+  btn.classList.toggle('open', open);
+};
+
+window.updateAccPreview = function(market) {
+  const map = { coin: ['$','coin'], kor: ['₩','kor'], us: ['$','us'] };
+  const [sym, key] = map[market];
+  const val = document.getElementById('cfg-seed-'+key).value;
+  const preview = document.getElementById('acc-seed-'+key+'-preview');
+  if (preview) preview.textContent = `시드 ${sym}${val}`;
+};
 
 // ── UI Helpers ───────────────────────────────────────────────────────────────
 window.switchTab = function(n) {
   ['dashboard','log','settings'].forEach(t => {
     document.getElementById('tab-'+t).classList.toggle('active', t===n);
     document.getElementById('screen-'+t).classList.toggle('active', t===n);
-    const bn = document.getElementById('bnav-'+t);
-    if (bn) bn.classList.toggle('active', t===n);
   });
+  // FAB: 매매일지 탭에서만 표시
+  const fab = document.querySelector('.fab');
+  if (fab) fab.style.display = (n === 'log') ? 'flex' : 'none';
   window.scrollTo(0, 0);
 };
 
@@ -1836,6 +2072,12 @@ function showToast(msg) {
 }
 
 // ── Init ─────────────────────────────────────────────────────────────────────
+// Chart.js 다크 테마 전역 기본값
+if (typeof Chart !== 'undefined') {
+  Chart.defaults.color = '#555b6a';
+  Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+  Chart.defaults.font.family = "'DM Sans','Noto Sans KR',sans-serif";
+}
 renderStrategies();
 renderRDist([0,0,0,0,0,0,0]);
 renderStrategyBars(strategies.map(s => ({n:s,c:0})));
