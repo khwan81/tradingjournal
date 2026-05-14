@@ -514,13 +514,135 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ── Toast ── */
+.toast {
+  position: fixed; bottom: 80px; left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  background: var(--bg4); border: 1px solid var(--border2);
+  color: var(--text); font-size: 13px; padding: 10px 20px;
+  border-radius: 99px; opacity: 0; pointer-events: none;
+  transition: opacity .25s, transform .25s; z-index: 500;
+  white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── Bottom Nav (모바일) ── */
+.bottom-nav {
+  display: none;
+  position: fixed; bottom: 0; left: 0; right: 0;
+  height: 60px;
+  background: var(--bg2); border-top: 1px solid var(--border2);
+  z-index: 200;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.bottom-nav-inner {
+  display: flex; height: 100%;
+}
+.bnav-item {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 3px;
+  font-size: 10px; color: var(--text3);
+  background: none; border: none; cursor: pointer;
+  font-family: var(--font); transition: color .15s;
+}
+.bnav-item svg { width: 20px; height: 20px; }
+.bnav-item.active { color: var(--accent); }
+
+/* ── 카드형 거래 행 (모바일 전용) ── */
+.trade-card {
+  display: none;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+  cursor: pointer; transition: background .12s;
+}
+.trade-card:hover { background: var(--bg3); }
+.trade-card:last-of-type { border-bottom: none; }
+.tc-top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.tc-symbol { font-size: 15px; font-weight: 600; color: var(--text); flex: 1; }
+.tc-pnl { font-size: 15px; font-weight: 600; }
+.tc-bot { display: flex; align-items: center; gap: 6px; }
+.tc-meta { font-size: 11px; color: var(--text3); margin-left: auto; }
+
 /* ── Responsive ── */
 @media (max-width: 700px) {
-  .kpi-grid { grid-template-columns: 1fr 1fr; }
-  .grid-2  { grid-template-columns: 1fr; }
-  .trade-head, .trade-row { grid-template-columns: 80px 46px 80px 68px 60px 46px 1fr 52px; font-size: 11px; }
-  .trade-head > span:nth-child(7),
-  .trade-row  > span:nth-child(7) { display: none; }
+  /* 전체 여백 */
+  #app { padding: 0 14px 80px; }
+
+  /* 헤더 */
+  .top-header { padding: 14px 0 12px; }
+  .top-header h1 { font-size: 15px; }
+  .user-chip span { display: none; }
+
+  /* 탭바: 상단 숨기고 하단 표시 */
+  .tab-bar { display: none; }
+  .bottom-nav { display: flex; }
+
+  /* KPI: 4열 → 2×2 */
+  .kpi-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .kpi-val { font-size: 18px; }
+  .kpi-card { padding: 13px 14px; }
+
+  /* 카드 그리드: 2열 → 1열 */
+  .grid-2 { grid-template-columns: 1fr; gap: 8px; }
+
+  /* 테이블형 거래 행: 숨김 */
+  .trade-head { display: none; }
+  .trade-row  { display: none; }
+
+  /* 카드형 거래 행: 표시 */
+  .trade-card { display: block; }
+
+  /* 모달: 전체화면 */
+  .ov { padding: 0; align-items: flex-end; }
+  .modal {
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    max-width: 100%; margin-bottom: 0;
+    max-height: 92vh; overflow-y: auto;
+    padding: 20px 20px 32px;
+  }
+
+  /* 입력 요소 터치 타겟 44px 이상 */
+  input[type=text], input[type=number], input[type=date],
+  input[type=url], select, textarea {
+    min-height: 48px; font-size: 16px;
+  }
+  textarea { min-height: 80px; }
+  input.mono { font-size: 18px; }
+
+  /* 설정 테이블: 스크롤 */
+  .mcols-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .mcols { min-width: 480px; }
+
+  /* 환율 행: 세로 배치 */
+  .srow { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .srow .input-wrap { width: 100% !important; }
+
+  /* 버튼 */
+  .btn-p, .btn-s, .btn-danger { min-height: 48px; font-size: 15px; }
+  .btn-add { padding: 10px 16px; min-height: 44px; }
+
+  /* 자동계산 요약: 2×2 */
+  .auto-grid { grid-template-columns: 1fr 1fr; }
+
+  /* 필터 칩 */
+  .fchip { padding: 6px 14px; font-size: 13px; min-height: 36px; }
+
+  /* 삭제 박스 */
+  .del-box { width: calc(100vw - 40px); }
+
+  /* R 분포 + 전략: 1열 */
+  .g2-dashboard { grid-template-columns: 1fr !important; }
+}
+
+/* ── 데스크탑: 카드형 숨김 ── */
+@media (min-width: 701px) {
+  .trade-card { display: none; }
+  .bottom-nav { display: none; }
 }
 </style>
 </head>
@@ -597,7 +719,7 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
       <div class="kpi-card"><div class="kpi-lbl">총 거래수</div><div class="kpi-val" id="d-cnt">—</div><div class="kpi-sub" id="d-cnt-s">이번달</div></div>
     </div>
 
-    <div class="grid-2" style="margin-bottom:12px;">
+    <div class="grid-2 g2-dashboard" style="margin-bottom:12px;">
       <div class="card">
         <div class="card-title">연속 승패 & 드로다운</div>
         <div class="grid-2" style="gap:8px;">
@@ -626,7 +748,7 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
       </div>
     </div>
 
-    <div class="grid-2" style="margin-bottom:12px;">
+    <div class="grid-2 g2-dashboard" style="margin-bottom:12px;">
       <div class="card">
         <div class="card-title">R 분포</div>
         <div class="r-dist-wrap" id="r-dist-bars"></div>
@@ -640,7 +762,8 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
 
     <div class="card">
       <div class="card-title">월별 성과</div>
-      <table class="monthly-table">
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+      <table class="monthly-table" style="min-width:480px;">
         <thead>
           <tr>
             <th>월</th><th>거래수</th><th>승률</th>
@@ -649,6 +772,7 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
         </thead>
         <tbody id="monthly-tbody"></tbody>
       </table>
+      </div>
     </div>
   </div>
 
@@ -669,7 +793,7 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
       </button>
     </div>
     <div class="trade-wrap">
-      <div class="trade-head">
+      <div class="trade-head t-cols">
         <span>날짜/시간</span><span>시장</span><span>종목</span>
         <span>전략/방향</span><span style="text-align:right;">손익</span>
         <span style="text-align:right;">R</span><span>기간</span>
@@ -687,7 +811,7 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
   <div class="screen" id="screen-settings">
     <div class="card">
       <div class="card-title">시장별 파라미터</div>
-      <div class="mcols">
+      <div class="mcols-wrap"><div class="mcols">
         <div class="mch">항목</div><div class="mch">코인 ($)</div><div class="mch">국장 (₩)</div><div class="mch">미장 ($)</div>
         <div class="mcc lbl">시드</div>
         <div class="mcc"><div class="input-wrap"><span class="input-prefix">$</span><input type="text" id="cfg-seed-coin" value="3,000" onblur="fmtComma(this)" oninput="rawNum(this)"></div></div>
@@ -718,7 +842,7 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
         <div class="mcc"><input type="text" id="cfg-wr-coin" value="50%"></div>
         <div class="mcc"><input type="text" id="cfg-wr-kor"  value="50%"></div>
         <div class="mcc"><input type="text" id="cfg-wr-us"   value="50%"></div>
-      </div>
+      </div></div><!-- /mcols-wrap -->
     </div>
 
     <div class="card">
@@ -917,6 +1041,34 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
   </div>
 </div>
 
+<!-- ─── 하단 네비게이션 (모바일) ─── -->
+<nav class="bottom-nav" id="bottom-nav">
+  <div class="bottom-nav-inner">
+    <button class="bnav-item active" id="bnav-dashboard" onclick="switchTab('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
+        <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+      </svg>
+      대시보드
+    </button>
+    <button class="bnav-item" id="bnav-log" onclick="switchTab('log')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M4 6h16M4 12h12M4 18h8"/>
+      </svg>
+      매매일지
+    </button>
+    <button class="bnav-item" id="bnav-settings" onclick="switchTab('settings')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+      </svg>
+      설정
+    </button>
+  </div>
+</nav>
+
+<!-- ─── 토스트 ─── -->
+<div class="toast" id="toast"></div>
+
 <!-- ─── Firebase Logic ─── -->
 <script type="module">
 import { initializeApp }                          from 'firebase/app';
@@ -1040,7 +1192,7 @@ window.saveSettings = async function() {
   };
   settings = cfg;
   await setDoc(doc(db, 'users', currentUid, 'config', 'settings'), cfg);
-  alert('설정이 저장되었습니다.');
+  showToast('✓ 설정이 저장되었습니다');
   renderDashboard();
 };
 
@@ -1130,12 +1282,14 @@ window.saveTrade = async function(isOpen) {
     data.createdAt = Date.now();
     await addDoc(collection(db, 'users', currentUid, 'trades'), data);
   }
+  showToast(editId ? '✓ 거래가 수정되었습니다' : '✓ 거래가 저장되었습니다');
   closeModal();
 };
 
 window.doDelete = async function() {
   if (!delTargetId) return;
   await deleteDoc(doc(db, 'users', currentUid, 'trades', delTargetId));
+  showToast('거래가 삭제되었습니다');
   closeDel();
 };
 
@@ -1172,22 +1326,23 @@ function buildTradeRow(t) {
 
   const memo = t.memo || '';
   const chartSection = t.chartUrl
-    ? `<div class="chart-block-label">차트 이미지</div>
+    ? `<div class="expand-label" style="margin-top:12px;">차트 이미지</div>
        <div class="chart-link-box">
-         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M12 8v4l3 3"/></svg>
+         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.8"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
          <a href="${t.chartUrl}" target="_blank" rel="noopener">구글 드라이브에서 차트 보기</a>
        </div>`
-    : `<div class="chart-block-label">차트 이미지</div><div class="chart-empty">차트 이미지 없음</div>`;
+    : `<div class="expand-label" style="margin-top:12px;">차트 이미지</div><div class="chart-empty">차트 이미지 없음</div>`;
 
   const expandHtml = `
     <div class="memo-block">
-      <div class="memo-header">메모</div>
+      <div class="expand-label">메모</div>
       <div class="memo-text ${memo?'':'empty'}">${memo || '메모 없음'}</div>
     </div>
     ${chartSection}`;
 
-  return `
-    <div class="trade-row" id="row-${t.id}" data-market="${t.market}" data-dir="${t.dir||''}"
+  // 데스크탑 테이블 행
+  const desktopRow = `
+    <div class="trade-row t-cols" id="row-${t.id}" data-market="${t.market}" data-dir="${t.dir||''}"
          onclick="toggleExp('${t.id}',event)">
       <div><div>${fmtDate(t.dateStart)}</div><div style="font-size:10px;color:var(--text3);">${timeStr}</div></div>
       ${mktBadge}
@@ -1203,6 +1358,37 @@ function buildTradeRow(t) {
       </div>
     </div>
     <div class="trade-expand" id="exp-${t.id}">${expandHtml}</div>`;
+
+  // 모바일 카드 행
+  const pnlColor = t.pnl === null ? 'var(--text3)' : t.pnl >= 0 ? 'var(--green)' : 'var(--red)';
+  const pnlMobile = t.pnl === null ? '미결'
+    : `${t.pnl>=0?'+':''}${t.pnl.toFixed(2)}${t.market==='kor'?'₩':'$'}`;
+  const rMobile = t.rVal === null ? '—'
+    : `${t.rVal>=0?'+':''}${t.rVal.toFixed(2)}R`;
+  const rColor = t.rVal === null ? 'var(--text3)' : t.rVal >= 0 ? 'var(--green)' : 'var(--red)';
+
+  const mobileCard = `
+    <div class="trade-card" id="card-${t.id}" data-market="${t.market}" data-dir="${t.dir||''}"
+         onclick="toggleExp('${t.id}',event)">
+      <div class="tc-top">
+        ${mktBadge}
+        <span class="tc-symbol">${t.symbol}</span>
+        <span class="tc-pnl" style="color:${pnlColor}">${pnlMobile}</span>
+      </div>
+      <div class="tc-bot">
+        ${dirBadge}
+        <span style="font-size:11px;color:var(--text2);">${t.strategy||''}</span>
+        <span style="font-size:11px;color:${rColor};">${rMobile}</span>
+        <span class="tc-meta">${t.duration||''} · ${fmtDate(t.dateStart)}</span>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:8px;">
+        <button class="btn-edit" onclick="openEdit('${t.id}',event)">✏ 수정</button>
+        <button class="btn-del"  onclick="confirmDel('${t.id}',event)">🗑 삭제</button>
+      </div>
+    </div>
+    <div class="trade-expand" id="exp-m-${t.id}">${expandHtml}</div>`;
+
+  return desktopRow + mobileCard;
 }
 
 // ── Render: Dashboard ────────────────────────────────────────────────────────
@@ -1362,7 +1548,10 @@ window.switchTab = function(n) {
   ['dashboard','log','settings'].forEach(t => {
     document.getElementById('tab-'+t).classList.toggle('active', t===n);
     document.getElementById('screen-'+t).classList.toggle('active', t===n);
+    const bn = document.getElementById('bnav-'+t);
+    if (bn) bn.classList.toggle('active', t===n);
   });
+  window.scrollTo(0, 0);
 };
 
 window.dbFilter = function(el, m) {
@@ -1381,8 +1570,11 @@ window.logFilter = function(el, f) {
 
 window.toggleExp = function(id, e) {
   if (e.target.closest('.trade-actions')) return;
-  const el = document.getElementById('exp-' + id);
-  if (el) el.style.display = el.style.display === 'block' ? 'none' : 'block';
+  // 데스크탑: exp-{id}, 모바일: exp-m-{id}
+  ['exp-'+id, 'exp-m-'+id].forEach(eid => {
+    const el = document.getElementById(eid);
+    if (el) el.style.display = el.style.display === 'block' ? 'none' : 'block';
+  });
 };
 
 // ── Modal ────────────────────────────────────────────────────────────────────
@@ -1632,6 +1824,15 @@ function fmtDate(d) {
 function fmtTime(t) {
   if (!t || t.length < 4) return '';
   return t.slice(0,2) + ':' + t.slice(2,4);
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
 }
 
 // ── Init ─────────────────────────────────────────────────────────────────────
