@@ -84,8 +84,10 @@ body {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
+  min-height: 100dvh;
   flex-direction: column;
   gap: 24px;
+  padding-top: env(safe-area-inset-top);
 }
 .login-card {
   background: var(--bg2);
@@ -115,6 +117,8 @@ body {
 .top-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 18px 0 16px;
+  /* iOS 노치/다이나믹아일랜드 safe area 적용 */
+  padding-top: calc(18px + env(safe-area-inset-top));
   border-bottom: 1px solid var(--border);
   margin-bottom: 20px;
 }
