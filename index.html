@@ -247,6 +247,7 @@ body {
   display: grid;
   grid-template-columns: 90px 52px 96px 78px 70px 54px 54px 1fr 60px;
   padding: 9px 14px;
+  gap: 0 12px;
   background: var(--bg3);
   font-size: 10px; color: var(--text3); font-weight: 500;
   text-transform: uppercase; letter-spacing: .04em;
@@ -256,6 +257,7 @@ body {
   display: grid;
   grid-template-columns: 90px 52px 96px 78px 70px 54px 54px 1fr 60px;
   padding: 11px 14px;
+  gap: 0 12px;
   font-size: 12px;
   border-bottom: 1px solid var(--border);
   background: var(--bg2);
@@ -887,7 +889,8 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator {
 /* ── trade row: 9열 (날짜/계좌/종목/전략/방향/손익/R/기간/관리) ── */
 .trade-head,
 .trade-row {
-  grid-template-columns: 96px 80px 1fr 80px 52px 80px 52px 52px 68px;
+  grid-template-columns: 96px 80px 1fr 90px 60px 88px 56px 60px 68px;
+  gap: 0 12px;
 }
 /* 배지: 텍스트 너비만큼만 차지하게 */
 .trade-row .badge, .trade-head .badge {
