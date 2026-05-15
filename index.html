@@ -550,13 +550,17 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
   background: var(--accent); color: #fff;
   border: none; border-radius: 50%;
   font-size: 28px; line-height: 1;
-  cursor: pointer; z-index: 150;
+  cursor: pointer; z-index: 90;
   box-shadow: 0 4px 16px rgba(79,143,255,.4);
   transition: background .15s, transform .15s;
   align-items: center; justify-content: center;
 }
 .fab:hover { background: var(--accent2); transform: scale(1.06); }
 .fab:active { transform: scale(.96); }
+/* 모바일에서 FAB에 가려지지 않도록 목록 하단 여백 */
+@media (max-width: 700px) {
+  .trade-wrap { margin-bottom: 80px; }
+}
 
 /* ── 아코디언 (시장 설정) ── */
 .accordion-item {
@@ -635,6 +639,8 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
     padding: 20px 20px 40px;
   }
 
+  /* 날짜/시간 4칸: 모바일에서 2×2 */
+  .dt-grid { grid-template-columns: 1fr 1fr !important; }
   /* 터치 타겟 */
   input[type=text], input[type=number], input[type=date],
   input[type=url], select, textarea { min-height: 48px; font-size: 16px; }
@@ -876,7 +882,7 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
           </div>
           <div class="acc-row">
             <span class="acc-lbl">목표 수익 비율</span>
-            <input class="acc-input" type="text" id="cfg-goal-coin" value="40%">
+            <input class="acc-input" type="text" id="cfg-goal-coin" value="40" placeholder="40" oninput="numOnly(this)" onblur="fmtPct(this)">
           </div>
           <div class="acc-row">
             <span class="acc-lbl">월 목표 평균 R</span>
@@ -884,15 +890,15 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
           </div>
           <div class="acc-row">
             <span class="acc-lbl">거래당 리스크</span>
-            <input class="acc-input" type="text" id="cfg-risk-coin" value="1%">
+            <input class="acc-input" type="text" id="cfg-risk-coin" value="1" placeholder="1" oninput="numOnly(this)" onblur="fmtPct(this)">
           </div>
           <div class="acc-row">
             <span class="acc-lbl">왕복 수수료</span>
-            <input class="acc-input" type="text" id="cfg-fee-coin" value="0.01%">
+            <input class="acc-input" type="text" id="cfg-fee-coin" value="0.01" placeholder="0.01" oninput="numOnly(this)" onblur="fmtPct(this)">
           </div>
           <div class="acc-row">
             <span class="acc-lbl">목표 승률</span>
-            <input class="acc-input" type="text" id="cfg-wr-coin" value="50%">
+            <input class="acc-input" type="text" id="cfg-wr-coin" value="50" placeholder="50" oninput="numOnly(this)" onblur="fmtPct(this)">
           </div>
         </div>
       </div>
@@ -916,7 +922,7 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
           </div>
           <div class="acc-row">
             <span class="acc-lbl">목표 수익 비율</span>
-            <input class="acc-input" type="text" id="cfg-goal-kor" value="30%">
+            <input class="acc-input" type="text" id="cfg-goal-kor" value="30" placeholder="30" oninput="numOnly(this)" onblur="fmtPct(this)">
           </div>
           <div class="acc-row">
             <span class="acc-lbl">월 목표 평균 R</span>
@@ -924,15 +930,15 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
           </div>
           <div class="acc-row">
             <span class="acc-lbl">거래당 리스크</span>
-            <input class="acc-input" type="text" id="cfg-risk-kor" value="1%">
+            <input class="acc-input" type="text" id="cfg-risk-kor" value="1" placeholder="1" oninput="numOnly(this)" onblur="fmtPct(this)">
           </div>
           <div class="acc-row">
             <span class="acc-lbl">왕복 수수료</span>
-            <input class="acc-input" type="text" id="cfg-fee-kor" value="0%">
+            <input class="acc-input" type="text" id="cfg-fee-kor" value="0" placeholder="0" oninput="numOnly(this)" onblur="fmtPct(this)">
           </div>
           <div class="acc-row">
             <span class="acc-lbl">목표 승률</span>
-            <input class="acc-input" type="text" id="cfg-wr-kor" value="50%">
+            <input class="acc-input" type="text" id="cfg-wr-kor" value="50" placeholder="50" oninput="numOnly(this)" onblur="fmtPct(this)">
           </div>
         </div>
       </div>
@@ -956,7 +962,7 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
           </div>
           <div class="acc-row">
             <span class="acc-lbl">목표 수익 비율</span>
-            <input class="acc-input" type="text" id="cfg-goal-us" value="30%">
+            <input class="acc-input" type="text" id="cfg-goal-us" value="30" placeholder="30" oninput="numOnly(this)" onblur="fmtPct(this)">
           </div>
           <div class="acc-row">
             <span class="acc-lbl">월 목표 평균 R</span>
@@ -964,15 +970,15 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
           </div>
           <div class="acc-row">
             <span class="acc-lbl">거래당 리스크</span>
-            <input class="acc-input" type="text" id="cfg-risk-us" value="1%">
+            <input class="acc-input" type="text" id="cfg-risk-us" value="1" placeholder="1" oninput="numOnly(this)" onblur="fmtPct(this)">
           </div>
           <div class="acc-row">
             <span class="acc-lbl">왕복 수수료</span>
-            <input class="acc-input" type="text" id="cfg-fee-us" value="0%">
+            <input class="acc-input" type="text" id="cfg-fee-us" value="0" placeholder="0" oninput="numOnly(this)" onblur="fmtPct(this)">
           </div>
           <div class="acc-row">
             <span class="acc-lbl">목표 승률</span>
-            <input class="acc-input" type="text" id="cfg-wr-us" value="50%">
+            <input class="acc-input" type="text" id="cfg-wr-us" value="50" placeholder="50" oninput="numOnly(this)" onblur="fmtPct(this)">
           </div>
         </div>
       </div>
@@ -1053,7 +1059,7 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
 
   <div class="divider"></div>
   <p class="sec-lbl">날짜 & 시간</p>
-  <div class="fg2" style="margin-bottom:8px;">
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:8px;" class="dt-grid">
     <div class="fgrp">
       <label class="flbl">시작 날짜</label>
       <input type="date" id="m-date-start">
@@ -1067,7 +1073,7 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
       <input type="text" id="m-time-start" class="mono" placeholder="2030" maxlength="4" inputmode="numeric" oninput="calcDur()">
     </div>
     <div class="fgrp">
-      <label class="flbl">종료 시간 <span class="fslbl">미청산이면 비워두기</span></label>
+      <label class="flbl">종료 시간 <span class="fslbl">비우면 진행중</span></label>
       <input type="text" id="m-time-end" class="mono" placeholder="2201" maxlength="4" inputmode="numeric" oninput="calcDur()">
     </div>
   </div>
@@ -1156,8 +1162,7 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
 
   <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
     <button class="btn-s" onclick="closeModal()">취소</button>
-    <button class="btn-s" onclick="saveTrade(true)">오픈 포지션 저장</button>
-    <button class="btn-p" onclick="saveTrade(false)">저장</button>
+    <button class="btn-p" onclick="saveTrade()">저장</button>
   </div>
 </div>
 </div>
@@ -1287,18 +1292,18 @@ window.saveSettings = async function() {
     seedCoin:   parseNum('cfg-seed-coin'),
     seedKor:    parseNum('cfg-seed-kor'),
     seedUs:     parseNum('cfg-seed-us'),
-    goalCoin:   v('cfg-goal-coin'),
-    goalKor:    v('cfg-goal-kor'),
-    goalUs:     v('cfg-goal-us'),
-    riskCoin:   v('cfg-risk-coin'),
-    riskKor:    v('cfg-risk-kor'),
-    riskUs:     v('cfg-risk-us'),
-    feeCoin:    v('cfg-fee-coin'),
-    feeKor:     v('cfg-fee-kor'),
-    feeUs:      v('cfg-fee-us'),
-    wrCoin:     v('cfg-wr-coin'),
-    wrKor:      v('cfg-wr-kor'),
-    wrUs:       v('cfg-wr-us'),
+    goalCoin:   stripPct(v('cfg-goal-coin')),
+    goalKor:    stripPct(v('cfg-goal-kor')),
+    goalUs:     stripPct(v('cfg-goal-us')),
+    riskCoin:   stripPct(v('cfg-risk-coin')),
+    riskKor:    stripPct(v('cfg-risk-kor')),
+    riskUs:     stripPct(v('cfg-risk-us')),
+    feeCoin:    stripPct(v('cfg-fee-coin')),
+    feeKor:     stripPct(v('cfg-fee-kor')),
+    feeUs:      stripPct(v('cfg-fee-us')),
+    wrCoin:     stripPct(v('cfg-wr-coin')),
+    wrKor:      stripPct(v('cfg-wr-kor')),
+    wrUs:       stripPct(v('cfg-wr-us')),
     tether:     parseNum('cfg-tether'),
     usdRate:    parseNum('cfg-usd'),
     totalGoal:  parseNum('cfg-total-goal'),
@@ -1306,6 +1311,7 @@ window.saveSettings = async function() {
   };
   settings = cfg;
   await setDoc(doc(db, 'users', currentUid, 'config', 'settings'), cfg);
+  updateRGoalDisplay();
   showToast('✓ 설정이 저장되었습니다');
   renderDashboard();
 };
@@ -1316,25 +1322,32 @@ function applySettingsToUI() {
   if (s.seedCoin)  setFmt('cfg-seed-coin', s.seedCoin);
   if (s.seedKor)   setFmt('cfg-seed-kor',  s.seedKor);
   if (s.seedUs)    setFmt('cfg-seed-us',   s.seedUs);
-  if (s.goalCoin)  sv('cfg-goal-coin', s.goalCoin);
-  if (s.goalKor)   sv('cfg-goal-kor',  s.goalKor);
-  if (s.goalUs)    sv('cfg-goal-us',   s.goalUs);
-  if (s.riskCoin)  sv('cfg-risk-coin', s.riskCoin);
-  if (s.riskKor)   sv('cfg-risk-kor',  s.riskKor);
-  if (s.riskUs)    sv('cfg-risk-us',   s.riskUs);
-  if (s.feeCoin)   sv('cfg-fee-coin',  s.feeCoin);
-  if (s.feeKor)    sv('cfg-fee-kor',   s.feeKor);
-  if (s.feeUs)     sv('cfg-fee-us',    s.feeUs);
-  if (s.wrCoin)    sv('cfg-wr-coin',   s.wrCoin);
-  if (s.wrKor)     sv('cfg-wr-kor',    s.wrKor);
-  if (s.wrUs)      sv('cfg-wr-us',     s.wrUs);
+  // % 필드는 숫자로 저장됐으므로 % 붙여서 표시
+  if (s.goalCoin != null) sv('cfg-goal-coin', s.goalCoin + '%');
+  if (s.goalKor  != null) sv('cfg-goal-kor',  s.goalKor  + '%');
+  if (s.goalUs   != null) sv('cfg-goal-us',   s.goalUs   + '%');
+  if (s.riskCoin != null) sv('cfg-risk-coin', s.riskCoin + '%');
+  if (s.riskKor  != null) sv('cfg-risk-kor',  s.riskKor  + '%');
+  if (s.riskUs   != null) sv('cfg-risk-us',   s.riskUs   + '%');
+  if (s.feeCoin  != null) sv('cfg-fee-coin',  s.feeCoin  + '%');
+  if (s.feeKor   != null) sv('cfg-fee-kor',   s.feeKor   + '%');
+  if (s.feeUs    != null) sv('cfg-fee-us',    s.feeUs    + '%');
+  if (s.wrCoin   != null) sv('cfg-wr-coin',   s.wrCoin   + '%');
+  if (s.wrKor    != null) sv('cfg-wr-kor',    s.wrKor    + '%');
+  if (s.wrUs     != null) sv('cfg-wr-us',     s.wrUs     + '%');
   if (s.tether)    setFmt('cfg-tether',     s.tether);
   if (s.usdRate)   setFmt('cfg-usd',        s.usdRate);
   if (s.totalGoal) setFmt('cfg-total-goal', s.totalGoal);
+  // 아코디언 시드 미리보기 업데이트
+  updateAccPreview('coin');
+  updateAccPreview('kor');
+  updateAccPreview('us');
+  // 목표 R 표시 업데이트
+  updateRGoalDisplay();
 }
 
 // ── Trade CRUD ───────────────────────────────────────────────────────────────
-window.saveTrade = async function(isOpen) {
+window.saveTrade = async function() {
   const editId  = v('m-edit-id');
   const market  = v('m-market');
   const dateS   = v('m-date-start');
@@ -1344,7 +1357,7 @@ window.saveTrade = async function(isOpen) {
     alert('날짜와 종목명은 필수입니다.'); return;
   }
 
-  const pnl   = parseFloat(v('m-pnl'))  || null;
+  const pnl   = v('m-pnl') !== '' ? parseFloat(v('m-pnl')) : null;
   const seed  = parseFloat(v('m-seed')) || null;
   const risk  = getRiskPct(market);
   const rVal  = (pnl !== null && seed) ? pnl / (seed * risk / 100) : null;
@@ -1356,6 +1369,9 @@ window.saveTrade = async function(isOpen) {
     else if (market === 'us') krw = pnl * usdRate;
     else krw = pnl;
   }
+
+  // 손익 미입력 → 자동으로 오픈 포지션
+  const isOpen = pnl === null;
 
   // 당일 시장별 N 계산
   const sameDay = trades.filter(t =>
@@ -1382,7 +1398,7 @@ window.saveTrade = async function(isOpen) {
     krw,
     memo:      v('m-memo').trim() || null,
     chartUrl:  v('m-chart-url').trim() || null,
-    isOpen:    isOpen || (!v('m-time-end') && !v('m-date-end') && pnl === null),
+    isOpen,
     dow,
     n,
     tetherRate: market === 'coin' ? tetherRate : null,
@@ -1396,7 +1412,7 @@ window.saveTrade = async function(isOpen) {
     data.createdAt = Date.now();
     await addDoc(collection(db, 'users', currentUid, 'trades'), data);
   }
-  showToast(editId ? '✓ 거래가 수정되었습니다' : '✓ 거래가 저장되었습니다');
+  showToast(isOpen ? '📌 오픈 포지션으로 저장됐습니다' : (editId ? '✓ 거래가 수정되었습니다' : '✓ 거래가 저장되었습니다'));
   closeModal();
 };
 
@@ -1447,6 +1463,7 @@ function buildTradeRow(t) {
        </div>`
     : `<div class="expand-label" style="margin-top:12px;">차트 이미지</div><div class="chart-empty">차트 이미지 없음</div>`;
 
+  // 공유 expand HTML (데스크탑/모바일 모두 하나만 씀)
   const expandHtml = `
     <div class="memo-block">
       <div class="expand-label">메모</div>
@@ -1470,11 +1487,10 @@ function buildTradeRow(t) {
         <button class="btn-edit" onclick="openEdit('${t.id}',event)">✏</button>
         <button class="btn-del"  onclick="confirmDel('${t.id}',event)">🗑</button>
       </div>
-    </div>
-    <div class="trade-expand" id="exp-${t.id}">${expandHtml}</div>`;
+    </div>`;
 
   // 모바일 카드 행
-  const pnlColor = t.pnl === null ? 'var(--text3)' : t.pnl >= 0 ? 'var(--green)' : 'var(--red)';
+  const pnlColor  = t.pnl === null ? 'var(--text3)' : t.pnl >= 0 ? 'var(--green)' : 'var(--red)';
   const pnlMobile = t.pnl === null ? '미결'
     : `${t.pnl>=0?'+':''}${t.pnl.toFixed(2)}${t.market==='kor'?'₩':'$'}`;
   const rMobile = t.rVal === null ? '—'
@@ -1499,10 +1515,12 @@ function buildTradeRow(t) {
         <button class="btn-edit" onclick="openEdit('${t.id}',event)">✏ 수정</button>
         <button class="btn-del"  onclick="confirmDel('${t.id}',event)">🗑 삭제</button>
       </div>
-    </div>
-    <div class="trade-expand" id="exp-m-${t.id}">${expandHtml}</div>`;
+    </div>`;
 
-  return desktopRow + mobileCard;
+  // expand 는 하나만 — 데스크탑·모바일 공유
+  const expandDiv = `<div class="trade-expand" id="exp-${t.id}">${expandHtml}</div>`;
+
+  return desktopRow + mobileCard + expandDiv;
 }
 
 // ── Render: Dashboard ────────────────────────────────────────────────────────
@@ -1807,11 +1825,8 @@ window.logFilter = function(el, f) {
 
 window.toggleExp = function(id, e) {
   if (e.target.closest('.trade-actions')) return;
-  // 데스크탑: exp-{id}, 모바일: exp-m-{id}
-  ['exp-'+id, 'exp-m-'+id].forEach(eid => {
-    const el = document.getElementById(eid);
-    if (el) el.style.display = el.style.display === 'block' ? 'none' : 'block';
-  });
+  const el = document.getElementById('exp-' + id);
+  if (el) el.style.display = el.style.display === 'block' ? 'none' : 'block';
 };
 
 // ── Modal ────────────────────────────────────────────────────────────────────
@@ -1886,10 +1901,12 @@ window.closeDel = function() {
 // ── Form Calculations ────────────────────────────────────────────────────────
 window.onMarketChange = function() {
   const m = v('m-market');
-  const goals = { coin: '+1.25R', kor: '+1.75R', us: '+1.52R' };
-  const lbls  = { coin: '코인 기준', kor: '국장 기준', us: '미장 기준' };
-  ge('r-goal-val').textContent = goals[m] || '+1.25R';
-  ge('r-goal-mkt').textContent = lbls[m]  || '';
+  // 설정에서 실시간으로 목표 R 읽기
+  const r = calcTargetR(m);
+  const rLabel = r !== null ? '+' + r.toFixed(2) + 'R' : { coin:'+1.25R', kor:'+1.75R', us:'+1.52R' }[m];
+  const lbls = { coin: '코인 기준', kor: '국장 기준', us: '미장 기준' };
+  ge('r-goal-val').textContent = rLabel;
+  ge('r-goal-mkt').textContent = lbls[m] || '';
   ge('rate-coin-row').style.display = m === 'coin' ? '' : 'none';
   ge('rate-us-row').style.display   = m === 'us'   ? '' : 'none';
   ge('rate-section').style.display  = m === 'kor'  ? 'none' : '';
@@ -2030,6 +2047,21 @@ window.rawNum = function(el) {
   el.value = el.value.replace(/[^0-9.]/g,'');
   try { el.setSelectionRange(p, p); } catch(e){}
 };
+// 숫자만 입력 (입력 중)
+window.numOnly = function(el) {
+  const p = el.selectionStart;
+  el.value = el.value.replace(/[^0-9.]/g,'');
+  try { el.setSelectionRange(p, p); } catch(e){}
+};
+// 포커스 아웃 시 % 자동 추가
+window.fmtPct = function(el) {
+  const raw = parseFloat(el.value);
+  if (!isNaN(raw)) el.value = raw + '%';
+};
+// % 제거해서 숫자만 읽기
+function stripPct(str) {
+  return parseFloat((str || '').replace('%','')) || 0;
+}
 
 // ── Utility ──────────────────────────────────────────────────────────────────
 function v(id)   { const el=ge(id); return el ? el.value : ''; }
@@ -2050,8 +2082,28 @@ function parseNum(id) {
 function getTether()  { return parseNum('cfg-tether')  || (settings.tether  || 1482); }
 function getUsdRate() { return parseNum('cfg-usd')     || (settings.usdRate || 1491); }
 function getRiskPct(market) {
-  const riskStr = {coin: v('cfg-risk-coin'), kor: v('cfg-risk-kor'), us: v('cfg-risk-us')}[market] || '1%';
-  return parseFloat(riskStr) || 1;
+  const raw = { coin: v('cfg-risk-coin'), kor: v('cfg-risk-kor'), us: v('cfg-risk-us') }[market] || '1';
+  return parseFloat(raw.replace('%','')) || 1;
+}
+
+// 설정에서 시장별 목표 R 계산 (시드 × 목표수익비율 / 리스크비율 / 목표승률... 단순화: 저장된 값 직접 표시)
+function calcTargetR(market) {
+  // 엑셀 방식: 월목표수익 = 시드 × 목표수익비율
+  // 목표 R = (시드 × 목표수익비율%) / (시드 × 리스크% × 목표승률)
+  //        = 목표수익비율% / (리스크% × 목표승률%)
+  const goal = stripPct(v('cfg-goal-'+market));
+  const risk = stripPct(v('cfg-risk-'+market));
+  const wr   = stripPct(v('cfg-wr-'+market));
+  if (!risk || !wr) return null;
+  return goal / (risk * (wr / 100));
+}
+
+function updateRGoalDisplay() {
+  ['coin','kor','us'].forEach(m => {
+    const r = calcTargetR(m);
+    const el = ge('cfg-r-'+m);
+    if (el && r !== null) el.textContent = '+' + r.toFixed(2) + 'R';
+  });
 }
 function fmtDate(d) {
   if (!d) return '—';
@@ -2083,6 +2135,7 @@ renderStrategies();
 renderRDist([0,0,0,0,0,0,0]);
 renderStrategyBars(strategies.map(s => ({n:s,c:0})));
 document.getElementById('m-date-start').value = new Date().toISOString().slice(0,10);
+updateRGoalDisplay();
 
 </script>
 </body>
