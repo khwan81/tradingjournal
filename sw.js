@@ -2,9 +2,9 @@ const CACHE_NAME = 'trading-journal-v1';
 
 // 오프라인에서도 앱 껍데기는 보여주기 위한 캐시 목록
 const SHELL_ASSETS = [
-  '/trading-journal/',
-  '/trading-journal/index.html',
-  '/trading-journal/manifest.json',
+  '/tradingjournal/',
+  '/tradingjournal/index.html',
+  '/tradingjournal/manifest.json',
 ];
 
 // 설치 시 shell 캐시

@@ -6,13 +6,13 @@
 <title>매매일지</title>
 
 <!-- PWA -->
-<link rel="manifest" href="/trading-journal/manifest.json">
+<link rel="manifest" href="/tradingjournal/manifest.json">
 <meta name="theme-color" content="#0d0f12">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="매매일지">
-<link rel="apple-touch-icon" href="/trading-journal/icons/icon-192.png">
+<link rel="apple-touch-icon" href="/tradingjournal/icons/icon-192.png">
 <meta name="description" content="개인 트레이딩 매매일지 — 거래 기록, 손익 분석, R값 통계">
 <meta name="robots" content="noindex">
 
@@ -1211,13 +1211,13 @@ import { getFirestore, collection, doc,
 // ── Firebase Config ──────────────────────────────────────────────────────────
 // 아래 값을 본인의 Firebase 프로젝트 설정으로 교체하세요
 const firebaseConfig = {
-  apiKey: "AIzaSyAeRy5MJOLLF3uK_xaN_UeIt5p1kA_KwEA",
-  authDomain: "tradingjournal-f6afc.firebaseapp.com",
-  projectId: "tradingjournal-f6afc",
-  storageBucket: "tradingjournal-f6afc.firebasestorage.app",
+  apiKey:            "AIzaSyAeRy5MJOLLF3uK_xaN_UeIt5p1kA_KwEA",
+  authDomain:        "tradingjournal-f6afc.firebaseapp.com",
+  projectId:         "tradingjournal-f6afc",
+  storageBucket:     "tradingjournal-f6afc.firebasestorage.app",
   messagingSenderId: "673545133862",
-  appId: "1:673545133862:web:90ec278804c2b035e96be7",
-  measurementId: "G-Y1TSX20W9C"
+  appId:             "1:673545133862:web:90ec278804c2b035e96be7",
+  measurementId:     "G-Y1TSX20W9C"
 };
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -2175,7 +2175,7 @@ updateRGoalDisplay();
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/trading-journal/sw.js')
+    navigator.serviceWorker.register('/tradingjournal/sw.js')
       .then(reg => console.log('SW 등록:', reg.scope))
       .catch(err => console.log('SW 실패:', err));
   });
