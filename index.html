@@ -286,8 +286,9 @@ body {
 
 /* ── Badge ── */
 .badge {
-  display: inline-block; padding: 2px 8px;
+  display: inline-block; padding: 2px 7px;
   border-radius: 99px; font-size: 10px; font-weight: 500;
+  white-space: nowrap;
 }
 .b-coin   { background: var(--coin-bg);   color: var(--coin-c); }
 .b-kor    { background: var(--kor-bg);    color: var(--kor-c); }
@@ -858,6 +859,37 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator {
   cursor: pointer;
 }
 
+/* ── 계좌 카드 세로 입력 ── */
+.acct-field-col {
+  display: flex; flex-direction: column; gap: 5px;
+  padding: 9px 0; border-bottom: 1px solid var(--border);
+}
+.acct-field-col:last-child { border-bottom: none; }
+.acct-input-wrap {
+  display: flex; align-items: center;
+  background: var(--bg4); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); overflow: hidden;
+  transition: border-color .15s;
+}
+.acct-input-wrap:focus-within { border-color: var(--accent); }
+.acct-input-prefix {
+  padding: 0 10px; font-size: 12px; color: var(--text3);
+  background: var(--bg3); border-right: 1px solid var(--border);
+  height: 36px; display: flex; align-items: center; flex-shrink: 0;
+}
+.acct-input-inner {
+  border: none !important; background: transparent !important;
+  width: 100% !important; text-align: right;
+  padding: 8px 10px !important;
+}
+.acct-input-inner:focus { border-color: transparent !important; }
+
+/* ── trade row 개선: 7열 ── */
+.trade-head,
+.trade-row {
+  grid-template-columns: 96px 90px 1fr 70px 90px 60px 70px;
+}
+
 /* ── 설정: PC 레이아웃 ── */
 @media (min-width: 701px) {
   .settings-top-grid {
@@ -1082,10 +1114,9 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator {
     </div>
     <div class="trade-wrap">
       <div class="trade-head t-cols">
-        <span>날짜/시간</span><span>시장</span><span>종목</span>
-        <span>전략/방향</span><span style="text-align:right;">손익</span>
-        <span style="text-align:right;">R</span><span>기간</span>
-        <span></span><span style="text-align:center;">관리</span>
+        <span>날짜/시간</span><span>계좌</span><span>종목</span>
+        <span>전략/방향</span><span style="text-align:right;">손익 / R</span>
+        <span>기간</span><span style="text-align:center;">관리</span>
       </div>
       <div id="trade-body">
         <div style="padding:32px;text-align:center;color:var(--text3);font-size:13px;">
@@ -1426,7 +1457,7 @@ window.saveSettings = async function() {
   accounts = accounts.map(a => {
     const seed = parseFloat(ge('acct-seed-'+a.id)?.value?.replace(/,/g,'')||0) || a.seed;
     const goal = parseFloat(ge('acct-goal-'+a.id)?.value?.replace(/,/g,'')||0) || a.monthlyGoal;
-    const risk = parseFloat(ge('acct-risk-'+a.id)?.value?.replace('%','')||0) || a.risk;
+    const risk = parseFloat(ge('acct-risk-'+a.id)?.value||0) || a.risk;
     const name = ge('acct-name-'+a.id)?.value || a.name;
     return { ...a, name, seed, monthlyGoal: goal, risk };
   });
@@ -1456,12 +1487,10 @@ function applySettingsToUI() {
 function renderAccountList() {
   const list = ge('acct-list'); if (!list) return;
   list.innerHTML = accounts.map(a => {
-    const sym = MKT_SYM[a.market] || '';
+    const sym = a.market === 'kor' ? '₩' : '$';
     const targetR = calcTargetRForAccount(a);
     const targetRStr = targetR !== null ? '+' + targetR.toFixed(2) + 'R' : '—';
-    const goalFmt = a.market === 'kor'
-      ? '₩' + Number(a.monthlyGoal).toLocaleString('ko-KR')
-      : sym + Number(a.monthlyGoal).toLocaleString('en-US');
+    const goalFmt = sym + Number(a.monthlyGoal).toLocaleString('ko-KR');
     return `
     <div class="acct-card">
       <div class="acct-card-head">
@@ -1480,17 +1509,26 @@ function renderAccountList() {
             <option value="us"${a.market==='us'?' selected':''}>미장 ($)</option>
           </select>
         </div>
-        <div class="acct-field-row">
+        <div class="acct-field-col">
           <span class="acct-field-lbl">시드</span>
-          <input class="acct-field-input" type="text" id="acct-seed-${a.id}" value="${Number(a.seed).toLocaleString('en-US')}" onblur="fmtComma(this);updateTotalGoalDisplay()" oninput="rawNum(this);updateTotalGoalDisplay()">
+          <div class="acct-input-wrap">
+            <span class="acct-input-prefix">${sym}</span>
+            <input class="acct-field-input acct-input-inner" type="text" id="acct-seed-${a.id}" value="${Number(a.seed).toLocaleString('ko-KR')}" onblur="fmtComma(this);updateTotalGoalDisplay()" oninput="rawNum(this);updateTotalGoalDisplay()">
+          </div>
         </div>
-        <div class="acct-field-row">
+        <div class="acct-field-col">
           <span class="acct-field-lbl">월 목표 수익</span>
-          <input class="acct-field-input" type="text" id="acct-goal-${a.id}" value="${Number(a.monthlyGoal).toLocaleString('en-US')}" onblur="fmtComma(this);updateAcctTargetR('${a.id}')" oninput="rawNum(this);updateAcctTargetR('${a.id}')">
+          <div class="acct-input-wrap">
+            <span class="acct-input-prefix">${sym}</span>
+            <input class="acct-field-input acct-input-inner" type="text" id="acct-goal-${a.id}" value="${Number(a.monthlyGoal).toLocaleString('ko-KR')}" onblur="fmtComma(this);updateAcctTargetR('${a.id}')" oninput="rawNum(this);updateAcctTargetR('${a.id}')">
+          </div>
         </div>
-        <div class="acct-field-row">
+        <div class="acct-field-col">
           <span class="acct-field-lbl">거래당 리스크</span>
-          <input class="acct-field-input" type="text" id="acct-risk-${a.id}" value="${a.risk}%" onblur="fmtPct(this);updateAcctTargetR('${a.id}')" oninput="numOnly(this);updateAcctTargetR('${a.id}')">
+          <div class="acct-input-wrap">
+            <span class="acct-input-prefix">%</span>
+            <input class="acct-field-input acct-input-inner" type="text" id="acct-risk-${a.id}" value="${a.risk}" onblur="updateAcctTargetR('${a.id}')" oninput="numOnly(this);updateAcctTargetR('${a.id}')">
+          </div>
         </div>
       </div>
       <div class="acct-result-bar">
@@ -1515,7 +1553,7 @@ window.updateAcctTargetR = function(id) {
   const a = accounts.find(x => x.id === id); if (!a) return;
   const seed = parseFloat(ge('acct-seed-'+id)?.value?.replace(/,/g,'')||0);
   const goal = parseFloat(ge('acct-goal-'+id)?.value?.replace(/,/g,'')||0);
-  const risk = parseFloat(ge('acct-risk-'+id)?.value?.replace('%','')||0);
+  const risk = parseFloat(ge('acct-risk-'+id)?.value||0);
   if (!seed || !risk) return;
   const rate = a.market==='coin' ? (parseNum('cfg-tether')||1482) : a.market==='us' ? (parseNum('cfg-usd')||1491) : 1;
   const goalKrw = a.market==='kor' ? goal : goal * rate;
@@ -1694,14 +1732,12 @@ function buildTradeRow(t) {
 
   const desktopRow = `
     <div class="trade-row t-cols" id="row-${t.id}" onclick="toggleExp('${t.id}',event)">
-      <div><div>${dtStr}</div><div style="font-size:10px;color:var(--text3);">${timeStr}</div></div>
-      ${mktBadge}
-      <span style="font-weight:500;">${t.symbol}</span>
-      <div style="display:flex;flex-direction:column;gap:3px;">${dirBadge}<span style="font-size:10px;color:var(--text3);">${t.strategy||''}</span></div>
-      <span style="text-align:right;">${pnlStr}</span>
-      <span style="text-align:right;">${rStr}</span>
+      <div><div style="font-size:12px;">${dtStr}</div><div style="font-size:10px;color:var(--text3);">${timeStr}</div></div>
+      <div style="display:flex;flex-direction:column;gap:3px;">${mktBadge}<span style="font-size:10px;color:var(--text3);margin-top:1px;">${t.accountName||''}</span></div>
+      <div><div style="font-weight:500;font-size:12px;">${t.symbol}</div><div style="font-size:10px;color:var(--text3);">${t.strategy||''}</div></div>
+      <div style="display:flex;flex-direction:column;gap:3px;">${dirBadge}</div>
+      <div style="text-align:right;"><div>${pnlStr}</div><div style="margin-top:2px;">${rStr}</div></div>
       <span style="font-size:11px;color:var(--text3);">${t.duration||'—'}</span>
-      <span></span>
       <div class="trade-actions">
         <button class="btn-edit" onclick="openEdit('${t.id}',event)">✏</button>
         <button class="btn-del"  onclick="confirmDel('${t.id}',event)">🗑</button>
