@@ -884,10 +884,14 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator {
 }
 .acct-input-inner:focus { border-color: transparent !important; }
 
-/* ── trade row 개선: 7열 ── */
+/* ── trade row: 9열 (날짜/계좌/종목/전략/방향/손익/R/기간/관리) ── */
 .trade-head,
 .trade-row {
-  grid-template-columns: 96px 90px 1fr 70px 90px 60px 70px;
+  grid-template-columns: 96px 80px 1fr 80px 52px 80px 52px 52px 68px;
+}
+/* 배지: 텍스트 너비만큼만 차지하게 */
+.trade-row .badge, .trade-head .badge {
+  display: inline-flex; width: fit-content; align-self: flex-start;
 }
 
 /* ── 설정: PC 레이아웃 ── */
@@ -1114,9 +1118,15 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator {
     </div>
     <div class="trade-wrap">
       <div class="trade-head t-cols">
-        <span>날짜/시간</span><span>계좌</span><span>종목</span>
-        <span>전략/방향</span><span style="text-align:right;">손익 / R</span>
-        <span>기간</span><span style="text-align:center;">관리</span>
+        <span>날짜/시간</span>
+        <span>계좌</span>
+        <span>종목</span>
+        <span>전략</span>
+        <span>방향</span>
+        <span style="text-align:right;">손익</span>
+        <span style="text-align:right;">R</span>
+        <span>기간</span>
+        <span style="text-align:center;">관리</span>
       </div>
       <div id="trade-body">
         <div style="padding:32px;text-align:center;color:var(--text3);font-size:13px;">
@@ -1733,10 +1743,12 @@ function buildTradeRow(t) {
   const desktopRow = `
     <div class="trade-row t-cols" id="row-${t.id}" onclick="toggleExp('${t.id}',event)">
       <div><div style="font-size:12px;">${dtStr}</div><div style="font-size:10px;color:var(--text3);">${timeStr}</div></div>
-      <div style="display:flex;flex-direction:column;gap:3px;">${mktBadge}<span style="font-size:10px;color:var(--text3);margin-top:1px;">${t.accountName||''}</span></div>
-      <div><div style="font-weight:500;font-size:12px;">${t.symbol}</div><div style="font-size:10px;color:var(--text3);">${t.strategy||''}</div></div>
-      <div style="display:flex;flex-direction:column;gap:3px;">${dirBadge}</div>
-      <div style="text-align:right;"><div>${pnlStr}</div><div style="margin-top:2px;">${rStr}</div></div>
+      <div>${mktBadge}</div>
+      <span style="font-weight:500;font-size:12px;">${t.symbol}</span>
+      <span style="font-size:11px;color:var(--text2);">${t.strategy||'—'}</span>
+      <div>${dirBadge}</div>
+      <div style="text-align:right;">${pnlStr}</div>
+      <div style="text-align:right;">${rStr}</div>
       <span style="font-size:11px;color:var(--text3);">${t.duration||'—'}</span>
       <div class="trade-actions">
         <button class="btn-edit" onclick="openEdit('${t.id}',event)">✏</button>
