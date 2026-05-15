@@ -877,12 +877,12 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
             <span class="acc-lbl">시드</span>
             <div style="display:flex;align-items:center;gap:6px;">
               <span style="font-size:12px;color:var(--text3);">$</span>
-              <input class="acc-input" type="text" id="cfg-seed-coin" value="3,000" onblur="fmtComma(this);updateAccPreview('coin')" oninput="rawNum(this)">
+              <input class="acc-input" type="text" id="cfg-seed-coin" value="3,000" onblur="fmtComma(this);updateAccPreview('coin');updateRGoalDisplay()" oninput="rawNum(this);updateRGoalDisplay()">
             </div>
           </div>
           <div class="acc-row">
             <span class="acc-lbl">목표 수익 비율</span>
-            <input class="acc-input" type="text" id="cfg-goal-coin" value="40" placeholder="40" oninput="numOnly(this)" onblur="fmtPct(this)">
+            <input class="acc-input" type="text" id="cfg-goal-coin" value="40" placeholder="40" oninput="numOnly(this);updateRGoalDisplay()" onblur="fmtPct(this);updateRGoalDisplay()">
           </div>
           <div class="acc-row">
             <span class="acc-lbl">월 목표 평균 R</span>
@@ -890,15 +890,15 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
           </div>
           <div class="acc-row">
             <span class="acc-lbl">거래당 리스크</span>
-            <input class="acc-input" type="text" id="cfg-risk-coin" value="1" placeholder="1" oninput="numOnly(this)" onblur="fmtPct(this)">
+            <input class="acc-input" type="text" id="cfg-risk-coin" value="1" placeholder="1" oninput="numOnly(this);updateRGoalDisplay()" onblur="fmtPct(this);updateRGoalDisplay()">
           </div>
           <div class="acc-row">
             <span class="acc-lbl">왕복 수수료</span>
-            <input class="acc-input" type="text" id="cfg-fee-coin" value="0.01" placeholder="0.01" oninput="numOnly(this)" onblur="fmtPct(this)">
+            <input class="acc-input" type="text" id="cfg-fee-coin" value="0.01" placeholder="0.01" oninput="numOnly(this);updateRGoalDisplay()" onblur="fmtPct(this);updateRGoalDisplay()">
           </div>
           <div class="acc-row">
             <span class="acc-lbl">목표 승률</span>
-            <input class="acc-input" type="text" id="cfg-wr-coin" value="50" placeholder="50" oninput="numOnly(this)" onblur="fmtPct(this)">
+            <input class="acc-input" type="text" id="cfg-wr-coin" value="50" placeholder="50" oninput="numOnly(this);updateRGoalDisplay()" onblur="fmtPct(this);updateRGoalDisplay()">
           </div>
         </div>
       </div>
@@ -917,12 +917,12 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
             <span class="acc-lbl">시드</span>
             <div style="display:flex;align-items:center;gap:6px;">
               <span style="font-size:12px;color:var(--text3);">₩</span>
-              <input class="acc-input" type="text" id="cfg-seed-kor" value="1,000,000" onblur="fmtComma(this);updateAccPreview('kor')" oninput="rawNum(this)">
+              <input class="acc-input" type="text" id="cfg-seed-kor" value="1,000,000" onblur="fmtComma(this);updateAccPreview('kor');updateRGoalDisplay()" oninput="rawNum(this);updateRGoalDisplay()">
             </div>
           </div>
           <div class="acc-row">
             <span class="acc-lbl">목표 수익 비율</span>
-            <input class="acc-input" type="text" id="cfg-goal-kor" value="30" placeholder="30" oninput="numOnly(this)" onblur="fmtPct(this)">
+            <input class="acc-input" type="text" id="cfg-goal-kor" value="30" placeholder="30" oninput="numOnly(this);updateRGoalDisplay()" onblur="fmtPct(this);updateRGoalDisplay()">
           </div>
           <div class="acc-row">
             <span class="acc-lbl">월 목표 평균 R</span>
@@ -930,15 +930,15 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
           </div>
           <div class="acc-row">
             <span class="acc-lbl">거래당 리스크</span>
-            <input class="acc-input" type="text" id="cfg-risk-kor" value="1" placeholder="1" oninput="numOnly(this)" onblur="fmtPct(this)">
+            <input class="acc-input" type="text" id="cfg-risk-kor" value="1" placeholder="1" oninput="numOnly(this);updateRGoalDisplay()" onblur="fmtPct(this);updateRGoalDisplay()">
           </div>
           <div class="acc-row">
             <span class="acc-lbl">왕복 수수료</span>
-            <input class="acc-input" type="text" id="cfg-fee-kor" value="0" placeholder="0" oninput="numOnly(this)" onblur="fmtPct(this)">
+            <input class="acc-input" type="text" id="cfg-fee-kor" value="0" placeholder="0" oninput="numOnly(this);updateRGoalDisplay()" onblur="fmtPct(this);updateRGoalDisplay()">
           </div>
           <div class="acc-row">
             <span class="acc-lbl">목표 승률</span>
-            <input class="acc-input" type="text" id="cfg-wr-kor" value="50" placeholder="50" oninput="numOnly(this)" onblur="fmtPct(this)">
+            <input class="acc-input" type="text" id="cfg-wr-kor" value="50" placeholder="50" oninput="numOnly(this);updateRGoalDisplay()" onblur="fmtPct(this);updateRGoalDisplay()">
           </div>
         </div>
       </div>
@@ -957,12 +957,12 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
             <span class="acc-lbl">시드</span>
             <div style="display:flex;align-items:center;gap:6px;">
               <span style="font-size:12px;color:var(--text3);">$</span>
-              <input class="acc-input" type="text" id="cfg-seed-us" value="1,000" onblur="fmtComma(this);updateAccPreview('us')" oninput="rawNum(this)">
+              <input class="acc-input" type="text" id="cfg-seed-us" value="1,000" onblur="fmtComma(this);updateAccPreview('us');updateRGoalDisplay()" oninput="rawNum(this);updateRGoalDisplay()">
             </div>
           </div>
           <div class="acc-row">
             <span class="acc-lbl">목표 수익 비율</span>
-            <input class="acc-input" type="text" id="cfg-goal-us" value="30" placeholder="30" oninput="numOnly(this)" onblur="fmtPct(this)">
+            <input class="acc-input" type="text" id="cfg-goal-us" value="30" placeholder="30" oninput="numOnly(this);updateRGoalDisplay()" onblur="fmtPct(this);updateRGoalDisplay()">
           </div>
           <div class="acc-row">
             <span class="acc-lbl">월 목표 평균 R</span>
@@ -970,15 +970,15 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
           </div>
           <div class="acc-row">
             <span class="acc-lbl">거래당 리스크</span>
-            <input class="acc-input" type="text" id="cfg-risk-us" value="1" placeholder="1" oninput="numOnly(this)" onblur="fmtPct(this)">
+            <input class="acc-input" type="text" id="cfg-risk-us" value="1" placeholder="1" oninput="numOnly(this);updateRGoalDisplay()" onblur="fmtPct(this);updateRGoalDisplay()">
           </div>
           <div class="acc-row">
             <span class="acc-lbl">왕복 수수료</span>
-            <input class="acc-input" type="text" id="cfg-fee-us" value="0" placeholder="0" oninput="numOnly(this)" onblur="fmtPct(this)">
+            <input class="acc-input" type="text" id="cfg-fee-us" value="0" placeholder="0" oninput="numOnly(this);updateRGoalDisplay()" onblur="fmtPct(this);updateRGoalDisplay()">
           </div>
           <div class="acc-row">
             <span class="acc-lbl">목표 승률</span>
-            <input class="acc-input" type="text" id="cfg-wr-us" value="50" placeholder="50" oninput="numOnly(this)" onblur="fmtPct(this)">
+            <input class="acc-input" type="text" id="cfg-wr-us" value="50" placeholder="50" oninput="numOnly(this);updateRGoalDisplay()" onblur="fmtPct(this);updateRGoalDisplay()">
           </div>
         </div>
       </div>
@@ -988,15 +988,15 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
       <div class="card-title">공통 환율 기본값 <span style="text-transform:none;letter-spacing:0;font-size:10px;color:var(--text3);">— 거래 입력 시 미입력이면 이 값 사용</span></div>
       <div class="srow">
         <div><div style="font-size:13px;">업비트 테더 (USDT/KRW)</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">코인 시장 원화 환산 기본값</div></div>
-        <div class="input-wrap" style="width:150px;"><span class="input-prefix">₩</span><input type="text" id="cfg-tether" value="1,482" onblur="fmtComma(this)" oninput="rawNum(this)"></div>
+        <div class="input-wrap" style="width:150px;"><span class="input-prefix">₩</span><input type="text" id="cfg-tether" value="1,482" onblur="fmtComma(this);updateRGoalDisplay()" oninput="rawNum(this);updateRGoalDisplay()"></div>
       </div>
       <div class="srow">
         <div><div style="font-size:13px;">원/달러 환율 (USD/KRW)</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">미장 원화 환산 기본값</div></div>
-        <div class="input-wrap" style="width:150px;"><span class="input-prefix">₩</span><input type="text" id="cfg-usd" value="1,491" onblur="fmtComma(this)" oninput="rawNum(this)"></div>
+        <div class="input-wrap" style="width:150px;"><span class="input-prefix">₩</span><input type="text" id="cfg-usd" value="1,491" onblur="fmtComma(this);updateRGoalDisplay()" oninput="rawNum(this);updateRGoalDisplay()"></div>
       </div>
       <div class="srow">
         <div><div style="font-size:13px;">월 목표 수익 합계</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">전체 시장 합산 목표</div></div>
-        <div class="input-wrap" style="width:180px;"><span class="input-prefix">₩</span><input type="text" id="cfg-total-goal" value="500,000" onblur="fmtComma(this)" oninput="rawNum(this)"></div>
+        <div class="input-wrap" style="width:180px;"><span class="input-prefix">₩</span><input type="text" id="cfg-total-goal" value="500,000" onblur="fmtComma(this);updateRGoalDisplay()" oninput="rawNum(this);updateRGoalDisplay()"></div>
       </div>
     </div>
 
@@ -2081,28 +2081,49 @@ function parseNum(id) {
 }
 function getTether()  { return parseNum('cfg-tether')  || (settings.tether  || 1482); }
 function getUsdRate() { return parseNum('cfg-usd')     || (settings.usdRate || 1491); }
+// 엑셀 원본 공식과 동일한 목표 R 계산
+// C14 = (C6 + C7*(1-C8)*C11*C10 + C7*C11*C9) / (C7*C8*C11*C10)
+// C6(월목표수익) = C15(합계₩) * C13(비율) / C12(환율) [코인/미장]
+//              = C15 * C13 [국장]
+function calcTargetR(market) {
+  const seed       = parseNum('cfg-seed-' + market);          // 시드
+  const goalRatio  = stripPct(v('cfg-goal-' + market)) / 100; // 목표수익비율 (0.4)
+  const risk       = stripPct(v('cfg-risk-' + market)) / 100; // 리스크 (0.01)
+  const fee        = stripPct(v('cfg-fee-'  + market)) / 100; // 수수료 (0.0001)
+  const wr         = stripPct(v('cfg-wr-'   + market)) / 100; // 승률 (0.5)
+  const totalGoal  = parseNum('cfg-total-goal');               // 월목표수익합계₩
+  const trades     = 40; // 월 거래 횟수 (엑셀 기본값, 추후 설정 가능)
+
+  if (!seed || !risk || !wr) return null;
+
+  // 월 목표 수익 (시장 통화 기준)
+  let monthlyGoal;
+  if (market === 'kor') {
+    monthlyGoal = totalGoal * goalRatio;
+  } else {
+    const rate = market === 'coin' ? (parseNum('cfg-tether') || 1482) : (parseNum('cfg-usd') || 1491);
+    monthlyGoal = (totalGoal * goalRatio) / rate;
+  }
+
+  // 목표 R = (월목표수익 + 거래수×(1-승률)×시드×리스크 + 거래수×시드×수수료)
+  //          ÷ (거래수 × 승률 × 시드 × 리스크)
+  const numerator   = monthlyGoal + trades * (1 - wr) * seed * risk + trades * seed * fee;
+  const denominator = trades * wr * seed * risk;
+
+  if (denominator <= 0) return null;
+  return numerator / denominator;
+}
+
 function getRiskPct(market) {
   const raw = { coin: v('cfg-risk-coin'), kor: v('cfg-risk-kor'), us: v('cfg-risk-us') }[market] || '1';
   return parseFloat(raw.replace('%','')) || 1;
 }
 
-// 설정에서 시장별 목표 R 계산 (시드 × 목표수익비율 / 리스크비율 / 목표승률... 단순화: 저장된 값 직접 표시)
-function calcTargetR(market) {
-  // 엑셀 방식: 월목표수익 = 시드 × 목표수익비율
-  // 목표 R = (시드 × 목표수익비율%) / (시드 × 리스크% × 목표승률)
-  //        = 목표수익비율% / (리스크% × 목표승률%)
-  const goal = stripPct(v('cfg-goal-'+market));
-  const risk = stripPct(v('cfg-risk-'+market));
-  const wr   = stripPct(v('cfg-wr-'+market));
-  if (!risk || !wr) return null;
-  return goal / (risk * (wr / 100));
-}
-
 function updateRGoalDisplay() {
   ['coin','kor','us'].forEach(m => {
     const r = calcTargetR(m);
-    const el = ge('cfg-r-'+m);
-    if (el && r !== null) el.textContent = '+' + r.toFixed(2) + 'R';
+    const el = ge('cfg-r-' + m);
+    if (el) el.textContent = r !== null ? '+' + r.toFixed(2) + 'R' : '—';
   });
 }
 function fmtDate(d) {
