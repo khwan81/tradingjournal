@@ -890,6 +890,9 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator {
 .trade-row .badge, .trade-head .badge {
   display: inline-flex; width: fit-content; align-self: flex-start;
 }
+/* 전체 컬럼 가운데 정렬 */
+.trade-head > *,
+.trade-row  > * { text-align: center; justify-content: center; align-items: center; }
 
 /* ── 설정: PC 레이아웃 ── */
 @media (min-width: 701px) {
@@ -1120,10 +1123,10 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator {
         <span>종목</span>
         <span>전략</span>
         <span>방향</span>
-        <span style="text-align:right;">손익</span>
-        <span style="text-align:right;">R</span>
+        <span>손익</span>
+        <span>R</span>
         <span>기간</span>
-        <span style="text-align:center;">관리</span>
+        <span>관리</span>
       </div>
       <div id="trade-body">
         <div style="padding:32px;text-align:center;color:var(--text3);font-size:13px;">
@@ -1744,8 +1747,8 @@ function buildTradeRow(t) {
       <span style="font-weight:500;font-size:12px;">${t.symbol}</span>
       <span style="font-size:11px;color:var(--text2);">${t.strategy||'—'}</span>
       <div>${dirBadge}</div>
-      <div style="text-align:right;">${pnlStr}</div>
-      <div style="text-align:right;">${rStr}</div>
+      <div>${pnlStr}</div>
+      <div>${rStr}</div>
       <span style="font-size:11px;color:var(--text3);">${t.duration||'—'}</span>
       <div class="trade-actions">
         <button class="btn-edit" onclick="openEdit('${t.id}',event)">✏</button>
