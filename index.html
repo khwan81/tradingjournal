@@ -844,13 +844,45 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
 .mgb-after-item { font-size: 11px; color: var(--text3); }
 .mgb-after-item span { color: var(--text2); font-weight: 500; }
 
-/* ── 반응형: 누적R 진행 카드 모바일 ── */
+/* ── datetime-local 다크 스타일 ── */
+input[type=datetime-local] {
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); padding: 8px 11px;
+  color: var(--text); font-size: 13px; font-family: var(--font);
+  outline: none; transition: border-color .15s;
+  color-scheme: dark;
+}
+input[type=datetime-local]:focus { border-color: var(--accent); }
+input[type=datetime-local]::-webkit-calendar-picker-indicator {
+  filter: invert(1) opacity(0.5);
+  cursor: pointer;
+}
+
+/* ── 설정: PC 레이아웃 ── */
+@media (min-width: 701px) {
+  .settings-top-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;
+  }
+  .settings-top-grid .card { margin-bottom: 0; }
+  .acct-card { max-width: none; }
+  #acct-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  #acct-list .acct-card { margin-bottom: 0; }
+  .add-acct-btn { max-width: none; }
+}
+
+/* ── 반응형: 모바일 ── */
 @media (max-width: 700px) {
   .goal-progress-grid { grid-template-columns: 1fr; }
   .gpc-cur { font-size: 18px; }
   .acct-field-input { min-height: 44px; width: 100%; }
   .acct-card { max-width: 100%; }
   .acct-field-row { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .settings-top-grid { display: flex; flex-direction: column; gap: 12px; }
 }
 </style>
 </head>
@@ -1038,11 +1070,10 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
     <div class="row-hd">
       <div class="fbar" id="log-fbar">
         <button class="fchip active" onclick="logFilter(this,'all')">전체</button>
-        <button class="fchip" onclick="logFilter(this,'coin')">코인</button>
-        <button class="fchip" onclick="logFilter(this,'kor')">국장</button>
-        <button class="fchip" onclick="logFilter(this,'us')">미장</button>
         <button class="fchip" onclick="logFilter(this,'long')">롱</button>
         <button class="fchip" onclick="logFilter(this,'short')">숏</button>
+        <button class="fchip" onclick="logFilter(this,'stop')">손절</button>
+        <button class="fchip" onclick="logFilter(this,'open')">오픈</button>
       </div>
       <button class="btn-add btn-add-desktop" onclick="openModal()">
         <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 1v12M1 7h12"/></svg>
@@ -1067,18 +1098,34 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
   <!-- ─── SETTINGS ─── -->
   <div class="screen" id="screen-settings">
 
-    <div class="card">
-      <div class="card-title">공통 환율 기본값 <span style="text-transform:none;letter-spacing:0;font-size:10px;color:var(--text3);">— 거래 입력 시 미입력이면 이 값 사용</span></div>
-      <div class="srow">
-        <div><div style="font-size:13px;">업비트 테더 (USDT/KRW)</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">코인 시장 원화 환산 기본값</div></div>
-        <div class="input-wrap" style="width:150px;"><span class="input-prefix">₩</span><input type="text" id="cfg-tether" value="1,482" onblur="fmtComma(this)" oninput="rawNum(this)"></div>
+    <!-- PC: 공통환율 + 전략관리 2열 / 모바일: 1열 -->
+    <div class="settings-top-grid">
+      <div class="card">
+        <div class="card-title">공통 환율 기본값 <span style="text-transform:none;letter-spacing:0;font-size:10px;color:var(--text3);">— 거래 입력 시 미입력이면 이 값 사용</span></div>
+        <div class="srow">
+          <div><div style="font-size:13px;">업비트 테더 (USDT/KRW)</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">코인 시장 원화 환산 기본값</div></div>
+          <div class="input-wrap" style="width:150px;"><span class="input-prefix">₩</span><input type="text" id="cfg-tether" value="1,482" onblur="fmtComma(this)" oninput="rawNum(this)"></div>
+        </div>
+        <div class="srow">
+          <div><div style="font-size:13px;">원/달러 환율 (USD/KRW)</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">미장 원화 환산 기본값</div></div>
+          <div class="input-wrap" style="width:150px;"><span class="input-prefix">₩</span><input type="text" id="cfg-usd" value="1,491" onblur="fmtComma(this)" oninput="rawNum(this)"></div>
+        </div>
       </div>
-      <div class="srow">
-        <div><div style="font-size:13px;">원/달러 환율 (USD/KRW)</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">미장 원화 환산 기본값</div></div>
-        <div class="input-wrap" style="width:150px;"><span class="input-prefix">₩</span><input type="text" id="cfg-usd" value="1,491" onblur="fmtComma(this)" oninput="rawNum(this)"></div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <div class="card-title" style="margin-bottom:0;">전략 관리</div>
+          <span style="font-size:11px;color:var(--text3);">입력 폼의 전략 목록에 반영됩니다</span>
+        </div>
+        <div class="strategy-list" id="strategy-list"></div>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="new-strategy-input" placeholder="새 전략 이름 입력..." style="flex:1;font-size:13px;">
+          <button class="btn-p" style="padding:9px 18px;font-size:13px;" onclick="addStrategy()">+ 추가</button>
+        </div>
       </div>
     </div>
 
+    <!-- 계좌 관리: 전체 너비, PC에서 카드 그리드 -->
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
         <div class="card-title" style="margin-bottom:0;">계좌 관리</div>
@@ -1092,22 +1139,10 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
       </div>
     </div>
 
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-        <div class="card-title" style="margin-bottom:0;">전략 관리</div>
-        <span style="font-size:11px;color:var(--text3);">입력 폼의 전략 목록에 반영됩니다</span>
-      </div>
-      <div class="strategy-list" id="strategy-list"></div>
-      <div style="display:flex;gap:8px;">
-        <input type="text" id="new-strategy-input" placeholder="새 전략 이름 입력..." style="flex:1;font-size:13px;">
-        <button class="btn-p" style="padding:9px 18px;font-size:13px;" onclick="addStrategy()">+ 추가</button>
-      </div>
-    </div>
-
     <div style="display:flex;justify-content:flex-end;">
       <button class="btn-p" onclick="saveSettings()">설정 저장</button>
     </div>
-  </div>>
+  </div>
 
 <!-- ─── 입력/수정 모달 ─── -->
 <div class="ov" id="modal-ov" onclick="bgClose(event)">
