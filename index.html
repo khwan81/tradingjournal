@@ -694,6 +694,7 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
 .acct-card {
   background: var(--bg2); border: 1px solid var(--border);
   border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 10px;
+  max-width: 560px;
 }
 .acct-card-head {
   display: flex; align-items: center; justify-content: space-between;
@@ -733,7 +734,7 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
 .btn-acct-del:hover { background: var(--red-bg); }
 .add-acct-btn {
   display: flex; align-items: center; justify-content: center; gap: 6px;
-  width: 100%; padding: 13px;
+  width: 100%; max-width: 560px; padding: 13px;
   border: 1px dashed var(--border2); border-radius: var(--radius-lg);
   background: transparent; color: var(--text3); font-size: 13px;
   font-family: var(--font); cursor: pointer; transition: all .15s;
@@ -848,6 +849,7 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
   .goal-progress-grid { grid-template-columns: 1fr; }
   .gpc-cur { font-size: 18px; }
   .acct-field-input { min-height: 44px; width: 100%; }
+  .acct-card { max-width: 100%; }
   .acct-field-row { flex-direction: column; align-items: flex-start; gap: 6px; }
 }
 </style>
@@ -1302,7 +1304,7 @@ let settings    = {};
 let accounts    = [];        // 계좌 배열
 let strategies  = [...STRATEGIES_DEFAULT];
 let dbFilter_   = 'all';     // 'all' | accountId
-let logFilter_  = 'all';     // 'all' | accountId | 'long' | 'short'
+let logFilter_  = 'all';     // 'all' | accountId | 'long' | 'short' | 'stop' | 'open'
 let delTargetId = null;
 let unsubTrades = null;
 let cumMode     = 'r';       // 'r' | 'pnl'
@@ -1437,7 +1439,7 @@ function renderAccountList() {
       <div class="acct-card-body">
         <div class="acct-field-row">
           <span class="acct-field-lbl">시장</span>
-          <select id="acct-mkt-${a.id}" style="background:var(--bg4);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:5px 10px;color:var(--text);font-size:13px;font-family:var(--font);outline:none;" onchange="onAcctMktChange('${a.id}')">
+          <select id="acct-mkt-${a.id}" style="background:var(--bg4);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:5px 10px;color:var(--text);font-size:13px;font-family:var(--font);outline:none;width:140px;" onchange="onAcctMktChange('${a.id}')">
             <option value="coin"${a.market==='coin'?' selected':''}>코인 ($)</option>
             <option value="kor"${a.market==='kor'?' selected':''}>국장 (₩)</option>
             <option value="us"${a.market==='us'?' selected':''}>미장 ($)</option>
@@ -1616,6 +1618,8 @@ function filterTradesList(list, f) {
   if (f === 'all')   return list;
   if (f === 'long')  return list.filter(t => t.dir === 'long');
   if (f === 'short') return list.filter(t => t.dir === 'short');
+  if (f === 'stop')  return list.filter(t => !t.isOpen && t.pnl !== null && t.pnl <= 0);
+  if (f === 'open')  return list.filter(t => t.isOpen);
   // accountId 필터
   return list.filter(t => (t.accountId || t.market) === f);
 }
@@ -1698,7 +1702,10 @@ function buildTradeRow(t) {
 
 // ── Render: Dashboard ──────────────────────────────────────────────────────────
 function renderDashboard() {
-  const filtered = dbFilter_==='all' ? trades : trades.filter(t=>(t.accountId||t.market)===dbFilter_);
+  const acctForFilter = accounts.find(a=>a.id===dbFilter_);
+  const filtered = dbFilter_==='all' ? trades : trades.filter(t=>
+    t.accountId===dbFilter_ || (!t.accountId && acctForFilter && t.market===acctForFilter.market)
+  );
   const closed   = filtered.filter(t => !t.isOpen && t.pnl!==null);
   const wins     = closed.filter(t => t.pnl>0);
   const wr       = closed.length ? (wins.length/closed.length*100).toFixed(1) : '—';
@@ -1783,15 +1790,16 @@ function renderGoalProgressCards(filtered) {
   const usdRate = getUsdRate();
   const thisMonth = new Date().toISOString().slice(0,7);
 
-  grid.innerHTML = accounts.map(a => {
+  const visibleAccounts = dbFilter_==='all' ? accounts : accounts.filter(a=>a.id===dbFilter_);
+  grid.innerHTML = visibleAccounts.map(a => {
     const acctTrades = filtered.filter(t =>
       (t.accountId===a.id || (!t.accountId && t.market===a.market)) &&
       t.dateStart?.slice(0,7)===thisMonth && !t.isOpen && t.rVal!==null
     );
     const cumR    = acctTrades.reduce((s,t)=>s+(t.rVal||0),0);
     const targetR = calcTargetRForAccount(a);
-    const pct     = targetR ? Math.min(Math.round(cumR/targetR*100),999) : 0;
-    const remain  = targetR ? (targetR - cumR) : 0;
+    const pct     = (targetR && targetR > 0 && cumR > 0) ? Math.min(Math.round(cumR/targetR*100), 100) : 0;
+    const remain  = targetR ? Math.max(0, targetR - cumR) : 0;
     const color   = pct>=80?'var(--accent)':pct>=40?'var(--green)':'var(--amber)';
     const sym = MKT_SYM[a.market]||'$';
 
@@ -1819,7 +1827,10 @@ window.switchCumTab = function(tab) {
   cumMode = tab;
   ge('cum-tab-r').classList.toggle('active',   tab==='r');
   ge('cum-tab-pnl').classList.toggle('active', tab==='pnl');
-  const filtered = dbFilter_==='all' ? trades : trades.filter(t=>(t.accountId||t.market)===dbFilter_);
+  const acctForFilter2 = accounts.find(a=>a.id===dbFilter_);
+  const filtered = dbFilter_==='all' ? trades : trades.filter(t=>
+    t.accountId===dbFilter_ || (!t.accountId && acctForFilter2 && t.market===acctForFilter2.market)
+  );
   renderCumChart(filtered);
 };
 
@@ -1981,7 +1992,7 @@ function renderLogFilterChips() {
   const bar = ge('log-fbar'); if (!bar) return;
   bar.innerHTML = `<button class="fchip${logFilter_==='all'?' active':''}" onclick="logFilter(this,'all')">전체</button>` +
     accounts.map(a=>`<button class="fchip${logFilter_===a.id?' active':''}" onclick="logFilter(this,'${a.id}')"><span class="badge ${MKT_BADGE[a.market]}" style="margin-right:3px;font-size:9px;">${MKT_LABEL[a.market]}</span>${a.name}</button>`).join('') +
-    `<button class="fchip${logFilter_==='long'?' active':''}" onclick="logFilter(this,'long')">롱</button><button class="fchip${logFilter_==='short'?' active':''}" onclick="logFilter(this,'short')">숏</button>`;
+    `<button class="fchip${logFilter_==='long'?' active':''}" onclick="logFilter(this,'long')">롱</button><button class="fchip${logFilter_==='short'?' active':''}" onclick="logFilter(this,'short')">숏</button><button class="fchip${logFilter_==='stop'?' active':''}" onclick="logFilter(this,'stop')">손절</button><button class="fchip${logFilter_==='open'?' active':''}" onclick="logFilter(this,'open')">오픈</button>`;
 }
 
 // ── UI ────────────────────────────────────────────────────────────────────────
@@ -2189,7 +2200,7 @@ function updateModalGoalBox() {
   const acctTrades=trades.filter(t=>(t.accountId===acct.id||(!t.accountId&&t.market===acct.market))&&t.dateStart?.slice(0,7)===thisMonth&&!t.isOpen&&t.rVal!==null);
   const cumR=acctTrades.reduce((s,t)=>s+(t.rVal||0),0);
   const targetR=calcTargetRForAccount(acct)||0;
-  const pct=targetR?Math.min(Math.round(cumR/targetR*100),999):0;
+  const pct=(targetR&&targetR>0&&cumR>0)?Math.min(Math.round(cumR/targetR*100),100):0;
 
   const pnl=parseFloat(v('m-pnl')), seed=parseFloat(v('m-seed')), risk=acct.risk||1;
   const thisR=(!isNaN(pnl)&&!isNaN(seed)&&seed>0)?pnl/(seed*risk/100):0;
