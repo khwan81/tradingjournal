@@ -114,14 +114,15 @@ body {
 .btn-google svg { width: 18px; height: 18px; flex-shrink: 0; }
 
 /* ── App Shell ── */
-#app { display: none; max-width: 980px; margin: 0 auto; padding: 0 20px 40px; }
+#app {
+  display: none; max-width: 980px; margin: 0 auto;
+  padding: env(safe-area-inset-top) 20px 40px;
+}
 
 /* ── Top Header ── */
 .top-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 18px 0 16px;
-  /* iOS 노치/다이나믹아일랜드 safe area 적용 */
-  padding-top: calc(18px + env(safe-area-inset-top));
   border-bottom: 1px solid var(--border);
   margin-bottom: 20px;
 }
@@ -618,7 +619,7 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
 
 /* ── Responsive ── */
 @media (max-width: 700px) {
-  #app { padding: 0 14px 32px; }
+  #app { padding: env(safe-area-inset-top) 14px 32px; }
   .top-header { padding: 14px 0 12px; }
   .top-header h1 { font-size: 15px; }
   .user-chip span { display: none; }
