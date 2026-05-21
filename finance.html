@@ -396,7 +396,151 @@ body {
 }
 .liab-row .actions button:hover { background: var(--bg3); color: var(--text); }
 
-/* ── 모달 ── */
+/* ── 거래내역 탭 ── */
+.tx-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 14px;
+  gap: 12px;
+}
+.month-nav {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+.month-nav button {
+  background: transparent; border: none;
+  color: var(--text2);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 8px;
+  font-family: var(--font);
+  border-radius: 4px;
+}
+.month-nav button:hover { background: var(--bg3); color: var(--text); }
+.month-nav button:disabled { opacity: 0.3; cursor: not-allowed; }
+.month-nav .ym {
+  font-size: 15px; font-weight: 500;
+  font-family: var(--font-mono);
+  min-width: 80px; text-align: center;
+}
+
+.tx-table {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.tx-row {
+  display: grid;
+  grid-template-columns: 60px minmax(0, 1fr) 100px 120px 110px 32px;
+  gap: 10px;
+  padding: 12px 16px;
+  font-size: 13px;
+  align-items: center;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.tx-row:last-child { border-bottom: none; }
+.tx-row.header {
+  font-size: 11px;
+  color: var(--text3);
+  padding: 10px 16px;
+}
+.tx-row.empty {
+  display: block;
+  padding: 60px 20px;
+  text-align: center;
+  color: var(--text3);
+}
+.tx-row .col-date { color: var(--text2); font-family: var(--font-mono); }
+.tx-row .col-cat  { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; }
+.tx-row .col-pay  { color: var(--text2); display: flex; align-items: center; gap: 6px; }
+.tx-row .col-acc  { color: var(--text2); font-size: 12px; }
+.tx-row .col-amt  {
+  text-align: right; font-family: var(--font-mono); font-weight: 500;
+}
+.tx-row .col-amt.income  { color: var(--green); }
+.tx-row .col-amt.expense { color: var(--red); }
+.tx-row .col-actions {
+  text-align: right;
+  cursor: pointer;
+}
+.tx-row .col-actions button {
+  background: transparent;
+  border: none;
+  color: var(--text2);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-family: var(--font);
+}
+.tx-row .col-actions button:hover { background: var(--bg3); color: var(--text); }
+
+.tx-day-head {
+  font-size: 11px;
+  color: var(--text2);
+  padding: 8px 16px;
+  background: rgba(255,255,255,0.02);
+  font-family: var(--font-mono);
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.tx-legend {
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--text3);
+  padding: 0 6px;
+  display: flex; gap: 14px;
+}
+.tx-legend .unpaid-dot { color: var(--amber); }
+
+.pay-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--amber);
+  display: inline-block;
+  margin-left: 2px;
+  flex-shrink: 0;
+}
+.pay-meta {
+  color: var(--text3); font-size: 10px; margin-left: 4px;
+}
+
+/* 거래 모달 paid 토글 */
+.paid-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+}
+.paid-row.unpaid {
+  background: rgba(251,191,36,0.05);
+  border-color: rgba(251,191,36,0.2);
+}
+.paid-row .paid-label .main { font-size: 13px; }
+.paid-row .paid-label .sub  { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.paid-row.unpaid .paid-label .sub { color: var(--amber); }
+
+/* 카테고리 칩 (행에서 표시할 때 색상) */
+.cat-chip {
+  display: inline-flex;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.cat-chip.revenue  { background: var(--green-bg); color: var(--green); }
+.cat-chip.fixed    { background: var(--amber-bg); color: var(--amber); }
+.cat-chip.variable { background: var(--red-bg);   color: var(--red); }
+.cat-chip.unknown  { background: var(--bg3);      color: var(--text3); }
+
+.tx-row .mobile-meta { display: none; }
+
+
 .ov {
   position: fixed; inset: 0;
   background: rgba(0,0,0,0.65);
@@ -589,6 +733,29 @@ body {
 
   .section-head { flex-wrap: wrap; }
   .section-actions { width: 100%; justify-content: flex-end; margin-top: 4px; }
+
+  /* 거래 행 — 모바일 카드형 (2행 그리드) */
+  .tx-row {
+    grid-template-columns: 1fr auto auto;
+    grid-template-areas:
+      "cat  amt    actions"
+      "meta meta   meta";
+    gap: 6px 10px;
+    padding: 12px 14px;
+  }
+  .tx-row.header { display: none; }
+  .tx-row .col-date    { display: none; }
+  .tx-row .col-cat     { grid-area: cat; }
+  .tx-row .col-amt     { grid-area: amt; }
+  .tx-row .col-actions { grid-area: actions; }
+  .tx-row .col-pay     {
+    grid-area: meta;
+    font-size: 11px;
+    grid-column: meta / meta;
+  }
+  .tx-row .col-acc     { display: none; }
+  .tx-row .mobile-meta { display: inline; color: var(--text3); }
+  .tx-row .mobile-meta::after { content: " · "; color: var(--text3); }
 }
 </style>
 </head>
@@ -634,9 +801,19 @@ body {
 
   <!-- 탭 콘텐츠 -->
   <div class="tab-content active" id="tab-transactions">
-    <div class="empty-state">
-      <div class="icon">📝</div>
-      <div>거래내역 탭 — 다음 단계에서 구현</div>
+    <div class="tx-header">
+      <div class="month-nav">
+        <button type="button" id="btn-month-prev" aria-label="이전 달">‹</button>
+        <span class="ym" id="ym-label">—</span>
+        <button type="button" id="btn-month-next" aria-label="다음 달">›</button>
+      </div>
+      <button class="btn-p" id="btn-add-tx">+ 새 거래</button>
+    </div>
+    <div class="tx-table" id="tx-table">
+      <div class="tx-row empty">로딩 중…</div>
+    </div>
+    <div class="tx-legend">
+      <span><span class="unpaid-dot">●</span> 미결제 카드 거래</span>
     </div>
   </div>
 
@@ -914,6 +1091,66 @@ body {
   </div>
 </div>
 
+<!-- ── 모달: 거래 추가/편집 ── -->
+<div class="ov" id="ov-tx">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="tx-modal-title">새 거래</h3>
+      <button class="modal-close" data-close="ov-tx">×</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-tx" onsubmit="return false;">
+        <div class="form-row cols-2 form-group">
+          <div>
+            <label class="form-label">날짜</label>
+            <input class="input" type="date" id="tx-date">
+          </div>
+          <div>
+            <label class="form-label">금액</label>
+            <input class="input" type="text" inputmode="numeric" id="tx-amount" placeholder="0" style="text-align:right; font-family: var(--font-mono);">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">카테고리</label>
+          <select class="select" id="tx-category"></select>
+          <div class="form-hint" id="tx-category-hint"></div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">결제수단</label>
+          <select class="select" id="tx-payment"></select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">계좌 <span style="color:var(--text3);">(선택)</span></label>
+          <select class="select" id="tx-account">
+            <option value="">미지정</option>
+          </select>
+        </div>
+
+        <div class="paid-row" id="tx-paid-row">
+          <div class="paid-label">
+            <div class="main">결제완료</div>
+            <div class="sub" id="tx-paid-sub">현금성 거래 — 즉시 결제</div>
+          </div>
+          <div class="toggle on" id="tx-paid-toggle" role="switch" aria-label="결제완료"></div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">메모 <span style="color:var(--text3);">(선택)</span></label>
+          <input class="input" id="tx-memo" placeholder="예: 점심 동료 분담" autocomplete="off">
+        </div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-danger grow" id="btn-tx-delete" style="display:none;">삭제</button>
+      <button class="btn-s" data-close="ov-tx">취소</button>
+      <button class="btn-p" id="btn-tx-save">저장</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -924,7 +1161,8 @@ import {
   signInWithPopup, signOut, onAuthStateChanged
 } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection,
-         onSnapshot, query, orderBy, getDocs } from 'firebase/firestore';
+         onSnapshot, query, orderBy, getDocs, addDoc, updateDoc,
+         where, serverTimestamp } from 'firebase/firestore';
 
 // ── Firebase 설정 ──
 const firebaseConfig = {
@@ -993,8 +1231,11 @@ document.querySelectorAll('.tab').forEach(btn => {
 // ──────────────────────────────────────────────────────
 let accounts = [];   // [{id, ...}] 공유 마스터
 let settings = null; // finance/config 도큐먼트
+let transactions = []; // 현재 월의 거래
+let currentMonth = currentYm(); // YYYY-MM 형식
 let unsubAccounts = null;
 let unsubSettings = null;
+let unsubTransactions = null;
 
 // 자산 종류 enum (categoriesEnum 기본값)
 const DEFAULT_CATEGORIES_ENUM = {
@@ -1019,6 +1260,8 @@ const pathAccountsItems   = () => collection(db, `users/${currentUid}/config/acc
 const pathAccountsSettings = () => doc(db, `users/${currentUid}/config/accounts`);
 const pathFinanceSettings = () => doc(db, `users/${currentUid}/finance/config`);
 const pathAccount = id => doc(db, `users/${currentUid}/config/accounts/items/${id}`);
+const pathTransactions = () => collection(db, `users/${currentUid}/finance/config/transactions`);
+const pathTransaction = id => doc(db, `users/${currentUid}/finance/config/transactions/${id}`);
 
 // ──────────────────────────────────────────────────────
 // 초기 데이터 로드
@@ -1067,16 +1310,43 @@ async function loadAll() {
       renderPayments();
       renderCategories();
       renderLiabilities();
+      renderTransactions(); // 카테고리/결제수단 라벨 색상이 settings에 의존
     },
     err => { console.error('settings subscribe error', err); showToast('설정 로드 실패'); }
+  );
+
+  // 현재 월 거래 구독
+  subscribeTransactions();
+}
+
+function subscribeTransactions() {
+  if (unsubTransactions) { unsubTransactions(); unsubTransactions = null; }
+  if (!currentUid) return;
+  unsubTransactions = onSnapshot(
+    query(pathTransactions(), where('ym', '==', currentMonth)),
+    snap => {
+      transactions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // 클라이언트에서 날짜 내림차순 정렬 (Firestore 복합 인덱스 회피)
+      transactions.sort((a, b) => {
+        if (a.date !== b.date) return b.date.localeCompare(a.date);
+        // 같은 날짜면 생성순 역순 (최신 위)
+        const at = a.createdAt?.toMillis?.() || 0;
+        const bt = b.createdAt?.toMillis?.() || 0;
+        return bt - at;
+      });
+      renderTransactions();
+    },
+    err => { console.error('transactions subscribe error', err); showToast('거래 로드 실패'); }
   );
 }
 
 function unsubscribeAll() {
   if (unsubAccounts) { unsubAccounts(); unsubAccounts = null; }
   if (unsubSettings) { unsubSettings(); unsubSettings = null; }
+  if (unsubTransactions) { unsubTransactions(); unsubTransactions = null; }
   accounts = [];
   settings = null;
+  transactions = [];
 }
 
 // ──────────────────────────────────────────────────────
@@ -1614,6 +1884,354 @@ document.getElementById('btn-liab-delete').addEventListener('click', async () =>
     showToast('부채가 삭제되었습니다');
   } catch (e) { console.error(e); showToast('삭제 실패'); }
 });
+
+// ──────────────────────────────────────────────────────
+// 월 네비게이션
+// ──────────────────────────────────────────────────────
+function setMonth(ym) {
+  currentMonth = ym;
+  document.getElementById('ym-label').textContent = ym;
+  subscribeTransactions();
+}
+function shiftMonth(delta) {
+  const [y, m] = currentMonth.split('-').map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  const ny = d.getFullYear();
+  const nm = String(d.getMonth() + 1).padStart(2, '0');
+  setMonth(`${ny}-${nm}`);
+}
+document.getElementById('btn-month-prev').addEventListener('click', () => shiftMonth(-1));
+document.getElementById('btn-month-next').addEventListener('click', () => shiftMonth(+1));
+
+// ──────────────────────────────────────────────────────
+// flow 결정 헬퍼 (카테고리 → revenue|fixed|variable)
+// ──────────────────────────────────────────────────────
+function mapCategoryToFlow(category) {
+  if (!settings) return 'variable';
+  if (settings.categories.revenue?.includes(category))  return 'revenue';
+  if (settings.categories.fixed?.includes(category))    return 'fixed';
+  if (settings.categories.variable?.includes(category)) return 'variable';
+  return 'variable'; // 거래 시점에 있던 카테고리가 나중에 삭제된 경우
+}
+
+// 거래에 박힌 flow가 없으면 현재 settings 기준으로 보조 결정
+function txFlow(tx) {
+  return tx.flow || mapCategoryToFlow(tx.category);
+}
+
+// ──────────────────────────────────────────────────────
+// 거래 렌더링
+// ──────────────────────────────────────────────────────
+function renderTransactions() {
+  const $t = document.getElementById('tx-table');
+  if (!transactions.length) {
+    $t.innerHTML = '<div class="tx-row empty">이번 달 거래가 없습니다 — 우상단 "+ 새 거래" 버튼으로 시작하세요</div>';
+    return;
+  }
+  const header = `
+    <div class="tx-row header">
+      <div>날짜</div>
+      <div>카테고리</div>
+      <div>결제수단</div>
+      <div>계좌</div>
+      <div style="text-align:right;">금액</div>
+      <div></div>
+    </div>
+  `;
+  // 일자별 그룹핑
+  const groups = {};
+  transactions.forEach(t => {
+    (groups[t.date] = groups[t.date] || []).push(t);
+  });
+  const dates = Object.keys(groups).sort().reverse();
+  const dayKor = ['일','월','화','수','목','금','토'];
+
+  const rowsHtml = dates.map(d => {
+    const [, mm, dd] = d.split('-');
+    const dt = new Date(d);
+    const dayLabel = `${parseInt(mm,10)}월 ${parseInt(dd,10)}일 (${dayKor[dt.getDay()]})`;
+    const rows = groups[d].map(t => {
+      const flow = txFlow(t);
+      const isIncome = flow === 'revenue';
+      const sign = isIncome ? '+' : '-';
+      const amtCls = isIncome ? 'income' : 'expense';
+      const unpaid = !t.paid && t.paymentType === 'card';
+      const dot = unpaid ? '<span class="pay-dot" title="미결제"></span>' : '';
+      const acc = t.accountName ? escapeHtml(t.accountName) : '—';
+      const mobileDate = `${mm}/${dd}`;
+      return `
+        <div class="tx-row" data-tx-id="${escapeHtml(t.id)}">
+          <div class="col-date">${mm}/${dd}</div>
+          <div class="col-cat">
+            <span class="cat-chip ${flow}">${escapeHtml(t.category || '미분류')}</span>
+          </div>
+          <div class="col-pay">
+            <span class="mobile-meta">${mobileDate}</span>${escapeHtml(t.payment || '')}${dot}
+          </div>
+          <div class="col-acc">${acc}</div>
+          <div class="col-amt ${amtCls}">${sign}${fmtAmount(t.amount)}</div>
+          <div class="col-actions">
+            <button type="button" data-edit-tx="${escapeHtml(t.id)}" aria-label="편집">⋯</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+    return `<div class="tx-day-head">${dayLabel}</div>${rows}`;
+  }).join('');
+
+  $t.innerHTML = header + rowsHtml;
+
+  $t.querySelectorAll('[data-edit-tx]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      openTxModal(btn.dataset.editTx);
+    });
+  });
+  // 행 자체도 클릭 가능
+  $t.querySelectorAll('.tx-row[data-tx-id]').forEach(row => {
+    row.addEventListener('click', () => openTxModal(row.dataset.txId));
+  });
+}
+
+function fmtAmount(n) {
+  const v = Math.abs(Math.round(Number(n) || 0));
+  return v.toLocaleString('en-US');
+}
+
+// ──────────────────────────────────────────────────────
+// 거래 모달
+// ──────────────────────────────────────────────────────
+let editingTxId = null;
+
+function openTxModal(id = null) {
+  // 사전조건 검증
+  if (!settings) return;
+  const hasCats = (settings.categories.revenue.length + settings.categories.fixed.length + settings.categories.variable.length) > 0;
+  const hasPays = settings.payments.length > 0;
+  if (!hasCats || !hasPays) {
+    const missing = [];
+    if (!hasCats) missing.push('카테고리');
+    if (!hasPays) missing.push('결제수단');
+    showToast(`설정 탭에서 ${missing.join(' / ')}을(를) 먼저 추가하세요`);
+    return;
+  }
+
+  editingTxId = id;
+  const isEdit = !!id;
+  document.getElementById('tx-modal-title').textContent = isEdit ? '거래 편집' : '새 거래';
+  document.getElementById('btn-tx-delete').style.display = isEdit ? 'inline-flex' : 'none';
+
+  const tx = isEdit ? transactions.find(x => x.id === id) : null;
+
+  // 날짜
+  const today = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
+  document.getElementById('tx-date').value = tx?.date || (isInCurrentMonth(today) ? today : `${currentMonth}-01`);
+
+  // 금액
+  document.getElementById('tx-amount').value = tx ? fmtAmount(tx.amount) : '';
+
+  // 카테고리 옵션 빌드
+  rebuildTxCategoryOptions(tx?.category);
+  // 결제수단 옵션 빌드
+  rebuildTxPaymentOptions(tx?.payment);
+  // 계좌 옵션 빌드
+  rebuildTxAccountOptions(tx?.accountId);
+
+  // paid
+  const initPay = tx?.payment || settings.payments[0]?.name;
+  const initPayType = (settings.payments.find(p => p.name === initPay))?.type || 'cash';
+  if (tx) {
+    setPaid(!!tx.paid, initPayType, /*touchedByUser=*/true);
+  } else {
+    setPaid(initPayType === 'cash', initPayType, /*touchedByUser=*/false);
+  }
+
+  // 메모
+  document.getElementById('tx-memo').value = tx?.memo || '';
+
+  openOv('ov-tx');
+  setTimeout(() => document.getElementById('tx-amount').focus(), 50);
+}
+
+function isInCurrentMonth(yyyymmdd) {
+  return yyyymmdd.startsWith(currentMonth);
+}
+
+function rebuildTxCategoryOptions(selected) {
+  const $sel = document.getElementById('tx-category');
+  const groups = [
+    ['수입',    settings.categories.revenue],
+    ['고정지출', settings.categories.fixed],
+    ['변동지출', settings.categories.variable],
+  ];
+  let html = '<option value="">선택…</option>';
+  groups.forEach(([label, arr]) => {
+    if (!arr.length) return;
+    html += `<optgroup label="${escapeHtml(label)}">`;
+    arr.forEach(name => {
+      html += `<option value="${escapeHtml(name)}"${name === selected ? ' selected' : ''}>${escapeHtml(name)}</option>`;
+    });
+    html += '</optgroup>';
+  });
+  $sel.innerHTML = html;
+  // 기본 선택: 첫 가능한 항목
+  if (!selected) {
+    const first = settings.categories.revenue[0] || settings.categories.fixed[0] || settings.categories.variable[0];
+    if (first) $sel.value = first;
+  }
+  updateTxCategoryHint();
+}
+function updateTxCategoryHint() {
+  const v = document.getElementById('tx-category').value;
+  const flow = mapCategoryToFlow(v);
+  const labels = { revenue: '수입', fixed: '고정지출', variable: '변동지출' };
+  document.getElementById('tx-category-hint').textContent = v ? `flow: ${labels[flow] || '—'}` : '';
+}
+
+function rebuildTxPaymentOptions(selected) {
+  const $sel = document.getElementById('tx-payment');
+  const html = ['<option value="">선택…</option>']
+    .concat(settings.payments.map(p =>
+      `<option value="${escapeHtml(p.name)}" data-type="${p.type}"${p.name === selected ? ' selected' : ''}>${escapeHtml(p.name)} ${p.type === 'card' ? '(카드)' : '(현금성)'}</option>`
+    ))
+    .join('');
+  $sel.innerHTML = html;
+  if (!selected && settings.payments[0]) $sel.value = settings.payments[0].name;
+}
+
+function rebuildTxAccountOptions(selected) {
+  const $sel = document.getElementById('tx-account');
+  const active = accounts.filter(a => a.active !== false);
+  $sel.innerHTML = ['<option value="">미지정</option>']
+    .concat(active.map(a => `<option value="${escapeHtml(a.id)}"${a.id === selected ? ' selected' : ''}>${escapeHtml(a.name)}</option>`))
+    .join('');
+}
+
+// paid 토글 관리
+let paidTouchedByUser = false;
+function setPaid(on, paymentType, touched) {
+  const $t = document.getElementById('tx-paid-toggle');
+  const $row = document.getElementById('tx-paid-row');
+  const $sub = document.getElementById('tx-paid-sub');
+  $t.classList.toggle('on', on);
+  // 카드+미결제일 때만 강조
+  $row.classList.toggle('unpaid', !on && paymentType === 'card');
+  if (paymentType === 'card') {
+    $sub.textContent = on ? '카드 거래 — 결제 완료됨' : '카드 거래 — 일괄결제 시 처리';
+  } else {
+    $sub.textContent = on ? '현금성 거래 — 즉시 결제' : '현금성 거래인데 미결제 처리';
+  }
+  paidTouchedByUser = touched;
+}
+
+document.getElementById('tx-paid-toggle').addEventListener('click', () => {
+  const $t = document.getElementById('tx-paid-toggle');
+  const payName = document.getElementById('tx-payment').value;
+  const payType = (settings?.payments.find(p => p.name === payName))?.type || 'cash';
+  setPaid(!$t.classList.contains('on'), payType, true);
+});
+
+// 카테고리 변경 → flow 힌트 갱신
+document.getElementById('tx-category').addEventListener('change', updateTxCategoryHint);
+
+// 결제수단 변경 → paid 자동 (사용자가 토글 만진 적 없으면)
+document.getElementById('tx-payment').addEventListener('change', () => {
+  const payName = document.getElementById('tx-payment').value;
+  const payType = (settings?.payments.find(p => p.name === payName))?.type || 'cash';
+  if (!paidTouchedByUser) {
+    setPaid(payType === 'cash', payType, false);
+  } else {
+    // 사용자가 토글을 만진 상태에서 결제수단을 바꿔도 paid 자체는 유지, 라벨만 갱신
+    const on = document.getElementById('tx-paid-toggle').classList.contains('on');
+    setPaid(on, payType, true);
+  }
+});
+
+// 금액 입력 — 콤마 포매팅
+document.getElementById('tx-amount').addEventListener('input', e => {
+  const raw = e.target.value.replace(/[^\d]/g, '');
+  e.target.value = raw ? Number(raw).toLocaleString('en-US') : '';
+});
+
+// 저장
+document.getElementById('btn-tx-save').addEventListener('click', async () => {
+  const date = document.getElementById('tx-date').value;
+  const amountRaw = document.getElementById('tx-amount').value.replace(/[^\d]/g, '');
+  const amount = parseInt(amountRaw, 10);
+  const category = document.getElementById('tx-category').value;
+  const payment = document.getElementById('tx-payment').value;
+  const accountId = document.getElementById('tx-account').value || null;
+  const memo = document.getElementById('tx-memo').value.trim() || null;
+  const paid = document.getElementById('tx-paid-toggle').classList.contains('on');
+
+  if (!date) { showToast('날짜를 입력하세요'); return; }
+  if (!amount || amount <= 0) { showToast('금액을 입력하세요'); return; }
+  if (!category) { showToast('카테고리를 선택하세요'); return; }
+  if (!payment)  { showToast('결제수단을 선택하세요'); return; }
+
+  const payObj = settings.payments.find(p => p.name === payment);
+  const acc = accountId ? accounts.find(a => a.id === accountId) : null;
+
+  const data = {
+    date,
+    ym: date.slice(0, 7),
+    amount,
+    amountNative: null,
+    currency: 'KRW',
+    fxRate: null,
+    category,
+    flow: mapCategoryToFlow(category),
+    payment,
+    paymentType: payObj?.type || 'cash',
+    accountId: acc?.id || null,
+    accountName: acc?.name || null,
+    paid,
+    paidAt: paid ? serverTimestamp() : null,
+    memo,
+    updatedAt: serverTimestamp(),
+  };
+
+  try {
+    if (editingTxId) {
+      await updateDoc(pathTransaction(editingTxId), data);
+      showToast('거래가 수정되었습니다');
+    } else {
+      data.createdAt = serverTimestamp();
+      await addDoc(pathTransactions(), data);
+      showToast('거래가 추가되었습니다');
+    }
+    closeOv('ov-tx');
+
+    // 저장한 거래의 ym이 현재 월과 다르면 그쪽으로 이동
+    if (data.ym !== currentMonth) {
+      setMonth(data.ym);
+      showToast(`${data.ym} 월로 이동했습니다`);
+    }
+  } catch (e) {
+    console.error(e);
+    showToast('저장 실패: ' + (e.message || e.code));
+  }
+});
+
+// 삭제
+document.getElementById('btn-tx-delete').addEventListener('click', async () => {
+  if (!editingTxId) return;
+  if (!confirm('이 거래를 삭제하시겠습니까?')) return;
+  try {
+    await deleteDoc(pathTransaction(editingTxId));
+    closeOv('ov-tx');
+    showToast('거래가 삭제되었습니다');
+  } catch (e) {
+    console.error(e);
+    showToast('삭제 실패: ' + (e.message || e.code));
+  }
+});
+
+// + 새 거래
+document.getElementById('btn-add-tx').addEventListener('click', () => openTxModal(null));
+
+// 월 라벨 초기화
+document.getElementById('ym-label').textContent = currentMonth;
 
 // ──────────────────────────────────────────────────────
 // 인증
