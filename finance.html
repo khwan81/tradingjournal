@@ -815,12 +815,10 @@ body {
   .tx-row .mobile-meta { display: inline; color: var(--text3); }
   .tx-row .mobile-meta::after { content: " · "; color: var(--text3); }
 
-  /* KPI 카드 모바일 — 폰트만 다운, 그리드는 유지 (700px 이하에서도 3열) */
-  .kpi-card { padding: 12px 12px; }
-  .kpi-card .value { font-size: 16px; }
-  .kpi-card .label { font-size: 10px; }
-  .kpi-card .sub   { font-size: 10px; }
-  .kpi-grid { gap: 6px; }
+  /* KPI 카드 모바일 — 1열 세로 (가독성 우선) */
+  .kpi-grid { grid-template-columns: 1fr; gap: 8px; }
+  .kpi-card { padding: 12px 14px; }
+  .kpi-card .value { font-size: 18px; }
 
   /* 필터 칩 폰트 다운 */
   .fchip { font-size: 11px; padding: 5px 10px; min-height: 32px; }
