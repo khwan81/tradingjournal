@@ -402,6 +402,64 @@ body {
   margin-bottom: 14px;
   gap: 12px;
 }
+
+/* KPI 카드 */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.kpi-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+.kpi-card .label {
+  font-size: 11px; color: var(--text2); margin-bottom: 6px;
+}
+.kpi-card .value {
+  font-size: 20px; font-weight: 500;
+  font-family: var(--font-mono);
+}
+.kpi-card .value.green { color: var(--green); }
+.kpi-card .value.red   { color: var(--red); }
+.kpi-card .value.muted { color: var(--text2); }
+.kpi-card .sub {
+  font-size: 11px; color: var(--text3); margin-top: 4px;
+}
+
+/* 필터 바 */
+.filter-bar {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin-bottom: 14px;
+  align-items: center;
+}
+.filter-bar .fdiv {
+  width: 1px;
+  background: var(--border);
+  align-self: stretch;
+  margin: 0 4px;
+}
+.fchip {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 99px;
+  padding: 5px 12px;
+  font-size: 12px;
+  color: var(--text2);
+  cursor: pointer;
+  font-family: var(--font);
+  transition: background .15s, color .15s, border-color .15s;
+}
+.fchip:hover { background: var(--bg4); color: var(--text); }
+.fchip.active {
+  background: var(--bg4);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
 .month-nav {
   display: flex; align-items: center; gap: 8px;
   background: var(--bg2);
@@ -756,6 +814,16 @@ body {
   .tx-row .col-acc     { display: none; }
   .tx-row .mobile-meta { display: inline; color: var(--text3); }
   .tx-row .mobile-meta::after { content: " · "; color: var(--text3); }
+
+  /* KPI 카드 모바일 — 폰트만 다운, 그리드는 유지 (700px 이하에서도 3열) */
+  .kpi-card { padding: 12px 12px; }
+  .kpi-card .value { font-size: 16px; }
+  .kpi-card .label { font-size: 10px; }
+  .kpi-card .sub   { font-size: 10px; }
+  .kpi-grid { gap: 6px; }
+
+  /* 필터 칩 폰트 다운 */
+  .fchip { font-size: 11px; padding: 5px 10px; min-height: 32px; }
 }
 </style>
 </head>
@@ -809,6 +877,38 @@ body {
       </div>
       <button class="btn-p" id="btn-add-tx">+ 새 거래</button>
     </div>
+
+    <!-- KPI 3개 -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="label">수입</div>
+        <div class="value green" id="kpi-income">0</div>
+        <div class="sub"  id="kpi-income-sub">0건</div>
+      </div>
+      <div class="kpi-card">
+        <div class="label">지출</div>
+        <div class="value red" id="kpi-expense">0</div>
+        <div class="sub"  id="kpi-expense-sub">고정 0 · 변동 0</div>
+      </div>
+      <div class="kpi-card">
+        <div class="label">순현금흐름</div>
+        <div class="value muted" id="kpi-net">0</div>
+        <div class="sub"  id="kpi-net-sub">—</div>
+      </div>
+    </div>
+
+    <!-- 필터 칩 -->
+    <div class="filter-bar" id="filter-bar">
+      <button type="button" class="fchip active" data-filter-all>전체</button>
+      <button type="button" class="fchip" data-filter-flow="revenue">수입</button>
+      <button type="button" class="fchip" data-filter-flow="fixed">고정지출</button>
+      <button type="button" class="fchip" data-filter-flow="variable">변동지출</button>
+      <span class="fdiv"></span>
+      <button type="button" class="fchip" data-filter-pay="unpaid">미결제</button>
+      <button type="button" class="fchip" data-filter-pay="card">카드</button>
+      <button type="button" class="fchip" data-filter-pay="cash">현금성</button>
+    </div>
+
     <div class="tx-table" id="tx-table">
       <div class="tx-row empty">로딩 중…</div>
     </div>
@@ -1233,6 +1333,8 @@ let accounts = [];   // [{id, ...}] 공유 마스터
 let settings = null; // finance/config 도큐먼트
 let transactions = []; // 현재 월의 거래
 let currentMonth = currentYm(); // YYYY-MM 형식
+let filterFlows = new Set(); // 활성 flow 필터: 'revenue'|'fixed'|'variable'
+let filterPays  = new Set(); // 활성 결제상태 필터: 'unpaid'|'card'|'cash'
 let unsubAccounts = null;
 let unsubSettings = null;
 let unsubTransactions = null;
@@ -1920,12 +2022,81 @@ function txFlow(tx) {
 }
 
 // ──────────────────────────────────────────────────────
+// KPI 계산 (필터 무관, 항상 월 전체)
+// ──────────────────────────────────────────────────────
+function renderKPI() {
+  let income = 0, fixed = 0, variable = 0;
+  let incomeCnt = 0;
+
+  for (const t of transactions) {
+    const flow = txFlow(t);
+    const amt = Number(t.amount) || 0;
+    if (flow === 'revenue')   { income += amt;   incomeCnt++; }
+    else if (flow === 'fixed')    fixed   += amt;
+    else if (flow === 'variable') variable += amt;
+  }
+  const expense = fixed + variable;
+  const net = income - expense;
+
+  document.getElementById('kpi-income').textContent  = income  ? `+${fmtAmount(income)}` : '0';
+  document.getElementById('kpi-expense').textContent = expense ? `-${fmtAmount(expense)}` : '0';
+  document.getElementById('kpi-net').textContent     = net === 0 ? '0' : `${net > 0 ? '+' : '-'}${fmtAmount(net)}`;
+
+  document.getElementById('kpi-income-sub').textContent  = `${incomeCnt}건`;
+  document.getElementById('kpi-expense-sub').textContent = `고정 ${fmtAmount(fixed)} · 변동 ${fmtAmount(variable)}`;
+
+  const $net = document.getElementById('kpi-net');
+  $net.classList.remove('green', 'red', 'muted');
+  if (net > 0) {
+    $net.classList.add('green');
+    document.getElementById('kpi-net-sub').textContent = '흑자';
+  } else if (net < 0) {
+    $net.classList.add('red');
+    document.getElementById('kpi-net-sub').textContent = '적자';
+  } else {
+    $net.classList.add('muted');
+    document.getElementById('kpi-net-sub').textContent = '—';
+  }
+}
+
+// ──────────────────────────────────────────────────────
+// 필터 적용
+// ──────────────────────────────────────────────────────
+function applyFilters(list) {
+  const noFlow = filterFlows.size === 0;
+  const noPay  = filterPays.size === 0;
+  if (noFlow && noPay) return list;
+  return list.filter(t => {
+    if (!noFlow) {
+      if (!filterFlows.has(txFlow(t))) return false;
+    }
+    if (!noPay) {
+      const isUnpaid = !t.paid && t.paymentType === 'card';
+      // 같은 그룹 내 OR
+      let ok = false;
+      if (filterPays.has('unpaid') && isUnpaid) ok = true;
+      if (filterPays.has('card')   && t.paymentType === 'card') ok = true;
+      if (filterPays.has('cash')   && t.paymentType === 'cash') ok = true;
+      if (!ok) return false;
+    }
+    return true;
+  });
+}
+
+// ──────────────────────────────────────────────────────
 // 거래 렌더링
 // ──────────────────────────────────────────────────────
 function renderTransactions() {
+  renderKPI(); // KPI는 필터 무관 — 월 전체 기준
   const $t = document.getElementById('tx-table');
+  const filtered = applyFilters(transactions);
+
   if (!transactions.length) {
     $t.innerHTML = '<div class="tx-row empty">이번 달 거래가 없습니다 — 우상단 "+ 새 거래" 버튼으로 시작하세요</div>';
+    return;
+  }
+  if (!filtered.length) {
+    $t.innerHTML = '<div class="tx-row empty">필터에 해당하는 거래가 없습니다</div>';
     return;
   }
   const header = `
@@ -1940,7 +2111,7 @@ function renderTransactions() {
   `;
   // 일자별 그룹핑
   const groups = {};
-  transactions.forEach(t => {
+  filtered.forEach(t => {
     (groups[t.date] = groups[t.date] || []).push(t);
   });
   const dates = Object.keys(groups).sort().reverse();
@@ -2232,6 +2403,37 @@ document.getElementById('btn-add-tx').addEventListener('click', () => openTxModa
 
 // 월 라벨 초기화
 document.getElementById('ym-label').textContent = currentMonth;
+
+// ──────────────────────────────────────────────────────
+// 필터 칩
+// ──────────────────────────────────────────────────────
+function refreshFilterUI() {
+  const $bar = document.getElementById('filter-bar');
+  const isAll = filterFlows.size === 0 && filterPays.size === 0;
+  $bar.querySelector('[data-filter-all]').classList.toggle('active', isAll);
+  $bar.querySelectorAll('[data-filter-flow]').forEach(btn => {
+    btn.classList.toggle('active', filterFlows.has(btn.dataset.filterFlow));
+  });
+  $bar.querySelectorAll('[data-filter-pay]').forEach(btn => {
+    btn.classList.toggle('active', filterPays.has(btn.dataset.filterPay));
+  });
+}
+document.getElementById('filter-bar').addEventListener('click', e => {
+  const btn = e.target.closest('.fchip');
+  if (!btn) return;
+  if (btn.hasAttribute('data-filter-all')) {
+    filterFlows.clear();
+    filterPays.clear();
+  } else if (btn.dataset.filterFlow) {
+    const v = btn.dataset.filterFlow;
+    if (filterFlows.has(v)) filterFlows.delete(v); else filterFlows.add(v);
+  } else if (btn.dataset.filterPay) {
+    const v = btn.dataset.filterPay;
+    if (filterPays.has(v)) filterPays.delete(v); else filterPays.add(v);
+  }
+  refreshFilterUI();
+  renderTransactions();
+});
 
 // ──────────────────────────────────────────────────────
 // 인증
