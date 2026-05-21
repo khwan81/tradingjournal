@@ -210,6 +210,351 @@ body {
   transform: translateX(-50%) translateY(0);
 }
 
+/* ── 설정 탭 카드 ── */
+.section-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  margin-bottom: 14px;
+}
+.section-head {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 14px;
+  gap: 12px;
+}
+.section-title {
+  font-size: 15px; font-weight: 500;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-title .hint {
+  color: var(--text2); font-weight: 400; font-size: 12px;
+}
+.section-sub {
+  font-size: 11px; color: var(--text3); margin-top: 2px;
+}
+.section-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* 버튼 */
+.btn-p, .btn-s, .btn-danger {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 8px 14px;
+  font-size: 13px;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: background .15s;
+}
+.btn-p {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 500;
+}
+.btn-p:hover { background: var(--accent2); }
+.btn-s:hover { background: var(--bg4); }
+.btn-s.subtle {
+  color: var(--text2);
+  background: var(--bg3);
+}
+.btn-danger {
+  background: transparent;
+  border-color: rgba(248,113,113,0.4);
+  color: var(--red);
+}
+.btn-danger:hover { background: var(--red-bg); }
+
+/* 계좌 테이블 */
+.acc-table {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.acc-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 70px 80px 100px 50px;
+  gap: 10px;
+  padding: 12px 14px;
+  font-size: 13px;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+.acc-row:last-child { border-bottom: none; }
+.acc-row.header {
+  font-size: 11px;
+  color: var(--text3);
+  padding: 10px 14px;
+}
+.acc-row.empty {
+  padding: 40px 20px;
+  display: block;
+  text-align: center;
+  color: var(--text3);
+  font-size: 13px;
+}
+.acc-row .col-name {
+  display: flex; align-items: center; gap: 6px;
+  min-width: 0; overflow: hidden;
+  white-space: nowrap; text-overflow: ellipsis;
+}
+.acc-row .col-meta { color: var(--text2); }
+.acc-row .col-actions {
+  text-align: right;
+  color: var(--text2);
+  cursor: pointer;
+}
+.acc-row .col-actions button {
+  background: transparent;
+  border: none;
+  color: var(--text2);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-family: var(--font);
+}
+.acc-row .col-actions button:hover { background: var(--bg3); color: var(--text); }
+.acc-row.inactive { opacity: 0.5; }
+
+/* 배지 */
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 500;
+  width: fit-content;
+}
+.badge.current   { background: var(--green-bg); color: var(--green); }
+.badge.noncurrent { background: rgba(167,139,250,0.12); color: #c4b5fd; }
+.badge.tracked   { background: rgba(79,143,255,0.12); color: #93c5fd; font-size: 10px; }
+.badge.inactive  { background: var(--bg4); color: var(--text3); }
+
+/* 카테고리/결제수단 칩 */
+.chip-list {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 99px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background .15s;
+  font-family: var(--font);
+}
+.chip:hover { background: var(--bg4); }
+.chip.revenue {
+  background: var(--green-bg);
+  color: var(--green);
+  border-color: rgba(52,211,153,0.25);
+}
+.chip.fixed {
+  background: var(--amber-bg);
+  color: var(--amber);
+  border-color: rgba(251,191,36,0.25);
+}
+.chip.variable {
+  background: var(--red-bg);
+  color: var(--red);
+  border-color: rgba(248,113,113,0.25);
+}
+.chip-empty {
+  font-size: 12px;
+  color: var(--text3);
+  padding: 4px 0;
+}
+.chip-group-label {
+  font-size: 11px; color: var(--text2);
+  margin-bottom: 6px; margin-top: 4px;
+}
+.chip-group-label:first-child { margin-top: 0; }
+
+/* 부채 목록 */
+.liab-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.liab-row:last-child { border-bottom: none; }
+.liab-row .meta { color: var(--text2); font-size: 12px; margin-top: 2px; }
+.liab-row .actions button {
+  background: transparent;
+  border: none;
+  color: var(--text2);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-family: var(--font);
+}
+.liab-row .actions button:hover { background: var(--bg3); color: var(--text); }
+
+/* ── 모달 ── */
+.ov {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.65);
+  display: none;
+  align-items: flex-start;
+  justify-content: center;
+  z-index: 100;
+  padding: 40px 20px;
+  overflow-y: auto;
+}
+.ov.show { display: flex; }
+.modal {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-lg);
+  width: 100%; max-width: 460px;
+  color: var(--text);
+  font-size: 14px;
+}
+.modal-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--border);
+}
+.modal-head h3 { font-size: 16px; font-weight: 500; }
+.modal-close {
+  background: transparent; border: none;
+  color: var(--text2); font-size: 22px;
+  cursor: pointer;
+  padding: 0 4px;
+  font-family: var(--font);
+}
+.modal-close:hover { color: var(--text); }
+.modal-body { padding: 18px 22px; }
+.modal-foot {
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding: 14px 22px;
+  border-top: 1px solid var(--border);
+}
+.modal-foot .grow { margin-right: auto; }
+
+/* 폼 */
+.form-group { margin-bottom: 14px; }
+.form-group:last-child { margin-bottom: 0; }
+.form-label {
+  font-size: 11px; color: var(--text2);
+  margin-bottom: 6px;
+  display: block;
+}
+.form-hint {
+  font-size: 10px; color: var(--text3);
+  margin-top: 4px;
+}
+.form-row { display: grid; gap: 10px; }
+.form-row.cols-2 { grid-template-columns: 1fr 1fr; }
+.form-section-title {
+  font-size: 11px; color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  margin-top: 14px;
+}
+.form-section-title:first-child { margin-top: 0; }
+
+.input, .select {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--text);
+  font-family: var(--font);
+  outline: none;
+}
+.input:focus, .select:focus { border-color: var(--accent); }
+.input::placeholder { color: var(--text3); }
+
+/* 라디오 칩 */
+.radio-chips { display: flex; gap: 6px; }
+.radio-chips input { display: none; }
+.radio-chips label {
+  flex: 1;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 9px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text2);
+  cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.radio-chips input:checked + label {
+  background: var(--bg4);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+/* 토글 스위치 */
+.toggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 4px 0;
+  margin-bottom: 12px;
+}
+.toggle-row .toggle-label .main { font-size: 13px; }
+.toggle-row .toggle-label .sub  { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.toggle {
+  position: relative;
+  width: 42px; height: 24px;
+  background: var(--bg4);
+  border-radius: 99px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background .15s;
+}
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 20px; height: 20px;
+  background: var(--text3);
+  border-radius: 50%;
+  transition: transform .15s, background .15s;
+}
+.toggle.on { background: var(--accent); }
+.toggle.on::after { transform: translateX(18px); background: #fff; }
+.toggle.locked {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.disabled-block { opacity: 0.4; pointer-events: none; }
+
+/* 카테고리 모달 그룹 선택 */
+.group-select {
+  display: flex; gap: 6px;
+}
+.group-select label {
+  flex: 1;
+  padding: 8px;
+  text-align: center;
+  font-size: 12px;
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  background: var(--bg3);
+  color: var(--text2);
+  cursor: pointer;
+}
+.group-select input { display: none; }
+.group-select input:checked + label {
+  background: var(--bg4);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
 /* ── Responsive (모바일) ── */
 @media (max-width: 700px) {
   #app { padding: env(safe-area-inset-top) 14px 30px; }
@@ -221,6 +566,29 @@ body {
   }
   .btn-logout { min-height: 32px; font-size: 12px; }
   .tab { min-height: 44px; }
+
+  /* 모달 → 바텀시트 */
+  .ov { padding: 0; align-items: flex-end; }
+  .modal {
+    max-width: 100%;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    max-height: 90vh;
+    overflow-y: auto;
+    margin-bottom: env(safe-area-inset-bottom);
+  }
+  .acc-row {
+    grid-template-columns: minmax(0, 1fr) 60px 40px;
+    font-size: 12px;
+  }
+  .acc-row .col-currency,
+  .acc-row .col-type { display: none; }
+  .acc-row.header .col-currency,
+  .acc-row.header .col-type { display: none; }
+
+  .form-row.cols-2 { grid-template-columns: 1fr; }
+
+  .section-head { flex-wrap: wrap; }
+  .section-actions { width: 100%; justify-content: flex-end; margin-top: 4px; }
 }
 </style>
 </head>
@@ -280,9 +648,268 @@ body {
   </div>
 
   <div class="tab-content" id="tab-settings">
-    <div class="empty-state">
-      <div class="icon">⚙️</div>
-      <div>설정 탭 — 다음 단계에서 구현</div>
+    <!-- 계좌 (공유 마스터) -->
+    <div class="section-card">
+      <div class="section-head">
+        <div>
+          <div class="section-title">🏦 계좌 <span class="hint">공유 마스터</span></div>
+          <div class="section-sub">매매일지·자산결산과 공유</div>
+        </div>
+        <div class="section-actions">
+          <button class="btn-s" id="btn-add-account">+ 계좌 추가</button>
+        </div>
+      </div>
+      <div class="acc-table" id="acc-table">
+        <div class="acc-row empty">로딩 중…</div>
+      </div>
+    </div>
+
+    <!-- 결제수단 -->
+    <div class="section-card">
+      <div class="section-head">
+        <div class="section-title">💳 결제수단</div>
+        <div class="section-actions">
+          <button class="btn-s subtle" id="btn-seed-payments">기본값 채우기</button>
+          <button class="btn-s" id="btn-add-payment">+ 추가</button>
+        </div>
+      </div>
+      <div class="chip-list" id="chip-payments">
+        <div class="chip-empty">로딩 중…</div>
+      </div>
+    </div>
+
+    <!-- 수입 카테고리 -->
+    <div class="section-card">
+      <div class="section-head">
+        <div class="section-title">💰 수입 카테고리</div>
+        <div class="section-actions">
+          <button class="btn-s subtle" id="btn-seed-revenue">기본값 채우기</button>
+          <button class="btn-s" data-add-cat="revenue">+ 추가</button>
+        </div>
+      </div>
+      <div class="chip-list" id="chip-revenue">
+        <div class="chip-empty">로딩 중…</div>
+      </div>
+    </div>
+
+    <!-- 지출 카테고리 -->
+    <div class="section-card">
+      <div class="section-head">
+        <div>
+          <div class="section-title">🛒 지출 카테고리</div>
+          <div class="section-sub">고정지출 / 변동지출 분리</div>
+        </div>
+        <div class="section-actions">
+          <button class="btn-s subtle" id="btn-seed-expense">기본값 채우기</button>
+          <button class="btn-s" data-add-cat="expense">+ 추가</button>
+        </div>
+      </div>
+      <div class="chip-group-label">고정지출</div>
+      <div class="chip-list" id="chip-fixed">
+        <div class="chip-empty">로딩 중…</div>
+      </div>
+      <div class="chip-group-label">변동지출</div>
+      <div class="chip-list" id="chip-variable">
+        <div class="chip-empty">로딩 중…</div>
+      </div>
+    </div>
+
+    <!-- 부채 마스터 -->
+    <div class="section-card">
+      <div class="section-head">
+        <div>
+          <div class="section-title">💸 부채 마스터</div>
+          <div class="section-sub">재무상태표 부채 항목</div>
+        </div>
+        <div class="section-actions">
+          <button class="btn-s" id="btn-add-liability">+ 부채 추가</button>
+        </div>
+      </div>
+      <div id="liab-list">
+        <div class="chip-empty" style="text-align:center; padding:24px 0;">로딩 중…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 모달: 계좌 추가/편집 ── -->
+<div class="ov" id="ov-account">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="acc-modal-title">계좌 추가</h3>
+      <button class="modal-close" data-close="ov-account">×</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-account" onsubmit="return false;">
+        <div class="form-group">
+          <label class="form-label">계좌 이름</label>
+          <input class="input" id="acc-name" placeholder="예: 토스뱅크, 메리츠 증권" autocomplete="off">
+        </div>
+
+        <div class="form-row cols-2 form-group">
+          <div>
+            <label class="form-label">통화</label>
+            <select class="select" id="acc-currency">
+              <option value="KRW">KRW</option>
+              <option value="USD">USD</option>
+              <option value="USDT">USDT</option>
+              <option value="JPY">JPY</option>
+            </select>
+            <div class="form-hint" id="acc-currency-lock-hint" style="display:none;">🔒 거래 발생 후 변경 불가</div>
+          </div>
+          <div>
+            <label class="form-label">정렬 순서</label>
+            <input class="input" type="number" id="acc-sort" placeholder="자동 (마지막)">
+          </div>
+        </div>
+
+        <div class="form-section-title">가계부 분류</div>
+
+        <div class="form-group">
+          <label class="form-label">유동/비유동</label>
+          <div class="radio-chips">
+            <input type="radio" name="acc-ftype" id="ftype-current" value="current" checked>
+            <label for="ftype-current">유동</label>
+            <input type="radio" name="acc-ftype" id="ftype-non" value="nonCurrent">
+            <label for="ftype-non">비유동</label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">자산 종류</label>
+          <select class="select" id="acc-fcat"></select>
+          <div class="form-hint" id="acc-fcat-hint">주식 · 코인 · 입출금 · CMA · 외화 · 대여</div>
+        </div>
+
+        <div class="form-section-title">자산결산</div>
+
+        <div class="toggle-row">
+          <div class="toggle-label">
+            <div class="main">수익률 추적</div>
+            <div class="sub">매월 잔고 입력해서 손익·수익률 계산</div>
+          </div>
+          <div class="toggle" id="acc-track-toggle" role="switch" aria-label="수익률 추적"></div>
+        </div>
+        <div class="form-hint" id="acc-track-lock-hint" style="display:none; margin-bottom:12px;">🔒 결산 데이터가 있어 변경 불가</div>
+
+        <div id="acc-track-fields" class="disabled-block">
+          <div class="form-group">
+            <label class="form-label">운용 카테고리</label>
+            <select class="select" id="acc-acat">
+              <option value="">선택…</option>
+              <option value="현금">현금</option>
+              <option value="비상금">비상금</option>
+              <option value="트레이딩">트레이딩</option>
+              <option value="장기투자">장기투자</option>
+              <option value="연금">연금</option>
+            </select>
+            <div class="form-hint">현금 · 비상금 · 트레이딩 · 장기투자 · 연금</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">추적 시작 월</label>
+            <input class="input" type="month" id="acc-startym">
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-danger grow" id="btn-acc-delete" style="display:none;">삭제</button>
+      <button class="btn-s" data-close="ov-account">취소</button>
+      <button class="btn-p" id="btn-acc-save">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 모달: 카테고리 추가/편집 ── -->
+<div class="ov" id="ov-category">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="cat-modal-title">카테고리 추가</h3>
+      <button class="modal-close" data-close="ov-category">×</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-category" onsubmit="return false;">
+        <div class="form-group">
+          <label class="form-label">분류</label>
+          <div class="group-select" id="cat-group-select">
+            <input type="radio" name="cat-group" id="grp-revenue"  value="revenue">
+            <label for="grp-revenue">수입</label>
+            <input type="radio" name="cat-group" id="grp-fixed"    value="fixed">
+            <label for="grp-fixed">고정지출</label>
+            <input type="radio" name="cat-group" id="grp-variable" value="variable">
+            <label for="grp-variable">변동지출</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">이름</label>
+          <input class="input" id="cat-name" placeholder="예: 식비, 월급" autocomplete="off">
+        </div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-danger grow" id="btn-cat-delete" style="display:none;">삭제</button>
+      <button class="btn-s" data-close="ov-category">취소</button>
+      <button class="btn-p" id="btn-cat-save">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 모달: 결제수단 추가/편집 ── -->
+<div class="ov" id="ov-payment">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="pay-modal-title">결제수단 추가</h3>
+      <button class="modal-close" data-close="ov-payment">×</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-payment" onsubmit="return false;">
+        <div class="form-group">
+          <label class="form-label">이름</label>
+          <input class="input" id="pay-name" placeholder="예: 현금, 국민카드" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label class="form-label">유형</label>
+          <div class="radio-chips">
+            <input type="radio" name="pay-type" id="pt-cash" value="cash" checked>
+            <label for="pt-cash">현금성</label>
+            <input type="radio" name="pay-type" id="pt-card" value="card">
+            <label for="pt-card">카드</label>
+          </div>
+          <div class="form-hint">현금성: 거래 시 결제 완료(paid=true) · 카드: 미결제 상태로 입력 후 일괄결제</div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-danger grow" id="btn-pay-delete" style="display:none;">삭제</button>
+      <button class="btn-s" data-close="ov-payment">취소</button>
+      <button class="btn-p" id="btn-pay-save">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 모달: 부채 추가/편집 ── -->
+<div class="ov" id="ov-liability">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="liab-modal-title">부채 추가</h3>
+      <button class="modal-close" data-close="ov-liability">×</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-liability" onsubmit="return false;">
+        <div class="form-group">
+          <label class="form-label">이름</label>
+          <input class="input" id="liab-name" placeholder="예: 회사 대출, 마이너스 통장" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label class="form-label">메모 (선택)</label>
+          <input class="input" id="liab-note" placeholder="만기·이율 등" autocomplete="off">
+        </div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-danger grow" id="btn-liab-delete" style="display:none;">삭제</button>
+      <button class="btn-s" data-close="ov-liability">취소</button>
+      <button class="btn-p" id="btn-liab-save">저장</button>
     </div>
   </div>
 </div>
@@ -296,7 +923,8 @@ import {
   getAuth, GoogleAuthProvider,
   signInWithPopup, signOut, onAuthStateChanged
 } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection,
+         onSnapshot, query, orderBy, getDocs } from 'firebase/firestore';
 
 // ── Firebase 설정 ──
 const firebaseConfig = {
@@ -360,14 +988,649 @@ document.querySelectorAll('.tab').forEach(btn => {
   });
 });
 
-// ── 인증 ──
+// ──────────────────────────────────────────────────────
+// 데이터 상태
+// ──────────────────────────────────────────────────────
+let accounts = [];   // [{id, ...}] 공유 마스터
+let settings = null; // finance/config/settings 도큐먼트
+let unsubAccounts = null;
+let unsubSettings = null;
+
+// 자산 종류 enum (categoriesEnum 기본값)
+const DEFAULT_CATEGORIES_ENUM = {
+  current:    ["주식", "코인", "입출금", "CMA", "외화", "대여"],
+  nonCurrent: ["연금", "부동산", "보증금", "청약"]
+};
+
+// 기본값 시드
+const SEED_PAYMENTS = [
+  { name: '현금',     type: 'cash' },
+  { name: '국민카드', type: 'card' },
+  { name: '현대카드', type: 'card' },
+];
+const SEED_REVENUE  = ['월급', '부업', '이자수입'];
+const SEED_FIXED    = ['주거', '통신비', '공과금', '보험'];
+const SEED_VARIABLE = ['식비', '외식', '교통', '쇼핑', '의료'];
+
+// ──────────────────────────────────────────────────────
+// Firestore 경로 헬퍼
+// ──────────────────────────────────────────────────────
+const pathAccountsItems   = () => collection(db, `users/${currentUid}/config/accounts/items`);
+const pathAccountsSettings = () => doc(db, `users/${currentUid}/config/accounts/settings`);
+const pathFinanceSettings = () => doc(db, `users/${currentUid}/finance/config/settings`);
+const pathAccount = id => doc(db, `users/${currentUid}/config/accounts/items/${id}`);
+
+// ──────────────────────────────────────────────────────
+// 초기 데이터 로드
+// ──────────────────────────────────────────────────────
+async function loadAll() {
+  // accounts/settings 도큐먼트 (없으면 생성)
+  const acctSnap = await getDoc(pathAccountsSettings());
+  if (!acctSnap.exists()) {
+    await setDoc(pathAccountsSettings(), {
+      categoriesEnum: DEFAULT_CATEGORIES_ENUM,
+      fxRates: { USD: 1489.375, JPY: 9.454428, USDT: 1487 }
+    });
+  }
+
+  // finance settings 도큐먼트 (없으면 생성)
+  const finSnap = await getDoc(pathFinanceSettings());
+  if (!finSnap.exists()) {
+    await setDoc(pathFinanceSettings(), {
+      categories: { revenue: [], fixed: [], variable: [] },
+      payments: [],
+      liabilities: []
+    });
+  }
+
+  // 실시간 구독
+  unsubAccounts = onSnapshot(
+    query(pathAccountsItems(), orderBy('sortOrder', 'asc')),
+    snap => {
+      accounts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderAccounts();
+    },
+    err => { console.error('accounts subscribe error', err); showToast('계좌 로드 실패'); }
+  );
+
+  unsubSettings = onSnapshot(
+    pathFinanceSettings(),
+    snap => {
+      settings = snap.data() || { categories: { revenue: [], fixed: [], variable: [] }, payments: [], liabilities: [] };
+      // 누락 필드 방어
+      if (!settings.categories) settings.categories = { revenue: [], fixed: [], variable: [] };
+      if (!settings.categories.revenue)  settings.categories.revenue  = [];
+      if (!settings.categories.fixed)    settings.categories.fixed    = [];
+      if (!settings.categories.variable) settings.categories.variable = [];
+      if (!Array.isArray(settings.payments)) settings.payments = [];
+      if (!Array.isArray(settings.liabilities)) settings.liabilities = [];
+      renderPayments();
+      renderCategories();
+      renderLiabilities();
+    },
+    err => { console.error('settings subscribe error', err); showToast('설정 로드 실패'); }
+  );
+}
+
+function unsubscribeAll() {
+  if (unsubAccounts) { unsubAccounts(); unsubAccounts = null; }
+  if (unsubSettings) { unsubSettings(); unsubSettings = null; }
+  accounts = [];
+  settings = null;
+}
+
+// ──────────────────────────────────────────────────────
+// 렌더링 — 계좌 테이블
+// ──────────────────────────────────────────────────────
+function renderAccounts() {
+  const $t = document.getElementById('acc-table');
+  if (!accounts.length) {
+    $t.innerHTML = '<div class="acc-row empty">아직 등록된 계좌가 없습니다 — 우상단 "+ 계좌 추가" 버튼으로 시작하세요</div>';
+    return;
+  }
+  const header = `
+    <div class="acc-row header">
+      <div>이름</div>
+      <div class="col-currency">통화</div>
+      <div class="col-type">분류</div>
+      <div>자산종류</div>
+      <div></div>
+    </div>
+  `;
+  const rows = accounts.map(a => {
+    const typeBadge = a.financeType === 'nonCurrent'
+      ? '<span class="badge noncurrent">비유동</span>'
+      : '<span class="badge current">유동</span>';
+    const tracked = a.trackPerformance
+      ? '<span class="badge tracked">추적</span>'
+      : '';
+    const inactive = a.active === false ? ' inactive' : '';
+    const inactiveBadge = a.active === false ? '<span class="badge inactive">숨김</span>' : '';
+    return `
+      <div class="acc-row${inactive}">
+        <div class="col-name" title="${escapeHtml(a.name)}">
+          ${escapeHtml(a.name)} ${tracked} ${inactiveBadge}
+        </div>
+        <div class="col-meta col-currency">${escapeHtml(a.currency || '')}</div>
+        <div class="col-type">${typeBadge}</div>
+        <div class="col-meta">${escapeHtml(a.financeCategory || '')}</div>
+        <div class="col-actions">
+          <button type="button" data-edit-acc="${escapeHtml(a.id)}" aria-label="편집">⋯</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+  $t.innerHTML = header + rows;
+  $t.querySelectorAll('[data-edit-acc]').forEach(btn => {
+    btn.addEventListener('click', () => openAccountModal(btn.dataset.editAcc));
+  });
+}
+
+// ──────────────────────────────────────────────────────
+// 렌더링 — 결제수단 칩
+// ──────────────────────────────────────────────────────
+function renderPayments() {
+  const $c = document.getElementById('chip-payments');
+  const list = settings?.payments || [];
+  if (!list.length) {
+    $c.innerHTML = '<div class="chip-empty">아직 결제수단이 없습니다</div>';
+    return;
+  }
+  $c.innerHTML = list.map((p, i) =>
+    `<span class="chip" data-edit-pay="${i}">${escapeHtml(p.name)}<span style="color:var(--text3); font-size:10px;">${p.type === 'card' ? '카드' : '현금성'}</span></span>`
+  ).join('');
+  $c.querySelectorAll('[data-edit-pay]').forEach(el => {
+    el.addEventListener('click', () => openPaymentModal(parseInt(el.dataset.editPay, 10)));
+  });
+}
+
+// ──────────────────────────────────────────────────────
+// 렌더링 — 카테고리 칩 (수입/고정/변동)
+// ──────────────────────────────────────────────────────
+function renderCategories() {
+  const groups = [
+    ['chip-revenue',  'revenue',  'revenue'],
+    ['chip-fixed',    'fixed',    'fixed'],
+    ['chip-variable', 'variable', 'variable'],
+  ];
+  groups.forEach(([elemId, key, cls]) => {
+    const $c = document.getElementById(elemId);
+    const list = settings?.categories?.[key] || [];
+    if (!list.length) {
+      $c.innerHTML = '<div class="chip-empty">없음</div>';
+      return;
+    }
+    $c.innerHTML = list.map(name =>
+      `<span class="chip ${cls}" data-edit-cat="${key}::${escapeHtml(name)}">${escapeHtml(name)}</span>`
+    ).join('');
+    $c.querySelectorAll('[data-edit-cat]').forEach(el => {
+      el.addEventListener('click', () => {
+        const [g, n] = el.dataset.editCat.split('::');
+        openCategoryModal(g, n);
+      });
+    });
+  });
+}
+
+// ──────────────────────────────────────────────────────
+// 렌더링 — 부채 목록
+// ──────────────────────────────────────────────────────
+function renderLiabilities() {
+  const $l = document.getElementById('liab-list');
+  const list = settings?.liabilities || [];
+  if (!list.length) {
+    $l.innerHTML = '<div class="chip-empty" style="text-align:center; padding:24px 0;">아직 등록된 부채가 없습니다</div>';
+    return;
+  }
+  $l.innerHTML = list.map((lb, i) => `
+    <div class="liab-row">
+      <div>
+        <div>${escapeHtml(lb.name)}</div>
+        ${lb.note ? `<div class="meta">${escapeHtml(lb.note)}</div>` : ''}
+      </div>
+      <div class="actions">
+        <button type="button" data-edit-liab="${i}" aria-label="편집">⋯</button>
+      </div>
+    </div>
+  `).join('');
+  $l.querySelectorAll('[data-edit-liab]').forEach(el => {
+    el.addEventListener('click', () => openLiabilityModal(parseInt(el.dataset.editLiab, 10)));
+  });
+}
+
+// ──────────────────────────────────────────────────────
+// 유틸
+// ──────────────────────────────────────────────────────
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+function genId(prefix = 'acc') {
+  return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+}
+function nextSortOrder() {
+  return accounts.reduce((m, a) => Math.max(m, a.sortOrder || 0), 0) + 1;
+}
+function currentYm() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+// 모달 열기/닫기
+function openOv(id) { document.getElementById(id).classList.add('show'); }
+function closeOv(id) { document.getElementById(id).classList.remove('show'); }
+document.querySelectorAll('[data-close]').forEach(el => {
+  el.addEventListener('click', () => closeOv(el.dataset.close));
+});
+// 오버레이 바깥 클릭으로 닫기
+document.querySelectorAll('.ov').forEach(ov => {
+  ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('show'); });
+});
+
+// ──────────────────────────────────────────────────────
+// 계좌 모달
+// ──────────────────────────────────────────────────────
+let editingAccountId = null;
+
+function openAccountModal(id = null) {
+  editingAccountId = id;
+  const isEdit = !!id;
+  document.getElementById('acc-modal-title').textContent = isEdit ? '계좌 편집' : '계좌 추가';
+  document.getElementById('btn-acc-delete').style.display = isEdit ? 'inline-flex' : 'none';
+
+  let a = {};
+  if (isEdit) {
+    a = accounts.find(x => x.id === id) || {};
+  }
+
+  document.getElementById('acc-name').value     = a.name || '';
+  document.getElementById('acc-currency').value = a.currency || 'KRW';
+  document.getElementById('acc-sort').value     = a.sortOrder != null ? a.sortOrder : '';
+
+  const ftype = a.financeType || 'current';
+  document.getElementById('ftype-current').checked = ftype === 'current';
+  document.getElementById('ftype-non').checked     = ftype === 'nonCurrent';
+  rebuildFcatOptions(ftype, a.financeCategory);
+
+  // 추적 토글
+  setAccTrack(!!a.trackPerformance);
+  document.getElementById('acc-acat').value = a.assetsCategory || '';
+  document.getElementById('acc-startym').value = a.startYm || currentYm();
+
+  // 추적 잠금: 결산 데이터가 있는 경우 (v0.1에선 항상 풀어두고 v0.2에 monthly 조회로 잠금 적용)
+  // 일단 신규 생성 시엔 자유, 편집 시엔 추적이 켜져있다면 잠금
+  const lockTrack = isEdit && !!a.trackPerformance;
+  document.getElementById('acc-track-toggle').classList.toggle('locked', lockTrack);
+  document.getElementById('acc-track-lock-hint').style.display = lockTrack ? 'block' : 'none';
+
+  // 통화 잠금: 편집 시(=거래 가능성 있음)면 일단 잠금
+  document.getElementById('acc-currency').disabled = isEdit;
+  document.getElementById('acc-currency-lock-hint').style.display = isEdit ? 'block' : 'none';
+
+  openOv('ov-account');
+  setTimeout(() => document.getElementById('acc-name').focus(), 50);
+}
+
+function rebuildFcatOptions(ftype, selectedValue) {
+  const enums = (accounts.length || settings) ? DEFAULT_CATEGORIES_ENUM : DEFAULT_CATEGORIES_ENUM;
+  // accounts settings 도큐먼트에서 가져오면 더 좋지만 v0.1에선 상수 고정으로 충분
+  const opts = DEFAULT_CATEGORIES_ENUM[ftype] || [];
+  const $sel = document.getElementById('acc-fcat');
+  $sel.innerHTML = opts.map(o =>
+    `<option value="${escapeHtml(o)}"${o === selectedValue ? ' selected' : ''}>${escapeHtml(o)}</option>`
+  ).join('');
+  document.getElementById('acc-fcat-hint').textContent = opts.join(' · ');
+}
+
+function setAccTrack(on) {
+  const $t = document.getElementById('acc-track-toggle');
+  $t.classList.toggle('on', on);
+  document.getElementById('acc-track-fields').classList.toggle('disabled-block', !on);
+}
+
+// 유동/비유동 변경 시 자산 종류 옵션 갱신
+document.querySelectorAll('input[name="acc-ftype"]').forEach(r => {
+  r.addEventListener('change', () => rebuildFcatOptions(r.value, null));
+});
+
+// 추적 토글 클릭
+document.getElementById('acc-track-toggle').addEventListener('click', () => {
+  const $t = document.getElementById('acc-track-toggle');
+  if ($t.classList.contains('locked')) return;
+  setAccTrack(!$t.classList.contains('on'));
+});
+
+// 계좌 저장
+document.getElementById('btn-acc-save').addEventListener('click', async () => {
+  const name = document.getElementById('acc-name').value.trim();
+  if (!name) { showToast('계좌 이름을 입력하세요'); return; }
+
+  const ftype = document.querySelector('input[name="acc-ftype"]:checked')?.value || 'current';
+  const fcat = document.getElementById('acc-fcat').value || (DEFAULT_CATEGORIES_ENUM[ftype][0] || '');
+  const tracked = document.getElementById('acc-track-toggle').classList.contains('on');
+  const acat = document.getElementById('acc-acat').value || null;
+
+  if (tracked && !acat) { showToast('운용 카테고리를 선택하세요'); return; }
+
+  const sortRaw = document.getElementById('acc-sort').value.trim();
+  const sortOrder = sortRaw === '' ? nextSortOrder() : parseInt(sortRaw, 10) || nextSortOrder();
+
+  const isEdit = !!editingAccountId;
+  const id = isEdit ? editingAccountId : genId('acc');
+  const existing = isEdit ? accounts.find(x => x.id === id) : null;
+
+  const data = {
+    id,
+    name,
+    // 신규 생성 시에만 통화 채택, 편집 시에는 기존 유지
+    currency: isEdit ? (existing?.currency || 'KRW') : document.getElementById('acc-currency').value,
+    active: existing?.active !== false,
+    sortOrder,
+
+    financeType: ftype,
+    financeCategory: fcat,
+
+    trackPerformance: tracked,
+    assetsCategory: tracked ? acat : null,
+    startYm: tracked ? (document.getElementById('acc-startym').value || currentYm()) : null,
+
+    // 매매일지 필드 (v0.1 폼에선 입력 없음, 기본값 박음)
+    trading: existing?.trading ?? false,
+    tradingMarket: existing?.tradingMarket ?? null,
+    tradingSeed: existing?.tradingSeed ?? null,
+    tradingMonthlyGoal: existing?.tradingMonthlyGoal ?? null,
+    tradingRisk: existing?.tradingRisk ?? null,
+  };
+
+  try {
+    await setDoc(pathAccount(id), data);
+    closeOv('ov-account');
+    showToast(isEdit ? '계좌가 저장되었습니다' : '계좌가 추가되었습니다');
+  } catch (e) {
+    console.error(e);
+    showToast('저장 실패: ' + (e.message || e.code));
+  }
+});
+
+// 계좌 삭제
+document.getElementById('btn-acc-delete').addEventListener('click', async () => {
+  if (!editingAccountId) return;
+  const a = accounts.find(x => x.id === editingAccountId);
+  if (!a) return;
+  // v0.1: 거래/결산 존재 검증은 거래내역 탭 구현 후 추가. 현재는 단순 삭제 확인.
+  if (!confirm(`"${a.name}" 계좌를 삭제하시겠습니까?\n(이미 입력된 거래가 있다면 데이터가 남게 됩니다)`)) return;
+  try {
+    await deleteDoc(pathAccount(editingAccountId));
+    closeOv('ov-account');
+    showToast('계좌가 삭제되었습니다');
+  } catch (e) {
+    console.error(e);
+    showToast('삭제 실패: ' + (e.message || e.code));
+  }
+});
+
+document.getElementById('btn-add-account').addEventListener('click', () => openAccountModal(null));
+
+// ──────────────────────────────────────────────────────
+// 카테고리 모달
+// ──────────────────────────────────────────────────────
+let editingCategory = null; // { group, name }
+
+function openCategoryModal(group = 'revenue', name = null) {
+  editingCategory = name ? { group, name } : null;
+  const isEdit = !!name;
+  document.getElementById('cat-modal-title').textContent = isEdit ? '카테고리 편집' : '카테고리 추가';
+  document.getElementById('btn-cat-delete').style.display = isEdit ? 'inline-flex' : 'none';
+  document.getElementById(`grp-${group}`).checked = true;
+  document.getElementById('cat-name').value = name || '';
+  openOv('ov-category');
+  setTimeout(() => document.getElementById('cat-name').focus(), 50);
+}
+
+document.querySelectorAll('[data-add-cat]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const type = btn.dataset.addCat; // revenue | expense
+    const initGroup = type === 'revenue' ? 'revenue' : 'variable';
+    openCategoryModal(initGroup, null);
+  });
+});
+
+document.getElementById('btn-cat-save').addEventListener('click', async () => {
+  const name = document.getElementById('cat-name').value.trim();
+  if (!name) { showToast('카테고리 이름을 입력하세요'); return; }
+  const group = document.querySelector('input[name="cat-group"]:checked')?.value;
+  if (!group) { showToast('분류를 선택하세요'); return; }
+
+  // settings 복사본
+  const cats = {
+    revenue:  [...(settings?.categories?.revenue  || [])],
+    fixed:    [...(settings?.categories?.fixed    || [])],
+    variable: [...(settings?.categories?.variable || [])],
+  };
+
+  // 편집: 기존 위치에서 제거
+  if (editingCategory) {
+    const arr = cats[editingCategory.group];
+    const i = arr.indexOf(editingCategory.name);
+    if (i >= 0) arr.splice(i, 1);
+  }
+
+  // 중복 체크
+  if (cats[group].includes(name)) {
+    showToast('이미 같은 이름의 카테고리가 있습니다');
+    return;
+  }
+  cats[group].push(name);
+
+  try {
+    await setDoc(pathFinanceSettings(), { ...settings, categories: cats }, { merge: false });
+    closeOv('ov-category');
+    showToast(editingCategory ? '카테고리가 수정되었습니다' : '카테고리가 추가되었습니다');
+  } catch (e) {
+    console.error(e);
+    showToast('저장 실패');
+  }
+});
+
+document.getElementById('btn-cat-delete').addEventListener('click', async () => {
+  if (!editingCategory) return;
+  if (!confirm(`"${editingCategory.name}" 카테고리를 삭제하시겠습니까?`)) return;
+  const cats = {
+    revenue:  [...(settings?.categories?.revenue  || [])],
+    fixed:    [...(settings?.categories?.fixed    || [])],
+    variable: [...(settings?.categories?.variable || [])],
+  };
+  const arr = cats[editingCategory.group];
+  const i = arr.indexOf(editingCategory.name);
+  if (i >= 0) arr.splice(i, 1);
+  try {
+    await setDoc(pathFinanceSettings(), { ...settings, categories: cats }, { merge: false });
+    closeOv('ov-category');
+    showToast('카테고리가 삭제되었습니다');
+  } catch (e) {
+    console.error(e);
+    showToast('삭제 실패');
+  }
+});
+
+// 기본값 채우기 - 카테고리
+async function seedCategories(group, names) {
+  const cats = {
+    revenue:  [...(settings?.categories?.revenue  || [])],
+    fixed:    [...(settings?.categories?.fixed    || [])],
+    variable: [...(settings?.categories?.variable || [])],
+  };
+  let added = 0;
+  names.forEach(n => {
+    if (!cats[group].includes(n)) { cats[group].push(n); added++; }
+  });
+  if (added === 0) { showToast('이미 모두 추가되어 있습니다'); return; }
+  try {
+    await setDoc(pathFinanceSettings(), { ...settings, categories: cats }, { merge: false });
+    showToast(`${added}개 항목이 추가되었습니다`);
+  } catch (e) {
+    console.error(e);
+    showToast('저장 실패');
+  }
+}
+document.getElementById('btn-seed-revenue').addEventListener('click', () => seedCategories('revenue', SEED_REVENUE));
+document.getElementById('btn-seed-expense').addEventListener('click', async () => {
+  // 고정 + 변동 둘 다
+  const cats = {
+    revenue:  [...(settings?.categories?.revenue  || [])],
+    fixed:    [...(settings?.categories?.fixed    || [])],
+    variable: [...(settings?.categories?.variable || [])],
+  };
+  let added = 0;
+  SEED_FIXED.forEach(n   => { if (!cats.fixed.includes(n))    { cats.fixed.push(n); added++; } });
+  SEED_VARIABLE.forEach(n => { if (!cats.variable.includes(n)) { cats.variable.push(n); added++; } });
+  if (added === 0) { showToast('이미 모두 추가되어 있습니다'); return; }
+  try {
+    await setDoc(pathFinanceSettings(), { ...settings, categories: cats }, { merge: false });
+    showToast(`${added}개 항목이 추가되었습니다`);
+  } catch (e) { console.error(e); showToast('저장 실패'); }
+});
+
+// ──────────────────────────────────────────────────────
+// 결제수단 모달
+// ──────────────────────────────────────────────────────
+let editingPaymentIdx = null;
+
+function openPaymentModal(idx = null) {
+  editingPaymentIdx = idx;
+  const isEdit = idx != null;
+  document.getElementById('pay-modal-title').textContent = isEdit ? '결제수단 편집' : '결제수단 추가';
+  document.getElementById('btn-pay-delete').style.display = isEdit ? 'inline-flex' : 'none';
+  const p = isEdit ? (settings.payments[idx] || {}) : {};
+  document.getElementById('pay-name').value = p.name || '';
+  document.getElementById('pt-cash').checked = (p.type || 'cash') === 'cash';
+  document.getElementById('pt-card').checked = p.type === 'card';
+  openOv('ov-payment');
+  setTimeout(() => document.getElementById('pay-name').focus(), 50);
+}
+
+document.getElementById('btn-add-payment').addEventListener('click', () => openPaymentModal(null));
+
+document.getElementById('btn-pay-save').addEventListener('click', async () => {
+  const name = document.getElementById('pay-name').value.trim();
+  if (!name) { showToast('결제수단 이름을 입력하세요'); return; }
+  const type = document.querySelector('input[name="pay-type"]:checked')?.value || 'cash';
+  const list = [...(settings?.payments || [])];
+
+  // 중복 체크 (편집 중인 자기 자신은 제외)
+  const dupIdx = list.findIndex(p => p.name === name);
+  if (dupIdx >= 0 && dupIdx !== editingPaymentIdx) {
+    showToast('이미 같은 이름의 결제수단이 있습니다');
+    return;
+  }
+
+  if (editingPaymentIdx != null) {
+    list[editingPaymentIdx] = { name, type };
+  } else {
+    list.push({ name, type });
+  }
+  try {
+    await setDoc(pathFinanceSettings(), { ...settings, payments: list }, { merge: false });
+    closeOv('ov-payment');
+    showToast(editingPaymentIdx != null ? '결제수단이 수정되었습니다' : '결제수단이 추가되었습니다');
+  } catch (e) { console.error(e); showToast('저장 실패'); }
+});
+
+document.getElementById('btn-pay-delete').addEventListener('click', async () => {
+  if (editingPaymentIdx == null) return;
+  const p = settings.payments[editingPaymentIdx];
+  if (!confirm(`"${p.name}" 결제수단을 삭제하시겠습니까?`)) return;
+  const list = [...settings.payments];
+  list.splice(editingPaymentIdx, 1);
+  try {
+    await setDoc(pathFinanceSettings(), { ...settings, payments: list }, { merge: false });
+    closeOv('ov-payment');
+    showToast('결제수단이 삭제되었습니다');
+  } catch (e) { console.error(e); showToast('삭제 실패'); }
+});
+
+document.getElementById('btn-seed-payments').addEventListener('click', async () => {
+  const list = [...(settings?.payments || [])];
+  let added = 0;
+  SEED_PAYMENTS.forEach(p => {
+    if (!list.some(x => x.name === p.name)) { list.push(p); added++; }
+  });
+  if (added === 0) { showToast('이미 모두 추가되어 있습니다'); return; }
+  try {
+    await setDoc(pathFinanceSettings(), { ...settings, payments: list }, { merge: false });
+    showToast(`${added}개 항목이 추가되었습니다`);
+  } catch (e) { console.error(e); showToast('저장 실패'); }
+});
+
+// ──────────────────────────────────────────────────────
+// 부채 모달
+// ──────────────────────────────────────────────────────
+let editingLiabIdx = null;
+
+function openLiabilityModal(idx = null) {
+  editingLiabIdx = idx;
+  const isEdit = idx != null;
+  document.getElementById('liab-modal-title').textContent = isEdit ? '부채 편집' : '부채 추가';
+  document.getElementById('btn-liab-delete').style.display = isEdit ? 'inline-flex' : 'none';
+  const lb = isEdit ? (settings.liabilities[idx] || {}) : {};
+  document.getElementById('liab-name').value = lb.name || '';
+  document.getElementById('liab-note').value = lb.note || '';
+  openOv('ov-liability');
+  setTimeout(() => document.getElementById('liab-name').focus(), 50);
+}
+
+document.getElementById('btn-add-liability').addEventListener('click', () => openLiabilityModal(null));
+
+document.getElementById('btn-liab-save').addEventListener('click', async () => {
+  const name = document.getElementById('liab-name').value.trim();
+  const note = document.getElementById('liab-note').value.trim();
+  if (!name) { showToast('부채 이름을 입력하세요'); return; }
+  const list = [...(settings?.liabilities || [])];
+  const dupIdx = list.findIndex(l => l.name === name);
+  if (dupIdx >= 0 && dupIdx !== editingLiabIdx) {
+    showToast('이미 같은 이름의 부채가 있습니다');
+    return;
+  }
+  const obj = { name, note: note || null };
+  if (editingLiabIdx != null) list[editingLiabIdx] = obj;
+  else list.push(obj);
+  try {
+    await setDoc(pathFinanceSettings(), { ...settings, liabilities: list }, { merge: false });
+    closeOv('ov-liability');
+    showToast(editingLiabIdx != null ? '부채가 수정되었습니다' : '부채가 추가되었습니다');
+  } catch (e) { console.error(e); showToast('저장 실패'); }
+});
+
+document.getElementById('btn-liab-delete').addEventListener('click', async () => {
+  if (editingLiabIdx == null) return;
+  const lb = settings.liabilities[editingLiabIdx];
+  if (!confirm(`"${lb.name}" 부채를 삭제하시겠습니까?`)) return;
+  const list = [...settings.liabilities];
+  list.splice(editingLiabIdx, 1);
+  try {
+    await setDoc(pathFinanceSettings(), { ...settings, liabilities: list }, { merge: false });
+    closeOv('ov-liability');
+    showToast('부채가 삭제되었습니다');
+  } catch (e) { console.error(e); showToast('삭제 실패'); }
+});
+
+// ──────────────────────────────────────────────────────
+// 인증
+// ──────────────────────────────────────────────────────
 onAuthStateChanged(auth, async user => {
   if (user) {
     currentUid = user.uid;
     $email.textContent = user.email || '';
-    // v0.1 다음 단계에서 여기에 데이터 로드 추가
+    try {
+      await loadAll();
+    } catch (e) {
+      console.error('loadAll failed:', e);
+      showToast('데이터 로드 실패: ' + (e.message || e.code));
+    }
     showApp();
   } else {
+    unsubscribeAll();
     currentUid = null;
     showLogin();
   }
