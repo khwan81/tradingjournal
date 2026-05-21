@@ -992,7 +992,7 @@ document.querySelectorAll('.tab').forEach(btn => {
 // 데이터 상태
 // ──────────────────────────────────────────────────────
 let accounts = [];   // [{id, ...}] 공유 마스터
-let settings = null; // finance/config/settings 도큐먼트
+let settings = null; // finance/config 도큐먼트
 let unsubAccounts = null;
 let unsubSettings = null;
 
@@ -1016,8 +1016,8 @@ const SEED_VARIABLE = ['식비', '외식', '교통', '쇼핑', '의료'];
 // Firestore 경로 헬퍼
 // ──────────────────────────────────────────────────────
 const pathAccountsItems   = () => collection(db, `users/${currentUid}/config/accounts/items`);
-const pathAccountsSettings = () => doc(db, `users/${currentUid}/config/accounts/settings`);
-const pathFinanceSettings = () => doc(db, `users/${currentUid}/finance/config/settings`);
+const pathAccountsSettings = () => doc(db, `users/${currentUid}/config/accounts`);
+const pathFinanceSettings = () => doc(db, `users/${currentUid}/finance/config`);
 const pathAccount = id => doc(db, `users/${currentUid}/config/accounts/items/${id}`);
 
 // ──────────────────────────────────────────────────────
