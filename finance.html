@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>가계부</title>
+
+<!-- PWA -->
+<link rel="manifest" href="/tradingjournal/manifest-finance.json">
+<meta name="theme-color" content="#0d0f12">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="가계부">
+<link rel="apple-touch-icon" href="/tradingjournal/icons/icon-finance-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/tradingjournal/icons/icon-finance-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/tradingjournal/icons/icon-finance-512.png">
+<meta name="description" content="개인 가계부 — 수입/지출 기록, 손익, 재무상태">
+<meta name="robots" content="noindex">
+
+<!-- Firebase SDK v10 -->
+<script type="importmap">
+{
+  "imports": {
+    "firebase/app":       "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js",
+    "firebase/auth":      "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js",
+    "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"
+  }
+}
+</script>
+
+<style>
+/* ── Reset & Base ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #0d0f12;
+  --bg2:       #13161b;
+  --bg3:       #1a1e25;
+  --bg4:       #222830;
+  --border:    rgba(255,255,255,0.07);
+  --border2:   rgba(255,255,255,0.13);
+  --text:      #e8eaf0;
+  --text2:     #8b909e;
+  --text3:     #555b6a;
+  --accent:    #4f8fff;
+  --accent2:   #3a72e8;
+  --green:     #34d399;
+  --green-bg:  rgba(52,211,153,0.1);
+  --red:       #f87171;
+  --red-bg:    rgba(248,113,113,0.1);
+  --amber:     #fbbf24;
+  --amber-bg:  rgba(251,191,36,0.1);
+  --radius-sm: 6px;
+  --radius:    10px;
+  --radius-lg: 14px;
+  --font:      'DM Sans', 'Noto Sans KR', sans-serif;
+  --font-mono: 'DM Mono', 'Fira Mono', monospace;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500&display=swap');
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Loading ── */
+#loading {
+  position: fixed; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg);
+  color: var(--text2);
+  font-size: 13px;
+  z-index: 100;
+}
+
+/* ── Login Screen ── */
+#login-screen {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  flex-direction: column;
+  gap: 24px;
+  padding-top: env(safe-area-inset-top);
+}
+.login-card {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-lg);
+  padding: 40px 48px;
+  text-align: center;
+  width: 340px;
+}
+.login-card h1 { font-size: 22px; font-weight: 600; margin-bottom: 6px; }
+.login-card p  { font-size: 13px; color: var(--text2); margin-bottom: 28px; }
+.btn-google {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; padding: 12px;
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--radius); color: var(--text);
+  font-size: 14px; font-family: var(--font); cursor: pointer;
+  transition: background .15s;
+}
+.btn-google:hover { background: var(--bg4); }
+.btn-google svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+/* ── App Shell ── */
+#app {
+  display: none;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: env(safe-area-inset-top) 20px 40px;
+}
+
+/* 상단 헤더 */
+.top-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 0 14px;
+  padding-top: calc(18px + env(safe-area-inset-top));
+}
+.top-header h1 {
+  font-size: 18px; font-weight: 600;
+  display: flex; align-items: center; gap: 8px;
+}
+.top-header .user-info {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 12px; color: var(--text2);
+}
+.btn-logout {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text2);
+  padding: 5px 10px; font-size: 12px; font-family: var(--font);
+  cursor: pointer; transition: background .15s;
+}
+.btn-logout:hover { background: var(--bg4); color: var(--text); }
+
+/* 탭바 */
+.tab-bar {
+  display: flex; gap: 4px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px;
+  margin-bottom: 18px;
+}
+.tab {
+  flex: 1; padding: 10px;
+  background: transparent; border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text2);
+  font-size: 13px; font-weight: 500;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.tab:hover { color: var(--text); }
+.tab.active {
+  background: var(--bg4);
+  color: var(--text);
+}
+
+/* 탭 콘텐츠 */
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* 빈 상태 (placeholder) */
+.empty-state {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 60px 20px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--text3);
+  font-size: 13px;
+  text-align: center;
+}
+.empty-state .icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+/* 토스트 */
+.toast {
+  position: fixed;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  left: 50%; transform: translateX(-50%) translateY(100px);
+  background: var(--bg4);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 12px 18px;
+  font-size: 13px;
+  color: var(--text);
+  opacity: 0;
+  transition: opacity .2s, transform .2s;
+  z-index: 200;
+  pointer-events: none;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ── Responsive (모바일) ── */
+@media (max-width: 700px) {
+  #app { padding: env(safe-area-inset-top) 14px 30px; }
+  .top-header h1 { font-size: 16px; }
+  .tab { padding: 11px 8px; font-size: 12px; }
+  input, select, textarea, button {
+    min-height: 48px;
+    font-size: 16px;  /* 줌 방지 */
+  }
+  .btn-logout { min-height: 32px; font-size: 12px; }
+  .tab { min-height: 44px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loading">로딩 중…</div>
+
+<!-- Login Screen -->
+<div id="login-screen">
+  <div class="login-card">
+    <h1>💰 가계부</h1>
+    <p>수입·지출·재무상태 한눈에</p>
+    <button class="btn-google" id="btn-google-login">
+      <svg viewBox="0 0 24 24">
+        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+      </svg>
+      Google로 시작하기
+    </button>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app">
+  <!-- 헤더 -->
+  <div class="top-header">
+    <h1>💰 가계부</h1>
+    <div class="user-info">
+      <span id="user-email"></span>
+      <button class="btn-logout" id="btn-logout">로그아웃</button>
+    </div>
+  </div>
+
+  <!-- 탭바 -->
+  <div class="tab-bar" role="tablist">
+    <button class="tab active" data-tab="transactions" role="tab">거래내역</button>
+    <button class="tab"        data-tab="balance"      role="tab">재무상태</button>
+    <button class="tab"        data-tab="settings"     role="tab">설정</button>
+  </div>
+
+  <!-- 탭 콘텐츠 -->
+  <div class="tab-content active" id="tab-transactions">
+    <div class="empty-state">
+      <div class="icon">📝</div>
+      <div>거래내역 탭 — 다음 단계에서 구현</div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-balance">
+    <div class="empty-state">
+      <div class="icon">📊</div>
+      <div>재무상태 탭 — 다음 단계에서 구현</div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-settings">
+    <div class="empty-state">
+      <div class="icon">⚙️</div>
+      <div>설정 탭 — 다음 단계에서 구현</div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from 'firebase/app';
+import {
+  getAuth, GoogleAuthProvider,
+  signInWithPopup, signOut, onAuthStateChanged
+} from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
+
+// ── Firebase 설정 ──
+const firebaseConfig = {
+  apiKey:            "AIzaSyAeRy5MJOLLF3uK_xaN_UeIt5p1kA_KwEA",
+  authDomain:        "tradingjournal-f6afc.firebaseapp.com",
+  projectId:         "tradingjournal-f6afc",
+  storageBucket:     "tradingjournal-f6afc.firebasestorage.app",
+  messagingSenderId: "673545133862",
+  appId:             "1:673545133862:web:90ec278804c2b035e96be7",
+  measurementId:     "G-Y1TSX20W9C"
+};
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+// ── 전역 상태 ──
+let currentUid = null;
+
+// ── DOM 참조 ──
+const $loading = document.getElementById('loading');
+const $login   = document.getElementById('login-screen');
+const $app     = document.getElementById('app');
+const $email   = document.getElementById('user-email');
+const $toast   = document.getElementById('toast');
+
+// ── 토스트 ──
+let toastTimer = null;
+function showToast(msg) {
+  $toast.textContent = msg;
+  $toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $toast.classList.remove('show'), 2200);
+}
+
+// ── 화면 전환 헬퍼 ──
+function showLoading() {
+  $loading.style.display = 'flex';
+  $login.style.display   = 'none';
+  $app.style.display     = 'none';
+}
+function showLogin() {
+  $loading.style.display = 'none';
+  $login.style.display   = 'flex';
+  $app.style.display     = 'none';
+}
+function showApp() {
+  $loading.style.display = 'none';
+  $login.style.display   = 'none';
+  $app.style.display     = 'block';
+}
+
+// ── 탭 전환 ──
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const target = btn.dataset.tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t === btn));
+    document.querySelectorAll('.tab-content').forEach(c => {
+      c.classList.toggle('active', c.id === `tab-${target}`);
+    });
+  });
+});
+
+// ── 인증 ──
+onAuthStateChanged(auth, async user => {
+  if (user) {
+    currentUid = user.uid;
+    $email.textContent = user.email || '';
+    // v0.1 다음 단계에서 여기에 데이터 로드 추가
+    showApp();
+  } else {
+    currentUid = null;
+    showLogin();
+  }
+});
+
+document.getElementById('btn-google-login').addEventListener('click', async () => {
+  try {
+    await signInWithPopup(auth, new GoogleAuthProvider());
+  } catch (e) {
+    console.error(e);
+    showToast('로그인 실패: ' + (e.message || e.code));
+  }
+});
+
+document.getElementById('btn-logout').addEventListener('click', async () => {
+  try {
+    await signOut(auth);
+  } catch (e) {
+    console.error(e);
+    showToast('로그아웃 실패');
+  }
+});
+
+// ── 서비스워커 등록 ──
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/tradingjournal/sw-finance.js').catch(err => {
+      console.warn('SW register failed:', err);
+    });
+  });
+}
+</script>
+</body>
+</html>
