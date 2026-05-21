@@ -32,6 +32,12 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
+  // http(s) 외 스킴(chrome-extension, data, blob 등)은 무시 — Cache API가 거부함
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+
+  // GET 외 메서드도 Cache.put 불가 — 캐시 우회
+  if (event.request.method !== 'GET') return;
+
   // Firebase / CDN 요청은 캐시하지 않음 (항상 최신 데이터)
   if (
     url.hostname.includes('firebase') ||
