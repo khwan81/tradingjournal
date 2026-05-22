@@ -755,7 +755,9 @@ body {
 
 /* 잔액 입력 모달 */
 .bal-fx-strip {
-  display: flex; gap: 12px; flex-wrap: wrap;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   background: var(--bg2);
   border: 1px solid var(--border2);
   border-radius: 8px;
@@ -764,8 +766,23 @@ body {
   color: var(--text2);
   margin-bottom: 12px;
 }
-.bal-fx-strip .fx-item { display: inline-flex; gap: 4px; }
+.bal-fx-strip .fx-row-wrap {
+  display: flex; gap: 12px; flex-wrap: wrap;
+  align-items: baseline;
+}
+.bal-fx-strip .fx-item { display: inline-flex; gap: 4px; align-items: baseline; }
 .bal-fx-strip .fx-item b { color: var(--text); font-weight: 600; }
+.bal-fx-strip .fx-snap {
+  color: var(--amber);
+  font-size: 10px;
+  margin-left: 2px;
+}
+.bal-fx-strip .fx-snap:empty { display: none; }
+.bal-fx-strip .fx-snap-date {
+  font-size: 10px;
+  color: var(--text3);
+}
+.bal-fx-strip .fx-snap-date:empty { display: none; }
 .bal-fx-strip .fx-link {
   margin-left: auto;
   color: var(--accent);
@@ -1794,10 +1811,13 @@ body {
     </div>
     <div class="modal-body">
       <div class="bal-fx-strip" id="bal-fx-strip">
-        <span class="fx-item">USD <b id="fx-usd">0</b></span>
-        <span class="fx-item">JPY <b id="fx-jpy">0</b></span>
-        <span class="fx-item">USDT <b id="fx-usdt">0</b></span>
-        <span class="fx-link" id="fx-edit-link">환율 수정</span>
+        <div class="fx-row-wrap">
+          <span class="fx-item">USD <b id="fx-usd">0</b><span class="fx-snap" id="fx-usd-snap"></span></span>
+          <span class="fx-item">JPY <b id="fx-jpy">0</b><span class="fx-snap" id="fx-jpy-snap"></span></span>
+          <span class="fx-item">USDT <b id="fx-usdt">0</b><span class="fx-snap" id="fx-usdt-snap"></span></span>
+          <span class="fx-link" id="fx-edit-link">환율 수정</span>
+        </div>
+        <div class="fx-snap-date" id="fx-snap-date"></div>
       </div>
 
       <!-- 자산 — 유동 -->
@@ -3061,11 +3081,45 @@ function openBalanceModal() {
   balModalYm = bsMonth;
   document.getElementById('bal-modal-ym').textContent = balModalYm;
 
-  // 환율 strip
+  // 환율 strip — 현재값
   const fx = (sharedSettings && sharedSettings.fxRates) || {};
-  document.getElementById('fx-usd').textContent  = fmtNum(fx.USD  || 0);
-  document.getElementById('fx-jpy').textContent  = fmtNum(fx.JPY  || 0);
-  document.getElementById('fx-usdt').textContent = fmtNum(fx.USDT || 0);
+  const curUsd  = fx.USD  || 0;
+  const curJpy  = fx.JPY  || 0;
+  const curUsdt = fx.USDT || 0;
+  document.getElementById('fx-usd').textContent  = fmtNum(curUsd);
+  document.getElementById('fx-jpy').textContent  = fmtNum(curJpy);
+  document.getElementById('fx-usdt').textContent = fmtNum(curUsdt);
+
+  // 스냅 환율: 저장된 자산 중 통화별 첫 항목의 fxRate
+  const snapRates = {};
+  if (bsSnapshot?.assetBalances) {
+    for (const v of Object.values(bsSnapshot.assetBalances)) {
+      if (v.currency && v.currency !== 'KRW' && v.fxRate != null) {
+        if (!(v.currency in snapRates)) snapRates[v.currency] = v.fxRate;
+      }
+    }
+  }
+
+  const renderFxSnap = (cur, currentRate, $el) => {
+    const snap = snapRates[cur];
+    if (snap != null && Math.abs(snap - currentRate) > 0.0001) {
+      $el.textContent = `(스냅 ${fmtNum(snap)})`;
+    } else {
+      $el.textContent = '';
+    }
+  };
+  renderFxSnap('USD',  curUsd,  document.getElementById('fx-usd-snap'));
+  renderFxSnap('JPY',  curJpy,  document.getElementById('fx-jpy-snap'));
+  renderFxSnap('USDT', curUsdt, document.getElementById('fx-usdt-snap'));
+
+  // 스냅 입력 날짜 — 어느 한 통화라도 스냅 표시가 있을 때만
+  const $date = document.getElementById('fx-snap-date');
+  const hasAnySnap = Object.keys(snapRates).length > 0
+    && [['USD', curUsd], ['JPY', curJpy], ['USDT', curUsdt]]
+        .some(([c, r]) => snapRates[c] != null && Math.abs(snapRates[c] - r) > 0.0001);
+  $date.textContent = hasAnySnap && bsSnapshot?.asOf
+    ? `스냅 환율은 ${bsSnapshot.asOf} 입력 시점`
+    : '';
 
   // row 빌드
   balRowsCache = buildBalanceRows();
@@ -3198,26 +3252,9 @@ function buildBalRowHtml(r) {
   const placeholder = r.auto ? fmtNum(r.krw) : '';
   const value = r.auto ? '' : (r.native === '' || r.native == null ? '' : r.native);
   const unit = r.isFx ? r.currency : (r.locked ? '' : '원');
-
-  // 외화 환산값 라인 (현재 환율 기준 + 스냅이 다르면 비교 한 줄)
-  let krwLine = '';
-  if (r.isFx) {
-    const curRate = r.fxRate || 0;
-    const nativeNum = parseNum(r.native);
-    const curKrw = Math.round(nativeNum * curRate);
-    let line = `${fmtNum(curKrw)} 원 (현재 ${fmtNum(curRate)})`;
-
-    // 스냅 환율이 있고 현재와 다르면 추가 정보
-    const hasSnap = r.snapFxRate != null && r.snapFxRate > 0;
-    const rateDiffers = hasSnap && Math.abs(r.snapFxRate - curRate) > 0.0001;
-    if (rateDiffers && nativeNum > 0) {
-      const snapKrw = Math.round(nativeNum * r.snapFxRate);
-      const dateStr = r.snapAsOf ? ` (${r.snapAsOf})` : '';
-      line += `<br><span class="bal-krw-snap">스냅 ${fmtNum(r.snapFxRate)}${dateStr} → ${fmtNum(snapKrw)}</span>`;
-    }
-    krwLine = `<div class="bal-krw" data-krw-for="${escapeHtml(r.key)}">${line}</div>`;
-  }
-
+  const krwLine = r.isFx
+    ? `<div class="bal-krw" data-krw-for="${escapeHtml(r.key)}">${fmtNum(r.krw)} 원 (환율 ${fmtNum(r.fxRate || 0)})</div>`
+    : '';
   return `
     <div class="bal-row${lockedCls}${autoCls}${fxCls}" data-key="${escapeHtml(r.key)}" data-type="${r.type}" data-tier="${r.tier}">
       <div class="bal-name">${escapeHtml(r.name)}${r.meta ? `<span class="meta">${escapeHtml(r.meta)}</span>` : ''}</div>
@@ -3243,19 +3280,9 @@ function onBalanceInputChange(e) {
   if (row.isFx) {
     const fxRate = row.fxRate || 0;
     row.krw = Math.round(v * fxRate);
-    // 환산값 라인 갱신 — buildBalRowHtml과 동일 로직
+    // 환산값 라인 갱신
     const $krw = document.querySelector(`.bal-krw[data-krw-for="${CSS.escape(key)}"]`);
-    if ($krw) {
-      let line = `${fmtNum(row.krw)} 원 (현재 ${fmtNum(fxRate)})`;
-      const hasSnap = row.snapFxRate != null && row.snapFxRate > 0;
-      const rateDiffers = hasSnap && Math.abs(row.snapFxRate - fxRate) > 0.0001;
-      if (rateDiffers && v > 0) {
-        const snapKrw = Math.round(v * row.snapFxRate);
-        const dateStr = row.snapAsOf ? ` (${row.snapAsOf})` : '';
-        line += `<br><span class="bal-krw-snap">스냅 ${fmtNum(row.snapFxRate)}${dateStr} → ${fmtNum(snapKrw)}</span>`;
-      }
-      $krw.innerHTML = line;
-    }
+    if ($krw) $krw.textContent = `${fmtNum(row.krw)} 원 (환율 ${fmtNum(fxRate)})`;
   } else {
     row.krw = v;
   }
