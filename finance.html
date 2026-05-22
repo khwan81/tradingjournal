@@ -460,6 +460,92 @@ body {
   color: var(--text);
 }
 
+/* 미결제 알림바 */
+.unpaid-bar {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(251, 191, 36, 0.10);
+  border: 1px solid rgba(251, 191, 36, 0.32);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: var(--text);
+}
+.unpaid-bar.show { display: flex; }
+.unpaid-bar .ub-left {
+  display: flex; align-items: center; gap: 8px;
+  min-width: 0;
+}
+.unpaid-bar .ub-icon { color: var(--amber); font-size: 14px; }
+.unpaid-bar .ub-text { color: var(--text2); }
+.unpaid-bar .ub-amt { color: var(--amber); font-weight: 700; }
+.unpaid-bar .ub-cta {
+  background: var(--amber);
+  color: #1a1300;
+  border: 0;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--font);
+  white-space: nowrap;
+}
+.unpaid-bar .ub-cta:hover { filter: brightness(1.08); }
+@media (max-width: 640px) {
+  .unpaid-bar { flex-direction: column; align-items: stretch; gap: 8px; }
+  .unpaid-bar .ub-cta { width: 100%; }
+}
+
+/* 일괄결제 모달 */
+.bulk-list {
+  display: flex; flex-direction: column; gap: 6px;
+  margin: 8px 0 4px;
+}
+.bulk-row {
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+.bulk-row:hover { background: var(--bg4); }
+.bulk-row.checked { border-color: var(--accent); }
+.bulk-row input[type="checkbox"] {
+  width: 16px; height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  margin: 0;
+}
+.bulk-row .bk-name { font-size: 13px; color: var(--text); font-weight: 600; }
+.bulk-row .bk-sub  { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.bulk-row .bk-amt  { font-size: 13px; color: var(--amber); font-weight: 700; text-align: right; }
+.bulk-empty {
+  text-align: center;
+  padding: 24px 12px;
+  color: var(--text3);
+  font-size: 13px;
+}
+.bulk-sum {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 12px;
+  background: var(--bg2);
+  border-top: 1px solid var(--border2);
+  border-bottom: 1px solid var(--border2);
+  margin: 8px -16px 0;
+  font-size: 13px;
+}
+.bulk-sum .bs-label { color: var(--text2); }
+.bulk-sum .bs-amt   { color: var(--text); font-weight: 700; }
+
 .month-nav {
   display: flex; align-items: center; gap: 8px;
   background: var(--bg2);
@@ -907,6 +993,15 @@ body {
       </div>
     </div>
 
+    <!-- 미결제 알림바 -->
+    <div class="unpaid-bar" id="unpaid-bar">
+      <div class="ub-left">
+        <span class="ub-icon">🔔</span>
+        <span class="ub-text">미결제 카드 거래 <span class="ub-amt" id="unpaid-amt">0</span></span>
+      </div>
+      <button type="button" class="ub-cta" id="btn-bulk-open">일괄결제 처리</button>
+    </div>
+
     <!-- 필터 칩 -->
     <div class="filter-bar" id="filter-bar">
       <button type="button" class="fchip active" data-filter-all>전체</button>
@@ -1261,6 +1356,30 @@ body {
   </div>
 </div>
 
+<!-- 일괄결제 모달 -->
+<div class="ov" id="ov-bulk">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">카드 일괄결제 처리</div>
+      <button class="modal-close" data-close="ov-bulk">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-hint">결제할 카드를 선택하세요. 선택한 카드의 미결제 거래가 모두 결제 완료 처리됩니다.</div>
+      <div class="bulk-list" id="bulk-list">
+        <div class="bulk-empty">미결제 카드 거래가 없습니다</div>
+      </div>
+      <div class="bulk-sum">
+        <span class="bs-label">선택 합계 (<span id="bulk-sel-cnt">0</span>개 카드)</span>
+        <span class="bs-amt" id="bulk-sel-amt">0</span>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-s" data-close="ov-bulk">취소</button>
+      <button class="btn-p" id="btn-bulk-confirm">결제 처리</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -1272,7 +1391,7 @@ import {
 } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection,
          onSnapshot, query, orderBy, getDocs, addDoc, updateDoc,
-         where, serverTimestamp } from 'firebase/firestore';
+         where, serverTimestamp, writeBatch } from 'firebase/firestore';
 
 // ── Firebase 설정 ──
 const firebaseConfig = {
@@ -1429,6 +1548,9 @@ async function loadAll() {
 
   // 현재 월 거래 구독
   subscribeTransactions();
+
+  // 모든 월의 미결제 카드 거래 구독 (알림바·일괄결제용)
+  subscribeUnpaid();
 }
 
 function subscribeTransactions() {
@@ -1456,9 +1578,12 @@ function unsubscribeAll() {
   if (unsubAccounts) { unsubAccounts(); unsubAccounts = null; }
   if (unsubSettings) { unsubSettings(); unsubSettings = null; }
   if (unsubTransactions) { unsubTransactions(); unsubTransactions = null; }
+  if (unsubUnpaid) { unsubUnpaid(); unsubUnpaid = null; }
   accounts = [];
   settings = null;
   transactions = [];
+  allUnpaidTxs = [];
+  renderUnpaidBar();
 }
 
 // ──────────────────────────────────────────────────────
@@ -2070,6 +2195,157 @@ function renderKPI() {
 }
 
 // ──────────────────────────────────────────────────────
+// 미결제 알림바 + 일괄결제
+// ──────────────────────────────────────────────────────
+
+// 모든 월의 미결제 카드 거래 (현재 월에 종속되지 않음)
+let allUnpaidTxs = [];
+let unsubUnpaid = null;
+
+function subscribeUnpaid() {
+  if (unsubUnpaid) unsubUnpaid();
+  // paid=false 인 모든 거래 (월 무관)
+  const q = query(pathTransactions(), where('paid', '==', false));
+  unsubUnpaid = onSnapshot(q,
+    snap => {
+      allUnpaidTxs = [];
+      snap.forEach(d => {
+        const t = { id: d.id, ...d.data() };
+        // 카드 거래만 (현금성 미결제는 알림바 대상 아님)
+        if (t.paymentType === 'card') allUnpaidTxs.push(t);
+      });
+      renderUnpaidBar();
+    },
+    err => { console.error('unpaid subscribe error', err); }
+  );
+}
+
+function renderUnpaidBar() {
+  const $bar = document.getElementById('unpaid-bar');
+  if (!allUnpaidTxs.length) {
+    $bar.classList.remove('show');
+    return;
+  }
+  const total = allUnpaidTxs.reduce((s, t) => s + (Number(t.amount) || 0), 0);
+  document.getElementById('unpaid-amt').textContent = fmtAmount(total) + '원';
+  $bar.classList.add('show');
+}
+
+// 카드별로 미결제 거래 그룹화
+function groupUnpaidByCard() {
+  const m = new Map();
+  for (const t of allUnpaidTxs) {
+    const key = t.payment || '(unknown)';
+    if (!m.has(key)) m.set(key, { name: key, count: 0, amount: 0, ids: [] });
+    const g = m.get(key);
+    g.count  += 1;
+    g.amount += Number(t.amount) || 0;
+    g.ids.push(t.id);
+  }
+  // 금액 큰 순
+  return Array.from(m.values()).sort((a, b) => b.amount - a.amount);
+}
+
+// 일괄결제 모달 상태
+let bulkSelected = new Set();
+
+function openBulkModal() {
+  if (!allUnpaidTxs.length) { showToast('미결제 카드 거래가 없습니다'); return; }
+  const groups = groupUnpaidByCard();
+  // 기본: 전부 선택
+  bulkSelected = new Set(groups.map(g => g.name));
+  renderBulkList(groups);
+  openOv('ov-bulk');
+}
+
+function renderBulkList(groups) {
+  const $list = document.getElementById('bulk-list');
+  if (!groups.length) {
+    $list.innerHTML = '<div class="bulk-empty">미결제 카드 거래가 없습니다</div>';
+    updateBulkSum(groups);
+    return;
+  }
+  $list.innerHTML = groups.map(g => {
+    const checked = bulkSelected.has(g.name);
+    return `
+      <label class="bulk-row${checked ? ' checked' : ''}" data-card="${escapeHtml(g.name)}">
+        <input type="checkbox" ${checked ? 'checked' : ''}>
+        <div>
+          <div class="bk-name">${escapeHtml(g.name)}</div>
+          <div class="bk-sub">${g.count}건 미결제</div>
+        </div>
+        <div class="bk-amt">${fmtAmount(g.amount)}</div>
+      </label>
+    `;
+  }).join('');
+
+  // 체크박스 핸들러 (label 전체 클릭으로 토글)
+  $list.querySelectorAll('.bulk-row').forEach($row => {
+    const $cb = $row.querySelector('input[type="checkbox"]');
+    $cb.addEventListener('change', () => {
+      const card = $row.dataset.card;
+      if ($cb.checked) bulkSelected.add(card);
+      else             bulkSelected.delete(card);
+      $row.classList.toggle('checked', $cb.checked);
+      updateBulkSum(groups);
+    });
+  });
+
+  updateBulkSum(groups);
+}
+
+function updateBulkSum(groups) {
+  let cnt = 0, amt = 0;
+  for (const g of groups) {
+    if (bulkSelected.has(g.name)) { cnt++; amt += g.amount; }
+  }
+  document.getElementById('bulk-sel-cnt').textContent = cnt;
+  document.getElementById('bulk-sel-amt').textContent = fmtAmount(amt);
+}
+
+async function confirmBulkPayment() {
+  const groups = groupUnpaidByCard();
+  const targets = groups.filter(g => bulkSelected.has(g.name));
+  if (!targets.length) { showToast('결제할 카드를 선택하세요'); return; }
+
+  const $btn = document.getElementById('btn-bulk-confirm');
+  $btn.disabled = true;
+  const orig = $btn.textContent;
+  $btn.textContent = '처리 중…';
+
+  try {
+    // writeBatch는 500건 제한 — 청크 처리
+    const allIds = targets.flatMap(g => g.ids);
+    const now = serverTimestamp();
+    const CHUNK = 450;
+    for (let i = 0; i < allIds.length; i += CHUNK) {
+      const batch = writeBatch(db);
+      const slice = allIds.slice(i, i + CHUNK);
+      for (const id of slice) {
+        batch.update(pathTransaction(id), {
+          paid:      true,
+          paidAt:    now,
+          updatedAt: now,
+        });
+      }
+      await batch.commit();
+    }
+
+    closeOv('ov-bulk');
+    // 카드별 토스트
+    for (const g of targets) {
+      showToast(`✓ ${g.name} ${fmtAmount(g.amount)}원 일괄 결제됨`);
+    }
+  } catch (e) {
+    console.error('bulk payment error', e);
+    showToast('일괄결제 실패: ' + (e.message || e.code));
+  } finally {
+    $btn.disabled = false;
+    $btn.textContent = orig;
+  }
+}
+
+// ──────────────────────────────────────────────────────
 // 필터 적용
 // ──────────────────────────────────────────────────────
 function applyFilters(list) {
@@ -2410,6 +2686,10 @@ document.getElementById('btn-tx-delete').addEventListener('click', async () => {
 
 // + 새 거래
 document.getElementById('btn-add-tx').addEventListener('click', () => openTxModal(null));
+
+// 일괄결제 모달
+document.getElementById('btn-bulk-open').addEventListener('click', openBulkModal);
+document.getElementById('btn-bulk-confirm').addEventListener('click', confirmBulkPayment);
 
 // 월 라벨 초기화
 document.getElementById('ym-label').textContent = currentMonth;
