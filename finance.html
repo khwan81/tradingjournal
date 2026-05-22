@@ -783,6 +783,20 @@ body {
   color: var(--text3);
 }
 .bal-fx-strip .fx-snap-date:empty { display: none; }
+.bal-fx-strip .fx-keep-snap {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px;
+  color: var(--text2);
+  cursor: pointer;
+  user-select: none;
+  margin-top: 2px;
+}
+.bal-fx-strip .fx-keep-snap input[type="checkbox"] {
+  width: 13px; height: 13px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  margin: 0;
+}
 .bal-fx-strip .fx-link {
   margin-left: auto;
   color: var(--accent);
@@ -1818,6 +1832,10 @@ body {
           <span class="fx-link" id="fx-edit-link">환율 수정</span>
         </div>
         <div class="fx-snap-date" id="fx-snap-date"></div>
+        <label class="fx-keep-snap" id="fx-keep-snap-wrap" style="display:none;">
+          <input type="checkbox" id="fx-keep-snap" checked>
+          <span>스냅 환율 유지 (저장 시)</span>
+        </label>
       </div>
 
       <!-- 자산 — 유동 -->
@@ -3121,9 +3139,31 @@ function openBalanceModal() {
     ? `스냅 환율은 ${bsSnapshot.asOf} 입력 시점`
     : '';
 
+  // 스냅 유지 토글: 환율 다른 통화가 있을 때만 표시, 기본 ON
+  const $keepWrap = document.getElementById('fx-keep-snap-wrap');
+  const $keepCb   = document.getElementById('fx-keep-snap');
+  if (hasAnySnap) {
+    $keepWrap.style.display = '';
+    $keepCb.checked = true;
+  } else {
+    $keepWrap.style.display = 'none';
+    $keepCb.checked = false;
+  }
+
   // row 빌드
   balRowsCache = buildBalanceRows();
+
+  // 토글 상태 적용 (기본 ON: 스냅 유지)
+  applyFxKeepSnap();
+
   renderBalanceLists();
+
+  // 토글 변경 시 row 재계산 + 다시 렌더
+  $keepCb.onchange = () => {
+    applyFxKeepSnap();
+    renderBalanceLists();
+    recalcBalancePreview();
+  };
 
   // 삭제 버튼: 기존 스냅샷 있을 때만
   document.getElementById('btn-bal-delete').style.display = bsSnapshot ? '' : 'none';
@@ -3132,6 +3172,27 @@ function openBalanceModal() {
   recalcBalancePreview();
 
   openOv('ov-balance');
+}
+
+// 외화 row의 effective fxRate/krw를 토글에 따라 결정
+// - 토글 ON & 스냅 있음 → 스냅 환율·KRW 사용
+// - 그 외 → 현재 환율로 계산
+function applyFxKeepSnap() {
+  const $keepCb = document.getElementById('fx-keep-snap');
+  const keep = !!($keepCb && $keepCb.checked && $keepCb.closest('label')?.style.display !== 'none');
+  for (const r of balRowsCache) {
+    if (!r.isFx) continue;
+    if (keep && r.snapFxRate != null) {
+      r.effectiveFxRate = r.snapFxRate;
+      // native이 그대로면 스냅 krw, 변경됐으면 스냅 환율로 재계산
+      const nativeNum = parseNum(r.native);
+      r.krw = Math.round(nativeNum * r.snapFxRate);
+    } else {
+      r.effectiveFxRate = r.fxRate;
+      const nativeNum = parseNum(r.native);
+      r.krw = Math.round(nativeNum * (r.fxRate || 0));
+    }
+  }
 }
 
 function buildBalanceRows() {
@@ -3149,10 +3210,12 @@ function buildBalanceRows() {
     // 저장된 스냅샷에서 prefill
     let native = '', krw = 0;
     let snapFxRate = null;
+    let snapKrw = null;
     const saved = bsSnapshot?.assetBalances?.[a.id];
     if (saved) {
       native = saved.native ?? '';
       snapFxRate = saved.fxRate ?? null;
+      snapKrw    = Number(saved.krw) || 0;
       // 외화는 현재 환율로 재계산 (저장 시 현재 환율로 박제될 것이므로)
       if (isFx && native !== '' && curFxRate) {
         krw = Math.round(Number(native) * curFxRate);
@@ -3170,6 +3233,7 @@ function buildBalanceRows() {
       currency,
       fxRate: curFxRate,           // 현재 환율 (입력·계산에 사용)
       snapFxRate,                   // 이전 스냅의 환율 (참고용 표시)
+      snapKrw,                      // 이전 스냅의 KRW (스냅 유지 시 저장값)
       snapAsOf: bsSnapshot?.asOf || null,
       locked: false,
       auto: false,
@@ -3252,8 +3316,9 @@ function buildBalRowHtml(r) {
   const placeholder = r.auto ? fmtNum(r.krw) : '';
   const value = r.auto ? '' : (r.native === '' || r.native == null ? '' : r.native);
   const unit = r.isFx ? r.currency : (r.locked ? '' : '원');
+  const effRate = r.isFx ? (r.effectiveFxRate != null ? r.effectiveFxRate : r.fxRate) : null;
   const krwLine = r.isFx
-    ? `<div class="bal-krw" data-krw-for="${escapeHtml(r.key)}">${fmtNum(r.krw)} 원 (환율 ${fmtNum(r.fxRate || 0)})</div>`
+    ? `<div class="bal-krw" data-krw-for="${escapeHtml(r.key)}">${fmtNum(r.krw)} 원 (환율 ${fmtNum(effRate || 0)})</div>`
     : '';
   return `
     <div class="bal-row${lockedCls}${autoCls}${fxCls}" data-key="${escapeHtml(r.key)}" data-type="${r.type}" data-tier="${r.tier}">
@@ -3278,11 +3343,10 @@ function onBalanceInputChange(e) {
   const v = parseNum($inp.value);
   row.native = v;
   if (row.isFx) {
-    const fxRate = row.fxRate || 0;
-    row.krw = Math.round(v * fxRate);
-    // 환산값 라인 갱신
+    const effRate = row.effectiveFxRate != null ? row.effectiveFxRate : (row.fxRate || 0);
+    row.krw = Math.round(v * effRate);
     const $krw = document.querySelector(`.bal-krw[data-krw-for="${CSS.escape(key)}"]`);
-    if ($krw) $krw.textContent = `${fmtNum(row.krw)} 원 (환율 ${fmtNum(fxRate)})`;
+    if ($krw) $krw.textContent = `${fmtNum(row.krw)} 원 (환율 ${fmtNum(effRate)})`;
   } else {
     row.krw = v;
   }
@@ -3341,10 +3405,11 @@ async function saveBalanceSnapshot() {
     if (r.type === 'asset') {
       // 빈 값은 저장 안 함 (사용자가 입력 안 한 항목)
       if (r.native === '' || r.native == null) continue;
+      const effRate = r.isFx ? (r.effectiveFxRate != null ? r.effectiveFxRate : r.fxRate) : null;
       assetBalances[r.key] = {
         native:   Number(r.native) || 0,
         currency: r.currency || 'KRW',
-        fxRate:   r.isFx ? (r.fxRate || null) : null,
+        fxRate:   r.isFx ? (effRate || null) : null,
         krw:      Number(r.krw) || 0,
       };
     } else {
