@@ -584,6 +584,87 @@ body {
   .unpaid-bar .ub-cta { width: 100%; }
 }
 
+/* 반복지출 알림바 (v0.2-3) — 파란색 톤 */
+.recurring-bar {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(79, 143, 255, 0.10);
+  border: 1px solid rgba(79, 143, 255, 0.32);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: var(--text);
+}
+.recurring-bar.show { display: flex; }
+.recurring-bar .rb-left {
+  display: flex; align-items: center; gap: 8px;
+  min-width: 0;
+}
+.recurring-bar .rb-icon { font-size: 14px; }
+.recurring-bar .rb-text { color: var(--text2); }
+.recurring-bar .rb-count { color: var(--accent); font-weight: 700; }
+.recurring-bar .rb-cta {
+  background: var(--accent);
+  color: #fff;
+  border: 0;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--font);
+  white-space: nowrap;
+}
+.recurring-bar .rb-cta:hover { filter: brightness(1.08); }
+.recurring-bar .rb-cta:disabled { opacity: 0.5; cursor: not-allowed; }
+@media (max-width: 640px) {
+  .recurring-bar { flex-direction: column; align-items: stretch; gap: 8px; }
+  .recurring-bar .rb-cta { width: 100%; }
+}
+
+/* 반복지출 마스터 리스트 행 */
+.rec-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+}
+.rec-row:last-child { border-bottom: none; }
+.rec-row .rec-main { flex: 1; min-width: 0; }
+.rec-row .rec-name-wrap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rec-row .rec-name { font-size: 14px; color: var(--text); }
+.rec-row .rec-amount { font-size: 13px; color: var(--text2); font-family: var(--font-mono); }
+.rec-row .rec-meta { font-size: 11px; color: var(--text3); margin-top: 4px; }
+.rec-row .rec-meta .dot { margin: 0 6px; }
+.rec-row .badge {
+  font-size: 10px; padding: 2px 7px; border-radius: 10px;
+  background: var(--bg4); color: var(--text2);
+  font-weight: 500;
+}
+.rec-row .badge.ended {
+  background: rgba(248, 113, 113, 0.12);
+  color: var(--red);
+}
+.rec-row .badge.active {
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--green);
+}
+.rec-row .actions { display: flex; gap: 4px; flex-shrink: 0; }
+.rec-row .actions button {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text2);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-family: var(--font);
+}
+.rec-row .actions button:hover { background: var(--bg3); color: var(--text); }
+
 /* 일괄결제 모달 */
 .bulk-list {
   display: flex; flex-direction: column; gap: 6px;
@@ -1525,6 +1606,15 @@ body {
       <button type="button" class="ub-cta" id="btn-bulk-open">일괄결제 처리</button>
     </div>
 
+    <!-- 반복지출 알림바 (v0.2-3) -->
+    <div class="recurring-bar" id="recurring-bar">
+      <div class="rb-left">
+        <span class="rb-icon">🔁</span>
+        <span class="rb-text">이번 달 미생성 반복지출 <span class="rb-count" id="recurring-count">0</span>건</span>
+      </div>
+      <button type="button" class="rb-cta" id="btn-recurring-generate">일괄 생성</button>
+    </div>
+
     <!-- 필터 칩 -->
     <div class="filter-bar" id="filter-bar">
       <button type="button" class="fchip active" data-filter-all>전체</button>
@@ -1684,6 +1774,22 @@ body {
           <span class="trash-caret">▾</span>
         </button>
         <div id="liab-trash-list" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- ───────── 반복지출 마스터 (v0.2-3) ───────── -->
+    <div class="section-card">
+      <div class="section-head">
+        <div>
+          <div class="section-title">🔁 반복지출</div>
+          <div class="section-sub">매월 자동 생성할 거래</div>
+        </div>
+        <div class="section-actions">
+          <button class="btn-s" id="btn-add-recurring">+ 반복지출 추가</button>
+        </div>
+      </div>
+      <div id="recurring-list">
+        <div class="chip-empty" style="text-align:center; padding:24px 0;">로딩 중…</div>
       </div>
     </div>
 
@@ -1898,6 +2004,68 @@ body {
       <button class="btn-danger grow" id="btn-liab-delete" style="display:none;">삭제</button>
       <button class="btn-s" data-close="ov-liability">취소</button>
       <button class="btn-p" id="btn-liab-save">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 모달: 반복지출 추가/편집 (v0.2-3) ── -->
+<div class="ov" id="ov-recurring">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="rec-modal-title">반복지출 추가</h3>
+      <button class="modal-close" data-close="ov-recurring">×</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-recurring" onsubmit="return false;">
+        <div class="form-group">
+          <label class="form-label">이름</label>
+          <input class="input" id="rec-name" placeholder="예: 넷플릭스, 월세, 보험료" autocomplete="off">
+        </div>
+        <div class="form-row cols-2 form-group">
+          <div>
+            <label class="form-label">금액</label>
+            <input class="input" type="text" inputmode="numeric" id="rec-amount" placeholder="0" style="text-align:right; font-family: var(--font-mono);">
+          </div>
+          <div>
+            <label class="form-label">매월 며칠</label>
+            <input class="input" type="number" id="rec-day" min="1" max="31" placeholder="15">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">카테고리</label>
+          <select class="select" id="rec-category"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">결제수단</label>
+          <select class="select" id="rec-payment"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">계좌 <span style="color:var(--text3);">(선택)</span></label>
+          <select class="select" id="rec-account">
+            <option value="">미지정</option>
+          </select>
+        </div>
+        <div class="form-row cols-2 form-group">
+          <div>
+            <label class="form-label">시작 월</label>
+            <input class="input" type="month" id="rec-valid-from">
+          </div>
+          <div>
+            <label class="form-label">종료 월 <span style="color:var(--text3);">(선택)</span></label>
+            <input class="input" type="month" id="rec-valid-to" placeholder="진행 중">
+          </div>
+        </div>
+        <div class="form-hint">시작 월 1일부터 활성. 종료 월 마지막 날까지 활성. 종료 월 비우면 진행 중.</div>
+        <div class="form-group" style="margin-top:12px;">
+          <label class="form-label">메모 <span style="color:var(--text3);">(선택)</span></label>
+          <input class="input" id="rec-memo" placeholder="예: Premium 플랜" autocomplete="off">
+        </div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-danger grow" id="btn-rec-delete" style="display:none;">삭제</button>
+      <button class="btn-s" data-close="ov-recurring">취소</button>
+      <button class="btn-p" id="btn-rec-save">저장</button>
     </div>
   </div>
 </div>
@@ -2132,18 +2300,21 @@ let accounts = [];   // [{id, ...}] 공유 마스터
 let settings = null; // finance/config 도큐먼트
 let sharedSettings = null; // config/accounts 도큐먼트 (categoriesEnum + fxRates)
 let transactions = []; // 현재 월의 거래
+let recurringMasters = []; // 반복지출 마스터 (전체)
 let currentMonth = currentYm(); // YYYY-MM 형식 (거래내역 탭)
 let bsMonth = currentYm();      // YYYY-MM 형식 (재무상태 탭 — 독립)
 let bsSnapshot = null;          // 현재 bsMonth의 스냅샷 (없으면 null)
 let bsPrevSnapshot = null;      // bsMonth 직전 달 스냅샷 (없으면 null)
 let filterFlows = new Set(); // 활성 flow 필터: 'revenue'|'fixed'|'variable'
 let filterPays  = new Set(); // 활성 결제상태 필터: 'unpaid'|'card'|'cash'
+let editingRecurringId = null; // 반복지출 모달 편집 중인 id
 let unsubAccounts = null;
 let unsubSharedSettings = null;
 let unsubSettings = null;
 let unsubTransactions = null;
 let unsubBsSnapshot = null;
 let unsubBsPrevSnapshot = null;
+let unsubRecurring = null;
 
 // 자산 종류 enum (categoriesEnum 기본값)
 const DEFAULT_CATEGORIES_ENUM = {
@@ -2172,6 +2343,8 @@ const pathTransactions = () => collection(db, `users/${currentUid}/finance/confi
 const pathTransaction = id => doc(db, `users/${currentUid}/finance/config/transactions/${id}`);
 const pathSnapshots = () => collection(db, `users/${currentUid}/finance/config/snapshots`);
 const pathSnapshot = ym => doc(db, `users/${currentUid}/finance/config/snapshots/${ym}`);
+const pathRecurring = () => collection(db, `users/${currentUid}/finance/config/recurring`);
+const pathRecurringItem = id => doc(db, `users/${currentUid}/finance/config/recurring/${id}`);
 
 // ──────────────────────────────────────────────────────
 // 초기 데이터 로드
@@ -2249,9 +2422,33 @@ async function loadAll() {
   // 모든 월의 미결제 카드 거래 구독 (알림바·일괄결제용)
   subscribeUnpaid();
 
+  // 반복지출 마스터 구독
+  subscribeRecurring();
+
   // 재무상태 탭 — 현재 bsMonth 스냅샷 구독
   subscribeBsSnapshot();
   renderBsHeader();
+}
+
+function subscribeRecurring() {
+  if (unsubRecurring) { unsubRecurring(); unsubRecurring = null; }
+  if (!currentUid) return;
+  unsubRecurring = onSnapshot(
+    pathRecurring(),
+    snap => {
+      recurringMasters = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // 정렬: 진행 중 먼저, 그 다음 이름
+      recurringMasters.sort((a, b) => {
+        const aActive = a.validTo == null ? 0 : 1;
+        const bActive = b.validTo == null ? 0 : 1;
+        if (aActive !== bActive) return aActive - bActive;
+        return String(a.name).localeCompare(String(b.name), 'ko');
+      });
+      renderRecurringList();
+      renderRecurringBar();
+    },
+    err => { console.error('recurring subscribe error', err); showToast('반복지출 로드 실패'); }
+  );
 }
 
 function subscribeTransactions() {
@@ -2270,6 +2467,7 @@ function subscribeTransactions() {
         return bt - at;
       });
       renderTransactions();
+      renderRecurringBar();
     },
     err => { console.error('transactions subscribe error', err); showToast('거래 로드 실패'); }
   );
@@ -2283,10 +2481,12 @@ function unsubscribeAll() {
   if (unsubUnpaid) { unsubUnpaid(); unsubUnpaid = null; }
   if (unsubBsSnapshot) { unsubBsSnapshot(); unsubBsSnapshot = null; }
   if (unsubBsPrevSnapshot) { unsubBsPrevSnapshot(); unsubBsPrevSnapshot = null; }
+  if (unsubRecurring) { unsubRecurring(); unsubRecurring = null; }
   accounts = [];
   settings = null;
   sharedSettings = null;
   transactions = [];
+  recurringMasters = [];
   allUnpaidTxs = [];
   bsSnapshot = null;
   bsPrevSnapshot = null;
@@ -3177,6 +3377,320 @@ document.getElementById('btn-liab-delete').addEventListener('click', async () =>
 });
 
 // ──────────────────────────────────────────────────────
+// 반복지출 관리 (v0.2-3)
+// ──────────────────────────────────────────────────────
+// 모델: users/{uid}/finance/config/recurring/{id}
+//   { id, name, amount, category, payment, accountId, accountName,
+//     dayOfMonth, validFrom (ym), validTo (ym|null),
+//     memo, createdAt }
+//
+// 시점성: validFrom <= ym AND (validTo == null OR validTo >= ym)
+// 거래에는 `recurringRef: id` 박아 중복 생성 방지
+
+// 어떤 ym에 어떤 반복지출이 활성인지 판정
+function isRecurringActiveInYm(rec, ym) {
+  if (!rec.validFrom) return false;
+  if (rec.validFrom > ym) return false;
+  if (rec.validTo && rec.validTo < ym) return false;
+  return true;
+}
+
+// 현재 달(currentMonth)에 미생성인 반복지출 목록
+function getRecurringPendingForCurrentMonth() {
+  const pending = [];
+  for (const rec of recurringMasters) {
+    if (!isRecurringActiveInYm(rec, currentMonth)) continue;
+    // 이미 생성된 거래가 있는지 확인 (recurringRef 일치 + ym 일치)
+    const exists = transactions.some(tx => tx.recurringRef === rec.id);
+    if (!exists) pending.push(rec);
+  }
+  return pending;
+}
+
+// ── 알림바 렌더 ──────────────────────────────────────
+function renderRecurringBar() {
+  const $bar = document.getElementById('recurring-bar');
+  if (!$bar) return;
+  const pending = getRecurringPendingForCurrentMonth();
+  if (pending.length === 0) {
+    $bar.classList.remove('show');
+    return;
+  }
+  document.getElementById('recurring-count').textContent = pending.length;
+  $bar.classList.add('show');
+}
+
+// ── 일괄 생성 ─────────────────────────────────────────
+async function generateRecurringForCurrentMonth() {
+  const pending = getRecurringPendingForCurrentMonth();
+  if (pending.length === 0) return;
+
+  const $btn = document.getElementById('btn-recurring-generate');
+  const orig = $btn.textContent;
+  $btn.disabled = true;
+  $btn.textContent = '⏳ 생성 중…';
+
+  try {
+    const batch = writeBatch(db);
+    const [y, m] = currentMonth.split('-').map(Number);
+    const lastDay = new Date(y, m, 0).getDate(); // 이번 달 마지막 날
+
+    for (const rec of pending) {
+      // dayOfMonth가 이번 달 마지막보다 크면 마지막 날로 clamp (예: 31일 설정인데 2월)
+      const day = Math.min(rec.dayOfMonth || 1, lastDay);
+      const date = `${currentMonth}-${String(day).padStart(2, '0')}`;
+      const payObj = settings?.payments?.find(p => p.name === rec.payment);
+      const acc = rec.accountId ? accounts.find(a => a.id === rec.accountId) : null;
+      const paid = (payObj?.type || 'cash') === 'cash'; // 현금성은 즉시 결제, 카드는 미결제
+
+      const data = {
+        date,
+        ym: currentMonth,
+        amount: rec.amount,
+        amountNative: null,
+        currency: 'KRW',
+        fxRate: null,
+        category: rec.category,
+        flow: mapCategoryToFlow(rec.category),
+        payment: rec.payment,
+        paymentType: payObj?.type || 'cash',
+        accountId: acc?.id || null,
+        accountName: acc?.name || null,
+        paid,
+        paidAt: paid ? serverTimestamp() : null,
+        memo: rec.memo || null,
+        recurringRef: rec.id,  // 핵심: 어느 반복지출에서 생성됐는지
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+
+      const newDocRef = doc(pathTransactions());
+      batch.set(newDocRef, data);
+    }
+
+    await batch.commit();
+    showToast(`반복지출 ${pending.length}건 생성 완료`);
+  } catch (e) {
+    console.error('[recurring generate] error', e);
+    showToast('생성 실패: ' + (e.message || e.code));
+  } finally {
+    $btn.disabled = false;
+    $btn.textContent = orig;
+  }
+}
+
+document.getElementById('btn-recurring-generate').addEventListener('click', generateRecurringForCurrentMonth);
+
+// ── 설정 탭: 마스터 리스트 렌더 ───────────────────────
+function renderRecurringList() {
+  const $l = document.getElementById('recurring-list');
+  if (!$l) return;
+  if (!recurringMasters.length) {
+    $l.innerHTML = '<div class="chip-empty" style="text-align:center; padding:24px 0;">아직 등록된 반복지출이 없습니다</div>';
+    return;
+  }
+  const today = currentYm();
+  $l.innerHTML = recurringMasters.map(rec => {
+    const isActive = isRecurringActiveInYm(rec, today);
+    const ended = rec.validTo && rec.validTo < today;
+    const notYet = rec.validFrom && rec.validFrom > today;
+    let badge;
+    if (ended)       badge = '<span class="badge ended">종료됨</span>';
+    else if (notYet) badge = '<span class="badge">예정</span>';
+    else if (isActive) badge = '<span class="badge active">진행 중</span>';
+    else             badge = '<span class="badge">비활성</span>';
+
+    const period = rec.validTo
+      ? `${rec.validFrom} ~ ${rec.validTo}`
+      : `${rec.validFrom} ~ 진행 중`;
+
+    return `
+    <div class="rec-row">
+      <div class="rec-main">
+        <div class="rec-name-wrap">
+          <span class="rec-name">${escapeHtml(rec.name)}</span>
+          ${badge}
+        </div>
+        <div class="rec-meta">
+          <span class="rec-amount">${fmtAmount(rec.amount)}원</span>
+          <span class="dot">·</span>
+          매월 ${rec.dayOfMonth}일
+          <span class="dot">·</span>
+          ${escapeHtml(rec.category)}
+          <span class="dot">·</span>
+          ${escapeHtml(rec.payment)}
+          <br>
+          <span style="color:var(--text3);">${escapeHtml(period)}</span>
+          ${rec.memo ? `<span class="dot">·</span>${escapeHtml(rec.memo)}` : ''}
+        </div>
+      </div>
+      <div class="actions">
+        <button type="button" data-edit-rec="${escapeHtml(rec.id)}" aria-label="편집">⋯</button>
+      </div>
+    </div>`;
+  }).join('');
+  $l.querySelectorAll('[data-edit-rec]').forEach(el => {
+    el.addEventListener('click', () => openRecurringModal(el.dataset.editRec));
+  });
+}
+
+// ── 모달 ─────────────────────────────────────────────
+function openRecurringModal(id = null) {
+  if (!settings) return;
+  const hasCats = (settings.categories.revenue.length + settings.categories.fixed.length + settings.categories.variable.length) > 0;
+  const hasPays = settings.payments.length > 0;
+  if (!hasCats || !hasPays) {
+    const missing = [];
+    if (!hasCats) missing.push('카테고리');
+    if (!hasPays) missing.push('결제수단');
+    showToast(`설정 탭에서 ${missing.join(' / ')}을(를) 먼저 추가하세요`);
+    return;
+  }
+
+  editingRecurringId = id;
+  const isEdit = !!id;
+  const rec = isEdit ? recurringMasters.find(r => r.id === id) : null;
+
+  document.getElementById('rec-modal-title').textContent = isEdit ? '반복지출 편집' : '반복지출 추가';
+  document.getElementById('btn-rec-delete').style.display = isEdit ? 'inline-flex' : 'none';
+
+  document.getElementById('rec-name').value = rec?.name || '';
+  document.getElementById('rec-amount').value = rec ? fmtAmount(rec.amount) : '';
+  document.getElementById('rec-day').value = rec?.dayOfMonth || 1;
+  document.getElementById('rec-memo').value = rec?.memo || '';
+  document.getElementById('rec-valid-from').value = rec?.validFrom || currentYm();
+  document.getElementById('rec-valid-to').value = rec?.validTo || '';
+
+  rebuildRecCategoryOptions(rec?.category);
+  rebuildRecPaymentOptions(rec?.payment);
+  rebuildRecAccountOptions(rec?.accountId);
+
+  openOv('ov-recurring');
+  setTimeout(() => document.getElementById('rec-name').focus(), 50);
+}
+
+function rebuildRecCategoryOptions(selected) {
+  const $sel = document.getElementById('rec-category');
+  const groups = [
+    ['수입',    settings.categories.revenue],
+    ['고정지출', settings.categories.fixed],
+    ['변동지출', settings.categories.variable],
+  ];
+  let html = '<option value="">선택…</option>';
+  groups.forEach(([label, arr]) => {
+    if (!arr.length) return;
+    html += `<optgroup label="${escapeHtml(label)}">`;
+    arr.forEach(name => {
+      html += `<option value="${escapeHtml(name)}"${name === selected ? ' selected' : ''}>${escapeHtml(name)}</option>`;
+    });
+    html += '</optgroup>';
+  });
+  $sel.innerHTML = html;
+  if (!selected) {
+    const first = settings.categories.fixed[0] || settings.categories.variable[0] || settings.categories.revenue[0];
+    if (first) $sel.value = first;
+  }
+}
+
+function rebuildRecPaymentOptions(selected) {
+  const $sel = document.getElementById('rec-payment');
+  $sel.innerHTML = ['<option value="">선택…</option>']
+    .concat(settings.payments.map(p =>
+      `<option value="${escapeHtml(p.name)}"${p.name === selected ? ' selected' : ''}>${escapeHtml(p.name)} ${p.type === 'card' ? '(카드)' : '(현금성)'}</option>`
+    )).join('');
+  if (!selected && settings.payments[0]) $sel.value = settings.payments[0].name;
+}
+
+function rebuildRecAccountOptions(selected) {
+  const $sel = document.getElementById('rec-account');
+  const active = accounts.filter(a => a.active !== false);
+  $sel.innerHTML = ['<option value="">미지정</option>']
+    .concat(active.map(a => `<option value="${escapeHtml(a.id)}"${a.id === selected ? ' selected' : ''}>${escapeHtml(a.name)}</option>`))
+    .join('');
+}
+
+// 추가 버튼
+document.getElementById('btn-add-recurring').addEventListener('click', () => openRecurringModal(null));
+
+// 금액 콤마 포맷팅 (입력 중)
+document.getElementById('rec-amount').addEventListener('input', e => {
+  const raw = e.target.value.replace(/[^\d]/g, '');
+  e.target.value = raw ? Number(raw).toLocaleString('en-US') : '';
+});
+
+// 저장
+document.getElementById('btn-rec-save').addEventListener('click', async () => {
+  const name = document.getElementById('rec-name').value.trim();
+  const amountRaw = document.getElementById('rec-amount').value.replace(/[^\d]/g, '');
+  const amount = parseInt(amountRaw, 10);
+  const dayOfMonth = parseInt(document.getElementById('rec-day').value, 10);
+  const category = document.getElementById('rec-category').value;
+  const payment = document.getElementById('rec-payment').value;
+  const accountId = document.getElementById('rec-account').value || null;
+  const validFrom = document.getElementById('rec-valid-from').value;
+  const validTo = document.getElementById('rec-valid-to').value || null;
+  const memo = document.getElementById('rec-memo').value.trim() || null;
+
+  if (!name)        { showToast('이름을 입력하세요'); return; }
+  if (!amount || amount <= 0) { showToast('금액을 입력하세요'); return; }
+  if (!dayOfMonth || dayOfMonth < 1 || dayOfMonth > 31) { showToast('1~31 사이의 날짜를 입력하세요'); return; }
+  if (!category)    { showToast('카테고리를 선택하세요'); return; }
+  if (!payment)     { showToast('결제수단을 선택하세요'); return; }
+  if (!validFrom)   { showToast('시작 월을 선택하세요'); return; }
+  if (validTo && validTo < validFrom) { showToast('종료 월은 시작 월 이후여야 합니다'); return; }
+
+  const payObj = settings.payments.find(p => p.name === payment);
+  const acc = accountId ? accounts.find(a => a.id === accountId) : null;
+
+  const data = {
+    name,
+    amount,
+    dayOfMonth,
+    category,
+    payment,
+    paymentType: payObj?.type || 'cash',
+    accountId: acc?.id || null,
+    accountName: acc?.name || null,
+    validFrom,
+    validTo,
+    memo,
+    updatedAt: serverTimestamp(),
+  };
+
+  try {
+    if (editingRecurringId) {
+      await updateDoc(pathRecurringItem(editingRecurringId), data);
+      showToast('반복지출이 수정되었습니다');
+    } else {
+      data.createdAt = serverTimestamp();
+      await addDoc(pathRecurring(), data);
+      showToast('반복지출이 추가되었습니다');
+    }
+    closeOv('ov-recurring');
+  } catch (e) {
+    console.error('[recurring save] error', e);
+    showToast('저장 실패: ' + (e.message || e.code));
+  }
+});
+
+// 삭제
+document.getElementById('btn-rec-delete').addEventListener('click', async () => {
+  if (!editingRecurringId) return;
+  const rec = recurringMasters.find(r => r.id === editingRecurringId);
+  if (!rec) return;
+  if (!confirm(`"${rec.name}" 반복지출을 삭제할까요?\n\n이미 생성된 거래는 그대로 유지됩니다.\n앞으로 새 거래는 생성되지 않습니다.\n\n진행 중인 항목을 보존하려면 종료 월만 설정하는 것도 방법입니다.`)) return;
+
+  try {
+    await deleteDoc(pathRecurringItem(editingRecurringId));
+    closeOv('ov-recurring');
+    showToast(`"${rec.name}" 삭제됨`);
+  } catch (e) {
+    console.error(e);
+    showToast('삭제 실패');
+  }
+});
+
+// ──────────────────────────────────────────────────────
 // 데이터 백업 (v0.2-2)
 // ──────────────────────────────────────────────────────
 // 백업 범위:
@@ -3185,6 +3699,7 @@ document.getElementById('btn-liab-delete').addEventListener('click', async () =>
 //   - users/{uid}/finance/config (문서)      → financeSettings
 //   - users/{uid}/finance/config/snapshots/* → snapshots[]
 //   - users/{uid}/finance/config/transactions/* → transactions[]
+//   - users/{uid}/finance/config/recurring/* → recurring[]   (v0.2-3)
 //
 // Firestore Timestamp는 JSON.stringify로 변환 시 {seconds, nanoseconds} 형태가 됨.
 // 복원(v0.3)에서 다시 Timestamp로 복원할 수 있도록 그대로 유지.
@@ -3197,19 +3712,21 @@ async function downloadBackup() {
   $btn.textContent = '⏳ 백업 중…';
 
   try {
-    // 병렬 페치 (5개)
+    // 병렬 페치 (6개)
     const [
       sharedDocSnap,
       sharedItemsSnap,
       finDocSnap,
       snapshotsSnap,
       transactionsSnap,
+      recurringSnap,
     ] = await Promise.all([
       getDoc(pathAccountsSettings()),
       getDocs(pathAccountsItems()),
       getDoc(pathFinanceSettings()),
       getDocs(pathSnapshots()),
       getDocs(pathTransactions()),
+      getDocs(pathRecurring()),
     ]);
 
     const sharedAccountsItems = [];
@@ -3221,9 +3738,12 @@ async function downloadBackup() {
     const transactions = [];
     transactionsSnap.forEach(d => transactions.push({ id: d.id, ...d.data() }));
 
+    const recurring = [];
+    recurringSnap.forEach(d => recurring.push({ id: d.id, ...d.data() }));
+
     const payload = {
-      schemaVersion: 1,
-      appVersion: 'v0.2-2',
+      schemaVersion: 2,
+      appVersion: 'v0.2-3',
       exportedAt: new Date().toISOString(),
       uid: currentUid,
       data: {
@@ -3232,6 +3752,7 @@ async function downloadBackup() {
         financeSettings: finDocSnap.exists() ? finDocSnap.data() : null,
         snapshots,
         transactions,
+        recurring,
       },
     };
 
@@ -3264,7 +3785,7 @@ async function downloadBackup() {
 
     // 결과 토스트
     const sizeKb = (blob.size / 1024).toFixed(1);
-    showToast(`백업 완료 — 거래 ${transactions.length}건, 스냅 ${snapshots.length}개 (${sizeKb} KB)`);
+    showToast(`백업 완료 — 거래 ${transactions.length}건, 스냅 ${snapshots.length}개, 반복지출 ${recurring.length}건 (${sizeKb} KB)`);
     console.log('[backup] 완료', { filename, size: blob.size, payload });
   } catch (e) {
     console.error('[backup] error', e);
@@ -3284,6 +3805,10 @@ function setMonth(ym) {
   currentMonth = ym;
   document.getElementById('ym-label').textContent = ym;
   subscribeTransactions();
+  // subscribeTransactions의 onSnapshot이 발화하기 전 잠깐의 빈 상태에서도
+  // 알림바를 즉시 업데이트 (이전 월의 거래 기준 표시 방지)
+  // 단, 정확한 값은 onSnapshot 콜백에서 다시 갱신됨
+  renderRecurringBar();
 }
 function shiftMonth(delta) {
   const [y, m] = currentMonth.split('-').map(Number);
@@ -4738,6 +5263,7 @@ onAuthStateChanged(auth, async user => {
       get bsMonth()        { return bsMonth; },
       get currentMonth()   { return currentMonth; },
       get transactions()   { return transactions; },
+      get recurringMasters() { return recurringMasters; },
 
       // 부채 진단: 마스터 + 휴지통 + 현재 월 스냅 + 키 매칭
       liab() {
