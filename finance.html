@@ -407,6 +407,59 @@ body {
 }
 .liab-row .actions button:hover { background: var(--bg3); color: var(--text); }
 
+/* 휴지통 (삭제된 부채 복원) */
+.trash-toggle {
+  width: 100%;
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text2);
+  font-size: 12px;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: background 0.1s, color 0.1s;
+}
+.trash-toggle:hover { background: var(--bg3); color: var(--text); }
+.trash-toggle .trash-icon { font-size: 13px; }
+.trash-toggle .trash-label { flex: 1; text-align: left; }
+.trash-toggle .trash-count {
+  background: var(--bg4); color: var(--text3);
+  font-size: 10px; padding: 2px 7px; border-radius: 10px;
+  font-weight: 500;
+}
+.trash-toggle .trash-caret {
+  font-size: 10px; color: var(--text3);
+  transition: transform 0.15s;
+}
+.trash-toggle[aria-expanded="true"] .trash-caret { transform: rotate(180deg); }
+
+#liab-trash-list { margin-top: 6px; }
+.trash-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text2);
+}
+.trash-row:last-child { border-bottom: none; }
+.trash-row .name-wrap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.trash-row .meta { color: var(--text3); font-size: 11px; margin-top: 2px; }
+.trash-row .actions { display: flex; gap: 4px; }
+.trash-row .actions button {
+  background: transparent;
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-family: var(--font);
+}
+.trash-row .actions button.restore:hover { background: rgba(79,143,255,0.12); color: var(--accent); border-color: var(--accent); }
+.trash-row .actions button.purge:hover { background: rgba(248,113,113,0.12); color: var(--red); border-color: var(--red); }
+
 /* ── 거래내역 탭 ── */
 .tx-header {
   display: flex; justify-content: space-between; align-items: center;
@@ -1601,6 +1654,17 @@ body {
       <div id="liab-list">
         <div class="chip-empty" style="text-align:center; padding:24px 0;">로딩 중…</div>
       </div>
+
+      <!-- 휴지통 (삭제된 부채 복원용) — 비어있을 땐 숨김 -->
+      <div id="liab-trash-wrap" style="display:none; margin-top: 16px;">
+        <button type="button" id="liab-trash-toggle" class="trash-toggle" aria-expanded="false">
+          <span class="trash-icon">🗑️</span>
+          <span class="trash-label">최근 삭제됨</span>
+          <span class="trash-count" id="liab-trash-count">0</span>
+          <span class="trash-caret">▾</span>
+        </button>
+        <div id="liab-trash-list" style="display:none;"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -2123,11 +2187,13 @@ async function loadAll() {
       if (!settings.categories.variable) settings.categories.variable = [];
       if (!Array.isArray(settings.payments)) settings.payments = [];
       if (!Array.isArray(settings.liabilities)) settings.liabilities = [];
+      if (!Array.isArray(settings.liabilitiesDeleted)) settings.liabilitiesDeleted = [];
       // 부채 마스터 마이그레이션 (1회성, 비동기 — 완료되면 다시 onSnapshot 발화)
       migrateLiabilitiesIfNeeded(settings);
       renderPayments();
       renderCategories();
       renderLiabilities();
+      renderLiabilitiesTrash();
       renderTransactions(); // 카테고리/결제수단 라벨 색상이 settings에 의존
       renderBsBody();       // 부채 마스터가 BS에 들어가니 갱신
     },
@@ -2436,6 +2502,129 @@ function renderLiabilities() {
   $l.querySelectorAll('[data-edit-liab]').forEach(el => {
     el.addEventListener('click', () => openLiabilityModal(el.dataset.editLiab));
   });
+}
+
+// ──────────────────────────────────────────────────────
+// 부채 휴지통 — 삭제된 부채 복원 UI
+// ──────────────────────────────────────────────────────
+function renderLiabilitiesTrash() {
+  const $wrap  = document.getElementById('liab-trash-wrap');
+  const $list  = document.getElementById('liab-trash-list');
+  const $count = document.getElementById('liab-trash-count');
+  const trash = settings?.liabilitiesDeleted || [];
+
+  if (!trash.length) {
+    $wrap.style.display = 'none';
+    return;
+  }
+  $wrap.style.display = '';
+  $count.textContent = trash.length;
+
+  // 정렬: 최근 삭제 먼저
+  const sorted = [...trash].sort((a, b) => {
+    const ta = a.deletedAt || '';
+    const tb = b.deletedAt || '';
+    return tb.localeCompare(ta);
+  });
+
+  $list.innerHTML = sorted.map(lb => {
+    const isNon = lb.type === 'nonCurrent';
+    const when = lb.deletedAt ? fmtDeletedAt(lb.deletedAt) : '';
+    return `
+      <div class="trash-row">
+        <div>
+          <div class="name-wrap">
+            <div>${escapeHtml(lb.name)}</div>
+            <span class="badge ${isNon ? 'noncurrent' : ''}">${isNon ? '비유동' : '유동'}</span>
+          </div>
+          <div class="meta">${when ? `삭제 ${when}` : ''}${lb.note ? ` · ${escapeHtml(lb.note)}` : ''}</div>
+        </div>
+        <div class="actions">
+          <button type="button" class="restore" data-restore="${escapeHtml(lb.id)}">복원</button>
+          <button type="button" class="purge"   data-purge="${escapeHtml(lb.id)}">영구삭제</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  $list.querySelectorAll('[data-restore]').forEach(el => {
+    el.addEventListener('click', () => restoreLiability(el.dataset.restore));
+  });
+  $list.querySelectorAll('[data-purge]').forEach(el => {
+    el.addEventListener('click', () => purgeLiability(el.dataset.purge));
+  });
+}
+
+function fmtDeletedAt(iso) {
+  try {
+    const d = new Date(iso);
+    const now = new Date();
+    const diffMs = now - d;
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1)  return '방금';
+    if (diffMin < 60) return `${diffMin}분 전`;
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24)  return `${diffHr}시간 전`;
+    const diffDay = Math.floor(diffHr / 24);
+    if (diffDay < 7)  return `${diffDay}일 전`;
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  } catch { return ''; }
+}
+
+// 휴지통 토글 (펼침/접기)
+document.getElementById('liab-trash-toggle').addEventListener('click', () => {
+  const $btn  = document.getElementById('liab-trash-toggle');
+  const $list = document.getElementById('liab-trash-list');
+  const open = $btn.getAttribute('aria-expanded') === 'true';
+  $btn.setAttribute('aria-expanded', String(!open));
+  $list.style.display = open ? 'none' : '';
+});
+
+async function restoreLiability(id) {
+  if (!id) return;
+  const trash = [...(settings?.liabilitiesDeleted || [])];
+  const idx = trash.findIndex(l => l.id === id);
+  if (idx < 0) { showToast('복원 대상을 찾을 수 없습니다'); return; }
+  const lb = trash[idx];
+
+  // 이름 충돌 체크 (활성 마스터)
+  const list = [...(settings?.liabilities || [])];
+  const conflict = list.find(l => l.name === lb.name);
+  if (conflict) {
+    showToast(`"${lb.name}" 이름이 이미 사용 중입니다. 충돌하는 부채의 이름을 먼저 바꿔주세요`);
+    return;
+  }
+
+  // deletedAt 제거 후 마스터로 이동
+  const { deletedAt, ...restored } = lb;
+  list.push(restored);
+  trash.splice(idx, 1);
+
+  try {
+    await setDoc(pathFinanceSettings(), {
+      ...settings,
+      liabilities: list,
+      liabilitiesDeleted: trash,
+    }, { merge: false });
+    showToast(`"${lb.name}" 복원됨`);
+  } catch (e) { console.error(e); showToast('복원 실패'); }
+}
+
+async function purgeLiability(id) {
+  if (!id) return;
+  const trash = [...(settings?.liabilitiesDeleted || [])];
+  const idx = trash.findIndex(l => l.id === id);
+  if (idx < 0) return;
+  const lb = trash[idx];
+  if (!confirm(`"${lb.name}"을(를) 휴지통에서 영구 삭제할까요?\n\n과거 스냅샷에 기록된 잔액은 그대로 보존되며,\n재무상태표에서 (완납·마스터 삭제됨)으로 계속 표시됩니다.\n\n복원은 불가능합니다.`)) return;
+  trash.splice(idx, 1);
+  try {
+    await setDoc(pathFinanceSettings(), {
+      ...settings,
+      liabilitiesDeleted: trash,
+    }, { merge: false });
+    showToast('영구 삭제 완료');
+  } catch (e) { console.error(e); showToast('삭제 실패'); }
 }
 
 // ──────────────────────────────────────────────────────
@@ -2926,12 +3115,21 @@ document.getElementById('btn-liab-delete').addEventListener('click', async () =>
   const idx = list.findIndex(l => l.id === editingLiabId);
   if (idx < 0) return;
   const lb = list[idx];
-  if (!confirm(`"${lb.name}" 부채를 마스터에서 삭제하시겠습니까?\n\n과거 스냅샷에 기록된 잔액은 그대로 보존되며,\n해당 월의 재무상태표에도 계속 표시됩니다.\n(상환 완료된 부채에 적합)`)) return;
+  if (!confirm(`"${lb.name}" 부채를 삭제할까요?\n\n과거 스냅샷의 잔액은 그대로 보존되어\n재무상태표에 계속 표시됩니다.\n\n실수로 삭제했다면 설정 탭의\n"최근 삭제됨"에서 복원할 수 있습니다.`)) return;
+
+  // 마스터에서 제거 → 휴지통에 deletedAt 박아서 push
   list.splice(idx, 1);
+  const trash = [...(settings?.liabilitiesDeleted || [])];
+  trash.push({ ...lb, deletedAt: new Date().toISOString() });
+
   try {
-    await setDoc(pathFinanceSettings(), { ...settings, liabilities: list }, { merge: false });
+    await setDoc(pathFinanceSettings(), {
+      ...settings,
+      liabilities: list,
+      liabilitiesDeleted: trash,
+    }, { merge: false });
     closeOv('ov-liability');
-    showToast('부채가 마스터에서 삭제되었습니다 (과거 기록 보존)');
+    showToast(`"${lb.name}" 삭제됨 — 설정 탭의 "최근 삭제됨"에서 복원 가능`);
   } catch (e) { console.error(e); showToast('삭제 실패'); }
 });
 
