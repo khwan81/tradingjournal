@@ -3823,12 +3823,36 @@ async function saveBalanceSnapshot() {
   const ym = balModalYm;
 
   // 자산·부채 객체 빌드
-  const assetBalances = {};
-  const liabilityBalances = {};
+  // ⚠ 핵심: balRowsCache는 active=true 항목만 들어있다.
+  //   비활성(숨김)/마스터에서 삭제된 항목은 캐시에 없어서, 그대로 setDoc하면
+  //   { merge: false }로 인해 기존 스냅의 해당 키가 통째로 날아간다.
+  // → 기존 스냅을 먼저 베이스로 깔고, 캐시에서 빌드한 값으로 덮어쓰는 방식 사용.
+  const cachedAssetKeys = new Set();
+  const cachedLiabKeys  = new Set();
   for (const r of balRowsCache) {
-    if (r.auto) continue; // 자동 항목은 저장 안 함
+    if (r.auto) continue;
+    if (r.type === 'asset') cachedAssetKeys.add(r.key);
+    else                    cachedLiabKeys.add(r.key);
+  }
+
+  // 1) 베이스: 기존 스냅 — 단, 캐시에 있는 키는 일단 제거 (캐시 값으로 덮어쓸 예정)
+  //    캐시에 없는 키 = 비활성/잔재 → 그대로 보존됨
+  const assetBalances = {};
+  for (const [k, v] of Object.entries(bsSnapshot?.assetBalances || {})) {
+    if (!cachedAssetKeys.has(k)) assetBalances[k] = v;
+  }
+  const liabilityBalances = {};
+  for (const [k, v] of Object.entries(bsSnapshot?.liabilityBalances || {})) {
+    if (!cachedLiabKeys.has(k)) liabilityBalances[k] = v;
+  }
+
+  // 2) 캐시에서 빌드한 활성 항목 값 덮어쓰기
+  for (const r of balRowsCache) {
+    if (r.auto) continue; // 자동 항목(카드 미지급금)은 저장 안 함
     if (r.type === 'asset') {
       // 빈 값은 저장 안 함 (사용자가 입력 안 한 항목)
+      // — 단, 캐시 빌드 시점에 이미 cachedAssetKeys에는 추가됨 (위 1단계에서 제거됨)
+      //   → 의도된 삭제: 활성 항목의 값을 비우면 스냅에서 제거됨
       if (r.native === '' || r.native == null) continue;
       const effRate = r.isFx ? (r.effectiveFxRate != null ? r.effectiveFxRate : r.fxRate) : null;
       assetBalances[r.key] = {
