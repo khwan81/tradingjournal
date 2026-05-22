@@ -4582,9 +4582,86 @@ onAuthStateChanged(auth, async user => {
       showToast('데이터 로드 실패: ' + (e.message || e.code));
     }
     showApp();
+
+    // ── 디버그 헬퍼 (콘솔에서 사용: debug.liab() 등) ─────
+    // module scope의 변수들을 콘솔에서 볼 수 있도록 노출
+    window.debug = {
+      get settings()       { return settings; },
+      get accounts()       { return accounts; },
+      get sharedSettings() { return sharedSettings; },
+      get bsSnapshot()     { return bsSnapshot; },
+      get bsPrevSnapshot() { return bsPrevSnapshot; },
+      get bsMonth()        { return bsMonth; },
+      get currentMonth()   { return currentMonth; },
+      get transactions()   { return transactions; },
+
+      // 부채 진단: 마스터 + 휴지통 + 현재 월 스냅 + 키 매칭
+      liab() {
+        const list = settings?.liabilities || [];
+        const trash = settings?.liabilitiesDeleted || [];
+        const snap = bsSnapshot?.liabilityBalances || {};
+        console.log('%c부채 마스터 (활성)', 'color:#34d399; font-weight:bold');
+        console.table(list.map(l => ({ id: l.id, name: l.name, type: l.type, note: l.note })));
+        console.log('%c부채 휴지통', 'color:#fbbf24; font-weight:bold');
+        console.table(trash.map(l => ({ id: l.id, name: l.name, type: l.type, deletedAt: l.deletedAt })));
+        console.log('%c현재 월 스냅 (' + bsMonth + ')', 'color:#4f8fff; font-weight:bold');
+        // 키별로 마스터/휴지통 매칭 + 값 형태 확인
+        const rows = Object.entries(snap).map(([k, v]) => {
+          const id = k.startsWith('liab:') ? k.slice(5) : k;
+          const inMaster = list.find(l => l.id === id);
+          const inTrash  = trash.find(l => l.id === id);
+          const isObj    = typeof v === 'object' && v !== null;
+          return {
+            key: k,
+            매칭: inMaster ? '마스터' : inTrash ? '휴지통' : '고아',
+            마스터이름: inMaster?.name || inTrash?.name || '(없음)',
+            값타입: isObj ? 'object' : typeof v,
+            스냅name: isObj ? (v.name || '(빈값)') : '-',
+            스냅type: isObj ? (v.type || '(빈값)') : '-',
+            krw: isObj ? v.krw : v,
+          };
+        });
+        console.table(rows);
+        console.log('migratedAt:', settings?.liabilitiesMigratedAt || '(미설정)');
+        return { list, trash, snap };
+      },
+
+      // 모든 스냅샷 둘러보기
+      async allSnaps() {
+        const snaps = await getDocs(pathSnapshots());
+        const rows = [];
+        snaps.forEach(d => {
+          const lb = d.data().liabilityBalances || {};
+          for (const [k, v] of Object.entries(lb)) {
+            const isObj = typeof v === 'object' && v !== null;
+            rows.push({
+              ym: d.id,
+              key: k,
+              type: isObj ? 'object' : typeof v,
+              name: isObj ? (v.name || '(빈값)') : '-',
+              krw: isObj ? v.krw : v,
+            });
+          }
+        });
+        console.table(rows);
+        return rows;
+      },
+
+      // 강제 마이그레이션 재실행 (플래그 지우고 onSnapshot이 다시 발화시키도록)
+      async resetMigration() {
+        if (!confirm('마이그레이션 플래그를 지우고 다시 실행할까요?')) return;
+        const s = { ...settings };
+        delete s.liabilitiesMigratedAt;
+        await setDoc(pathFinanceSettings(), s, { merge: false });
+        console.log('migratedAt 제거됨. 마이그레이션이 다음 onSnapshot 발화에서 재실행됩니다');
+      },
+    };
+    console.log('%c[debug] window.debug 활성화. 사용: debug.liab() / debug.allSnaps() / debug.resetMigration()',
+      'color:#8b909e; font-style:italic');
   } else {
     unsubscribeAll();
     currentUid = null;
+    delete window.debug;
     showLogin();
   }
 });
