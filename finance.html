@@ -546,6 +546,232 @@ body {
 .bulk-sum .bs-label { color: var(--text2); }
 .bulk-sum .bs-amt   { color: var(--text); font-weight: 700; }
 
+/* 환율 섹션 (설정 탭) */
+.fx-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+}
+.fx-row {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  gap: 6px;
+  align-items: center;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+.fx-row .fx-cur {
+  font-size: 11px;
+  color: var(--text2);
+  font-weight: 600;
+}
+.fx-row .fx-input {
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-size: 13px;
+  color: var(--text);
+  font-family: var(--font);
+  text-align: right;
+  width: 100%;
+  -moz-appearance: textfield;
+}
+.fx-row .fx-input::-webkit-outer-spin-button,
+.fx-row .fx-input::-webkit-inner-spin-button {
+  -webkit-appearance: none; margin: 0;
+}
+.fx-row .fx-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.fx-row .fx-suffix {
+  font-size: 11px;
+  color: var(--text3);
+}
+
+/* ────────────────────────────────────────── */
+/* 재무상태표 탭 + 잔액 입력 모달              */
+/* ────────────────────────────────────────── */
+
+/* 탭 헤더는 거래내역 탭의 .tx-header와 같은 구조 재사용 */
+.bs-header {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.bs-asof {
+  font-size: 11px;
+  color: var(--text3);
+  margin-left: 8px;
+}
+
+/* placeholder (저장된 스냅샷 없을 때) */
+.bs-placeholder {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--text2);
+  font-size: 13px;
+}
+
+/* 잔액 입력 모달 */
+.bal-fx-strip {
+  display: flex; gap: 12px; flex-wrap: wrap;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 11px;
+  color: var(--text2);
+  margin-bottom: 12px;
+}
+.bal-fx-strip .fx-item { display: inline-flex; gap: 4px; }
+.bal-fx-strip .fx-item b { color: var(--text); font-weight: 600; }
+.bal-fx-strip .fx-link {
+  margin-left: auto;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.bal-section {
+  margin-top: 14px;
+}
+.bal-section:first-of-type { margin-top: 4px; }
+.bal-sec-head {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 11px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+  padding: 0 2px;
+}
+.bal-sec-head .sec-sub { color: var(--text2); text-transform: none; letter-spacing: 0; }
+
+.bal-list {
+  display: flex; flex-direction: column;
+  gap: 4px;
+}
+.bal-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+}
+.bal-row.locked { opacity: 0.7; }
+.bal-row .bal-name {
+  font-size: 13px;
+  color: var(--text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bal-row .bal-name .meta {
+  font-size: 10px;
+  color: var(--text3);
+  margin-left: 6px;
+}
+.bal-row .bal-input-wrap {
+  display: flex; align-items: center; gap: 4px;
+  justify-self: end;
+}
+.bal-row input.bal-input {
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-size: 13px;
+  color: var(--text);
+  font-family: var(--font);
+  text-align: right;
+  width: 130px;
+  -moz-appearance: textfield;
+}
+.bal-row input.bal-input::-webkit-outer-spin-button,
+.bal-row input.bal-input::-webkit-inner-spin-button {
+  -webkit-appearance: none; margin: 0;
+}
+.bal-row input.bal-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.bal-row.locked input.bal-input {
+  background: var(--bg2);
+  cursor: not-allowed;
+}
+.bal-row .bal-unit {
+  font-size: 11px;
+  color: var(--text3);
+  min-width: 28px;
+  text-align: left;
+}
+.bal-row .bal-krw {
+  font-size: 11px;
+  color: var(--text3);
+  text-align: right;
+  grid-column: 1 / -1;
+  margin-top: 2px;
+  padding-right: 2px;
+}
+.bal-row.fx { row-gap: 0; }
+.bal-row.auto-badge .bal-name::after {
+  content: '자동';
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 9px;
+  padding: 1px 5px;
+  background: rgba(79, 143, 255, 0.16);
+  color: var(--accent);
+  border-radius: 3px;
+  vertical-align: middle;
+}
+
+/* 미리보기 박스 */
+.bal-preview {
+  background: var(--bg2);
+  border-top: 1px solid var(--border2);
+  border-bottom: 1px solid var(--border2);
+  margin: 16px -16px 0;
+  padding: 12px 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 16px;
+  font-size: 12px;
+}
+.bal-preview .pv-row {
+  display: flex; justify-content: space-between;
+}
+.bal-preview .pv-row.full {
+  grid-column: 1 / -1;
+  padding-top: 6px;
+  margin-top: 2px;
+  border-top: 1px solid var(--border2);
+  font-size: 13px;
+  font-weight: 700;
+}
+.bal-preview .pv-label { color: var(--text2); }
+.bal-preview .pv-val   { color: var(--text); font-weight: 600; }
+.bal-preview .pv-val.green { color: var(--green); }
+.bal-preview .pv-val.red   { color: var(--red); }
+.bal-preview .pv-val.muted { color: var(--text2); }
+
+@media (max-width: 640px) {
+  .bal-preview { grid-template-columns: 1fr; }
+  .bal-row input.bal-input { width: 110px; }
+}
+
 .month-nav {
   display: flex; align-items: center; gap: 8px;
   background: var(--bg2);
@@ -1023,13 +1249,54 @@ body {
   </div>
 
   <div class="tab-content" id="tab-balance">
-    <div class="empty-state">
-      <div class="icon">📊</div>
-      <div>재무상태 탭 — 다음 단계에서 구현</div>
+    <div class="bs-header">
+      <div class="month-nav">
+        <button type="button" id="btn-bs-prev" aria-label="이전 달">‹</button>
+        <span class="ym" id="bs-ym-label">—</span>
+        <button type="button" id="btn-bs-next" aria-label="다음 달">›</button>
+        <span class="bs-asof" id="bs-asof"></span>
+      </div>
+      <button class="btn-p" id="btn-bs-edit">잔액 입력</button>
+    </div>
+
+    <div id="bs-body">
+      <div class="bs-placeholder">
+        이번 달 잔액 스냅샷 없음 — 우상단 "잔액 입력" 버튼으로 시작
+      </div>
     </div>
   </div>
 
   <div class="tab-content" id="tab-settings">
+    <!-- 환율 (공유 마스터) -->
+    <div class="section-card" id="sec-fxrates">
+      <div class="section-head">
+        <div>
+          <div class="section-title">💱 환율 <span class="hint">공유 마스터</span></div>
+          <div class="section-sub">외화 자산 환산에 사용 — 잔액 입력 시 스냅됨</div>
+        </div>
+        <div class="section-actions">
+          <button class="btn-s" id="btn-fx-save">저장</button>
+        </div>
+      </div>
+      <div class="fx-grid">
+        <label class="fx-row">
+          <span class="fx-cur">USD</span>
+          <input type="text" inputmode="decimal" class="fx-input" id="fx-input-usd" placeholder="1,489.375">
+          <span class="fx-suffix">원</span>
+        </label>
+        <label class="fx-row">
+          <span class="fx-cur">JPY</span>
+          <input type="text" inputmode="decimal" class="fx-input" id="fx-input-jpy" placeholder="9.454428">
+          <span class="fx-suffix">원</span>
+        </label>
+        <label class="fx-row">
+          <span class="fx-cur">USDT</span>
+          <input type="text" inputmode="decimal" class="fx-input" id="fx-input-usdt" placeholder="1,487">
+          <span class="fx-suffix">원</span>
+        </label>
+      </div>
+    </div>
+
     <!-- 계좌 (공유 마스터) -->
     <div class="section-card">
       <div class="section-head">
@@ -1380,6 +1647,63 @@ body {
   </div>
 </div>
 
+<!-- 잔액 입력 모달 -->
+<div class="ov" id="ov-balance">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title"><span id="bal-modal-ym">—</span> 잔액 입력</div>
+      <button class="modal-close" data-close="ov-balance">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="bal-fx-strip" id="bal-fx-strip">
+        <span class="fx-item">USD <b id="fx-usd">0</b></span>
+        <span class="fx-item">JPY <b id="fx-jpy">0</b></span>
+        <span class="fx-item">USDT <b id="fx-usdt">0</b></span>
+        <span class="fx-link" id="fx-edit-link">환율 수정</span>
+      </div>
+
+      <!-- 자산 — 유동 -->
+      <div class="bal-section">
+        <div class="bal-sec-head"><span>자산 — 유동</span><span class="sec-sub" id="bal-cur-sum">0</span></div>
+        <div class="bal-list" id="bal-current-assets"></div>
+      </div>
+
+      <!-- 자산 — 비유동 -->
+      <div class="bal-section">
+        <div class="bal-sec-head"><span>자산 — 비유동</span><span class="sec-sub" id="bal-non-sum">0</span></div>
+        <div class="bal-list" id="bal-noncurrent-assets"></div>
+      </div>
+
+      <!-- 부채 — 유동 -->
+      <div class="bal-section">
+        <div class="bal-sec-head"><span>부채 — 유동</span><span class="sec-sub" id="bal-cliab-sum">0</span></div>
+        <div class="bal-list" id="bal-current-liab"></div>
+      </div>
+
+      <!-- 부채 — 비유동 -->
+      <div class="bal-section">
+        <div class="bal-sec-head"><span>부채 — 비유동</span><span class="sec-sub" id="bal-nliab-sum">0</span></div>
+        <div class="bal-list" id="bal-noncurrent-liab"></div>
+      </div>
+
+      <!-- 미리보기 -->
+      <div class="bal-preview">
+        <div class="pv-row"><span class="pv-label">총자산</span><span class="pv-val" id="pv-assets">0</span></div>
+        <div class="pv-row"><span class="pv-label">총부채</span><span class="pv-val red" id="pv-liab">0</span></div>
+        <div class="pv-row"><span class="pv-label">유동부채</span><span class="pv-val muted" id="pv-cliab">0</span></div>
+        <div class="pv-row"><span class="pv-label">비유동부채</span><span class="pv-val muted" id="pv-nliab">0</span></div>
+        <div class="pv-row full"><span class="pv-label">순자산</span><span class="pv-val" id="pv-net">0</span></div>
+        <div class="pv-row" style="grid-column: 1 / -1;"><span class="pv-label">조정 순자산 <span style="font-size:10px;color:var(--text3);">(자산 - 유동부채)</span></span><span class="pv-val" id="pv-net-adj">0</span></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-danger grow" id="btn-bal-delete" style="display:none;">스냅샷 삭제</button>
+      <button class="btn-s" data-close="ov-balance">취소</button>
+      <button class="btn-p" id="btn-bal-save">저장</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -1460,13 +1784,18 @@ document.querySelectorAll('.tab').forEach(btn => {
 // ──────────────────────────────────────────────────────
 let accounts = [];   // [{id, ...}] 공유 마스터
 let settings = null; // finance/config 도큐먼트
+let sharedSettings = null; // config/accounts 도큐먼트 (categoriesEnum + fxRates)
 let transactions = []; // 현재 월의 거래
-let currentMonth = currentYm(); // YYYY-MM 형식
+let currentMonth = currentYm(); // YYYY-MM 형식 (거래내역 탭)
+let bsMonth = currentYm();      // YYYY-MM 형식 (재무상태 탭 — 독립)
+let bsSnapshot = null;          // 현재 bsMonth의 스냅샷 (없으면 null)
 let filterFlows = new Set(); // 활성 flow 필터: 'revenue'|'fixed'|'variable'
 let filterPays  = new Set(); // 활성 결제상태 필터: 'unpaid'|'card'|'cash'
 let unsubAccounts = null;
+let unsubSharedSettings = null;
 let unsubSettings = null;
 let unsubTransactions = null;
+let unsubBsSnapshot = null;
 
 // 자산 종류 enum (categoriesEnum 기본값)
 const DEFAULT_CATEGORIES_ENUM = {
@@ -1493,6 +1822,8 @@ const pathFinanceSettings = () => doc(db, `users/${currentUid}/finance/config`);
 const pathAccount = id => doc(db, `users/${currentUid}/config/accounts/items/${id}`);
 const pathTransactions = () => collection(db, `users/${currentUid}/finance/config/transactions`);
 const pathTransaction = id => doc(db, `users/${currentUid}/finance/config/transactions/${id}`);
+const pathSnapshots = () => collection(db, `users/${currentUid}/finance/config/snapshots`);
+const pathSnapshot = ym => doc(db, `users/${currentUid}/finance/config/snapshots/${ym}`);
 
 // ──────────────────────────────────────────────────────
 // 초기 데이터 로드
@@ -1527,6 +1858,17 @@ async function loadAll() {
     err => { console.error('accounts subscribe error', err); showToast('계좌 로드 실패'); }
   );
 
+  // 공유 설정 (categoriesEnum + fxRates) 구독
+  unsubSharedSettings = onSnapshot(
+    pathAccountsSettings(),
+    snap => {
+      sharedSettings = snap.data() || { categoriesEnum: DEFAULT_CATEGORIES_ENUM, fxRates: {} };
+      if (!sharedSettings.fxRates) sharedSettings.fxRates = {};
+      renderFxRates();
+    },
+    err => { console.error('shared settings subscribe error', err); }
+  );
+
   unsubSettings = onSnapshot(
     pathFinanceSettings(),
     snap => {
@@ -1551,6 +1893,10 @@ async function loadAll() {
 
   // 모든 월의 미결제 카드 거래 구독 (알림바·일괄결제용)
   subscribeUnpaid();
+
+  // 재무상태 탭 — 현재 bsMonth 스냅샷 구독
+  subscribeBsSnapshot();
+  renderBsHeader();
 }
 
 function subscribeTransactions() {
@@ -1576,13 +1922,17 @@ function subscribeTransactions() {
 
 function unsubscribeAll() {
   if (unsubAccounts) { unsubAccounts(); unsubAccounts = null; }
+  if (unsubSharedSettings) { unsubSharedSettings(); unsubSharedSettings = null; }
   if (unsubSettings) { unsubSettings(); unsubSettings = null; }
   if (unsubTransactions) { unsubTransactions(); unsubTransactions = null; }
   if (unsubUnpaid) { unsubUnpaid(); unsubUnpaid = null; }
+  if (unsubBsSnapshot) { unsubBsSnapshot(); unsubBsSnapshot = null; }
   accounts = [];
   settings = null;
+  sharedSettings = null;
   transactions = [];
   allUnpaidTxs = [];
+  bsSnapshot = null;
   renderUnpaidBar();
 }
 
@@ -2346,6 +2696,393 @@ async function confirmBulkPayment() {
 }
 
 // ──────────────────────────────────────────────────────
+// 재무상태표 (v0.1-4)
+// ──────────────────────────────────────────────────────
+
+// 월 라벨 (재무상태 탭)
+function renderBsHeader() {
+  document.getElementById('bs-ym-label').textContent = bsMonth;
+  document.getElementById('bs-asof').textContent =
+    bsSnapshot?.asOf ? `(asOf ${bsSnapshot.asOf})` : '';
+  // v0.1-4a: 본문은 placeholder만. 4b에서 실제 표시 구현.
+  const $body = document.getElementById('bs-body');
+  if (bsSnapshot) {
+    $body.innerHTML = `<div class="bs-placeholder" style="text-align:left; padding:16px 20px;">
+      <div style="color:var(--text); font-weight:600; margin-bottom:6px;">스냅샷 저장됨 — ${bsMonth}</div>
+      <div style="font-size:12px; color:var(--text2);">자산 ${Object.keys(bsSnapshot.assetBalances || {}).length}건 / 부채 ${Object.keys(bsSnapshot.liabilityBalances || {}).length}건</div>
+      <div style="font-size:11px; color:var(--text3); margin-top:8px;">화면 표시는 다음 단계(4b)에서 구현. 지금은 "잔액 입력" 버튼으로 수정만 가능.</div>
+    </div>`;
+    document.getElementById('btn-bs-edit').textContent = '잔액 수정';
+  } else {
+    $body.innerHTML = `<div class="bs-placeholder">${bsMonth} 잔액 스냅샷 없음 — 우상단 "잔액 입력" 버튼으로 시작</div>`;
+    document.getElementById('btn-bs-edit').textContent = '잔액 입력';
+  }
+}
+
+function subscribeBsSnapshot() {
+  if (unsubBsSnapshot) { unsubBsSnapshot(); unsubBsSnapshot = null; }
+  if (!currentUid) return;
+  unsubBsSnapshot = onSnapshot(pathSnapshot(bsMonth),
+    snap => {
+      bsSnapshot = snap.exists() ? snap.data() : null;
+      renderBsHeader();
+    },
+    err => { console.error('bs snapshot subscribe error', err); }
+  );
+}
+
+function goBsMonth(delta) {
+  const [y, m] = bsMonth.split('-').map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  bsMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  subscribeBsSnapshot();
+  renderBsHeader();
+}
+
+// ── 잔액 입력 모달 ──
+
+// 모달이 현재 활성화한 ym (저장 시 사용)
+let balModalYm = null;
+
+// row 데이터 캐시 — 미리보기 계산용
+// shape: [{ key, type: 'asset'|'liab', tier: 'current'|'noncurrent',
+//           name, currency, fxRate, locked, auto, krw, native }]
+let balRowsCache = [];
+
+function fmtNum(n) { return (Number(n) || 0).toLocaleString('ko-KR'); }
+function parseNum(s) {
+  if (s == null) return 0;
+  const v = parseFloat(String(s).replace(/,/g, ''));
+  return isFinite(v) ? v : 0;
+}
+
+// 자동 카드 미지급금 계산 (paid=false card 거래 전체 합)
+function calcCardUnpaidTotal() {
+  return allUnpaidTxs.reduce((s, t) => s + (Number(t.amount) || 0), 0);
+}
+
+function openBalanceModal() {
+  balModalYm = bsMonth;
+  document.getElementById('bal-modal-ym').textContent = balModalYm;
+
+  // 환율 strip
+  const fx = (sharedSettings && sharedSettings.fxRates) || {};
+  document.getElementById('fx-usd').textContent  = fmtNum(fx.USD  || 0);
+  document.getElementById('fx-jpy').textContent  = fmtNum(fx.JPY  || 0);
+  document.getElementById('fx-usdt').textContent = fmtNum(fx.USDT || 0);
+
+  // row 빌드
+  balRowsCache = buildBalanceRows();
+  renderBalanceLists();
+
+  // 삭제 버튼: 기존 스냅샷 있을 때만
+  document.getElementById('btn-bal-delete').style.display = bsSnapshot ? '' : 'none';
+
+  // 미리보기 초기 계산
+  recalcBalancePreview();
+
+  openOv('ov-balance');
+}
+
+function buildBalanceRows() {
+  const fx = (sharedSettings && sharedSettings.fxRates) || {};
+  const rows = [];
+
+  // 자산: accounts 마스터 active=true만
+  for (const a of accounts) {
+    if (a.active === false) continue;
+    const tier = a.financeType === 'nonCurrent' ? 'noncurrent' : 'current';
+    const currency = a.currency || 'KRW';
+    const isFx = currency !== 'KRW';
+    const fxRate = isFx ? (fx[currency] || null) : null;
+
+    // 저장된 스냅샷에서 prefill
+    let native = '', krw = 0, savedFx = fxRate;
+    const saved = bsSnapshot?.assetBalances?.[a.id];
+    if (saved) {
+      native = saved.native ?? '';
+      krw    = Number(saved.krw) || 0;
+      savedFx = saved.fxRate ?? fxRate;
+    }
+
+    rows.push({
+      key: a.id,
+      type: 'asset',
+      tier,
+      name: a.name,
+      meta: isFx ? currency : '',
+      currency,
+      fxRate: savedFx,
+      locked: false,
+      auto: false,
+      isFx,
+      native,
+      krw,
+    });
+  }
+
+  // 부채: settings.liabilities (현재 마스터는 단순 {name,note})
+  // v0.1-4a 단순화: 모두 유동, name을 key로 사용
+  // 부채 마스터 보강(type/active/id)은 v0.1-4c 또는 v0.2
+  const liabs = settings?.liabilities || [];
+  for (const l of liabs) {
+    const key = `liab:${l.name}`;
+    const tier = l.type === 'nonCurrent' ? 'noncurrent' : 'current';
+    const saved = bsSnapshot?.liabilityBalances?.[key];
+    rows.push({
+      key,
+      type: 'liab',
+      tier,
+      name: l.name,
+      meta: l.note || '',
+      currency: 'KRW',
+      fxRate: null,
+      locked: false,
+      auto: false,
+      isFx: false,
+      native: saved != null ? saved : '',
+      krw: Number(saved) || 0,
+    });
+  }
+
+  // 자동 부채: 카드 미지급금 (마스터에 있든 없든 항상 한 줄)
+  rows.push({
+    key: '__card_unpaid__',
+    type: 'liab',
+    tier: 'current',
+    name: '카드 미지급금',
+    meta: '',
+    currency: 'KRW',
+    fxRate: null,
+    locked: true,
+    auto: true,
+    isFx: false,
+    native: '',
+    krw: calcCardUnpaidTotal(),
+  });
+
+  return rows;
+}
+
+function renderBalanceLists() {
+  const groups = {
+    'bal-current-assets':    balRowsCache.filter(r => r.type === 'asset' && r.tier === 'current'),
+    'bal-noncurrent-assets': balRowsCache.filter(r => r.type === 'asset' && r.tier === 'noncurrent'),
+    'bal-current-liab':      balRowsCache.filter(r => r.type === 'liab'  && r.tier === 'current'),
+    'bal-noncurrent-liab':   balRowsCache.filter(r => r.type === 'liab'  && r.tier === 'noncurrent'),
+  };
+  for (const [containerId, rows] of Object.entries(groups)) {
+    const $c = document.getElementById(containerId);
+    if (!rows.length) {
+      $c.innerHTML = '<div class="bs-placeholder" style="padding:10px;">항목 없음</div>';
+      continue;
+    }
+    $c.innerHTML = rows.map(r => buildBalRowHtml(r)).join('');
+  }
+
+  // input 핸들러 바인딩
+  document.querySelectorAll('.bal-input').forEach($inp => {
+    $inp.addEventListener('input', onBalanceInputChange);
+  });
+}
+
+function buildBalRowHtml(r) {
+  const lockedCls = r.locked ? ' locked' : '';
+  const autoCls = r.auto ? ' auto-badge' : '';
+  const fxCls = r.isFx ? ' fx' : '';
+  const disabled = r.locked ? 'disabled' : '';
+  const placeholder = r.auto ? fmtNum(r.krw) : '';
+  const value = r.auto ? '' : (r.native === '' || r.native == null ? '' : r.native);
+  const unit = r.isFx ? r.currency : (r.locked ? '' : '원');
+  const krwLine = r.isFx
+    ? `<div class="bal-krw" data-krw-for="${escapeHtml(r.key)}">${fmtNum(r.krw)} 원 (환율 ${fmtNum(r.fxRate || 0)})</div>`
+    : '';
+  return `
+    <div class="bal-row${lockedCls}${autoCls}${fxCls}" data-key="${escapeHtml(r.key)}" data-type="${r.type}" data-tier="${r.tier}">
+      <div class="bal-name">${escapeHtml(r.name)}${r.meta ? `<span class="meta">${escapeHtml(r.meta)}</span>` : ''}</div>
+      <div class="bal-input-wrap">
+        <input type="text" inputmode="decimal" class="bal-input" data-key="${escapeHtml(r.key)}"
+               value="${value === '' ? '' : value}"
+               placeholder="${placeholder}"
+               ${disabled}>
+        <span class="bal-unit">${unit}</span>
+      </div>
+      ${krwLine}
+    </div>
+  `;
+}
+
+function onBalanceInputChange(e) {
+  const $inp = e.target;
+  const key = $inp.dataset.key;
+  const row = balRowsCache.find(r => r.key === key);
+  if (!row || row.locked) return;
+  const v = parseNum($inp.value);
+  row.native = v;
+  if (row.isFx) {
+    const fxRate = row.fxRate || 0;
+    row.krw = Math.round(v * fxRate);
+    // 환산값 라인 갱신
+    const $krw = document.querySelector(`.bal-krw[data-krw-for="${CSS.escape(key)}"]`);
+    if ($krw) $krw.textContent = `${fmtNum(row.krw)} 원 (환율 ${fmtNum(fxRate)})`;
+  } else {
+    row.krw = v;
+  }
+  recalcBalancePreview();
+}
+
+function recalcBalancePreview() {
+  let curAssets = 0, nonAssets = 0, curLiab = 0, nonLiab = 0;
+  for (const r of balRowsCache) {
+    const krw = Number(r.krw) || 0;
+    if (r.type === 'asset') {
+      if (r.tier === 'current') curAssets += krw;
+      else                       nonAssets += krw;
+    } else {
+      if (r.tier === 'current') curLiab += krw;
+      else                       nonLiab += krw;
+    }
+  }
+  const totalAssets = curAssets + nonAssets;
+  const totalLiab   = curLiab + nonLiab;
+  const net    = totalAssets - totalLiab;
+  const netAdj = totalAssets - curLiab;
+
+  // 섹션 헤더 합계
+  document.getElementById('bal-cur-sum').textContent  = fmtNum(curAssets);
+  document.getElementById('bal-non-sum').textContent  = fmtNum(nonAssets);
+  document.getElementById('bal-cliab-sum').textContent = fmtNum(curLiab);
+  document.getElementById('bal-nliab-sum').textContent = fmtNum(nonLiab);
+
+  // 미리보기 박스
+  document.getElementById('pv-assets').textContent = fmtNum(totalAssets);
+  document.getElementById('pv-liab').textContent   = fmtNum(totalLiab);
+  document.getElementById('pv-cliab').textContent  = fmtNum(curLiab);
+  document.getElementById('pv-nliab').textContent  = fmtNum(nonLiab);
+
+  const $net = document.getElementById('pv-net');
+  $net.textContent = fmtNum(net);
+  $net.classList.remove('green', 'red', 'muted');
+  $net.classList.add(net > 0 ? 'green' : net < 0 ? 'red' : 'muted');
+
+  const $adj = document.getElementById('pv-net-adj');
+  $adj.textContent = fmtNum(netAdj);
+  $adj.classList.remove('green', 'red', 'muted');
+  $adj.classList.add(netAdj > 0 ? 'green' : netAdj < 0 ? 'red' : 'muted');
+}
+
+async function saveBalanceSnapshot() {
+  if (!balModalYm) return;
+  const ym = balModalYm;
+
+  // 자산·부채 객체 빌드
+  const assetBalances = {};
+  const liabilityBalances = {};
+  for (const r of balRowsCache) {
+    if (r.auto) continue; // 자동 항목은 저장 안 함
+    if (r.type === 'asset') {
+      // 빈 값은 저장 안 함 (사용자가 입력 안 한 항목)
+      if (r.native === '' || r.native == null) continue;
+      assetBalances[r.key] = {
+        native:   Number(r.native) || 0,
+        currency: r.currency || 'KRW',
+        fxRate:   r.isFx ? (r.fxRate || null) : null,
+        krw:      Number(r.krw) || 0,
+      };
+    } else {
+      if (r.native === '' || r.native == null) continue;
+      liabilityBalances[r.key] = Number(r.krw) || 0;
+    }
+  }
+
+  // asOf — 해당 월의 마지막 날 또는 오늘 (현재 월이면 오늘)
+  const today = new Date();
+  const todayYm = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  let asOf;
+  if (ym === todayYm) {
+    asOf = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  } else {
+    const [y, m] = ym.split('-').map(Number);
+    const last = new Date(y, m, 0); // 다음달 0일 = 이번달 마지막
+    asOf = `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, '0')}-${String(last.getDate()).padStart(2, '0')}`;
+  }
+
+  const $btn = document.getElementById('btn-bal-save');
+  $btn.disabled = true;
+  const orig = $btn.textContent;
+  $btn.textContent = '저장 중…';
+
+  try {
+    await setDoc(pathSnapshot(ym), {
+      ym,
+      asOf,
+      assetBalances,
+      liabilityBalances,
+      createdAt: bsSnapshot?.createdAt || serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }, { merge: false });
+
+    closeOv('ov-balance');
+    showToast(`${ym} 잔액 스냅샷이 저장되었습니다`);
+  } catch (e) {
+    console.error('saveBalanceSnapshot error', e);
+    showToast('저장 실패: ' + (e.message || e.code));
+  } finally {
+    $btn.disabled = false;
+    $btn.textContent = orig;
+  }
+}
+
+async function deleteBalanceSnapshot() {
+  if (!balModalYm || !bsSnapshot) return;
+  if (!confirm(`${balModalYm} 잔액 스냅샷을 삭제하시겠습니까?`)) return;
+
+  const $btn = document.getElementById('btn-bal-delete');
+  $btn.disabled = true;
+  try {
+    await deleteDoc(pathSnapshot(balModalYm));
+    closeOv('ov-balance');
+    showToast('스냅샷이 삭제되었습니다');
+  } catch (e) {
+    console.error('deleteBalanceSnapshot error', e);
+    showToast('삭제 실패: ' + (e.message || e.code));
+  } finally {
+    $btn.disabled = false;
+  }
+}
+
+// ── 환율 설정 (공유 마스터) ──
+function renderFxRates() {
+  const fx = sharedSettings?.fxRates || {};
+  const $usd  = document.getElementById('fx-input-usd');
+  const $jpy  = document.getElementById('fx-input-jpy');
+  const $usdt = document.getElementById('fx-input-usdt');
+  if ($usd  && document.activeElement !== $usd)  $usd.value  = fx.USD  != null ? fx.USD  : '';
+  if ($jpy  && document.activeElement !== $jpy)  $jpy.value  = fx.JPY  != null ? fx.JPY  : '';
+  if ($usdt && document.activeElement !== $usdt) $usdt.value = fx.USDT != null ? fx.USDT : '';
+}
+
+async function saveFxRates() {
+  const usd  = parseNum(document.getElementById('fx-input-usd').value);
+  const jpy  = parseNum(document.getElementById('fx-input-jpy').value);
+  const usdt = parseNum(document.getElementById('fx-input-usdt').value);
+  const next = { ...(sharedSettings || {}), fxRates: { USD: usd, JPY: jpy, USDT: usdt } };
+  if (!next.categoriesEnum) next.categoriesEnum = DEFAULT_CATEGORIES_ENUM;
+
+  const $btn = document.getElementById('btn-fx-save');
+  $btn.disabled = true;
+  try {
+    await setDoc(pathAccountsSettings(), next, { merge: true });
+    showToast('환율이 저장되었습니다');
+  } catch (e) {
+    console.error('saveFxRates error', e);
+    showToast('저장 실패: ' + (e.message || e.code));
+  } finally {
+    $btn.disabled = false;
+  }
+}
+
+// ──────────────────────────────────────────────────────
 // 필터 적용
 // ──────────────────────────────────────────────────────
 function applyFilters(list) {
@@ -2690,6 +3427,33 @@ document.getElementById('btn-add-tx').addEventListener('click', () => openTxModa
 // 일괄결제 모달
 document.getElementById('btn-bulk-open').addEventListener('click', openBulkModal);
 document.getElementById('btn-bulk-confirm').addEventListener('click', confirmBulkPayment);
+
+// 재무상태표 — 월 네비 + 모달
+document.getElementById('btn-bs-prev').addEventListener('click', () => goBsMonth(-1));
+document.getElementById('btn-bs-next').addEventListener('click', () => goBsMonth(+1));
+document.getElementById('btn-bs-edit').addEventListener('click', openBalanceModal);
+document.getElementById('btn-bal-save').addEventListener('click', saveBalanceSnapshot);
+document.getElementById('btn-bal-delete').addEventListener('click', deleteBalanceSnapshot);
+
+// 환율 저장
+document.getElementById('btn-fx-save').addEventListener('click', saveFxRates);
+
+// 환율 수정 링크 — 설정 탭의 환율 섹션으로 스크롤
+document.getElementById('fx-edit-link').addEventListener('click', () => {
+  closeOv('ov-balance');
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelector('.tab[data-tab="settings"]').classList.add('active');
+  document.getElementById('tab-settings').classList.add('active');
+  // 환율 섹션으로 스크롤 + 강조
+  const $sec = document.getElementById('sec-fxrates');
+  if ($sec) {
+    $sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    $sec.style.transition = 'box-shadow .2s';
+    $sec.style.boxShadow = '0 0 0 2px var(--accent)';
+    setTimeout(() => $sec.style.boxShadow = '', 1200);
+  }
+});
 
 // 월 라벨 초기화
 document.getElementById('ym-label').textContent = currentMonth;
