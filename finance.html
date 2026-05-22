@@ -2871,6 +2871,12 @@ function openLiabilityModal(ident = null) {
       lb = list.find(l => l.id === ident) || null;
     }
   }
+  // 마이그레이션 직전 잠깐의 윈도우 — id 없는 옛 모델로 편집 시도
+  // 신규로 잘못 저장되는 사고 방지: 마이그레이션 완료까지 잠시 대기 요청
+  if (lb && !lb.id) {
+    showToast('데이터 업그레이드 중입니다. 잠시 후 다시 시도해주세요');
+    return;
+  }
   const isEdit = lb != null;
   editingLiabId = lb?.id || null;
   editingLiabType = lb?.type === 'nonCurrent' ? 'nonCurrent' : 'current';
