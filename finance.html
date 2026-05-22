@@ -654,6 +654,24 @@ body {
   color: var(--text3);
   margin-top: 4px;
 }
+.bs-kpi-card .bs-mom {
+  font-size: 11px;
+  margin-top: 4px;
+  font-weight: 600;
+}
+.bs-kpi-card .bs-mom.green { color: var(--green); }
+.bs-kpi-card .bs-mom.red   { color: var(--red); }
+.bs-kpi-card .bs-mom.muted { color: var(--text3); font-weight: 400; }
+
+.bs-delta {
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.bs-delta.green { color: var(--green); }
+.bs-delta.red   { color: var(--red); }
+.bs-delta.muted { color: var(--text3); }
 
 /* BS 2열: 자산 | 부채 */
 .bs-cols {
@@ -1965,6 +1983,7 @@ let transactions = []; // 현재 월의 거래
 let currentMonth = currentYm(); // YYYY-MM 형식 (거래내역 탭)
 let bsMonth = currentYm();      // YYYY-MM 형식 (재무상태 탭 — 독립)
 let bsSnapshot = null;          // 현재 bsMonth의 스냅샷 (없으면 null)
+let bsPrevSnapshot = null;      // bsMonth 직전 달 스냅샷 (없으면 null)
 let filterFlows = new Set(); // 활성 flow 필터: 'revenue'|'fixed'|'variable'
 let filterPays  = new Set(); // 활성 결제상태 필터: 'unpaid'|'card'|'cash'
 let unsubAccounts = null;
@@ -1972,6 +1991,7 @@ let unsubSharedSettings = null;
 let unsubSettings = null;
 let unsubTransactions = null;
 let unsubBsSnapshot = null;
+let unsubBsPrevSnapshot = null;
 
 // 자산 종류 enum (categoriesEnum 기본값)
 const DEFAULT_CATEGORIES_ENUM = {
@@ -2106,12 +2126,14 @@ function unsubscribeAll() {
   if (unsubTransactions) { unsubTransactions(); unsubTransactions = null; }
   if (unsubUnpaid) { unsubUnpaid(); unsubUnpaid = null; }
   if (unsubBsSnapshot) { unsubBsSnapshot(); unsubBsSnapshot = null; }
+  if (unsubBsPrevSnapshot) { unsubBsPrevSnapshot(); unsubBsPrevSnapshot = null; }
   accounts = [];
   settings = null;
   sharedSettings = null;
   transactions = [];
   allUnpaidTxs = [];
   bsSnapshot = null;
+  bsPrevSnapshot = null;
   renderUnpaidBar();
 }
 
@@ -2250,6 +2272,11 @@ function nextSortOrder() {
 }
 function currentYm() {
   const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+function prevYm(ym) {
+  const [y, m] = ym.split('-').map(Number);
+  const d = new Date(y, m - 2, 1); // m-1은 0-based 이번달, -1 더 빼면 전월
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
@@ -2903,44 +2930,54 @@ function renderBsBody() {
   }
 
   // 자산 행 빌드 (계좌 마스터 active=true 전체. 입력 안 된 항목은 "—")
+  const prevAssets = bsPrevSnapshot?.assetBalances || {};
+  const prevLiabs  = bsPrevSnapshot?.liabilityBalances || {};
   const assetRows = { current: [], noncurrent: [] };
   for (const a of accounts) {
     if (a.active === false) continue;
     const tier = a.financeType === 'nonCurrent' ? 'noncurrent' : 'current';
     const saved = bsSnapshot.assetBalances?.[a.id];
     const isFx = (a.currency || 'KRW') !== 'KRW';
+    const prevKrw = prevAssets[a.id] ? (Number(prevAssets[a.id].krw) || 0) : null;
+    const curKrw = saved ? (Number(saved.krw) || 0) : 0;
     assetRows[tier].push({
       key: a.id,
       name: a.name,
       meta: isFx ? a.currency : '',
       isFx,
       filled: !!saved,
-      krw: saved ? (Number(saved.krw) || 0) : 0,
+      krw: curKrw,
       native: saved ? saved.native : null,
       currency: saved?.currency || a.currency || 'KRW',
       fxRate: saved?.fxRate || null,
       auto: false,
+      prevKrw,
+      delta: (prevKrw != null && saved) ? curKrw - prevKrw : null,
     });
   }
 
   // 부채 행 빌드 (마스터 + 자동 카드 미지급금)
-  // v0.1-4a 단순화: 모든 부채는 유동
   const liabRows = { current: [], noncurrent: [] };
   for (const l of (settings?.liabilities || [])) {
     const tier = l.type === 'nonCurrent' ? 'noncurrent' : 'current';
     const key = `liab:${l.name}`;
     const saved = bsSnapshot.liabilityBalances?.[key];
+    const prevVal = prevLiabs[key];
+    const prevKrw = prevVal != null ? Number(prevVal) : null;
+    const curKrw  = Number(saved) || 0;
     liabRows[tier].push({
       key,
       name: l.name,
       meta: l.note || '',
       isFx: false,
       filled: saved != null,
-      krw: Number(saved) || 0,
+      krw: curKrw,
       auto: false,
+      prevKrw,
+      delta: (prevKrw != null && saved != null) ? curKrw - prevKrw : null,
     });
   }
-  // 자동 카드 미지급금 (항상 표시, 0이면 표시 안 함)
+  // 자동 카드 미지급금 (변화 추적 불가 → delta null)
   const cardUnpaid = calcCardUnpaidTotal();
   if (cardUnpaid > 0) {
     liabRows.current.push({
@@ -2951,6 +2988,8 @@ function renderBsBody() {
       filled: true,
       krw: cardUnpaid,
       auto: true,
+      prevKrw: null,
+      delta: null,
     });
   }
 
@@ -2966,22 +3005,35 @@ function renderBsBody() {
   const netAdj = totalAssets - curLiab;
   const debtRatio = totalAssets > 0 ? (totalLiab / totalAssets) * 100 : 0;
 
+  // 이전 달 집계 (MoM 비교용)
+  const prevTotals = computePrevTotals(bsPrevSnapshot);
+  const dAssets = prevTotals ? (totalAssets - prevTotals.totalAssets) : null;
+  const dLiab   = prevTotals ? (totalLiab   - prevTotals.totalLiab)   : null;
+  const dNet    = prevTotals ? (net         - prevTotals.net)         : null;
+  const dCurA   = prevTotals ? (curAssets   - prevTotals.curAssets)   : null;
+  const dNonA   = prevTotals ? (nonAssets   - prevTotals.nonAssets)   : null;
+  const dCurL   = prevTotals ? (curLiab     - prevTotals.curLiab)     : null;
+  const dNonL   = prevTotals ? (nonLiab     - prevTotals.nonLiab)     : null;
+
   // HTML 빌드
   $body.innerHTML = `
     <div class="bs-kpi-grid">
       <div class="bs-kpi-card">
         <div class="label">순자산</div>
         <div class="value ${net > 0 ? 'green' : net < 0 ? 'red' : 'muted'}">${fmtSigned(net)}</div>
+        ${renderKpiMom(dNet, prevTotals?.net, 'asset')}
         <div class="sub">조정 ${fmtSigned(netAdj)} <span style="color:var(--text3);">(자산 - 유동부채)</span></div>
       </div>
       <div class="bs-kpi-card">
         <div class="label">자산총계</div>
         <div class="value">${fmtNum(totalAssets)}</div>
+        ${renderKpiMom(dAssets, prevTotals?.totalAssets, 'asset')}
         <div class="sub">유동 ${fmtNum(curAssets)} · 비유동 ${fmtNum(nonAssets)}</div>
       </div>
       <div class="bs-kpi-card">
         <div class="label">부채비율</div>
         <div class="value ${debtRatio > 100 ? 'red' : debtRatio > 50 ? 'muted' : 'green'}">${debtRatio.toFixed(1)}%</div>
+        ${renderKpiRatioMom(debtRatio, prevTotals)}
         <div class="sub">총부채 ${fmtNum(totalLiab)}</div>
       </div>
     </div>
@@ -2989,19 +3041,79 @@ function renderBsBody() {
     <div class="bs-cols">
       <div class="bs-col">
         <div class="bs-col-head assets"><span>자산</span><span class="total">${fmtNum(totalAssets)}</span></div>
-        ${renderBsTier('유동', assetRows.current, curAssets)}
-        ${renderBsTier('비유동', assetRows.noncurrent, nonAssets)}
+        ${renderBsTier('유동', assetRows.current, curAssets, dCurA, 'asset')}
+        ${renderBsTier('비유동', assetRows.noncurrent, nonAssets, dNonA, 'asset')}
       </div>
       <div class="bs-col">
         <div class="bs-col-head liab"><span>부채</span><span class="total">${fmtNum(totalLiab)}</span></div>
-        ${renderBsTier('유동', liabRows.current, curLiab)}
-        ${renderBsTier('비유동', liabRows.noncurrent, nonLiab)}
+        ${renderBsTier('유동', liabRows.current, curLiab, dCurL, 'liab')}
+        ${renderBsTier('비유동', liabRows.noncurrent, nonLiab, dNonL, 'liab')}
       </div>
     </div>
   `;
 }
 
-function renderBsTier(title, rows, total) {
+// 이전 달 스냅샷에서 합계 계산
+function computePrevTotals(snap) {
+  if (!snap) return null;
+  let curAssets = 0, nonAssets = 0, curLiab = 0, nonLiab = 0;
+
+  // 자산: 이전 달 입력된 항목만 계산 (마스터에 없는 계좌도 포함하려면 키로 룩업)
+  const aMap = new Map(accounts.map(a => [a.id, a]));
+  for (const [aid, v] of Object.entries(snap.assetBalances || {})) {
+    const a = aMap.get(aid);
+    const tier = a?.financeType === 'nonCurrent' ? 'noncurrent' : 'current';
+    const krw = Number(v.krw) || 0;
+    if (tier === 'current') curAssets += krw;
+    else                     nonAssets += krw;
+  }
+
+  // 부채: 모두 유동 (v0.1-4a 단순화)
+  for (const v of Object.values(snap.liabilityBalances || {})) {
+    curLiab += Number(v) || 0;
+  }
+
+  const totalAssets = curAssets + nonAssets;
+  const totalLiab = curLiab + nonLiab;
+  return {
+    curAssets, nonAssets, curLiab, nonLiab,
+    totalAssets, totalLiab,
+    net: totalAssets - totalLiab,
+  };
+}
+
+// KPI용 MoM (절대값 + 퍼센트)
+// type: 'asset' (증가=초록), 'liab'은 호출자가 부호 뒤집어 전달
+function renderKpiMom(delta, base, type) {
+  if (delta == null) return '';
+  const pct = (base != null && base !== 0) ? (delta / base * 100) : null;
+  const cls = pickDeltaClass(delta, type);
+  const sign = delta > 0 ? '+' : delta < 0 ? '−' : '';
+  const pctStr = pct != null ? ` (${sign}${Math.abs(pct).toFixed(1)}%)` : '';
+  return `<div class="bs-mom ${cls}">${sign}${fmtNum(Math.abs(delta))}${pctStr} MoM</div>`;
+}
+
+// 부채비율 MoM (포인트 단위)
+function renderKpiRatioMom(curRatio, prev) {
+  if (!prev) return '';
+  const prevRatio = prev.totalAssets > 0 ? (prev.totalLiab / prev.totalAssets * 100) : 0;
+  const d = curRatio - prevRatio;
+  if (Math.abs(d) < 0.05) return `<div class="bs-mom muted">변화 없음 MoM</div>`;
+  const cls = d > 0 ? 'red' : 'green'; // 부채비율은 증가 = 빨강
+  const sign = d > 0 ? '+' : '−';
+  return `<div class="bs-mom ${cls}">${sign}${Math.abs(d).toFixed(1)}pp MoM</div>`;
+}
+
+// delta 부호 + 타입 → 색상 클래스
+// type='asset': + 초록, - 빨강
+// type='liab':  + 빨강, - 초록 (부채는 줄어드는 게 좋음)
+function pickDeltaClass(delta, type) {
+  if (!delta) return 'muted';
+  if (type === 'liab') return delta > 0 ? 'red' : 'green';
+  return delta > 0 ? 'green' : 'red';
+}
+
+function renderBsTier(title, rows, total, deltaTotal, type) {
   if (!rows.length) {
     return `
       <div class="bs-tier">
@@ -3010,32 +3122,42 @@ function renderBsTier(title, rows, total) {
       </div>
     `;
   }
+  const deltaStr = renderInlineDelta(deltaTotal, type);
   return `
     <div class="bs-tier">
-      <div class="bs-tier-head"><span>${title}</span><span>${fmtNum(total)}</span></div>
-      ${rows.map(buildBsItemHtml).join('')}
+      <div class="bs-tier-head"><span>${title}</span><span>${fmtNum(total)}${deltaStr}</span></div>
+      ${rows.map(r => buildBsItemHtml(r, type)).join('')}
     </div>
   `;
 }
 
-function buildBsItemHtml(r) {
+// 한 줄에 인라인으로 들어가는 delta " (+12,000)"
+function renderInlineDelta(delta, type) {
+  if (delta == null || !delta) return '';
+  const cls = pickDeltaClass(delta, type);
+  const sign = delta > 0 ? '+' : '−';
+  return ` <span class="bs-delta ${cls}">(${sign}${fmtNum(Math.abs(delta))})</span>`;
+}
+
+function buildBsItemHtml(r, type) {
   const classes = ['bs-item'];
   if (!r.filled) classes.push('empty');
   if (r.isFx)    classes.push('fx');
   if (r.auto)    classes.push('auto');
 
   const metaHtml = r.meta ? `<span class="meta">${escapeHtml(r.meta)}</span>` : '';
+  const deltaStr = (r.filled && r.delta != null) ? renderInlineDelta(r.delta, type) : '';
 
   let amtHtml;
   if (!r.filled) {
     amtHtml = '—';
   } else if (r.isFx && r.native != null) {
     amtHtml = `
-      <span class="amt-line">${fmtNum(r.krw)}</span>
+      <span class="amt-line">${fmtNum(r.krw)}${deltaStr}</span>
       <span class="amt-native">${fmtNum(r.native)} ${escapeHtml(r.currency)}${r.fxRate ? ' @ ' + fmtNum(r.fxRate) : ''}</span>
     `;
   } else {
-    amtHtml = fmtNum(r.krw);
+    amtHtml = `${fmtNum(r.krw)}${deltaStr}`;
   }
 
   return `
@@ -3055,13 +3177,26 @@ function fmtSigned(n) {
 
 function subscribeBsSnapshot() {
   if (unsubBsSnapshot) { unsubBsSnapshot(); unsubBsSnapshot = null; }
+  if (unsubBsPrevSnapshot) { unsubBsPrevSnapshot(); unsubBsPrevSnapshot = null; }
   if (!currentUid) return;
+
+  // 현재 달
   unsubBsSnapshot = onSnapshot(pathSnapshot(bsMonth),
     snap => {
       bsSnapshot = snap.exists() ? snap.data() : null;
       renderBsHeader();
     },
     err => { console.error('bs snapshot subscribe error', err); }
+  );
+
+  // 이전 달 (MoM 비교용)
+  const prev = prevYm(bsMonth);
+  unsubBsPrevSnapshot = onSnapshot(pathSnapshot(prev),
+    snap => {
+      bsPrevSnapshot = snap.exists() ? snap.data() : null;
+      renderBsHeader();
+    },
+    err => { console.error('bs prev snapshot subscribe error', err); }
   );
 }
 
