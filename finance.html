@@ -620,6 +620,139 @@ body {
   font-size: 13px;
 }
 
+/* BS KPI */
+.bs-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.bs-kpi-card {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.bs-kpi-card .label {
+  font-size: 11px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+.bs-kpi-card .value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+.bs-kpi-card .value.green { color: var(--green); }
+.bs-kpi-card .value.red   { color: var(--red); }
+.bs-kpi-card .value.muted { color: var(--text2); }
+.bs-kpi-card .sub {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 4px;
+}
+
+/* BS 2열: 자산 | 부채 */
+.bs-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.bs-col {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.bs-col-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  padding-bottom: 8px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--border2);
+}
+.bs-col-head .total { font-size: 14px; }
+.bs-col-head.assets .total { color: var(--text); }
+.bs-col-head.liab   .total { color: var(--red); }
+.bs-tier {
+  margin-top: 10px;
+}
+.bs-tier:first-of-type { margin-top: 2px; }
+.bs-tier-head {
+  display: flex; justify-content: space-between;
+  font-size: 10px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+.bs-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: baseline;
+  padding: 5px 6px;
+  font-size: 13px;
+  border-radius: 4px;
+}
+.bs-item:hover { background: var(--bg3); }
+.bs-item .name {
+  color: var(--text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bs-item .name .meta {
+  font-size: 10px;
+  color: var(--text3);
+  margin-left: 6px;
+}
+.bs-item .amt {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+.bs-item.empty .amt { color: var(--text3); }
+.bs-item.empty .name { color: var(--text2); }
+.bs-item.fx .amt-line { display: block; }
+.bs-item.fx .amt-native {
+  font-size: 11px;
+  color: var(--text3);
+  display: block;
+  margin-top: 1px;
+}
+.bs-item.auto .name::after {
+  content: '자동';
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 9px;
+  padding: 1px 5px;
+  background: rgba(79, 143, 255, 0.16);
+  color: var(--accent);
+  border-radius: 3px;
+  vertical-align: middle;
+}
+.bs-tier .bs-item.empty .amt { font-style: italic; }
+
+.bs-empty-tier {
+  font-size: 12px;
+  color: var(--text3);
+  padding: 6px;
+  text-align: center;
+}
+
+@media (max-width: 760px) {
+  .bs-kpi-grid { grid-template-columns: 1fr; }
+  .bs-cols { grid-template-columns: 1fr; }
+}
+
 /* 잔액 입력 모달 */
 .bal-fx-strip {
   display: flex; gap: 12px; flex-wrap: wrap;
@@ -1854,6 +1987,7 @@ async function loadAll() {
     snap => {
       accounts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       renderAccounts();
+      renderBsBody(); // 재무상태표에도 영향
     },
     err => { console.error('accounts subscribe error', err); showToast('계좌 로드 실패'); }
   );
@@ -1865,6 +1999,7 @@ async function loadAll() {
       sharedSettings = snap.data() || { categoriesEnum: DEFAULT_CATEGORIES_ENUM, fxRates: {} };
       if (!sharedSettings.fxRates) sharedSettings.fxRates = {};
       renderFxRates();
+      renderBsBody(); // 외화 환율 라벨이 BS에 들어가니 갱신
     },
     err => { console.error('shared settings subscribe error', err); }
   );
@@ -1884,6 +2019,7 @@ async function loadAll() {
       renderCategories();
       renderLiabilities();
       renderTransactions(); // 카테고리/결제수단 라벨 색상이 settings에 의존
+      renderBsBody();       // 부채 마스터가 BS에 들어가니 갱신
     },
     err => { console.error('settings subscribe error', err); showToast('설정 로드 실패'); }
   );
@@ -2574,11 +2710,14 @@ function renderUnpaidBar() {
   const $bar = document.getElementById('unpaid-bar');
   if (!allUnpaidTxs.length) {
     $bar.classList.remove('show');
-    return;
+  } else {
+    const total = allUnpaidTxs.reduce((s, t) => s + (Number(t.amount) || 0), 0);
+    document.getElementById('unpaid-amt').textContent = fmtAmount(total) + '원';
+    $bar.classList.add('show');
   }
-  const total = allUnpaidTxs.reduce((s, t) => s + (Number(t.amount) || 0), 0);
-  document.getElementById('unpaid-amt').textContent = fmtAmount(total) + '원';
-  $bar.classList.add('show');
+  // 카드 미지급금이 표 본문에도 들어가므로 같이 갱신
+  // (단, 본문이 아직 안 그려졌으면 skip)
+  if (document.getElementById('bs-body')) renderBsBody();
 }
 
 // 카드별로 미결제 거래 그룹화
@@ -2699,24 +2838,180 @@ async function confirmBulkPayment() {
 // 재무상태표 (v0.1-4)
 // ──────────────────────────────────────────────────────
 
-// 월 라벨 (재무상태 탭)
+// 월 라벨 + 본문 렌더 (재무상태 탭)
 function renderBsHeader() {
   document.getElementById('bs-ym-label').textContent = bsMonth;
   document.getElementById('bs-asof').textContent =
     bsSnapshot?.asOf ? `(asOf ${bsSnapshot.asOf})` : '';
-  // v0.1-4a: 본문은 placeholder만. 4b에서 실제 표시 구현.
+  document.getElementById('btn-bs-edit').textContent = bsSnapshot ? '잔액 수정' : '잔액 입력';
+
+  renderBsBody();
+}
+
+// 자산·부채 표 렌더링 (스냅샷 + 자동 카드 미지급금 합쳐서)
+function renderBsBody() {
   const $body = document.getElementById('bs-body');
-  if (bsSnapshot) {
-    $body.innerHTML = `<div class="bs-placeholder" style="text-align:left; padding:16px 20px;">
-      <div style="color:var(--text); font-weight:600; margin-bottom:6px;">스냅샷 저장됨 — ${bsMonth}</div>
-      <div style="font-size:12px; color:var(--text2);">자산 ${Object.keys(bsSnapshot.assetBalances || {}).length}건 / 부채 ${Object.keys(bsSnapshot.liabilityBalances || {}).length}건</div>
-      <div style="font-size:11px; color:var(--text3); margin-top:8px;">화면 표시는 다음 단계(4b)에서 구현. 지금은 "잔액 입력" 버튼으로 수정만 가능.</div>
-    </div>`;
-    document.getElementById('btn-bs-edit').textContent = '잔액 수정';
-  } else {
-    $body.innerHTML = `<div class="bs-placeholder">${bsMonth} 잔액 스냅샷 없음 — 우상단 "잔액 입력" 버튼으로 시작</div>`;
-    document.getElementById('btn-bs-edit').textContent = '잔액 입력';
+  if (!$body) return; // 로그인 화면 등 DOM 없을 때
+
+  // 스냅샷이 아예 없으면: placeholder (단, 카드 미지급금이 있으면 작은 안내)
+  if (!bsSnapshot) {
+    const cardUnpaid = calcCardUnpaidTotal();
+    const hint = cardUnpaid > 0
+      ? `<div style="font-size:11px; color:var(--text3); margin-top:8px;">참고: 현재 미결제 카드 거래 합산 ${fmtNum(cardUnpaid)}원 (잔액 입력 시 자동 포함됨)</div>`
+      : '';
+    $body.innerHTML = `<div class="bs-placeholder">${bsMonth} 잔액 스냅샷 없음 — 우상단 "잔액 입력" 버튼으로 시작${hint}</div>`;
+    return;
   }
+
+  // 자산 행 빌드 (계좌 마스터 active=true 전체. 입력 안 된 항목은 "—")
+  const assetRows = { current: [], noncurrent: [] };
+  for (const a of accounts) {
+    if (a.active === false) continue;
+    const tier = a.financeType === 'nonCurrent' ? 'noncurrent' : 'current';
+    const saved = bsSnapshot.assetBalances?.[a.id];
+    const isFx = (a.currency || 'KRW') !== 'KRW';
+    assetRows[tier].push({
+      key: a.id,
+      name: a.name,
+      meta: isFx ? a.currency : '',
+      isFx,
+      filled: !!saved,
+      krw: saved ? (Number(saved.krw) || 0) : 0,
+      native: saved ? saved.native : null,
+      currency: saved?.currency || a.currency || 'KRW',
+      fxRate: saved?.fxRate || null,
+      auto: false,
+    });
+  }
+
+  // 부채 행 빌드 (마스터 + 자동 카드 미지급금)
+  // v0.1-4a 단순화: 모든 부채는 유동
+  const liabRows = { current: [], noncurrent: [] };
+  for (const l of (settings?.liabilities || [])) {
+    const tier = l.type === 'nonCurrent' ? 'noncurrent' : 'current';
+    const key = `liab:${l.name}`;
+    const saved = bsSnapshot.liabilityBalances?.[key];
+    liabRows[tier].push({
+      key,
+      name: l.name,
+      meta: l.note || '',
+      isFx: false,
+      filled: saved != null,
+      krw: Number(saved) || 0,
+      auto: false,
+    });
+  }
+  // 자동 카드 미지급금 (항상 표시, 0이면 표시 안 함)
+  const cardUnpaid = calcCardUnpaidTotal();
+  if (cardUnpaid > 0) {
+    liabRows.current.push({
+      key: '__card_unpaid__',
+      name: '카드 미지급금',
+      meta: '',
+      isFx: false,
+      filled: true,
+      krw: cardUnpaid,
+      auto: true,
+    });
+  }
+
+  // 집계
+  const sumRows = rows => rows.reduce((s, r) => s + (Number(r.krw) || 0), 0);
+  const curAssets = sumRows(assetRows.current);
+  const nonAssets = sumRows(assetRows.noncurrent);
+  const curLiab   = sumRows(liabRows.current);
+  const nonLiab   = sumRows(liabRows.noncurrent);
+  const totalAssets = curAssets + nonAssets;
+  const totalLiab   = curLiab + nonLiab;
+  const net    = totalAssets - totalLiab;
+  const netAdj = totalAssets - curLiab;
+  const debtRatio = totalAssets > 0 ? (totalLiab / totalAssets) * 100 : 0;
+
+  // HTML 빌드
+  $body.innerHTML = `
+    <div class="bs-kpi-grid">
+      <div class="bs-kpi-card">
+        <div class="label">순자산</div>
+        <div class="value ${net > 0 ? 'green' : net < 0 ? 'red' : 'muted'}">${fmtSigned(net)}</div>
+        <div class="sub">조정 ${fmtSigned(netAdj)} <span style="color:var(--text3);">(자산 - 유동부채)</span></div>
+      </div>
+      <div class="bs-kpi-card">
+        <div class="label">자산총계</div>
+        <div class="value">${fmtNum(totalAssets)}</div>
+        <div class="sub">유동 ${fmtNum(curAssets)} · 비유동 ${fmtNum(nonAssets)}</div>
+      </div>
+      <div class="bs-kpi-card">
+        <div class="label">부채비율</div>
+        <div class="value ${debtRatio > 100 ? 'red' : debtRatio > 50 ? 'muted' : 'green'}">${debtRatio.toFixed(1)}%</div>
+        <div class="sub">총부채 ${fmtNum(totalLiab)}</div>
+      </div>
+    </div>
+
+    <div class="bs-cols">
+      <div class="bs-col">
+        <div class="bs-col-head assets"><span>자산</span><span class="total">${fmtNum(totalAssets)}</span></div>
+        ${renderBsTier('유동', assetRows.current, curAssets)}
+        ${renderBsTier('비유동', assetRows.noncurrent, nonAssets)}
+      </div>
+      <div class="bs-col">
+        <div class="bs-col-head liab"><span>부채</span><span class="total">${fmtNum(totalLiab)}</span></div>
+        ${renderBsTier('유동', liabRows.current, curLiab)}
+        ${renderBsTier('비유동', liabRows.noncurrent, nonLiab)}
+      </div>
+    </div>
+  `;
+}
+
+function renderBsTier(title, rows, total) {
+  if (!rows.length) {
+    return `
+      <div class="bs-tier">
+        <div class="bs-tier-head"><span>${title}</span><span>0</span></div>
+        <div class="bs-empty-tier">항목 없음</div>
+      </div>
+    `;
+  }
+  return `
+    <div class="bs-tier">
+      <div class="bs-tier-head"><span>${title}</span><span>${fmtNum(total)}</span></div>
+      ${rows.map(buildBsItemHtml).join('')}
+    </div>
+  `;
+}
+
+function buildBsItemHtml(r) {
+  const classes = ['bs-item'];
+  if (!r.filled) classes.push('empty');
+  if (r.isFx)    classes.push('fx');
+  if (r.auto)    classes.push('auto');
+
+  const metaHtml = r.meta ? `<span class="meta">${escapeHtml(r.meta)}</span>` : '';
+
+  let amtHtml;
+  if (!r.filled) {
+    amtHtml = '—';
+  } else if (r.isFx && r.native != null) {
+    amtHtml = `
+      <span class="amt-line">${fmtNum(r.krw)}</span>
+      <span class="amt-native">${fmtNum(r.native)} ${escapeHtml(r.currency)}${r.fxRate ? ' @ ' + fmtNum(r.fxRate) : ''}</span>
+    `;
+  } else {
+    amtHtml = fmtNum(r.krw);
+  }
+
+  return `
+    <div class="${classes.join(' ')}">
+      <div class="name">${escapeHtml(r.name)}${metaHtml}</div>
+      <div class="amt">${amtHtml}</div>
+    </div>
+  `;
+}
+
+// 부호 포함 포맷 (KPI 순자산용)
+function fmtSigned(n) {
+  if (!n) return '0';
+  const sign = n > 0 ? '+' : '-';
+  return sign + fmtNum(Math.abs(n));
 }
 
 function subscribeBsSnapshot() {
