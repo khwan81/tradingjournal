@@ -757,6 +757,45 @@ body {
   color: var(--text3);
 }
 
+/* ── 거래 모달 외화 입력 (v0.2-4) ── */
+.fx-section {
+  background: rgba(79, 143, 255, 0.06);
+  border: 1px solid rgba(79, 143, 255, 0.25);
+  border-radius: 8px;
+  padding: 10px 12px 12px;
+  margin: 6px 0 14px;
+}
+.fx-section-head {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 8px;
+}
+.fx-section .fx-badge {
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  letter-spacing: 0.3px;
+}
+.fx-section .fx-section-title {
+  font-size: 12px;
+  color: var(--text2);
+  font-weight: 500;
+}
+.fx-section .form-group { margin-bottom: 6px; }
+.fx-section .form-row { margin-bottom: 0; }
+.fx-preview {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(79, 143, 255, 0.25);
+  font-size: 12px;
+  color: var(--text2);
+  text-align: right;
+  font-family: var(--font-mono);
+}
+.fx-preview strong { color: var(--accent); font-weight: 700; }
+
 /* ────────────────────────────────────────── */
 /* 재무상태표 탭 + 잔액 입력 모달              */
 /* ────────────────────────────────────────── */
@@ -1184,6 +1223,12 @@ body {
 }
 .tx-row .col-amt.income  { color: var(--green); }
 .tx-row .col-amt.expense { color: var(--red); }
+.tx-row .col-amt .fx-native {
+  font-size: 10px;
+  color: var(--text3);
+  font-weight: 400;
+  margin-top: 2px;
+}
 .tx-row .col-actions {
   text-align: right;
   cursor: pointer;
@@ -2106,6 +2151,25 @@ body {
           <select class="select" id="tx-account">
             <option value="">미지정</option>
           </select>
+        </div>
+
+        <!-- 외화 입력 영역 (v0.2-4) — 계좌가 외화일 때만 표시 -->
+        <div class="fx-section" id="tx-fx-section" style="display:none;">
+          <div class="fx-section-head">
+            <span class="fx-badge" id="tx-fx-badge">USD</span>
+            <span class="fx-section-title">외화 거래</span>
+          </div>
+          <div class="form-row cols-2 form-group">
+            <div>
+              <label class="form-label" id="tx-fx-native-label">USD 금액</label>
+              <input class="input" type="text" inputmode="decimal" id="tx-fx-native" placeholder="0.00" style="text-align:right; font-family: var(--font-mono);">
+            </div>
+            <div>
+              <label class="form-label">환율 (KRW)</label>
+              <input class="input" type="text" inputmode="decimal" id="tx-fx-rate" placeholder="0" style="text-align:right; font-family: var(--font-mono);">
+            </div>
+          </div>
+          <div class="fx-preview" id="tx-fx-preview">KRW 환산: <strong>0</strong>원</div>
         </div>
 
         <div class="paid-row" id="tx-paid-row">
@@ -4901,6 +4965,12 @@ function renderTransactions() {
       const dot = unpaid ? '<span class="pay-dot" title="미결제"></span>' : '';
       const acc = t.accountName ? escapeHtml(t.accountName) : '—';
       const mobileDate = `${mm}/${dd}`;
+      // 외화 거래면 원본 표시 + KRW 환산 (v0.2-4)
+      const isFx = t.currency && t.currency !== 'KRW' && t.amountNative != null;
+      const nativeLabel = isFx ? fmtFxNative(t.amountNative, t.currency) : '';
+      const amtCell = isFx
+        ? `${sign}${fmtAmount(t.amount)}<div class="fx-native">${nativeLabel}</div>`
+        : `${sign}${fmtAmount(t.amount)}`;
       return `
         <div class="tx-row" data-tx-id="${escapeHtml(t.id)}">
           <div class="col-date">${mm}/${dd}</div>
@@ -4911,7 +4981,7 @@ function renderTransactions() {
             <span class="mobile-meta">${mobileDate}</span>${escapeHtml(t.payment || '')}${dot}
           </div>
           <div class="col-acc">${acc}</div>
-          <div class="col-amt ${amtCls}">${sign}${fmtAmount(t.amount)}</div>
+          <div class="col-amt ${amtCls}">${amtCell}</div>
           <div class="col-actions">
             <button type="button" data-edit-tx="${escapeHtml(t.id)}" aria-label="편집">⋯</button>
           </div>
@@ -4938,6 +5008,16 @@ function renderTransactions() {
 function fmtAmount(n) {
   const v = Math.abs(Math.round(Number(n) || 0));
   return v.toLocaleString('en-US');
+}
+
+// 외화 native 포맷 — 통화 기호 + 콤마 (소수 두 자리까지)
+function fmtFxNative(n, currency) {
+  const v = Math.abs(Number(n) || 0);
+  const symbols = { USD: '$', JPY: '¥', USDT: 'USDT ', EUR: '€', CNY: '¥' };
+  const sym = symbols[currency] || `${currency} `;
+  // 소수 있으면 소수까지, 정수면 정수만
+  const formatted = Number.isInteger(v) ? v.toLocaleString('en-US') : v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 });
+  return `${sym}${formatted}`;
 }
 
 // ──────────────────────────────────────────────────────
@@ -4978,6 +5058,17 @@ function openTxModal(id = null) {
   rebuildTxPaymentOptions(tx?.payment);
   // 계좌 옵션 빌드
   rebuildTxAccountOptions(tx?.accountId);
+
+  // 외화 모드 초기화 (v0.2-4)
+  // tx가 외화 거래면 그 값을 채우고, 아니면 계좌 currency 기반으로 모드 결정
+  if (tx && tx.currency && tx.currency !== 'KRW') {
+    document.getElementById('tx-fx-native').value = tx.amountNative != null ? String(tx.amountNative) : '';
+    document.getElementById('tx-fx-rate').value = tx.fxRate != null ? String(tx.fxRate) : '';
+  } else {
+    document.getElementById('tx-fx-native').value = '';
+    document.getElementById('tx-fx-rate').value = '';
+  }
+  applyTxFxMode(); // 계좌 currency에 따라 외화 영역 노출/숨김 결정
 
   // paid
   const initPay = tx?.payment || settings.payments[0]?.name;
@@ -5049,6 +5140,93 @@ function rebuildTxAccountOptions(selected) {
     .join('');
 }
 
+// ── 외화 모드 관리 (v0.2-4) ───────────────────────────
+// 선택된 계좌의 currency를 보고 외화 영역 노출/숨김 결정.
+// 외화 모드일 때:
+//   - KRW 금액 입력은 비활성 (자동 계산)
+//   - 외화 native + 환율을 입력하면 amount(KRW)에 자동 반영
+function getSelectedTxAccountCurrency() {
+  const accId = document.getElementById('tx-account').value;
+  if (!accId) return 'KRW';
+  const acc = accounts.find(a => a.id === accId);
+  return acc?.currency || 'KRW';
+}
+
+function applyTxFxMode() {
+  const cur = getSelectedTxAccountCurrency();
+  const isFx = cur !== 'KRW';
+  const $section = document.getElementById('tx-fx-section');
+  const $amount = document.getElementById('tx-amount');
+  const $badge = document.getElementById('tx-fx-badge');
+  const $nativeLabel = document.getElementById('tx-fx-native-label');
+
+  if (isFx) {
+    $section.style.display = '';
+    $badge.textContent = cur;
+    $nativeLabel.textContent = `${cur} 금액`;
+    // KRW 금액은 자동 계산되므로 readonly + 톤 다운
+    $amount.readOnly = true;
+    $amount.style.background = 'var(--bg3)';
+    $amount.style.color = 'var(--text2)';
+    // 환율 prefill (사용자가 안 채웠을 때만)
+    const $rate = document.getElementById('tx-fx-rate');
+    if (!$rate.value) {
+      const current = sharedSettings?.fxRates?.[cur];
+      if (current != null) $rate.value = String(current);
+    }
+    recomputeTxFx();
+  } else {
+    $section.style.display = 'none';
+    $amount.readOnly = false;
+    $amount.style.background = '';
+    $amount.style.color = '';
+    // 외화 잔재 클리어 (KRW 모드일 때 표시 안 함)
+    document.getElementById('tx-fx-native').value = '';
+    document.getElementById('tx-fx-rate').value = '';
+    document.getElementById('tx-fx-preview').innerHTML = 'KRW 환산: <strong>0</strong>원';
+  }
+}
+
+function recomputeTxFx() {
+  const nativeRaw = document.getElementById('tx-fx-native').value.replace(/,/g, '').trim();
+  const rateRaw = document.getElementById('tx-fx-rate').value.replace(/,/g, '').trim();
+  const native = parseFloat(nativeRaw);
+  const rate = parseFloat(rateRaw);
+  let krw = 0;
+  if (!isNaN(native) && !isNaN(rate) && native > 0 && rate > 0) {
+    krw = Math.round(native * rate);
+  }
+  document.getElementById('tx-fx-preview').innerHTML = `KRW 환산: <strong>${fmtAmount(krw)}</strong>원`;
+  document.getElementById('tx-amount').value = krw ? fmtAmount(krw) : '';
+}
+
+// 계좌 변경 → 외화 모드 재적용
+document.getElementById('tx-account').addEventListener('change', applyTxFxMode);
+
+// 외화 native/환율 입력 → KRW 환산 + 콤마 표시
+document.getElementById('tx-fx-native').addEventListener('input', e => {
+  // 소수 허용. 입력 도중은 raw 유지, blur 시 콤마 포맷
+  recomputeTxFx();
+});
+document.getElementById('tx-fx-native').addEventListener('blur', e => {
+  const raw = e.target.value.replace(/,/g, '').trim();
+  const num = parseFloat(raw);
+  if (!isNaN(num) && num > 0) {
+    // 소수 두 자리까지 표시. 정수면 정수로.
+    e.target.value = Number.isInteger(num) ? num.toLocaleString('en-US') : num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 });
+  }
+});
+document.getElementById('tx-fx-rate').addEventListener('input', e => {
+  recomputeTxFx();
+});
+document.getElementById('tx-fx-rate').addEventListener('blur', e => {
+  const raw = e.target.value.replace(/,/g, '').trim();
+  const num = parseFloat(raw);
+  if (!isNaN(num) && num > 0) {
+    e.target.value = Number.isInteger(num) ? num.toLocaleString('en-US') : num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 });
+  }
+});
+
 // paid 토글 관리
 let paidTouchedByUser = false;
 function setPaid(on, paymentType, touched) {
@@ -5106,21 +5284,36 @@ document.getElementById('btn-tx-save').addEventListener('click', async () => {
   const memo = document.getElementById('tx-memo').value.trim() || null;
   const paid = document.getElementById('tx-paid-toggle').classList.contains('on');
 
+  // 외화 모드 판정 — 선택된 계좌의 currency 기준
+  const acc = accountId ? accounts.find(a => a.id === accountId) : null;
+  const currency = acc?.currency || 'KRW';
+  const isFx = currency !== 'KRW';
+
+  let amountNative = null;
+  let fxRate = null;
+  if (isFx) {
+    const nativeRaw = document.getElementById('tx-fx-native').value.replace(/,/g, '').trim();
+    const rateRaw = document.getElementById('tx-fx-rate').value.replace(/,/g, '').trim();
+    amountNative = parseFloat(nativeRaw);
+    fxRate = parseFloat(rateRaw);
+    if (isNaN(amountNative) || amountNative <= 0) { showToast(`${currency} 금액을 입력하세요`); return; }
+    if (isNaN(fxRate) || fxRate <= 0)             { showToast('환율을 입력하세요'); return; }
+  }
+
   if (!date) { showToast('날짜를 입력하세요'); return; }
-  if (!amount || amount <= 0) { showToast('금액을 입력하세요'); return; }
+  if (!amount || amount <= 0) { showToast(isFx ? '환산 금액이 유효하지 않습니다' : '금액을 입력하세요'); return; }
   if (!category) { showToast('카테고리를 선택하세요'); return; }
   if (!payment)  { showToast('결제수단을 선택하세요'); return; }
 
   const payObj = settings.payments.find(p => p.name === payment);
-  const acc = accountId ? accounts.find(a => a.id === accountId) : null;
 
   const data = {
     date,
     ym: date.slice(0, 7),
     amount,
-    amountNative: null,
-    currency: 'KRW',
-    fxRate: null,
+    amountNative,
+    currency,
+    fxRate,
     category,
     flow: mapCategoryToFlow(category),
     payment,
