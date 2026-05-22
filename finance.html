@@ -460,6 +460,26 @@ body {
 .trash-row .actions button.restore:hover { background: rgba(79,143,255,0.12); color: var(--accent); border-color: var(--accent); }
 .trash-row .actions button.purge:hover { background: rgba(248,113,113,0.12); color: var(--red); border-color: var(--red); }
 
+/* ── 데이터 관리 (v0.2-2) ── */
+.backup-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.backup-info { flex: 1; min-width: 0; }
+.backup-info-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+.backup-info-desc  { font-size: 11px; color: var(--text3); line-height: 1.5; }
+.backup-card .btn-p { flex-shrink: 0; }
+@media (max-width: 480px) {
+  .backup-card { flex-direction: column; align-items: stretch; }
+  .backup-card .btn-p { width: 100%; }
+}
+
 /* ── 거래내역 탭 ── */
 .tx-header {
   display: flex; justify-content: space-between; align-items: center;
@@ -1664,6 +1684,29 @@ body {
           <span class="trash-caret">▾</span>
         </button>
         <div id="liab-trash-list" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- ───────── 데이터 관리 (v0.2-2) ───────── -->
+    <div class="section-card">
+      <div class="section-head">
+        <div>
+          <div class="section-title">💾 데이터 관리</div>
+          <div class="section-sub">백업 다운로드</div>
+        </div>
+      </div>
+      <div class="backup-card">
+        <div class="backup-info">
+          <div class="backup-info-title">전체 데이터 백업</div>
+          <div class="backup-info-desc">
+            계좌·결제수단·카테고리·부채 마스터·환율·거래·재무상태 스냅샷을<br>
+            JSON 파일 한 개로 다운로드합니다
+          </div>
+        </div>
+        <button class="btn-p" id="btn-backup-download">📥 백업 다운로드</button>
+      </div>
+      <div class="form-hint" style="margin-top:10px;">
+        ※ 복원 기능은 v0.3에서 제공됩니다. 백업 파일은 클라우드 동기화 외 별도 저장소(이메일·드라이브 등)에 보관하세요.
       </div>
     </div>
   </div>
@@ -3132,6 +3175,107 @@ document.getElementById('btn-liab-delete').addEventListener('click', async () =>
     showToast(`"${lb.name}" 삭제됨 — 설정 탭의 "최근 삭제됨"에서 복원 가능`);
   } catch (e) { console.error(e); showToast('삭제 실패'); }
 });
+
+// ──────────────────────────────────────────────────────
+// 데이터 백업 (v0.2-2)
+// ──────────────────────────────────────────────────────
+// 백업 범위:
+//   - users/{uid}/config/accounts (문서)     → sharedConfigAccounts
+//   - users/{uid}/config/accounts/items/*    → sharedAccountsItems[]
+//   - users/{uid}/finance/config (문서)      → financeSettings
+//   - users/{uid}/finance/config/snapshots/* → snapshots[]
+//   - users/{uid}/finance/config/transactions/* → transactions[]
+//
+// Firestore Timestamp는 JSON.stringify로 변환 시 {seconds, nanoseconds} 형태가 됨.
+// 복원(v0.3)에서 다시 Timestamp로 복원할 수 있도록 그대로 유지.
+async function downloadBackup() {
+  if (!currentUid) { showToast('로그인이 필요합니다'); return; }
+
+  const $btn = document.getElementById('btn-backup-download');
+  const orig = $btn.textContent;
+  $btn.disabled = true;
+  $btn.textContent = '⏳ 백업 중…';
+
+  try {
+    // 병렬 페치 (5개)
+    const [
+      sharedDocSnap,
+      sharedItemsSnap,
+      finDocSnap,
+      snapshotsSnap,
+      transactionsSnap,
+    ] = await Promise.all([
+      getDoc(pathAccountsSettings()),
+      getDocs(pathAccountsItems()),
+      getDoc(pathFinanceSettings()),
+      getDocs(pathSnapshots()),
+      getDocs(pathTransactions()),
+    ]);
+
+    const sharedAccountsItems = [];
+    sharedItemsSnap.forEach(d => sharedAccountsItems.push({ id: d.id, ...d.data() }));
+
+    const snapshots = [];
+    snapshotsSnap.forEach(d => snapshots.push({ ym: d.id, ...d.data() }));
+
+    const transactions = [];
+    transactionsSnap.forEach(d => transactions.push({ id: d.id, ...d.data() }));
+
+    const payload = {
+      schemaVersion: 1,
+      appVersion: 'v0.2-2',
+      exportedAt: new Date().toISOString(),
+      uid: currentUid,
+      data: {
+        sharedConfigAccounts: sharedDocSnap.exists() ? sharedDocSnap.data() : null,
+        sharedAccountsItems,
+        financeSettings: finDocSnap.exists() ? finDocSnap.data() : null,
+        snapshots,
+        transactions,
+      },
+    };
+
+    // JSON 직렬화 — Firestore Timestamp의 toJSON()이 ISO 변환을 하지 않으므로
+    // 객체 구조를 그대로 두고 stringify (복원 시 호환성 위해)
+    const json = JSON.stringify(payload, (key, value) => {
+      // Firestore Timestamp 인스턴스 → 명시적 마커로 변환
+      if (value && typeof value === 'object' && typeof value.seconds === 'number' && typeof value.nanoseconds === 'number') {
+        return { __ts__: true, seconds: value.seconds, nanoseconds: value.nanoseconds };
+      }
+      return value;
+    }, 2);
+
+    // 파일명: finance-backup-2026-05-22T15-30-45.json
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const stamp = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+    const filename = `finance-backup-${stamp}.json`;
+
+    // Blob 생성 → 다운로드 트리거
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+    // 결과 토스트
+    const sizeKb = (blob.size / 1024).toFixed(1);
+    showToast(`백업 완료 — 거래 ${transactions.length}건, 스냅 ${snapshots.length}개 (${sizeKb} KB)`);
+    console.log('[backup] 완료', { filename, size: blob.size, payload });
+  } catch (e) {
+    console.error('[backup] error', e);
+    showToast('백업 실패: ' + (e.message || e.code || '알 수 없는 오류'));
+  } finally {
+    $btn.disabled = false;
+    $btn.textContent = orig;
+  }
+}
+
+document.getElementById('btn-backup-download').addEventListener('click', downloadBackup);
 
 // ──────────────────────────────────────────────────────
 // 월 네비게이션
