@@ -2853,13 +2853,9 @@ function renderBsBody() {
   const $body = document.getElementById('bs-body');
   if (!$body) return; // 로그인 화면 등 DOM 없을 때
 
-  // 스냅샷이 아예 없으면: placeholder (단, 카드 미지급금이 있으면 작은 안내)
+  // 스냅샷이 아예 없으면: placeholder
   if (!bsSnapshot) {
-    const cardUnpaid = calcCardUnpaidTotal();
-    const hint = cardUnpaid > 0
-      ? `<div style="font-size:11px; color:var(--text3); margin-top:8px;">참고: 현재 미결제 카드 거래 합산 ${fmtNum(cardUnpaid)}원 (잔액 입력 시 자동 포함됨)</div>`
-      : '';
-    $body.innerHTML = `<div class="bs-placeholder">${bsMonth} 잔액 스냅샷 없음 — 우상단 "잔액 입력" 버튼으로 시작${hint}</div>`;
+    $body.innerHTML = `<div class="bs-placeholder">${bsMonth} 잔액 스냅샷 없음 — 우상단 "잔액 입력" 버튼으로 시작</div>`;
     return;
   }
 
