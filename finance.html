@@ -395,9 +395,6 @@ body {
   letter-spacing: 0.3px;
 }
 .liab-row .badge.noncurrent { background: rgba(251, 191, 36, 0.15); color: var(--amber); }
-.liab-row .badge.inactive   { background: rgba(136, 140, 152, 0.15); color: var(--text3); }
-.liab-row.inactive .name-wrap > div:first-child,
-.liab-row.inactive .meta { color: var(--text3); text-decoration: line-through; text-decoration-color: var(--text3); }
 .liab-row .actions button {
   background: transparent;
   border: none;
@@ -1204,23 +1201,6 @@ body {
   color: var(--text);
 }
 
-/* 체크박스 + 라벨 한 줄 */
-.check-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--text2);
-  cursor: pointer;
-  user-select: none;
-}
-.check-row input[type="checkbox"] {
-  width: 16px; height: 16px;
-  accent-color: var(--accent);
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
 .input, .select {
   width: 100%;
   background: var(--bg);
@@ -1805,12 +1785,6 @@ body {
           <label class="form-label">메모 (선택)</label>
           <input class="input" id="liab-note" placeholder="만기·이율 등" autocomplete="off">
         </div>
-        <div class="form-group" id="liab-active-group" style="display:none;">
-          <label class="check-row">
-            <input type="checkbox" id="liab-active" checked>
-            <span>활성 — 끄면 재무상태표·입력 화면에서 숨김 (데이터는 보존)</span>
-          </label>
-        </div>
       </form>
     </div>
     <div class="modal-foot">
@@ -2306,12 +2280,14 @@ function renderCategories() {
 // ──────────────────────────────────────────────────────
 // 부채 마스터 마이그레이션 (v0.1 → v0.2)
 // ──────────────────────────────────────────────────────
-// v0.1: { name, note }                                    스냅 키: liab:{name}
-// v0.2: { id, name, type, note, active, createdAt }       스냅 키: liab:{id}
+// v0.1: { name, note }                           스냅 값: 숫자(krw), 키: liab:{name}
+// v0.2: { id, name, type, note, createdAt }     스냅 값: { krw, name, type }, 키: liab:{id}
 //
 // 마이그레이션 트리거: settings.liabilitiesMigratedAt이 없으면 1회 실행.
-// - 각 부채에 id/type/active 부여
-// - 모든 스냅샷의 liab:{name} 키 → liab:{id} 키로 교체
+// - 각 부채에 id/type 부여 (모두 'current' 기본)
+// - 모든 스냅샷의 liab:{name} 키 → liab:{id} 키로 교체 (마스터에 있는 경우)
+// - 모든 스냅샷 값: 숫자 → { krw, name, type } 객체로 변환 (이름 비정규화)
+// - 마스터에 없는 부채 잔재도 보존 + 객체화 (이름은 키에서 추출, type=current 기본)
 let liabMigrationRunning = false;
 
 async function migrateLiabilitiesIfNeeded(s) {
@@ -2334,54 +2310,30 @@ async function migrateLiabilitiesIfNeeded(s) {
     return true;
   }
 
-  // 이미 모든 항목에 id가 있고 type/active가 있으면 플래그만 박기
-  const allHaveNewFields = list.every(l => l && l.id && l.type && typeof l.active === 'boolean');
-  if (allHaveNewFields) {
-    liabMigrationRunning = true;
-    try {
-      await setDoc(pathFinanceSettings(), {
-        ...s,
-        liabilitiesMigratedAt: new Date().toISOString(),
-      }, { merge: false });
-    } catch (e) { console.error('liab migration (flag only) error', e); }
-    finally { liabMigrationRunning = false; }
-    return true;
-  }
-
   liabMigrationRunning = true;
   console.log('[migrate] 부채 마스터 v0.1 → v0.2 시작', { count: list.length });
 
   try {
-    // 1) 새 부채 마스터 빌드 (id/type/active/createdAt 보강)
-    //    name → id 매핑도 같이 만든다 (스냅 키 교체용)
+    // 1) 새 부채 마스터 빌드 (id/type/createdAt 보강, active 제거)
+    //    name → {id, type} 매핑도 같이 만든다 (스냅 키/값 비정규화용)
     const nowIso = new Date().toISOString();
-    const nameToId = new Map();
+    const nameToMeta = new Map();
     const newLiabilities = list.map(l => {
-      if (l.id) {
-        // 이미 id가 있는 항목 (부분 마이그레이션 상태)
-        nameToId.set(l.name, l.id);
-        return {
-          id: l.id,
-          name: l.name,
-          type: l.type || 'current',
-          note: l.note || null,
-          active: typeof l.active === 'boolean' ? l.active : true,
-          createdAt: l.createdAt || nowIso,
-        };
-      }
-      const newId = genId('liab');
-      nameToId.set(l.name, newId);
-      return {
-        id: newId,
+      const ent = {
+        id: l.id || genId('liab'),
         name: l.name,
         type: l.type || 'current',    // 기본 유동
         note: l.note || null,
-        active: true,
-        createdAt: nowIso,
+        createdAt: l.createdAt || nowIso,
       };
+      // active 필드는 정책 변경으로 제거 (의도적으로 누락)
+      nameToMeta.set(l.name, { id: ent.id, type: ent.type });
+      return ent;
     });
 
-    // 2) 스냅샷 키 교체: liab:{name} → liab:{id}
+    // 2) 스냅샷 키 + 값 변환
+    //    - 키: liab:{name} → liab:{id} (마스터에 있는 경우만)
+    //    - 값: 숫자 또는 객체 둘 다 → { krw, name, type } 통일
     const snapColl = await getDocs(pathSnapshots());
     const batch = writeBatch(db);
     let snapPatched = 0;
@@ -2394,20 +2346,29 @@ async function migrateLiabilitiesIfNeeded(s) {
       const newLb = {};
       let changed = false;
       for (const [k, v] of Object.entries(lb)) {
-        if (k.startsWith('liab:')) {
-          const oldName = k.slice(5);
-          const newId = nameToId.get(oldName);
-          if (newId) {
-            const newKey = `liab:${newId}`;
-            newLb[newKey] = v;
-            if (newKey !== k) changed = true;
-          } else {
-            // 마스터에서 삭제된 부채인 경우 기존 키 보존 (잔재)
-            newLb[k] = v;
-          }
-        } else {
-          newLb[k] = v; // 다른 키는 그대로
+        if (!k.startsWith('liab:')) {
+          newLb[k] = v;  // 다른 키는 그대로
+          continue;
         }
+        const oldName = k.slice(5);
+        const meta = nameToMeta.get(oldName);
+        // 새 키 결정
+        const newKey = meta ? `liab:${meta.id}` : k;  // 마스터에 없으면 기존 키 유지
+        // 값 객체화
+        let krw, name, type;
+        if (typeof v === 'object' && v !== null) {
+          // 이미 객체형 (재실행/부분 마이그)
+          krw  = Number(v.krw) || 0;
+          name = v.name || meta?.name || oldName;
+          type = v.type || meta?.type || 'current';
+        } else {
+          // 숫자형 (v0.1)
+          krw  = Number(v) || 0;
+          name = meta ? oldName /* 마스터에 있으면 name == oldName */ : oldName;
+          type = meta ? meta.type : 'current';
+        }
+        newLb[newKey] = { krw, name, type };
+        if (newKey !== k || typeof v !== 'object') changed = true;
       }
 
       if (changed) {
@@ -2416,7 +2377,7 @@ async function migrateLiabilitiesIfNeeded(s) {
       }
     }
 
-    // 3) settings 업데이트 + 스냅샷 일괄 커밋
+    // 3) 스냅 일괄 커밋 → 그다음 마스터 + 플래그 (순서 중요)
     if (snapPatched > 0) await batch.commit();
     await setDoc(pathFinanceSettings(), {
       ...s,
@@ -2446,11 +2407,8 @@ function renderLiabilities() {
     $l.innerHTML = '<div class="chip-empty" style="text-align:center; padding:24px 0;">아직 등록된 부채가 없습니다</div>';
     return;
   }
-  // 정렬: 활성 먼저, 그 다음 유동/비유동, 그 다음 이름
+  // 정렬: 유동 먼저, 그 다음 이름
   const sorted = [...list].sort((a, b) => {
-    const aAct = a.active === false ? 1 : 0;
-    const bAct = b.active === false ? 1 : 0;
-    if (aAct !== bAct) return aAct - bAct;
     const aTier = a.type === 'nonCurrent' ? 1 : 0;
     const bTier = b.type === 'nonCurrent' ? 1 : 0;
     if (aTier !== bTier) return aTier - bTier;
@@ -2458,16 +2416,14 @@ function renderLiabilities() {
   });
   $l.innerHTML = sorted.map(lb => {
     const isNon = lb.type === 'nonCurrent';
-    const isInactive = lb.active === false;
     // 안정적인 식별자: id 우선, 없으면 마이그레이션 전이라 name fallback
     const ident = lb.id || `__name__:${lb.name}`;
     return `
-    <div class="liab-row ${isInactive ? 'inactive' : ''}">
+    <div class="liab-row">
       <div>
         <div class="name-wrap">
           <div>${escapeHtml(lb.name)}</div>
           <span class="badge ${isNon ? 'noncurrent' : ''}">${isNon ? '비유동' : '유동'}</span>
-          ${isInactive ? `<span class="badge inactive">비활성</span>` : ''}
         </div>
         ${lb.note ? `<div class="meta">${escapeHtml(lb.note)}</div>` : ''}
       </div>
@@ -2504,6 +2460,29 @@ function prevYm(ym) {
   const [y, m] = ym.split('-').map(Number);
   const d = new Date(y, m - 2, 1); // m-1은 0-based 이번달, -1 더 빼면 전월
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+// ──────────────────────────────────────────────────────
+// 부채 스냅 값 정규화 (v0.1 숫자형 / v0.2 객체형 모두 처리)
+// ──────────────────────────────────────────────────────
+// 반환: { krw, name, type } | null  — fallbackName/Type은 키에 매칭되는 마스터 또는 키 자체
+function normalizeLiabSnap(v, fallbackName, fallbackType) {
+  if (v == null) return null;
+  if (typeof v === 'object') {
+    return {
+      krw:  Number(v.krw) || 0,
+      name: v.name || fallbackName || '',
+      type: v.type || fallbackType || 'current',
+    };
+  }
+  // 숫자형 (v0.1 잔재 또는 마이그레이션 전)
+  const n = Number(v);
+  if (!isFinite(n) || n === 0) return null;
+  return {
+    krw:  n,
+    name: fallbackName || '',
+    type: fallbackType || 'current',
+  };
 }
 
 // 모달 열기/닫기
@@ -2885,9 +2864,6 @@ function openLiabilityModal(ident = null) {
   document.getElementById('btn-liab-delete').style.display = isEdit ? 'inline-flex' : 'none';
   document.getElementById('liab-name').value = lb?.name || '';
   document.getElementById('liab-note').value = lb?.note || '';
-  document.getElementById('liab-active').checked = lb ? (lb.active !== false) : true;
-  // active 체크박스는 편집 시에만 노출 (신규는 항상 활성)
-  document.getElementById('liab-active-group').style.display = isEdit ? '' : 'none';
   // 세그먼트 상태 반영
   document.querySelectorAll('#liab-type-seg .seg-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.liabType === editingLiabType);
@@ -2912,7 +2888,6 @@ document.getElementById('btn-add-liability').addEventListener('click', () => ope
 document.getElementById('btn-liab-save').addEventListener('click', async () => {
   const name = document.getElementById('liab-name').value.trim();
   const note = document.getElementById('liab-note').value.trim();
-  const active = document.getElementById('liab-active').checked;
   if (!name) { showToast('부채 이름을 입력하세요'); return; }
   const list = [...(settings?.liabilities || [])];
   const isEdit = editingLiabId != null;
@@ -2928,7 +2903,6 @@ document.getElementById('btn-liab-save').addEventListener('click', async () => {
       name,
       type: editingLiabType,
       note: note || null,
-      active,
     };
   } else {
     list.push({
@@ -2936,7 +2910,6 @@ document.getElementById('btn-liab-save').addEventListener('click', async () => {
       name,
       type: editingLiabType,
       note: note || null,
-      active: true,
       createdAt: new Date().toISOString(),
     });
   }
@@ -2953,12 +2926,12 @@ document.getElementById('btn-liab-delete').addEventListener('click', async () =>
   const idx = list.findIndex(l => l.id === editingLiabId);
   if (idx < 0) return;
   const lb = list[idx];
-  if (!confirm(`"${lb.name}" 부채를 삭제하시겠습니까?\n(과거 스냅샷의 잔액 기록은 보존되지만 표시되지 않습니다.\n숨김만 원하면 "활성" 체크를 풀어주세요.)`)) return;
+  if (!confirm(`"${lb.name}" 부채를 마스터에서 삭제하시겠습니까?\n\n과거 스냅샷에 기록된 잔액은 그대로 보존되며,\n해당 월의 재무상태표에도 계속 표시됩니다.\n(상환 완료된 부채에 적합)`)) return;
   list.splice(idx, 1);
   try {
     await setDoc(pathFinanceSettings(), { ...settings, liabilities: list }, { merge: false });
     closeOv('ov-liability');
-    showToast('부채가 삭제되었습니다');
+    showToast('부채가 마스터에서 삭제되었습니다 (과거 기록 보존)');
   } catch (e) { console.error(e); showToast('삭제 실패'); }
 });
 
@@ -3240,19 +3213,22 @@ function renderBsBody() {
     });
   }
 
-  // 부채 행 빌드 (마스터 + 자동 카드 미지급금)
-  // - id 있는 항목: key = `liab:{id}` (이름 변경 안전)
-  // - id 없는 항목(마이그레이션 직전): key = `liab:{name}` fallback
-  // - active === false: 표시 제외 (스냅 데이터는 보존)
+  // 부채 행 빌드 (마스터 + 자동 카드 미지급금 + 마스터에 없는 스냅 고아)
+  // - 마스터 항목: key = `liab:{id}` (id 없는 fallback은 `liab:{name}`)
+  // - 마스터에서 삭제된 부채: 스냅에 남아있으면 표시 (상환 완료 부채의 과거 기록)
+  // - 스냅 값: 객체({krw,name,type}) 또는 숫자(v0.1 잔재) 둘 다 처리
   const liabRows = { current: [], noncurrent: [] };
+  const usedKeys = new Set();  // 마스터로 처리한 키
   for (const l of (settings?.liabilities || [])) {
-    if (l.active === false) continue;
     const tier = l.type === 'nonCurrent' ? 'noncurrent' : 'current';
     const key = l.id ? `liab:${l.id}` : `liab:${l.name}`;
-    const saved = bsSnapshot.liabilityBalances?.[key];
-    const prevVal = prevLiabs[key];
-    const prevKrw = prevVal != null ? Number(prevVal) : null;
-    const curKrw  = Number(saved) || 0;
+    usedKeys.add(key);
+    const savedRaw = bsSnapshot.liabilityBalances?.[key];
+    const prevRaw  = prevLiabs[key];
+    const saved = normalizeLiabSnap(savedRaw, l.name, l.type || 'current');
+    const prev  = normalizeLiabSnap(prevRaw,  l.name, l.type || 'current');
+    const curKrw  = saved ? saved.krw : 0;
+    const prevKrw = prev  ? prev.krw  : null;
     liabRows[tier].push({
       key,
       name: l.name,
@@ -3262,7 +3238,31 @@ function renderBsBody() {
       krw: curKrw,
       auto: false,
       prevKrw,
-      delta: (prevKrw != null && saved != null) ? curKrw - prevKrw : null,
+      delta: (prev != null && saved != null) ? curKrw - prevKrw : null,
+    });
+  }
+  // 고아 스냅 항목: 마스터에서 삭제됐지만 스냅에 잔액이 남은 부채
+  // (상환 완료된 부채 등 — 과거 재무상태표에 계속 표시)
+  for (const [key, savedRaw] of Object.entries(bsSnapshot.liabilityBalances || {})) {
+    if (usedKeys.has(key)) continue;
+    // 키에서 fallback 이름 추출 (liab:liab_xxx 같은 id면 의미 없으므로 객체의 name 우선)
+    const fallbackName = key.startsWith('liab:') ? key.slice(5) : key;
+    const saved = normalizeLiabSnap(savedRaw, fallbackName, 'current');
+    if (!saved || saved.krw === 0) continue;
+    const tier = saved.type === 'nonCurrent' ? 'noncurrent' : 'current';
+    const prevRaw = prevLiabs[key];
+    const prev = normalizeLiabSnap(prevRaw, fallbackName, saved.type);
+    const prevKrw = prev ? prev.krw : null;
+    liabRows[tier].push({
+      key,
+      name: saved.name,
+      meta: '(완납·마스터 삭제됨)',
+      isFx: false,
+      filled: true,
+      krw: saved.krw,
+      auto: false,
+      prevKrw,
+      delta: prevKrw != null ? saved.krw - prevKrw : null,
     });
   }
   // 자동 카드 미지급금 (변화 추적 불가 → delta null)
@@ -3356,9 +3356,14 @@ function computePrevTotals(snap) {
     else                     nonAssets += krw;
   }
 
-  // 부채: 모두 유동 (v0.1-4a 단순화)
-  for (const v of Object.values(snap.liabilityBalances || {})) {
-    curLiab += Number(v) || 0;
+  // 부채: 객체형 {krw, type} 또는 숫자형(v0.1 잔재) 둘 다 지원
+  // 마스터에 없는 키도 그대로 합산 (마스터 삭제됐어도 스냅의 type을 신뢰)
+  for (const [key, raw] of Object.entries(snap.liabilityBalances || {})) {
+    const fallbackName = key.startsWith('liab:') ? key.slice(5) : key;
+    const n = normalizeLiabSnap(raw, fallbackName, 'current');
+    if (!n) continue;
+    if (n.type === 'nonCurrent') nonLiab += n.krw;
+    else                          curLiab += n.krw;
   }
 
   const totalAssets = curAssets + nonAssets;
@@ -3666,16 +3671,15 @@ function buildBalanceRows() {
     });
   }
 
-  // 부채: settings.liabilities (v0.2 보강 마스터: {id, name, type, note, active})
-  // - id 있는 항목: key = `liab:{id}`
-  // - id 없는 fallback: key = `liab:{name}` (마이그레이션 직전 1회성)
-  // - active === false: 입력 화면에서 제외
+  // 부채: settings.liabilities (v0.2: {id, name, type, note, createdAt})
+  // - 마스터에 있는 부채만 입력 가능 (마스터 삭제된 잔재는 입력 화면에 표시 안 함 - 재무상태표에서만 자동 표시)
+  // - 스냅 값은 객체({krw,name,type}) 또는 숫자(v0.1) 둘 다 처리
   const liabs = settings?.liabilities || [];
   for (const l of liabs) {
-    if (l.active === false) continue;
     const key = l.id ? `liab:${l.id}` : `liab:${l.name}`;
     const tier = l.type === 'nonCurrent' ? 'noncurrent' : 'current';
-    const saved = bsSnapshot?.liabilityBalances?.[key];
+    const savedRaw = bsSnapshot?.liabilityBalances?.[key];
+    const saved = normalizeLiabSnap(savedRaw, l.name, l.type || 'current');
     rows.push({
       key,
       type: 'liab',
@@ -3687,8 +3691,8 @@ function buildBalanceRows() {
       locked: false,
       auto: false,
       isFx: false,
-      native: saved != null ? saved : '',
-      krw: Number(saved) || 0,
+      native: saved ? saved.krw : '',
+      krw: saved ? saved.krw : 0,
     });
   }
 
@@ -3823,10 +3827,11 @@ async function saveBalanceSnapshot() {
   const ym = balModalYm;
 
   // 자산·부채 객체 빌드
-  // ⚠ 핵심: balRowsCache는 active=true 항목만 들어있다.
-  //   비활성(숨김)/마스터에서 삭제된 항목은 캐시에 없어서, 그대로 setDoc하면
-  //   { merge: false }로 인해 기존 스냅의 해당 키가 통째로 날아간다.
-  // → 기존 스냅을 먼저 베이스로 깔고, 캐시에서 빌드한 값으로 덮어쓰는 방식 사용.
+  // ⚠ 핵심: balRowsCache는 입력 가능한 항목만 들어있다.
+  //   - 자산: active=false 계좌는 캐시에 없음
+  //   - 부채: 마스터에서 삭제된 부채(고아 스냅 잔재)는 캐시에 없음
+  //   { merge: false }로 통째 덮어쓰면 캐시에 없는 키가 모두 날아감
+  //   → 기존 스냅을 베이스로 깔고, 캐시 값으로 덮어쓰는 방식으로 보존
   const cachedAssetKeys = new Set();
   const cachedLiabKeys  = new Set();
   for (const r of balRowsCache) {
@@ -3836,7 +3841,7 @@ async function saveBalanceSnapshot() {
   }
 
   // 1) 베이스: 기존 스냅 — 단, 캐시에 있는 키는 일단 제거 (캐시 값으로 덮어쓸 예정)
-  //    캐시에 없는 키 = 비활성/잔재 → 그대로 보존됨
+  //    캐시에 없는 키 = 비활성 자산 / 마스터 삭제된 부채 잔재 → 그대로 보존됨
   const assetBalances = {};
   for (const [k, v] of Object.entries(bsSnapshot?.assetBalances || {})) {
     if (!cachedAssetKeys.has(k)) assetBalances[k] = v;
@@ -3847,12 +3852,12 @@ async function saveBalanceSnapshot() {
   }
 
   // 2) 캐시에서 빌드한 활성 항목 값 덮어쓰기
+  //    부채는 v0.2부터 객체형으로 저장: {krw, name, type} (이름·타입 비정규화)
+  //    이렇게 하면 마스터에서 삭제돼도 과거 스냅이 자체적으로 표시 가능
   for (const r of balRowsCache) {
     if (r.auto) continue; // 자동 항목(카드 미지급금)은 저장 안 함
     if (r.type === 'asset') {
-      // 빈 값은 저장 안 함 (사용자가 입력 안 한 항목)
-      // — 단, 캐시 빌드 시점에 이미 cachedAssetKeys에는 추가됨 (위 1단계에서 제거됨)
-      //   → 의도된 삭제: 활성 항목의 값을 비우면 스냅에서 제거됨
+      // 빈 값은 저장 안 함 (사용자가 입력 안 한 항목 = 의도된 삭제)
       if (r.native === '' || r.native == null) continue;
       const effRate = r.isFx ? (r.effectiveFxRate != null ? r.effectiveFxRate : r.fxRate) : null;
       assetBalances[r.key] = {
@@ -3863,7 +3868,11 @@ async function saveBalanceSnapshot() {
       };
     } else {
       if (r.native === '' || r.native == null) continue;
-      liabilityBalances[r.key] = Number(r.krw) || 0;
+      liabilityBalances[r.key] = {
+        krw:  Number(r.krw) || 0,
+        name: r.name,
+        type: r.tier === 'noncurrent' ? 'nonCurrent' : 'current',
+      };
     }
   }
 
