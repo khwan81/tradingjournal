@@ -384,6 +384,20 @@ body {
 }
 .liab-row:last-child { border-bottom: none; }
 .liab-row .meta { color: var(--text2); font-size: 12px; margin-top: 2px; }
+.liab-row .name-wrap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.liab-row .badge {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--bg3);
+  color: var(--text2);
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+.liab-row .badge.noncurrent { background: rgba(251, 191, 36, 0.15); color: var(--amber); }
+.liab-row .badge.inactive   { background: rgba(136, 140, 152, 0.15); color: var(--text3); }
+.liab-row.inactive .name-wrap > div:first-child,
+.liab-row.inactive .meta { color: var(--text3); text-decoration: line-through; text-decoration-color: var(--text3); }
 .liab-row .actions button {
   background: transparent;
   border: none;
@@ -1164,6 +1178,49 @@ body {
 }
 .form-section-title:first-child { margin-top: 0; }
 
+/* 세그먼트 토글 (모달 내 분류 선택용) */
+.seg {
+  display: inline-flex;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+.seg-btn {
+  border: 0;
+  background: transparent;
+  color: var(--text2);
+  font-size: 13px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.1s, color 0.1s;
+}
+.seg-btn:hover { color: var(--text); }
+.seg-btn.active {
+  background: var(--bg3);
+  color: var(--text);
+}
+
+/* 체크박스 + 라벨 한 줄 */
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text2);
+  cursor: pointer;
+  user-select: none;
+}
+.check-row input[type="checkbox"] {
+  width: 16px; height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
 .input, .select {
   width: 100%;
   background: var(--bg);
@@ -1737,8 +1794,22 @@ body {
           <input class="input" id="liab-name" placeholder="예: 회사 대출, 마이너스 통장" autocomplete="off">
         </div>
         <div class="form-group">
+          <label class="form-label">분류</label>
+          <div class="seg" id="liab-type-seg" role="tablist" aria-label="부채 분류">
+            <button type="button" class="seg-btn active" data-liab-type="current">유동</button>
+            <button type="button" class="seg-btn" data-liab-type="nonCurrent">비유동</button>
+          </div>
+          <div class="form-hint">1년 내 상환은 유동, 그 외는 비유동</div>
+        </div>
+        <div class="form-group">
           <label class="form-label">메모 (선택)</label>
           <input class="input" id="liab-note" placeholder="만기·이율 등" autocomplete="off">
+        </div>
+        <div class="form-group" id="liab-active-group" style="display:none;">
+          <label class="check-row">
+            <input type="checkbox" id="liab-active" checked>
+            <span>활성 — 끄면 재무상태표·입력 화면에서 숨김 (데이터는 보존)</span>
+          </label>
         </div>
       </form>
     </div>
@@ -2078,6 +2149,8 @@ async function loadAll() {
       if (!settings.categories.variable) settings.categories.variable = [];
       if (!Array.isArray(settings.payments)) settings.payments = [];
       if (!Array.isArray(settings.liabilities)) settings.liabilities = [];
+      // 부채 마스터 마이그레이션 (1회성, 비동기 — 완료되면 다시 onSnapshot 발화)
+      migrateLiabilitiesIfNeeded(settings);
       renderPayments();
       renderCategories();
       renderLiabilities();
@@ -2231,6 +2304,139 @@ function renderCategories() {
 }
 
 // ──────────────────────────────────────────────────────
+// 부채 마스터 마이그레이션 (v0.1 → v0.2)
+// ──────────────────────────────────────────────────────
+// v0.1: { name, note }                                    스냅 키: liab:{name}
+// v0.2: { id, name, type, note, active, createdAt }       스냅 키: liab:{id}
+//
+// 마이그레이션 트리거: settings.liabilitiesMigratedAt이 없으면 1회 실행.
+// - 각 부채에 id/type/active 부여
+// - 모든 스냅샷의 liab:{name} 키 → liab:{id} 키로 교체
+let liabMigrationRunning = false;
+
+async function migrateLiabilitiesIfNeeded(s) {
+  if (liabMigrationRunning) return false;
+  if (!s) return false;
+  if (s.liabilitiesMigratedAt) return false;            // 이미 마이그레이션 완료
+  const list = Array.isArray(s.liabilities) ? s.liabilities : [];
+
+  // 빈 마스터: 플래그만 박고 종료
+  if (list.length === 0) {
+    liabMigrationRunning = true;
+    try {
+      await setDoc(pathFinanceSettings(), {
+        ...s,
+        liabilities: [],
+        liabilitiesMigratedAt: new Date().toISOString(),
+      }, { merge: false });
+    } catch (e) { console.error('liab migration (empty) error', e); }
+    finally { liabMigrationRunning = false; }
+    return true;
+  }
+
+  // 이미 모든 항목에 id가 있고 type/active가 있으면 플래그만 박기
+  const allHaveNewFields = list.every(l => l && l.id && l.type && typeof l.active === 'boolean');
+  if (allHaveNewFields) {
+    liabMigrationRunning = true;
+    try {
+      await setDoc(pathFinanceSettings(), {
+        ...s,
+        liabilitiesMigratedAt: new Date().toISOString(),
+      }, { merge: false });
+    } catch (e) { console.error('liab migration (flag only) error', e); }
+    finally { liabMigrationRunning = false; }
+    return true;
+  }
+
+  liabMigrationRunning = true;
+  console.log('[migrate] 부채 마스터 v0.1 → v0.2 시작', { count: list.length });
+
+  try {
+    // 1) 새 부채 마스터 빌드 (id/type/active/createdAt 보강)
+    //    name → id 매핑도 같이 만든다 (스냅 키 교체용)
+    const nowIso = new Date().toISOString();
+    const nameToId = new Map();
+    const newLiabilities = list.map(l => {
+      if (l.id) {
+        // 이미 id가 있는 항목 (부분 마이그레이션 상태)
+        nameToId.set(l.name, l.id);
+        return {
+          id: l.id,
+          name: l.name,
+          type: l.type || 'current',
+          note: l.note || null,
+          active: typeof l.active === 'boolean' ? l.active : true,
+          createdAt: l.createdAt || nowIso,
+        };
+      }
+      const newId = genId('liab');
+      nameToId.set(l.name, newId);
+      return {
+        id: newId,
+        name: l.name,
+        type: l.type || 'current',    // 기본 유동
+        note: l.note || null,
+        active: true,
+        createdAt: nowIso,
+      };
+    });
+
+    // 2) 스냅샷 키 교체: liab:{name} → liab:{id}
+    const snapColl = await getDocs(pathSnapshots());
+    const batch = writeBatch(db);
+    let snapPatched = 0;
+
+    for (const snapDoc of snapColl.docs) {
+      const data = snapDoc.data();
+      const lb = data?.liabilityBalances;
+      if (!lb || typeof lb !== 'object') continue;
+
+      const newLb = {};
+      let changed = false;
+      for (const [k, v] of Object.entries(lb)) {
+        if (k.startsWith('liab:')) {
+          const oldName = k.slice(5);
+          const newId = nameToId.get(oldName);
+          if (newId) {
+            const newKey = `liab:${newId}`;
+            newLb[newKey] = v;
+            if (newKey !== k) changed = true;
+          } else {
+            // 마스터에서 삭제된 부채인 경우 기존 키 보존 (잔재)
+            newLb[k] = v;
+          }
+        } else {
+          newLb[k] = v; // 다른 키는 그대로
+        }
+      }
+
+      if (changed) {
+        batch.update(snapDoc.ref, { liabilityBalances: newLb });
+        snapPatched++;
+      }
+    }
+
+    // 3) settings 업데이트 + 스냅샷 일괄 커밋
+    if (snapPatched > 0) await batch.commit();
+    await setDoc(pathFinanceSettings(), {
+      ...s,
+      liabilities: newLiabilities,
+      liabilitiesMigratedAt: nowIso,
+    }, { merge: false });
+
+    console.log('[migrate] 부채 마스터 완료', { 부채: newLiabilities.length, 스냅수정: snapPatched });
+    showToast(`부채 마스터 업그레이드 완료 (${newLiabilities.length}건)`);
+    return true;
+  } catch (e) {
+    console.error('liab migration error', e);
+    showToast('부채 마스터 마이그레이션 실패: ' + (e.message || e.code));
+    return false;
+  } finally {
+    liabMigrationRunning = false;
+  }
+}
+
+// ──────────────────────────────────────────────────────
 // 렌더링 — 부채 목록
 // ──────────────────────────────────────────────────────
 function renderLiabilities() {
@@ -2240,19 +2446,39 @@ function renderLiabilities() {
     $l.innerHTML = '<div class="chip-empty" style="text-align:center; padding:24px 0;">아직 등록된 부채가 없습니다</div>';
     return;
   }
-  $l.innerHTML = list.map((lb, i) => `
-    <div class="liab-row">
+  // 정렬: 활성 먼저, 그 다음 유동/비유동, 그 다음 이름
+  const sorted = [...list].sort((a, b) => {
+    const aAct = a.active === false ? 1 : 0;
+    const bAct = b.active === false ? 1 : 0;
+    if (aAct !== bAct) return aAct - bAct;
+    const aTier = a.type === 'nonCurrent' ? 1 : 0;
+    const bTier = b.type === 'nonCurrent' ? 1 : 0;
+    if (aTier !== bTier) return aTier - bTier;
+    return String(a.name).localeCompare(String(b.name), 'ko');
+  });
+  $l.innerHTML = sorted.map(lb => {
+    const isNon = lb.type === 'nonCurrent';
+    const isInactive = lb.active === false;
+    // 안정적인 식별자: id 우선, 없으면 마이그레이션 전이라 name fallback
+    const ident = lb.id || `__name__:${lb.name}`;
+    return `
+    <div class="liab-row ${isInactive ? 'inactive' : ''}">
       <div>
-        <div>${escapeHtml(lb.name)}</div>
+        <div class="name-wrap">
+          <div>${escapeHtml(lb.name)}</div>
+          <span class="badge ${isNon ? 'noncurrent' : ''}">${isNon ? '비유동' : '유동'}</span>
+          ${isInactive ? `<span class="badge inactive">비활성</span>` : ''}
+        </div>
         ${lb.note ? `<div class="meta">${escapeHtml(lb.note)}</div>` : ''}
       </div>
       <div class="actions">
-        <button type="button" data-edit-liab="${i}" aria-label="편집">⋯</button>
+        <button type="button" data-edit-liab="${escapeHtml(ident)}" aria-label="편집">⋯</button>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
   $l.querySelectorAll('[data-edit-liab]').forEach(el => {
-    el.addEventListener('click', () => openLiabilityModal(parseInt(el.dataset.editLiab, 10)));
+    el.addEventListener('click', () => openLiabilityModal(el.dataset.editLiab));
   });
 }
 
@@ -2629,48 +2855,100 @@ document.getElementById('btn-seed-payments').addEventListener('click', async () 
 // ──────────────────────────────────────────────────────
 // 부채 모달
 // ──────────────────────────────────────────────────────
-let editingLiabIdx = null;
+// editingLiabId: 편집 중인 부채의 id (신규 추가 시 null)
+// ident 인자는 id (마이그레이션 후) 또는 "__name__:{name}" (마이그레이션 전 fallback)
+let editingLiabId = null;
+let editingLiabType = 'current';  // 모달 내 임시 type 상태
 
-function openLiabilityModal(idx = null) {
-  editingLiabIdx = idx;
-  const isEdit = idx != null;
+function openLiabilityModal(ident = null) {
+  const list = settings?.liabilities || [];
+  let lb = null;
+  if (ident != null) {
+    if (typeof ident === 'string' && ident.startsWith('__name__:')) {
+      const nm = ident.slice('__name__:'.length);
+      lb = list.find(l => l.name === nm) || null;
+    } else {
+      lb = list.find(l => l.id === ident) || null;
+    }
+  }
+  const isEdit = lb != null;
+  editingLiabId = lb?.id || null;
+  editingLiabType = lb?.type === 'nonCurrent' ? 'nonCurrent' : 'current';
+
   document.getElementById('liab-modal-title').textContent = isEdit ? '부채 편집' : '부채 추가';
   document.getElementById('btn-liab-delete').style.display = isEdit ? 'inline-flex' : 'none';
-  const lb = isEdit ? (settings.liabilities[idx] || {}) : {};
-  document.getElementById('liab-name').value = lb.name || '';
-  document.getElementById('liab-note').value = lb.note || '';
+  document.getElementById('liab-name').value = lb?.name || '';
+  document.getElementById('liab-note').value = lb?.note || '';
+  document.getElementById('liab-active').checked = lb ? (lb.active !== false) : true;
+  // active 체크박스는 편집 시에만 노출 (신규는 항상 활성)
+  document.getElementById('liab-active-group').style.display = isEdit ? '' : 'none';
+  // 세그먼트 상태 반영
+  document.querySelectorAll('#liab-type-seg .seg-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.liabType === editingLiabType);
+  });
+
   openOv('ov-liability');
   setTimeout(() => document.getElementById('liab-name').focus(), 50);
 }
+
+// 세그먼트 클릭 핸들러 (모달 1회 init)
+document.querySelectorAll('#liab-type-seg .seg-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    editingLiabType = b.dataset.liabType;
+    document.querySelectorAll('#liab-type-seg .seg-btn').forEach(x => {
+      x.classList.toggle('active', x === b);
+    });
+  });
+});
 
 document.getElementById('btn-add-liability').addEventListener('click', () => openLiabilityModal(null));
 
 document.getElementById('btn-liab-save').addEventListener('click', async () => {
   const name = document.getElementById('liab-name').value.trim();
   const note = document.getElementById('liab-note').value.trim();
+  const active = document.getElementById('liab-active').checked;
   if (!name) { showToast('부채 이름을 입력하세요'); return; }
   const list = [...(settings?.liabilities || [])];
-  const dupIdx = list.findIndex(l => l.name === name);
-  if (dupIdx >= 0 && dupIdx !== editingLiabIdx) {
-    showToast('이미 같은 이름의 부채가 있습니다');
-    return;
+  const isEdit = editingLiabId != null;
+  // 이름 중복 체크 (자기 자신 제외)
+  const dup = list.find(l => l.name === name && l.id !== editingLiabId);
+  if (dup) { showToast('이미 같은 이름의 부채가 있습니다'); return; }
+
+  if (isEdit) {
+    const idx = list.findIndex(l => l.id === editingLiabId);
+    if (idx < 0) { showToast('편집 대상을 찾을 수 없습니다'); return; }
+    list[idx] = {
+      ...list[idx],
+      name,
+      type: editingLiabType,
+      note: note || null,
+      active,
+    };
+  } else {
+    list.push({
+      id: genId('liab'),
+      name,
+      type: editingLiabType,
+      note: note || null,
+      active: true,
+      createdAt: new Date().toISOString(),
+    });
   }
-  const obj = { name, note: note || null };
-  if (editingLiabIdx != null) list[editingLiabIdx] = obj;
-  else list.push(obj);
   try {
     await setDoc(pathFinanceSettings(), { ...settings, liabilities: list }, { merge: false });
     closeOv('ov-liability');
-    showToast(editingLiabIdx != null ? '부채가 수정되었습니다' : '부채가 추가되었습니다');
+    showToast(isEdit ? '부채가 수정되었습니다' : '부채가 추가되었습니다');
   } catch (e) { console.error(e); showToast('저장 실패'); }
 });
 
 document.getElementById('btn-liab-delete').addEventListener('click', async () => {
-  if (editingLiabIdx == null) return;
-  const lb = settings.liabilities[editingLiabIdx];
-  if (!confirm(`"${lb.name}" 부채를 삭제하시겠습니까?`)) return;
-  const list = [...settings.liabilities];
-  list.splice(editingLiabIdx, 1);
+  if (editingLiabId == null) return;
+  const list = [...(settings?.liabilities || [])];
+  const idx = list.findIndex(l => l.id === editingLiabId);
+  if (idx < 0) return;
+  const lb = list[idx];
+  if (!confirm(`"${lb.name}" 부채를 삭제하시겠습니까?\n(과거 스냅샷의 잔액 기록은 보존되지만 표시되지 않습니다.\n숨김만 원하면 "활성" 체크를 풀어주세요.)`)) return;
+  list.splice(idx, 1);
   try {
     await setDoc(pathFinanceSettings(), { ...settings, liabilities: list }, { merge: false });
     closeOv('ov-liability');
@@ -2957,10 +3235,14 @@ function renderBsBody() {
   }
 
   // 부채 행 빌드 (마스터 + 자동 카드 미지급금)
+  // - id 있는 항목: key = `liab:{id}` (이름 변경 안전)
+  // - id 없는 항목(마이그레이션 직전): key = `liab:{name}` fallback
+  // - active === false: 표시 제외 (스냅 데이터는 보존)
   const liabRows = { current: [], noncurrent: [] };
   for (const l of (settings?.liabilities || [])) {
+    if (l.active === false) continue;
     const tier = l.type === 'nonCurrent' ? 'noncurrent' : 'current';
-    const key = `liab:${l.name}`;
+    const key = l.id ? `liab:${l.id}` : `liab:${l.name}`;
     const saved = bsSnapshot.liabilityBalances?.[key];
     const prevVal = prevLiabs[key];
     const prevKrw = prevVal != null ? Number(prevVal) : null;
@@ -3378,12 +3660,14 @@ function buildBalanceRows() {
     });
   }
 
-  // 부채: settings.liabilities (현재 마스터는 단순 {name,note})
-  // v0.1-4a 단순화: 모두 유동, name을 key로 사용
-  // 부채 마스터 보강(type/active/id)은 v0.1-4c 또는 v0.2
+  // 부채: settings.liabilities (v0.2 보강 마스터: {id, name, type, note, active})
+  // - id 있는 항목: key = `liab:{id}`
+  // - id 없는 fallback: key = `liab:{name}` (마이그레이션 직전 1회성)
+  // - active === false: 입력 화면에서 제외
   const liabs = settings?.liabilities || [];
   for (const l of liabs) {
-    const key = `liab:${l.name}`;
+    if (l.active === false) continue;
+    const key = l.id ? `liab:${l.id}` : `liab:${l.name}`;
     const tier = l.type === 'nonCurrent' ? 'noncurrent' : 'current';
     const saved = bsSnapshot?.liabilityBalances?.[key];
     rows.push({
