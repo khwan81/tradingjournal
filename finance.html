@@ -7867,8 +7867,7 @@ document.getElementById('fx-edit-link').addEventListener('click', () => {
   }
 });
 
-// 월 라벨 초기화
-document.getElementById('ym-label').textContent = currentMonth;
+// 월 라벨 초기화는 글로벌 헤더(gm-label)에서 loadAll/setMonth 시점에 처리됨 (v0.5+)
 
 // ──────────────────────────────────────────────────────
 // 필터 칩
@@ -7924,7 +7923,6 @@ onAuthStateChanged(auth, async user => {
       get sharedSettings() { return sharedSettings; },
       get bsSnapshot()     { return bsSnapshot; },
       get bsPrevSnapshot() { return bsPrevSnapshot; },
-      get currentMonth()        { return currentMonth; },
       get currentMonth()   { return currentMonth; },
       get transactions()   { return transactions; },
       get recurringMasters() { return recurringMasters; },
