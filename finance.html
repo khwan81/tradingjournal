@@ -1098,6 +1098,80 @@ body {
   color: var(--text3);
 }
 
+/* ── 대시보드 탭 (v0.5) ── */
+.dash-header {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.dash-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text);
+}
+.dash-sub {
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+}
+.dash-placeholder {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--text2);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.dash-placeholder .hint {
+  font-size: 11px;
+  color: var(--text3);
+}
+
+/* 대시보드 KPI 그리드 (B2) */
+.dash-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+@media (max-width: 700px) {
+  .dash-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.dash-kpi-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+.dash-kpi-label {
+  font-size: 11px;
+  color: var(--text2);
+  margin-bottom: 6px;
+}
+.dash-kpi-value {
+  font-size: 20px;
+  font-weight: 500;
+  font-family: var(--font-mono);
+  color: var(--text);
+}
+.dash-kpi-value.green  { color: var(--green); }
+.dash-kpi-value.red    { color: var(--red); }
+.dash-kpi-value.amber  { color: #fbbf24; }
+.dash-kpi-value.muted  { color: var(--text3); }
+.dash-kpi-sub {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 4px;
+}
+.dash-kpi-sub.green { color: var(--green); }
+.dash-kpi-sub.red   { color: var(--red); }
+.dash-kpi-sub.amber { color: #fbbf24; }
+
 /* 전체 요약 카드 */
 .bg-summary {
   background: var(--bg2);
@@ -2017,6 +2091,7 @@ body {
     <button class="tab"        data-tab="balance"      role="tab">재무상태</button>
     <button class="tab"        data-tab="pl"           role="tab">손익</button>
     <button class="tab"        data-tab="budget"       role="tab">예산</button>
+    <button class="tab"        data-tab="dashboard"    role="tab">대시보드</button>
     <button class="tab"        data-tab="settings"     role="tab">설정</button>
   </div>
 
@@ -2147,6 +2222,44 @@ body {
     <div id="bg-body">
       <div class="bg-placeholder">
         예산 데이터 로딩 중…
+      </div>
+    </div>
+  </div>
+
+  <!-- 대시보드 탭 (v0.5 B1 + B2) -->
+  <div class="tab-content" id="tab-dashboard">
+    <div class="dash-header">
+      <div class="dash-title">대시보드</div>
+      <div class="dash-sub" id="dash-asof">—</div>
+    </div>
+
+    <!-- 4 KPI (B2) -->
+    <div class="dash-kpi-grid">
+      <div class="dash-kpi-card">
+        <div class="dash-kpi-label">순자산</div>
+        <div class="dash-kpi-value" id="dash-kpi-networth">—</div>
+        <div class="dash-kpi-sub"   id="dash-kpi-networth-sub">—</div>
+      </div>
+      <div class="dash-kpi-card">
+        <div class="dash-kpi-label">이번달 순이익</div>
+        <div class="dash-kpi-value" id="dash-kpi-net">—</div>
+        <div class="dash-kpi-sub"   id="dash-kpi-net-sub">—</div>
+      </div>
+      <div class="dash-kpi-card">
+        <div class="dash-kpi-label">부채비율</div>
+        <div class="dash-kpi-value" id="dash-kpi-debt">—</div>
+        <div class="dash-kpi-sub"   id="dash-kpi-debt-sub">—</div>
+      </div>
+      <div class="dash-kpi-card">
+        <div class="dash-kpi-label">예산 소진율</div>
+        <div class="dash-kpi-value" id="dash-kpi-budget">—</div>
+        <div class="dash-kpi-sub"   id="dash-kpi-budget-sub">—</div>
+      </div>
+    </div>
+
+    <div id="dash-body">
+      <div class="dash-placeholder">
+        차트 영역은 다음 단계(B3~)에서 추가됩니다
       </div>
     </div>
   </div>
@@ -3147,6 +3260,7 @@ async function loadAll() {
       renderLastBackupInfo();  // 마지막 백업 시각 표시 (v0.3-1)
       renderTransactions(); // 카테고리/결제수단 라벨 색상이 settings에 의존
       renderBsBody();       // 부채 마스터가 BS에 들어가니 갱신
+      renderDashKpi();      // v0.5 B2 — flow 결정에 settings 의존
     },
     err => { console.error('settings subscribe error', err); showToast('설정 로드 실패'); }
   );
@@ -3175,6 +3289,11 @@ async function loadAll() {
   renderBgHeader();
   subscribeBgBudgets();
   subscribeBgTransactions();
+
+  // 대시보드 탭 — B1 + B2: 헤더 + KPI + 빈 본문
+  renderDashHeader();
+  renderDashKpi();
+  renderDashBody();
 }
 
 function subscribeRecurring() {
@@ -3216,6 +3335,7 @@ function subscribeTransactions() {
       renderTransactions();
       renderRecurringBar();
       renderBudgetBar();   // v0.4 A7
+      renderDashKpi();     // v0.5 B2
     },
     err => { console.error('transactions subscribe error', err); showToast('거래 로드 실패'); }
   );
@@ -3276,6 +3396,7 @@ function subscribeTxTabBudgets() {
     snap => {
       txTabBudgets = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       renderBudgetBar();
+      renderDashKpi();   // v0.5 B2
     },
     err => { console.error('tx tab budgets subscribe error', err); }
   );
@@ -5892,6 +6013,7 @@ function subscribeBsSnapshot() {
     snap => {
       bsSnapshot = snap.exists() ? snap.data() : null;
       renderBsHeader();
+      renderDashKpi();   // v0.5 B2
     },
     err => { console.error('bs snapshot subscribe error', err); }
   );
@@ -5902,6 +6024,7 @@ function subscribeBsSnapshot() {
     snap => {
       bsPrevSnapshot = snap.exists() ? snap.data() : null;
       renderBsHeader();
+      renderDashKpi();   // v0.5 B2
     },
     err => { console.error('bs prev snapshot subscribe error', err); }
   );
@@ -6263,6 +6386,151 @@ async function copyBudgetsFromPrevMonth() {
 }
 
 document.getElementById('btn-bg-copy-prev').addEventListener('click', copyBudgetsFromPrevMonth);
+
+// ──────────────────────────────────────────────────────
+// 대시보드 (v0.5)
+// ──────────────────────────────────────────────────────
+// B1: 빈 본문 + as-of 표시. B2부터 KPI 추가.
+
+function renderDashHeader() {
+  // 현재 시각을 as-of로 표시
+  const $asof = document.getElementById('dash-asof');
+  if (!$asof) return;
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  $asof.textContent = `as of ${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+}
+
+function renderDashBody() {
+  const $body = document.getElementById('dash-body');
+  if (!$body) return;
+  $body.innerHTML = `
+    <div class="dash-placeholder">
+      차트 영역은 다음 단계(B3~)에서 추가됩니다
+    </div>
+  `;
+}
+
+// ── 대시보드 KPI (v0.5 B2) ──
+// 데이터 소스:
+//   • 순자산/부채비율 → 재무상태 탭의 bsSnapshot (현재월 기본). 전월은 bsPrevSnapshot.
+//   • 이번달 순이익  → 거래내역 탭의 transactions (currentMonth)
+//   • 예산 소진율    → txTabBudgets + transactions (currentMonth, 비용만)
+// 모든 데이터가 이미 다른 탭에서 구독 중이라 추가 구독 없음.
+function renderDashKpi() {
+  // ── 1) 순자산 + 부채비율 (재무상태 스냅에서) ──
+  const $nw    = document.getElementById('dash-kpi-networth');
+  const $nwSub = document.getElementById('dash-kpi-networth-sub');
+  const $debt    = document.getElementById('dash-kpi-debt');
+  const $debtSub = document.getElementById('dash-kpi-debt-sub');
+
+  // 헬퍼: 클래스 초기화
+  const resetCls = (el) => el.classList.remove('green', 'red', 'amber', 'muted');
+
+  if (bsSnapshot) {
+    const cur = computePrevTotals(bsSnapshot);  // "prev" 이름이지만 임의의 스냅을 받음
+    if (cur) {
+      // 순자산
+      resetCls($nw);
+      const netStr = (cur.net >= 0 ? '+' : '−') + fmtAmount(Math.abs(cur.net));
+      $nw.textContent = netStr;
+      $nw.classList.add(cur.net > 0 ? 'green' : cur.net < 0 ? 'red' : 'muted');
+
+      // MoM (전월 대비)
+      const prev = computePrevTotals(bsPrevSnapshot);
+      resetCls($nwSub);
+      if (prev && prev.net !== 0) {
+        const delta = cur.net - prev.net;
+        const pct = (delta / Math.abs(prev.net)) * 100;
+        const sign = delta > 0 ? '+' : delta < 0 ? '−' : '';
+        $nwSub.textContent = `${sign}${fmtAmount(Math.abs(delta))} (${sign}${Math.abs(pct).toFixed(1)}%) MoM`;
+        $nwSub.classList.add(delta > 0 ? 'green' : delta < 0 ? 'red' : 'muted');
+      } else {
+        $nwSub.textContent = `${bsMonth} 기준`;
+      }
+
+      // 부채비율
+      resetCls($debt);
+      const dr = cur.totalAssets > 0 ? (cur.totalLiab / cur.totalAssets) * 100 : 0;
+      $debt.textContent = `${dr.toFixed(1)}%`;
+      let drLabel;
+      if (cur.totalAssets <= 0) {
+        $debt.classList.add('muted');
+        drLabel = '자산 없음';
+      } else if (dr >= 70) {
+        $debt.classList.add('red');
+        drLabel = '위험';
+      } else if (dr >= 40) {
+        $debt.classList.add('amber');
+        drLabel = '주의';
+      } else {
+        $debt.classList.add('green');
+        drLabel = '안정';
+      }
+      resetCls($debtSub);
+      $debtSub.textContent = `자산 ${fmtAmount(cur.totalAssets)} · ${drLabel}`;
+      if (drLabel === '위험') $debtSub.classList.add('red');
+      else if (drLabel === '주의') $debtSub.classList.add('amber');
+      else if (drLabel === '안정') $debtSub.classList.add('green');
+    }
+  } else {
+    resetCls($nw);    $nw.classList.add('muted');     $nw.textContent = '—';
+    resetCls($nwSub);                                 $nwSub.textContent = `${bsMonth} 스냅 없음`;
+    resetCls($debt);  $debt.classList.add('muted');   $debt.textContent = '—';
+    resetCls($debtSub);                               $debtSub.textContent = '스냅 입력 필요';
+  }
+
+  // ── 2) 이번달 순이익 (거래내역 탭 transactions에서) ──
+  const $net    = document.getElementById('dash-kpi-net');
+  const $netSub = document.getElementById('dash-kpi-net-sub');
+  resetCls($net);
+  resetCls($netSub);
+
+  let revenue = 0, expense = 0;
+  for (const t of transactions) {
+    const flow = txFlow(t);
+    const amt = Number(t.amount) || 0;
+    if (flow === 'revenue')                         revenue += amt;
+    else if (flow === 'fixed' || flow === 'variable') expense += amt;
+  }
+  const monthNet = revenue - expense;
+  if (transactions.length === 0) {
+    $net.classList.add('muted');
+    $net.textContent = '0';
+    $netSub.textContent = `${currentMonth} 거래 없음`;
+  } else {
+    const netStr = (monthNet >= 0 ? '+' : '−') + fmtAmount(Math.abs(monthNet));
+    $net.textContent = netStr;
+    if (monthNet > 0) { $net.classList.add('green'); $netSub.textContent = `흑자 · ${currentMonth}`; $netSub.classList.add('green'); }
+    else if (monthNet < 0) { $net.classList.add('red'); $netSub.textContent = `적자 · ${currentMonth}`; $netSub.classList.add('red'); }
+    else { $net.classList.add('muted'); $netSub.textContent = `손익 0 · ${currentMonth}`; }
+  }
+
+  // ── 3) 예산 소진율 (txTabBudgets + transactions, 비용만) ──
+  const $bud    = document.getElementById('dash-kpi-budget');
+  const $budSub = document.getElementById('dash-kpi-budget-sub');
+  resetCls($bud);
+  resetCls($budSub);
+
+  // 지출 예산 합
+  const expenseBudget = txTabBudgets
+    .filter(b => b.flow === 'fixed' || b.flow === 'variable')
+    .reduce((s, b) => s + (Number(b.budget) || 0), 0);
+
+  if (expenseBudget <= 0) {
+    $bud.classList.add('muted');
+    $bud.textContent = '—';
+    $budSub.textContent = `${currentMonth} 예산 미설정`;
+  } else {
+    const pct = (expense / expenseBudget) * 100;
+    $bud.textContent = `${pct.toFixed(0)}%`;
+    let label;
+    if (pct > 100)      { $bud.classList.add('red');   $budSub.classList.add('red');   label = '초과'; }
+    else if (pct >= 80) { $bud.classList.add('amber'); $budSub.classList.add('amber'); label = '임박'; }
+    else                { $bud.classList.add('green'); $budSub.classList.add('green'); label = '여유'; }
+    $budSub.textContent = `${fmtAmount(expense)} / ${fmtAmount(expenseBudget)} · ${label}`;
+  }
+}
 
 // ── 예산 모달 (v0.4 A4) ──
 // 도큐먼트 ID 규칙: `{ym}__{flow}__{category}` (구분자 더블 언더스코어)
