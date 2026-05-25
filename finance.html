@@ -3316,7 +3316,7 @@ function renderBudgetBar() {
       const budget = Number(b.budget) || 0;
       if (budget <= 0) continue;
       const pct = (actual / budget) * 100;
-      if (pct >= 100)     over.push({ cat, pct: Math.round(pct) });
+      if (pct > 100)      over.push({ cat, pct: Math.round(pct) });
       else if (pct >= 80) warn.push({ cat, pct: Math.round(pct) });
     }
   }
@@ -6019,8 +6019,8 @@ function renderBgBody() {
       if (budget > 0) {
         barWidth = Math.min(100, (actual / budget) * 100);
         if (isExpense) {
-          if (pct >= 100)      barCls = 'over';        // 초과 (빨강)
-          else if (pct >= 80)  barCls = 'warn';        // 80%↑ (주황)
+          if (pct > 100)       barCls = 'over';        // 초과 (빨강)
+          else if (pct >= 80)  barCls = 'warn';        // 80~100% (주황)
           else                 barCls = 'ok';          // 정상 (녹색)
         } else {
           // 매출(목표) — 많이 달성할수록 좋음
@@ -6068,7 +6068,7 @@ function renderBgBody() {
     if (groupBudget > 0) {
       let pCls = '';
       if (isExpense) {
-        if (groupPct >= 100)      pCls = 'over';
+        if (groupPct > 100)       pCls = 'over';
         else if (groupPct >= 80)  pCls = 'warn';
         else                      pCls = 'ok';
       } else {
@@ -6122,7 +6122,7 @@ function renderBgBody() {
           <span class="bg-actual">${fmtAmount(totalExp)}</span>
           / <span class="bg-budget">${fmtAmount(totalExpBudget)}</span>
           ${totalExpBudget > 0
-            ? ` · <span class="bg-pct ${totalExp >= totalExpBudget ? 'over' : (totalExp >= totalExpBudget * 0.8 ? 'warn' : 'ok')}">${Math.round((totalExp/totalExpBudget)*100)}%</span>`
+            ? ` · <span class="bg-pct ${totalExp > totalExpBudget ? 'over' : (totalExp >= totalExpBudget * 0.8 ? 'warn' : 'ok')}">${Math.round((totalExp/totalExpBudget)*100)}%</span>`
             : ''}
         </span>
       </div>
