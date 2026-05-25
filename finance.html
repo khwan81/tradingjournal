@@ -740,6 +740,54 @@ body {
   .recurring-bar .rb-cta { width: 100%; }
 }
 
+/* 예산 알림바 (v0.4 A7) */
+.budget-bar {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.32);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: var(--text);
+}
+.budget-bar.show { display: flex; }
+.budget-bar.severe {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.36);
+}
+.budget-bar .bb-left {
+  display: flex; align-items: center; gap: 8px;
+  min-width: 0; flex: 1;
+}
+.budget-bar .bb-icon { font-size: 14px; }
+.budget-bar .bb-text {
+  color: var(--text2);
+  overflow: hidden; text-overflow: ellipsis;
+}
+.budget-bar .bb-strong { color: #fbbf24; font-weight: 600; }
+.budget-bar.severe .bb-strong { color: var(--red); }
+.budget-bar .bb-cta {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: var(--font);
+  white-space: nowrap;
+}
+.budget-bar .bb-cta:hover { background: rgba(255,255,255,0.04); }
+@media (max-width: 640px) {
+  .budget-bar { flex-direction: column; align-items: stretch; gap: 8px; }
+  .budget-bar .bb-cta { width: 100%; }
+}
+
 /* 반복지출 마스터 리스트 행 */
 .rec-row {
   display: flex; justify-content: space-between; align-items: center;
@@ -2020,6 +2068,15 @@ body {
       <button type="button" class="rb-cta" id="btn-recurring-generate">일괄 생성</button>
     </div>
 
+    <!-- 예산 알림바 (v0.4 A7) -->
+    <div class="budget-bar" id="budget-bar">
+      <div class="bb-left">
+        <span class="bb-icon">📊</span>
+        <span class="bb-text" id="budget-bar-text">예산 알림</span>
+      </div>
+      <button type="button" class="bb-cta" id="btn-budget-goto">예산 보기</button>
+    </div>
+
     <!-- 필터 칩 -->
     <div class="filter-bar" id="filter-bar">
       <button type="button" class="fchip active" data-filter-all>전체</button>
@@ -2970,6 +3027,7 @@ let plTransactions = [];        // 손익 탭에서 보고 있는 월의 거래
 let bgMonth = currentYm();      // YYYY-MM 형식 (예산 탭 — 독립, v0.4)
 let bgBudgets = [];             // 예산 탭에서 보고 있는 월의 예산 도큐먼트들
 let bgTransactions = [];        // 예산 탭의 같은 월 거래 (실제 사용액 계산)
+let txTabBudgets = [];          // 거래내역 탭의 currentMonth 예산 (v0.4 A7 — 알림바용)
 let filterFlows = new Set(); // 활성 flow 필터: 'revenue'|'fixed'|'variable'
 let filterPays  = new Set(); // 활성 결제상태 필터: 'unpaid'|'card'|'cash'
 let editingRecurringId = null; // 반복지출 모달 편집 중인 id
@@ -2983,6 +3041,7 @@ let unsubRecurring = null;
 let unsubPlTransactions = null;     // 손익 탭 거래 구독
 let unsubBgBudgets = null;          // 예산 탭 예산 구독 (v0.4)
 let unsubBgTransactions = null;     // 예산 탭 거래 구독 (v0.4)
+let unsubTxTabBudgets = null;       // 거래내역 탭 예산 구독 (v0.4 A7)
 
 // 자산 종류 enum (categoriesEnum 기본값)
 const DEFAULT_CATEGORIES_ENUM = {
@@ -3101,6 +3160,9 @@ async function loadAll() {
   // 반복지출 마스터 구독
   subscribeRecurring();
 
+  // 거래내역 탭 — 예산 알림바용 (v0.4 A7)
+  subscribeTxTabBudgets();
+
   // 재무상태 탭 — 현재 bsMonth 스냅샷 구독
   subscribeBsSnapshot();
   renderBsHeader();
@@ -3153,6 +3215,7 @@ function subscribeTransactions() {
       });
       renderTransactions();
       renderRecurringBar();
+      renderBudgetBar();   // v0.4 A7
     },
     err => { console.error('transactions subscribe error', err); showToast('거래 로드 실패'); }
   );
@@ -3202,6 +3265,117 @@ function subscribeBgTransactions() {
     err => { console.error('bg transactions subscribe error', err); showToast('거래 로드 실패'); }
   );
 }
+
+// 거래내역 탭 예산 구독 (v0.4 A7)
+// — currentMonth의 예산을 따로 구독. 같은 월이면 Firestore 캐시 사용으로 비용 없음.
+function subscribeTxTabBudgets() {
+  if (unsubTxTabBudgets) { unsubTxTabBudgets(); unsubTxTabBudgets = null; }
+  if (!currentUid) return;
+  unsubTxTabBudgets = onSnapshot(
+    query(pathBudgets(), where('ym', '==', currentMonth)),
+    snap => {
+      txTabBudgets = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderBudgetBar();
+    },
+    err => { console.error('tx tab budgets subscribe error', err); }
+  );
+}
+
+// 거래내역 탭 예산 알림바 렌더 (v0.4 A7)
+// 알림 조건:
+//   - 초과(100%↑): 빨강 강조
+//   - 임박(80~100%): 노랑 강조
+//   - 거래는 있는데 예산 미설정 (지출만 — 매출은 미설정 안내 안 함)
+// 위 셋 중 하나라도 있으면 알림바 표시. 없으면 숨김.
+function renderBudgetBar() {
+  const $bar = document.getElementById('budget-bar');
+  if (!$bar) return;
+
+  // 카테고리별 사용액 집계 (현재 월 거래)
+  const usage = { revenue: new Map(), fixed: new Map(), variable: new Map() };
+  for (const t of transactions) {
+    const flow = txFlow(t);
+    if (!usage[flow]) continue;
+    const cat = t.category || '(분류 없음)';
+    usage[flow].set(cat, (usage[flow].get(cat) || 0) + (Number(t.amount) || 0));
+  }
+
+  // 예산 인덱스 (flow별)
+  const budgetByCat = { revenue: new Map(), fixed: new Map(), variable: new Map() };
+  for (const b of txTabBudgets) {
+    if (!b.category || !b.flow) continue;
+    if (budgetByCat[b.flow]) budgetByCat[b.flow].set(b.category, b);
+  }
+
+  // 1) 초과/임박 검출 (비용만 — 매출 미달은 알림에서 제외)
+  const over = [];   // 100%↑
+  const warn = [];   // 80~99%
+  for (const flow of ['fixed', 'variable']) {
+    for (const [cat, b] of budgetByCat[flow]) {
+      const actual = usage[flow].get(cat) || 0;
+      const budget = Number(b.budget) || 0;
+      if (budget <= 0) continue;
+      const pct = (actual / budget) * 100;
+      if (pct >= 100)     over.push({ cat, pct: Math.round(pct) });
+      else if (pct >= 80) warn.push({ cat, pct: Math.round(pct) });
+    }
+  }
+
+  // 2) 거래는 있는데 예산 미설정인 비용 카테고리
+  const noBudget = [];
+  for (const flow of ['fixed', 'variable']) {
+    for (const [cat, amt] of usage[flow]) {
+      if (amt <= 0) continue;
+      if (!budgetByCat[flow].has(cat)) noBudget.push(cat);
+    }
+  }
+
+  // 표시할 알림이 없으면 숨김
+  if (over.length === 0 && warn.length === 0 && noBudget.length === 0) {
+    $bar.classList.remove('show', 'severe');
+    return;
+  }
+
+  // 3) 메시지 빌드 (우선순위: 초과 > 임박 > 미설정)
+  const parts = [];
+  if (over.length > 0) {
+    const items = over.slice(0, 3).map(o => `<span class="bb-strong">${escapeHtml(o.cat)} ${o.pct}%</span>`).join(', ');
+    const extra = over.length > 3 ? ` 외 ${over.length - 3}개` : '';
+    parts.push(`초과 ${items}${extra}`);
+  }
+  if (warn.length > 0) {
+    const items = warn.slice(0, 2).map(w => `<span class="bb-strong">${escapeHtml(w.cat)} ${w.pct}%</span>`).join(', ');
+    const extra = warn.length > 2 ? ` 외 ${warn.length - 2}개` : '';
+    parts.push(`임박 ${items}${extra}`);
+  }
+  if (noBudget.length > 0) {
+    const items = noBudget.slice(0, 2).map(n => `<span class="bb-strong">${escapeHtml(n)}</span>`).join(', ');
+    const extra = noBudget.length > 2 ? ` 외 ${noBudget.length - 2}개` : '';
+    parts.push(`예산 미설정 ${items}${extra}`);
+  }
+
+  document.getElementById('budget-bar-text').innerHTML = parts.join(' · ');
+  $bar.classList.add('show');
+  $bar.classList.toggle('severe', over.length > 0);
+}
+
+// "예산 보기" 버튼 → 예산 탭으로 이동 + 현재 월로 동기화
+document.getElementById('btn-budget-goto').addEventListener('click', () => {
+  // 예산 탭 월을 거래내역 탭의 currentMonth로 맞춤
+  if (bgMonth !== currentMonth) {
+    bgMonth = currentMonth;
+    renderBgHeader();
+    subscribeBgBudgets();
+    subscribeBgTransactions();
+  }
+  // 탭 전환 — 기존 탭 클릭 핸들러 흉내
+  document.querySelectorAll('.tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.tab === 'budget')
+  );
+  document.querySelectorAll('.tab-content').forEach(c =>
+    c.classList.toggle('active', c.id === 'tab-budget')
+  );
+});
 
 // 손익 본문 렌더 (A3) — 카테고리별 상세 표
 // 매출/고정비/변동비 각 그룹에 그 달에 등장한 카테고리만 집계해서 나열.
@@ -3311,6 +3485,7 @@ function unsubscribeAll() {
   if (unsubPlTransactions) { unsubPlTransactions(); unsubPlTransactions = null; }  // A2
   if (unsubBgBudgets) { unsubBgBudgets(); unsubBgBudgets = null; }                 // v0.4
   if (unsubBgTransactions) { unsubBgTransactions(); unsubBgTransactions = null; } // v0.4
+  if (unsubTxTabBudgets) { unsubTxTabBudgets(); unsubTxTabBudgets = null; }       // v0.4 A7
   accounts = [];
   settings = null;
   sharedSettings = null;
@@ -3322,6 +3497,7 @@ function unsubscribeAll() {
   plTransactions = [];   // A2
   bgBudgets = [];        // v0.4
   bgTransactions = [];   // v0.4
+  txTabBudgets = [];     // v0.4 A7
   renderUnpaidBar();
 }
 
@@ -5175,6 +5351,7 @@ function setMonth(ym) {
   currentMonth = ym;
   document.getElementById('ym-label').textContent = ym;
   subscribeTransactions();
+  subscribeTxTabBudgets();   // v0.4 A7 — 거래내역 탭 예산도 재구독
   // subscribeTransactions의 onSnapshot이 발화하기 전 잠깐의 빈 상태에서도
   // 알림바를 즉시 업데이트 (이전 월의 거래 기준 표시 방지)
   // 단, 정확한 값은 onSnapshot 콜백에서 다시 갱신됨
