@@ -1028,6 +1028,28 @@ body {
 .pl-row.empty .pl-amt,
 .pl-row.empty .pl-name { color: var(--text3); font-style: italic; }
 
+/* ── 예산 탭 (v0.4) ── */
+.bg-header {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.bg-placeholder {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--text2);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.bg-placeholder .hint {
+  font-size: 11px;
+  color: var(--text3);
+}
+
 /* BS KPI */
 .bs-kpi-grid {
   display: grid;
@@ -1814,6 +1836,7 @@ body {
     <button class="tab active" data-tab="transactions" role="tab">거래내역</button>
     <button class="tab"        data-tab="balance"      role="tab">재무상태</button>
     <button class="tab"        data-tab="pl"           role="tab">손익</button>
+    <button class="tab"        data-tab="budget"       role="tab">예산</button>
     <button class="tab"        data-tab="settings"     role="tab">설정</button>
   </div>
 
@@ -1917,6 +1940,24 @@ body {
     <div id="pl-body">
       <div class="pl-placeholder">
         거래가 없습니다
+      </div>
+    </div>
+  </div>
+
+  <!-- 예산 탭 (v0.4 A1) -->
+  <div class="tab-content" id="tab-budget">
+    <div class="bg-header">
+      <div class="month-nav">
+        <button type="button" id="btn-bg-prev" aria-label="이전 달">‹</button>
+        <span class="ym" id="bg-ym-label">—</span>
+        <button type="button" id="btn-bg-next" aria-label="다음 달">›</button>
+      </div>
+      <button class="btn-s" id="btn-bg-copy-prev">📋 전월 복사</button>
+    </div>
+
+    <div id="bg-body">
+      <div class="bg-placeholder">
+        예산 데이터 로딩 중…
       </div>
     </div>
   </div>
@@ -2743,6 +2784,9 @@ let bsSnapshot = null;          // 현재 bsMonth의 스냅샷 (없으면 null)
 let bsPrevSnapshot = null;      // bsMonth 직전 달 스냅샷 (없으면 null)
 let plMonth = currentYm();      // YYYY-MM 형식 (손익 탭 — 독립, v0.3-4)
 let plTransactions = [];        // 손익 탭에서 보고 있는 월의 거래
+let bgMonth = currentYm();      // YYYY-MM 형식 (예산 탭 — 독립, v0.4)
+let bgBudgets = [];             // 예산 탭에서 보고 있는 월의 예산 도큐먼트들
+let bgTransactions = [];        // 예산 탭의 같은 월 거래 (실제 사용액 계산)
 let filterFlows = new Set(); // 활성 flow 필터: 'revenue'|'fixed'|'variable'
 let filterPays  = new Set(); // 활성 결제상태 필터: 'unpaid'|'card'|'cash'
 let editingRecurringId = null; // 반복지출 모달 편집 중인 id
@@ -2754,6 +2798,8 @@ let unsubBsSnapshot = null;
 let unsubBsPrevSnapshot = null;
 let unsubRecurring = null;
 let unsubPlTransactions = null;     // 손익 탭 거래 구독
+let unsubBgBudgets = null;          // 예산 탭 예산 구독 (v0.4)
+let unsubBgTransactions = null;     // 예산 탭 거래 구독 (v0.4)
 
 // 자산 종류 enum (categoriesEnum 기본값)
 const DEFAULT_CATEGORIES_ENUM = {
@@ -2784,6 +2830,8 @@ const pathSnapshots = () => collection(db, `users/${currentUid}/finance/config/s
 const pathSnapshot = ym => doc(db, `users/${currentUid}/finance/config/snapshots/${ym}`);
 const pathRecurring = () => collection(db, `users/${currentUid}/finance/config/recurring`);
 const pathRecurringItem = id => doc(db, `users/${currentUid}/finance/config/recurring/${id}`);
+const pathBudgets = () => collection(db, `users/${currentUid}/finance/config/budgets`);   // v0.4
+const pathBudget = id => doc(db, `users/${currentUid}/finance/config/budgets/${id}`);     // v0.4
 
 // ──────────────────────────────────────────────────────
 // 초기 데이터 로드
@@ -2877,6 +2925,10 @@ async function loadAll() {
   // 손익 탭 — A2: 헤더 + 거래 구독
   renderPlHeader();
   subscribePlTransactions();
+
+  // 예산 탭 — A1: 헤더 + 빈 본문 (구독은 A2에서 추가 예정)
+  renderBgHeader();
+  renderBgBody();
 }
 
 function subscribeRecurring() {
@@ -3044,6 +3096,8 @@ function unsubscribeAll() {
   if (unsubBsPrevSnapshot) { unsubBsPrevSnapshot(); unsubBsPrevSnapshot = null; }
   if (unsubRecurring) { unsubRecurring(); unsubRecurring = null; }
   if (unsubPlTransactions) { unsubPlTransactions(); unsubPlTransactions = null; }  // A2
+  if (unsubBgBudgets) { unsubBgBudgets(); unsubBgBudgets = null; }                 // v0.4
+  if (unsubBgTransactions) { unsubBgTransactions(); unsubBgTransactions = null; } // v0.4
   accounts = [];
   settings = null;
   sharedSettings = null;
@@ -3053,6 +3107,8 @@ function unsubscribeAll() {
   bsSnapshot = null;
   bsPrevSnapshot = null;
   plTransactions = [];   // A2
+  bgBudgets = [];        // v0.4
+  bgTransactions = [];   // v0.4
   renderUnpaidBar();
 }
 
@@ -5484,6 +5540,33 @@ function goPlMonth(delta) {
   subscribePlTransactions();   // A2: 새 월의 거래 재구독
 }
 
+// ── 예산 탭 (v0.4 A1) ──
+// 단계: A1 = 빈 화면 + 월 네비만. A2부터 CRUD/구독 추가.
+function renderBgHeader() {
+  const $label = document.getElementById('bg-ym-label');
+  if ($label) $label.textContent = bgMonth;
+}
+
+function goBgMonth(delta) {
+  const [y, m] = bgMonth.split('-').map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  bgMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  renderBgHeader();
+  // A2에서 여기에 subscribeBgBudgets() / subscribeBgTransactions() 호출 추가 예정
+}
+
+// A1: 빈 화면
+function renderBgBody() {
+  const $body = document.getElementById('bg-body');
+  if (!$body) return;
+  $body.innerHTML = `
+    <div class="bg-placeholder">
+      예산 관리 — 단계적으로 구현 중<br>
+      <span class="hint">(곧 카테고리별 예산 입력, 진행률 바, 전월 복사 추가 예정)</span>
+    </div>
+  `;
+}
+
 // ── 잔액 입력 모달 ──
 
 // 모달이 현재 활성화한 ym (저장 시 사용)
@@ -6428,6 +6511,10 @@ document.getElementById('btn-bs-next').addEventListener('click', () => goBsMonth
 // 손익 탭 월 네비 (v0.3-4 A1)
 document.getElementById('btn-pl-prev').addEventListener('click', () => goPlMonth(-1));
 document.getElementById('btn-pl-next').addEventListener('click', () => goPlMonth(+1));
+
+// 예산 탭 월 네비 (v0.4 A1)
+document.getElementById('btn-bg-prev').addEventListener('click', () => goBgMonth(-1));
+document.getElementById('btn-bg-next').addEventListener('click', () => goBgMonth(+1));
 document.getElementById('btn-bs-edit').addEventListener('click', openBalanceModal);
 document.getElementById('btn-bal-save').addEventListener('click', saveBalanceSnapshot);
 document.getElementById('btn-bal-delete').addEventListener('click', deleteBalanceSnapshot);
