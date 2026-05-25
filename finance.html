@@ -1050,6 +1050,115 @@ body {
   color: var(--text3);
 }
 
+/* 전체 요약 카드 */
+.bg-summary {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+.bg-summary-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 5px 0;
+  font-size: 12px;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.bg-summary-row + .bg-summary-row {
+  border-top: 1px dashed var(--border);
+}
+.bg-summary-label { color: var(--text2); }
+.bg-summary-val {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+/* 카테고리별 표 */
+.bg-table {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.bg-group {
+  border-bottom: 1px solid var(--border);
+}
+.bg-group:last-child { border-bottom: none; }
+
+.bg-group-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 14px 16px 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.bg-group-title { color: var(--text); }
+.bg-group-total {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text2);
+}
+
+/* 카테고리 행 (클릭 가능) */
+.bg-row {
+  padding: 8px 16px 10px 28px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.bg-row:hover { background: rgba(255,255,255,0.02); }
+.bg-row.empty { cursor: default; }
+.bg-row.empty:hover { background: transparent; }
+
+.bg-row-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+.bg-cat {
+  color: var(--text2);
+  flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.bg-amt {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text);
+  flex-shrink: 0;
+}
+.bg-actual { color: var(--text); }
+.bg-budget { color: var(--text3); }
+.bg-empty   { color: var(--text3); font-style: italic; font-size: 11px; }
+.bg-no-budget { color: #fbbf24; font-size: 11px; margin-left: 4px; }
+
+.bg-pct {
+  font-weight: 500;
+  font-family: var(--font-mono);
+}
+.bg-pct.ok    { color: var(--green); }
+.bg-pct.warn  { color: #fbbf24; }
+.bg-pct.over  { color: var(--red); }
+
+/* 진행률 바 */
+.bg-bar {
+  height: 6px;
+  background: var(--bg);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 2px;
+}
+.bg-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+.bg-bar-fill.ok    { background: var(--green); }
+.bg-bar-fill.warn  { background: #fbbf24; }
+.bg-bar-fill.over  { background: var(--red); }
+
 /* BS KPI */
 .bs-kpi-grid {
   display: grid;
@@ -2926,9 +3035,10 @@ async function loadAll() {
   renderPlHeader();
   subscribePlTransactions();
 
-  // 예산 탭 — A1: 헤더 + 빈 본문 (구독은 A2에서 추가 예정)
+  // 예산 탭 — A2: 헤더 + 예산/거래 구독
   renderBgHeader();
-  renderBgBody();
+  subscribeBgBudgets();
+  subscribeBgTransactions();
 }
 
 function subscribeRecurring() {
@@ -2987,6 +3097,35 @@ function subscribePlTransactions() {
       renderPlBody();
     },
     err => { console.error('pl transactions subscribe error', err); showToast('손익 데이터 로드 실패'); }
+  );
+}
+
+// ── 예산 탭 구독 (v0.4 A2) ──
+// 예산 도큐먼트 구독 — 같은 월의 모든 예산 (카테고리별 1개씩)
+function subscribeBgBudgets() {
+  if (unsubBgBudgets) { unsubBgBudgets(); unsubBgBudgets = null; }
+  if (!currentUid) return;
+  unsubBgBudgets = onSnapshot(
+    query(pathBudgets(), where('ym', '==', bgMonth)),
+    snap => {
+      bgBudgets = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderBgBody();
+    },
+    err => { console.error('bg budgets subscribe error', err); showToast('예산 로드 실패'); }
+  );
+}
+
+// 예산 탭 거래 구독 — 같은 월의 거래 (사용액 집계용)
+function subscribeBgTransactions() {
+  if (unsubBgTransactions) { unsubBgTransactions(); unsubBgTransactions = null; }
+  if (!currentUid) return;
+  unsubBgTransactions = onSnapshot(
+    query(pathTransactions(), where('ym', '==', bgMonth)),
+    snap => {
+      bgTransactions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderBgBody();
+    },
+    err => { console.error('bg transactions subscribe error', err); showToast('거래 로드 실패'); }
   );
 }
 
@@ -5552,19 +5691,214 @@ function goBgMonth(delta) {
   const d = new Date(y, m - 1 + delta, 1);
   bgMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   renderBgHeader();
-  // A2에서 여기에 subscribeBgBudgets() / subscribeBgTransactions() 호출 추가 예정
+  subscribeBgBudgets();
+  subscribeBgTransactions();
 }
 
-// A1: 빈 화면
+// 예산 본문 렌더 (v0.4 A3)
+// 매출/고정비/변동비 그룹별로 카테고리 진행률 표시.
+// 카테고리 순서: settings.categories 마스터 순서 → 마스터에 없는 카테고리는 뒤에.
+//
+// 진행률 의미:
+//   매출 그룹  → 실제/목표 (높을수록 좋음, 100%↑는 초과 달성)
+//   비용 그룹  → 실제/한도 (높을수록 나쁨, 100%↑는 초과 지출)
 function renderBgBody() {
   const $body = document.getElementById('bg-body');
   if (!$body) return;
-  $body.innerHTML = `
-    <div class="bg-placeholder">
-      예산 관리 — 단계적으로 구현 중<br>
-      <span class="hint">(곧 카테고리별 예산 입력, 진행률 바, 전월 복사 추가 예정)</span>
+
+  if (!settings) {
+    $body.innerHTML = '<div class="bg-placeholder">설정 로딩 중…</div>';
+    return;
+  }
+
+  // 1) 사용액 집계 — flow + category로 거래 합계
+  const usage = { revenue: new Map(), fixed: new Map(), variable: new Map() };
+  for (const t of bgTransactions) {
+    const flow = txFlow(t);
+    if (!usage[flow]) continue;
+    const cat = t.category || '(분류 없음)';
+    usage[flow].set(cat, (usage[flow].get(cat) || 0) + (Number(t.amount) || 0));
+  }
+
+  // 2) 예산 인덱스 — `${ym}_${flow}_${category}` → 예산 객체
+  //    같은 카테고리에 여러 예산이 있으면 마지막 것 사용 (이론상 한 개)
+  const budgetByCat = { revenue: new Map(), fixed: new Map(), variable: new Map() };
+  for (const b of bgBudgets) {
+    if (!b.category || !b.flow) continue;
+    if (budgetByCat[b.flow]) budgetByCat[b.flow].set(b.category, b);
+  }
+
+  // 3) 카테고리 순서 — 마스터 순서 + 마스터엔 없지만 거래/예산엔 등장한 추가 카테고리
+  const orderCats = (flow) => {
+    const masterList = settings?.categories?.[flow] || [];
+    const usageMap   = usage[flow];
+    const budgetMap  = budgetByCat[flow];
+    const ordered = [];
+    const seen = new Set();
+    for (const m of masterList) {
+      ordered.push(m);
+      seen.add(m);
+    }
+    // 마스터에 없지만 거래 또는 예산엔 등장한 항목들
+    const extras = [];
+    for (const k of usageMap.keys())  if (!seen.has(k)) { extras.push(k); seen.add(k); }
+    for (const k of budgetMap.keys()) if (!seen.has(k)) { extras.push(k); seen.add(k); }
+    return [...ordered, ...extras];
+  };
+
+  // 4) 그룹별 HTML 빌더
+  // isExpense: 비용 그룹이면 true (진행률 색 의미가 반대)
+  const buildGroup = (flow, label, isExpense, cls) => {
+    const cats = orderCats(flow);
+    let groupBudget = 0, groupActual = 0;
+
+    const rowsHtml = cats.map(cat => {
+      const b = budgetByCat[flow].get(cat);
+      const actual = usage[flow].get(cat) || 0;
+      const budget = b ? (Number(b.budget) || 0) : 0;
+      groupBudget += budget;
+      groupActual += actual;
+
+      // 진행률
+      const pct = budget > 0 ? Math.round((actual / budget) * 100) : null;
+
+      // 진행률 바 상태
+      let barCls = '';
+      let barWidth = 0;
+      if (budget > 0) {
+        barWidth = Math.min(100, (actual / budget) * 100);
+        if (isExpense) {
+          if (pct >= 100)      barCls = 'over';        // 초과 (빨강)
+          else if (pct >= 80)  barCls = 'warn';        // 80%↑ (주황)
+          else                 barCls = 'ok';          // 정상 (녹색)
+        } else {
+          // 매출(목표) — 많이 달성할수록 좋음
+          if (pct >= 100)      barCls = 'ok';          // 목표 달성+ (녹색)
+          else if (pct >= 50)  barCls = 'warn';        // 절반 이상 (주황)
+          else                 barCls = 'over';        // 미달 (빨강은 강하니 텍스트만 회색으로)
+        }
+      }
+
+      // 우측 라벨 — "{actual} / {budget} (pct%)" or "예산 미설정"
+      let amtRight, pctRight;
+      if (b) {
+        amtRight = `<span class="bg-actual">${fmtAmount(actual)}</span> / <span class="bg-budget">${fmtAmount(budget)}</span>`;
+        pctRight = pct == null
+          ? '—'
+          : `<span class="bg-pct ${barCls || ''}">${pct}%</span>`;
+      } else if (actual > 0) {
+        // 예산 미설정인데 거래는 있음 — 노란 경고
+        amtRight = `<span class="bg-actual">${fmtAmount(actual)}</span> <span class="bg-no-budget">⚠️ 예산 미설정</span>`;
+        pctRight = '';
+      } else {
+        // 예산도 거래도 없음
+        amtRight = `<span class="bg-empty">— 예산 없음</span>`;
+        pctRight = '';
+      }
+
+      // 진행률 바 (예산 있을 때만)
+      const barHtml = (budget > 0)
+        ? `<div class="bg-bar"><div class="bg-bar-fill ${barCls}" style="width:${barWidth}%"></div></div>`
+        : '';
+
+      return `
+        <div class="bg-row" data-edit-bg="${escapeHtml(flow)}::${escapeHtml(cat)}">
+          <div class="bg-row-head">
+            <span class="bg-cat">${escapeHtml(cat)}</span>
+            <span class="bg-amt">${amtRight}${pctRight ? ' · ' + pctRight : ''}</span>
+          </div>
+          ${barHtml}
+        </div>`;
+    }).join('');
+
+    // 그룹 합계 진행률
+    let groupPct = groupBudget > 0 ? Math.round((groupActual / groupBudget) * 100) : null;
+    let groupPctHtml = '';
+    if (groupBudget > 0) {
+      let pCls = '';
+      if (isExpense) {
+        if (groupPct >= 100)      pCls = 'over';
+        else if (groupPct >= 80)  pCls = 'warn';
+        else                      pCls = 'ok';
+      } else {
+        if (groupPct >= 100)      pCls = 'ok';
+        else if (groupPct >= 50)  pCls = 'warn';
+        else                      pCls = 'over';
+      }
+      groupPctHtml = ` · <span class="bg-pct ${pCls}">${groupPct}%</span>`;
+    }
+
+    return `
+      <div class="bg-group ${cls}">
+        <div class="bg-group-head">
+          <span class="bg-group-title">${label}</span>
+          <span class="bg-group-total">
+            <span class="bg-actual">${fmtAmount(groupActual)}</span>
+            / <span class="bg-budget">${fmtAmount(groupBudget)}</span>${groupPctHtml}
+          </span>
+        </div>
+        ${rowsHtml || '<div class="bg-row empty"><div class="bg-row-head"><span class="bg-cat">—</span><span class="bg-amt">카테고리 없음</span></div></div>'}
+      </div>`;
+  };
+
+  // 5) 전체 합계 (지출 합 / 지출 예산 합 — 매출 별도)
+  let totalRev = 0, totalRevBudget = 0;
+  let totalExp = 0, totalExpBudget = 0;
+  for (const [cat, amt] of usage.revenue)  totalRev += amt;
+  for (const [cat, amt] of usage.fixed)    totalExp += amt;
+  for (const [cat, amt] of usage.variable) totalExp += amt;
+  for (const b of bgBudgets) {
+    const bv = Number(b.budget) || 0;
+    if (b.flow === 'revenue') totalRevBudget += bv;
+    else                       totalExpBudget += bv;
+  }
+
+  const summaryHtml = `
+    <div class="bg-summary">
+      <div class="bg-summary-row">
+        <span class="bg-summary-label">💰 매출 (목표 대비)</span>
+        <span class="bg-summary-val">
+          <span class="bg-actual">${fmtAmount(totalRev)}</span>
+          / <span class="bg-budget">${fmtAmount(totalRevBudget)}</span>
+          ${totalRevBudget > 0
+            ? ` · <span class="bg-pct ${totalRev >= totalRevBudget ? 'ok' : (totalRev >= totalRevBudget * 0.5 ? 'warn' : 'over')}">${Math.round((totalRev/totalRevBudget)*100)}%</span>`
+            : ''}
+        </span>
+      </div>
+      <div class="bg-summary-row">
+        <span class="bg-summary-label">🛒 지출 (한도 대비)</span>
+        <span class="bg-summary-val">
+          <span class="bg-actual">${fmtAmount(totalExp)}</span>
+          / <span class="bg-budget">${fmtAmount(totalExpBudget)}</span>
+          ${totalExpBudget > 0
+            ? ` · <span class="bg-pct ${totalExp >= totalExpBudget ? 'over' : (totalExp >= totalExpBudget * 0.8 ? 'warn' : 'ok')}">${Math.round((totalExp/totalExpBudget)*100)}%</span>`
+            : ''}
+        </span>
+      </div>
     </div>
   `;
+
+  $body.innerHTML = `
+    ${summaryHtml}
+    <div class="bg-table">
+      ${buildGroup('revenue',  '💰 매출',      false, 'revenue')}
+      ${buildGroup('fixed',    '🔵 고정비',    true,  'expense')}
+      ${buildGroup('variable', '🟡 변동비',    true,  'expense')}
+    </div>
+  `;
+
+  // 카테고리 행 클릭 → 편집 모달 (다음 단계에서 구현)
+  $body.querySelectorAll('[data-edit-bg]').forEach(el => {
+    el.addEventListener('click', () => {
+      const [flow, cat] = el.dataset.editBg.split('::');
+      openBudgetModal(flow, cat);
+    });
+  });
+}
+
+// 임시 — 다음 단계(A4)에서 진짜 모달로 교체
+function openBudgetModal(flow, category) {
+  showToast(`(다음 단계에서 구현) ${flow} / ${category} 편집 모달`);
 }
 
 // ── 잔액 입력 모달 ──
