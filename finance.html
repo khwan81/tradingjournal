@@ -477,6 +477,20 @@ body {
 .backup-info-desc.danger { color: var(--red); }
 .backup-card .btn-p, .backup-card .btn-d { flex-shrink: 0; }
 
+/* 마지막 백업 시각 (v0.3-1) */
+.backup-last {
+  margin-top: 8px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text3);
+}
+.backup-last.stale {
+  color: #fbbf24;        /* 노란 톤 — 7일 이상 경과 */
+}
+.backup-last.never {
+  color: #fbbf24;        /* 한 번도 안 한 경우도 동일 톤 */
+}
+
 /* 복원 카드 (v0.3-1) — 백업 카드 사이 간격 */
 .backup-card + .backup-card { margin-top: 10px; }
 .backup-card-restore { border-color: rgba(239,68,68,0.28); }
@@ -1925,6 +1939,7 @@ body {
             계좌·결제수단·카테고리·부채 마스터·환율·거래·재무상태 스냅샷·반복지출을<br>
             JSON 파일 한 개로 다운로드합니다
           </div>
+          <div class="backup-last" id="backup-last-info">마지막 백업: —</div>
         </div>
         <button class="btn-p" id="btn-backup-download">📥 백업 다운로드</button>
       </div>
@@ -1933,7 +1948,7 @@ body {
           <div class="backup-info-title">백업 파일에서 복원</div>
           <div class="backup-info-desc danger">
             ⚠️ 현재 데이터는 모두 덮어쓰여집니다.<br>
-            실행 전 자동으로 현재 상태가 백업 다운로드됩니다.
+            복원 전에 반드시 백업 다운로드를 먼저 수행하세요.
           </div>
         </div>
         <button class="btn-d" id="btn-restore-open">📤 복원하기</button>
@@ -1995,7 +2010,7 @@ body {
         <div class="restore-warn restore-warn-danger">
           🚨 <strong>현재 계정의 모든 데이터가 삭제되고 백업 파일 내용으로 교체됩니다.</strong><br>
           이 작업은 되돌릴 수 없습니다.<br>
-          복원 직전 현재 상태가 자동으로 백업 다운로드됩니다.
+          취소하고 먼저 백업 다운로드부터 하는 것을 권장합니다.
         </div>
 
         <div class="form-group" style="margin-top:14px;">
@@ -2009,10 +2024,9 @@ body {
       <!-- 단계 2: 진행 표시 -->
       <div id="restore-step-progress" style="display:none;">
         <div class="restore-progress">
-          <div class="restore-progress-step" id="rps-1">⏳ 현재 상태 자동 백업 중…</div>
-          <div class="restore-progress-step" id="rps-2">⏳ 기존 데이터 삭제 중…</div>
-          <div class="restore-progress-step" id="rps-3">⏳ 백업 데이터 쓰는 중…</div>
-          <div class="restore-progress-step" id="rps-4">⏳ 마무리…</div>
+          <div class="restore-progress-step" id="rps-1">⏳ 기존 데이터 삭제 중…</div>
+          <div class="restore-progress-step" id="rps-2">⏳ 백업 데이터 쓰는 중…</div>
+          <div class="restore-progress-step" id="rps-3">⏳ 마무리…</div>
         </div>
       </div>
     </div>
@@ -2634,6 +2648,7 @@ async function loadAll() {
       renderCategories();
       renderLiabilities();
       renderLiabilitiesTrash();
+      renderLastBackupInfo();  // 마지막 백업 시각 표시 (v0.3-1)
       renderTransactions(); // 카테고리/결제수단 라벨 색상이 settings에 의존
       renderBsBody();       // 부채 마스터가 BS에 들어가니 갱신
     },
@@ -4011,6 +4026,14 @@ async function downloadBackup() {
     const sizeKb = (blob.size / 1024).toFixed(1);
     showToast(`백업 완료 — 거래 ${transactions.length}건, 스냅 ${snapshots.length}개, 반복지출 ${recurring.length}건 (${sizeKb} KB)`);
     console.log('[backup] 완료', { filename, size: blob.size, payload });
+
+    // 마지막 백업 시각 기록 (v0.3-1) — financeSettings에 머지 저장.
+    // onSnapshot이 발화해 UI(backup-last-info)가 자동 갱신됨.
+    try {
+      await setDoc(pathFinanceSettings(), { lastBackupAt: new Date().toISOString() }, { merge: true });
+    } catch (e) {
+      console.warn('[backup] lastBackupAt 저장 실패 (백업 자체는 성공)', e);
+    }
   } catch (e) {
     console.error('[backup] error', e);
     showToast('백업 실패: ' + (e.message || e.code || '알 수 없는 오류'));
@@ -4018,6 +4041,45 @@ async function downloadBackup() {
     $btn.disabled = false;
     $btn.textContent = orig;
   }
+}
+
+// 마지막 백업 시각 표시 (v0.3-1)
+// settings.lastBackupAt (ISO 문자열) 을 사람이 읽기 좋게 + 경과 일수 + 7일 이상이면 노란 강조
+function renderLastBackupInfo() {
+  const $el = document.getElementById('backup-last-info');
+  if (!$el) return;   // 설정탭이 아직 DOM에 없을 경우 방어
+
+  const iso = settings?.lastBackupAt;
+  $el.classList.remove('stale', 'never');
+
+  if (!iso) {
+    $el.textContent = '마지막 백업: 없음 — 지금 백업해 두는 것을 권장합니다';
+    $el.classList.add('never');
+    return;
+  }
+
+  const dt = new Date(iso);
+  if (isNaN(dt)) {
+    $el.textContent = '마지막 백업: (날짜 정보 손상)';
+    $el.classList.add('stale');
+    return;
+  }
+
+  const pad = n => String(n).padStart(2, '0');
+  const fmt = `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+
+  const diffMs   = Date.now() - dt.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  let ago;
+  if      (diffMs < 60 * 1000)              ago = '방금';
+  else if (diffMs < 60 * 60 * 1000)         ago = `${Math.floor(diffMs / 60000)}분 전`;
+  else if (diffDays < 1)                    ago = `${Math.floor(diffMs / 3600000)}시간 전`;
+  else if (diffDays < 7)                    ago = `${diffDays}일 전`;
+  else                                      ago = `${diffDays}일 전`;
+
+  $el.textContent = `마지막 백업: ${fmt} (${ago})`;
+  if (diffDays >= 7) $el.classList.add('stale');
 }
 
 document.getElementById('btn-backup-download').addEventListener('click', downloadBackup);
@@ -4029,10 +4091,10 @@ document.getElementById('btn-backup-download').addEventListener('click', downloa
 //   1) 파일 선택 → 파싱 → 검증
 //   2) 미리보기 모달 (메타 + 카운트 + "복원" 텍스트 confirm)
 //   3) 실행:
-//        a. 자동 사전 백업 (downloadBackup 재사용 - 강제 다운로드)
-//        b. 기존 컬렉션 삭제 (writeBatch, 500개 분할)
-//        c. 백업 데이터 쓰기 (Timestamp 마커 → Timestamp 인스턴스 역변환)
-//        d. 페이지 새로고침 (구독 상태 정리)
+//        a. 기존 컬렉션 삭제 (writeBatch, 500개 분할)
+//        b. 백업 데이터 쓰기 (Timestamp 마커 → Timestamp 인스턴스 역변환)
+//        c. 페이지 새로고침 (구독 상태 정리)
+// 안전장치는 "복원" 텍스트 confirm + 사용자가 직접 백업 다운로드를 먼저 수행하는 책임에 의존
 
 // 현재 파싱된 백업 데이터 (모달 단계 사이 보관)
 let restorePayload = null;
@@ -4245,44 +4307,37 @@ async function executeRestore() {
   try { unsubscribeAll(); } catch (_) { /* ignore */ }
 
   try {
-    // 1. 자동 사전 백업 (강제 다운로드)
+    // 1. 기존 데이터 삭제
     setRestoreStep(1, 'active');
-    await downloadBackup();
-    // downloadBackup 내부에서 토스트가 뜨고 파일이 다운로드됨
-    // 실패해도 throw하지 않으므로 명시적으로 알 수 없음 — 사용자 경험상 단계 표시만
-    setRestoreStep(1, 'done', '✓ 현재 상태 자동 백업 완료');
-
-    // 2. 기존 데이터 삭제
-    setRestoreStep(2, 'active');
     const delTx   = await deleteAllInCollection(pathTransactions());
     const delSnap = await deleteAllInCollection(pathSnapshots());
     const delRec  = await deleteAllInCollection(pathRecurring());
     const delAcc  = await deleteAllInCollection(pathAccountsItems());
-    setRestoreStep(2, 'done', `✓ 기존 데이터 삭제 (${delTx + delSnap + delRec + delAcc}건)`);
+    setRestoreStep(1, 'done', `✓ 기존 데이터 삭제 (${delTx + delSnap + delRec + delAcc}건)`);
 
-    // 3. 새 데이터 쓰기
-    setRestoreStep(3, 'active');
+    // 2. 새 데이터 쓰기
+    setRestoreStep(2, 'active');
     const d = restorePayload.data;
 
-    // 3a. sharedConfigAccounts (단일 도큐먼트)
+    // 2a. sharedConfigAccounts (단일 도큐먼트)
     if (d.sharedConfigAccounts && typeof d.sharedConfigAccounts === 'object') {
       await setDoc(pathAccountsSettings(), d.sharedConfigAccounts);
     }
-    // 3b. financeSettings (단일 도큐먼트)
+    // 2b. financeSettings (단일 도큐먼트)
     if (d.financeSettings && typeof d.financeSettings === 'object') {
       await setDoc(pathFinanceSettings(), d.financeSettings);
     }
-    // 3c. 컬렉션들
+    // 2c. 컬렉션들
     const wAcc  = await writeAllToCollection(pathAccountsItems(), d.sharedAccountsItems, 'id');
     const wSnap = await writeAllToCollection(pathSnapshots(),     d.snapshots,           'ym');
     const wTx   = await writeAllToCollection(pathTransactions(),  d.transactions,        'id');
     const wRec  = await writeAllToCollection(pathRecurring(),     d.recurring,           'id');
-    setRestoreStep(3, 'done', `✓ 데이터 복원 (거래 ${wTx} · 스냅 ${wSnap} · 반복 ${wRec} · 계좌 ${wAcc})`);
+    setRestoreStep(2, 'done', `✓ 데이터 복원 (거래 ${wTx} · 스냅 ${wSnap} · 반복 ${wRec} · 계좌 ${wAcc})`);
 
-    // 4. 마무리 — 페이지 새로고침으로 모든 구독 상태 깨끗이 정리
-    setRestoreStep(4, 'active', '⏳ 새로고침 준비 중…');
+    // 3. 마무리 — 페이지 새로고침으로 모든 구독 상태 깨끗이 정리
+    setRestoreStep(3, 'active', '⏳ 새로고침 준비 중…');
     await new Promise(r => setTimeout(r, 600));   // 사용자가 단계 결과를 볼 수 있게 잠깐 대기
-    setRestoreStep(4, 'done', '✓ 완료 — 3초 후 새로고침됩니다');
+    setRestoreStep(3, 'done', '✓ 완료 — 3초 후 새로고침됩니다');
 
     showToast('복원 완료 — 페이지를 새로고침합니다');
     setTimeout(() => { window.location.reload(); }, 3000);
@@ -4291,7 +4346,7 @@ async function executeRestore() {
     showToast('복원 실패: ' + (e.message || e.code || '알 수 없는 오류'));
     // 사용자가 모달을 닫고 다시 시도할 수 있도록 취소 버튼 복구
     $cancel.disabled = false;
-    setRestoreStep(2, '', '⚠️ 중단됨 — 콘솔(F12)에서 오류 확인 후 다시 시도하세요');
+    setRestoreStep(1, '', '⚠️ 중단됨 — 콘솔(F12)에서 오류 확인 후 다시 시도하세요');
   }
 }
 
@@ -5953,8 +6008,56 @@ onAuthStateChanged(auth, async user => {
         await setDoc(pathFinanceSettings(), s, { merge: false });
         console.log('migratedAt 제거됨. 마이그레이션이 다음 onSnapshot 발화에서 재실행됩니다');
       },
+
+      // Timestamp 보존 검증 (v0.3-1 복원 후 사용)
+      // 거래 컬렉션의 createdAt / updatedAt이 정상 Firestore Timestamp 인스턴스인지 확인
+      async checkTimestamps() {
+        const snap = await getDocs(pathTransactions());
+        if (snap.empty) { console.log('거래가 없습니다'); return []; }
+
+        const rows = [];
+        let okCount = 0, badCount = 0;
+        snap.forEach(d => {
+          const data = d.data();
+          const ct = data.createdAt;
+          const ut = data.updatedAt;
+
+          // Timestamp 인스턴스 판정: toDate() 메서드 존재 + seconds/nanoseconds 숫자
+          const isTs = v => v && typeof v.toDate === 'function'
+                            && typeof v.seconds === 'number'
+                            && typeof v.nanoseconds === 'number';
+
+          const ctOk = !ct || isTs(ct);  // 없어도 OK (선택 필드), 있으면 Timestamp여야
+          const utOk = !ut || isTs(ut);
+          const allOk = ctOk && utOk;
+          if (allOk) okCount++; else badCount++;
+
+          rows.push({
+            id: d.id.slice(0, 12) + '…',
+            date: data.date,
+            amount: data.amount,
+            createdAt_type: ct ? (isTs(ct) ? '✓ Timestamp' : `✗ ${typeof ct}`) : '(없음)',
+            createdAt_date: ct && isTs(ct) ? ct.toDate().toISOString().slice(0, 19) : '-',
+            updatedAt_type: ut ? (isTs(ut) ? '✓ Timestamp' : `✗ ${typeof ut}`) : '(없음)',
+          });
+        });
+
+        console.log(`%c거래 ${snap.size}건 검사 결과: 정상 ${okCount} / 비정상 ${badCount}`,
+          `color:${badCount === 0 ? '#34d399' : '#ef4444'}; font-weight:bold`);
+        console.table(rows.slice(0, 10));  // 처음 10건만 표로
+        if (rows.length > 10) console.log(`...외 ${rows.length - 10}건 (전체는 반환값 확인)`);
+
+        // 첫 거래의 createdAt 원시 객체도 출력 (인스턴스 검증용)
+        if (snap.docs[0]) {
+          const first = snap.docs[0].data();
+          console.log('첫 거래 createdAt 원본:', first.createdAt);
+          console.log('생성자 이름:', first.createdAt?.constructor?.name);
+        }
+
+        return { okCount, badCount, rows };
+      },
     };
-    console.log('%c[debug] window.debug 활성화. 사용: debug.liab() / debug.allSnaps() / debug.resetMigration()',
+    console.log('%c[debug] window.debug 활성화. 사용: debug.liab() / debug.allSnaps() / debug.resetMigration() / debug.checkTimestamps()',
       'color:#8b909e; font-style:italic');
   } else {
     unsubscribeAll();
