@@ -1159,6 +1159,29 @@ body {
 .bg-bar-fill.warn  { background: #fbbf24; }
 .bg-bar-fill.over  { background: var(--red); }
 
+/* 예산 모달 컨텍스트 (v0.4 A4) */
+.bg-modal-context {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+}
+.bg-modal-ctx-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 12px; padding: 4px 0;
+  font-size: 12px;
+}
+.bg-modal-ctx-row + .bg-modal-ctx-row {
+  border-top: 1px dashed var(--border);
+}
+.bg-modal-ctx-k { color: var(--text3); flex-shrink: 0; }
+.bg-modal-ctx-v {
+  color: var(--text);
+  font-family: var(--font-mono);
+  text-align: right;
+}
+
 /* BS KPI */
 .bs-kpi-grid {
   display: grid;
@@ -2503,6 +2526,57 @@ body {
       <button class="btn-danger grow" id="btn-at-delete" style="display:none;">삭제</button>
       <button class="btn-s" data-close="ov-asset-type">취소</button>
       <button class="btn-p" id="btn-at-save">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 모달: 예산 입력/편집 (v0.4 A4) ── -->
+<div class="ov" id="ov-budget">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="bg-modal-title">예산 설정</h3>
+      <button class="modal-close" data-close="ov-budget">×</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-budget" onsubmit="return false;">
+        <!-- 컨텍스트 (수정 불가) -->
+        <div class="bg-modal-context" id="bg-modal-context">
+          <div class="bg-modal-ctx-row">
+            <span class="bg-modal-ctx-k">구분</span>
+            <span class="bg-modal-ctx-v" id="bg-modal-flow">—</span>
+          </div>
+          <div class="bg-modal-ctx-row">
+            <span class="bg-modal-ctx-k">카테고리</span>
+            <span class="bg-modal-ctx-v" id="bg-modal-cat">—</span>
+          </div>
+          <div class="bg-modal-ctx-row">
+            <span class="bg-modal-ctx-k">월</span>
+            <span class="bg-modal-ctx-v" id="bg-modal-ym">—</span>
+          </div>
+          <div class="bg-modal-ctx-row">
+            <span class="bg-modal-ctx-k">현재 사용액</span>
+            <span class="bg-modal-ctx-v" id="bg-modal-actual">—</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">예산 금액 (KRW)</label>
+          <input type="text" inputmode="numeric" class="input" id="bg-modal-amount" placeholder="500,000" autocomplete="off">
+          <div class="form-hint" id="bg-modal-hint">
+            매출은 목표 금액, 비용은 한도 금액을 입력하세요.
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">메모 (선택)</label>
+          <input type="text" class="input" id="bg-modal-note" placeholder="" autocomplete="off">
+        </div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-danger grow" id="btn-bg-delete" style="display:none;">삭제</button>
+      <button class="btn-s" data-close="ov-budget">취소</button>
+      <button class="btn-p" id="btn-bg-save">저장</button>
     </div>
   </div>
 </div>
@@ -5887,7 +5961,7 @@ function renderBgBody() {
     </div>
   `;
 
-  // 카테고리 행 클릭 → 편집 모달 (다음 단계에서 구현)
+  // 카테고리 행 클릭 → 예산 입력/편집 모달 (A4)
   $body.querySelectorAll('[data-edit-bg]').forEach(el => {
     el.addEventListener('click', () => {
       const [flow, cat] = el.dataset.editBg.split('::');
@@ -5896,10 +5970,116 @@ function renderBgBody() {
   });
 }
 
-// 임시 — 다음 단계(A4)에서 진짜 모달로 교체
-function openBudgetModal(flow, category) {
-  showToast(`(다음 단계에서 구현) ${flow} / ${category} 편집 모달`);
+// ── 예산 모달 (v0.4 A4) ──
+// 도큐먼트 ID 규칙: `{ym}__{flow}__{category}` (구분자 더블 언더스코어)
+// — 카테고리 이름에 들어갈 가능성이 매우 낮은 패턴
+// — flow를 같이 넣어서 같은 이름이 매출/비용 그룹에 둘 다 있어도 충돌 X
+function budgetDocId(ym, flow, category) {
+  return `${ym}__${flow}__${category}`;
 }
+
+// 현재 편집 중인 예산의 컨텍스트
+let editingBudget = null; // { ym, flow, category, existing? }
+
+function openBudgetModal(flow, category) {
+  if (!currentUid) { showToast('로그인이 필요합니다'); return; }
+  if (!settings)   { showToast('설정 로딩 중…'); return; }
+
+  // 기존 예산 찾기
+  const existing = bgBudgets.find(b => b.flow === flow && b.category === category) || null;
+  editingBudget = { ym: bgMonth, flow, category, existing };
+
+  // 사용액 계산
+  const actual = bgTransactions
+    .filter(t => txFlow(t) === flow && (t.category || '(분류 없음)') === category)
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+  // 모달 채우기
+  document.getElementById('bg-modal-title').textContent =
+    existing ? '예산 편집' : '예산 설정';
+
+  const flowLabel = flow === 'revenue' ? '💰 매출 (목표)'
+                  : flow === 'fixed'   ? '🔵 고정비 (한도)'
+                  : flow === 'variable'? '🟡 변동비 (한도)'
+                  : flow;
+  document.getElementById('bg-modal-flow').textContent   = flowLabel;
+  document.getElementById('bg-modal-cat').textContent    = category;
+  document.getElementById('bg-modal-ym').textContent     = bgMonth;
+  document.getElementById('bg-modal-actual').textContent = fmtAmount(actual);
+
+  document.getElementById('bg-modal-amount').value = existing ? (existing.budget || '') : '';
+  document.getElementById('bg-modal-note').value   = existing ? (existing.note || '')   : '';
+
+  // 힌트 텍스트 (그룹에 맞게)
+  document.getElementById('bg-modal-hint').textContent = (flow === 'revenue')
+    ? '이 카테고리의 이번 달 목표 매출액을 입력하세요.'
+    : '이 카테고리의 이번 달 지출 한도를 입력하세요.';
+
+  // 삭제 버튼은 기존 예산 있을 때만
+  document.getElementById('btn-bg-delete').style.display = existing ? 'inline-flex' : 'none';
+
+  openOv('ov-budget');
+  setTimeout(() => document.getElementById('bg-modal-amount').focus(), 50);
+}
+
+// 저장 (추가/편집 공통)
+document.getElementById('btn-bg-save').addEventListener('click', async () => {
+  if (!editingBudget) return;
+  const { ym, flow, category, existing } = editingBudget;
+
+  const raw = document.getElementById('bg-modal-amount').value.trim();
+  // 콤마 제거 + 숫자
+  const amount = parseInt(raw.replace(/,/g, ''), 10);
+  if (!isFinite(amount) || amount < 0) {
+    showToast('올바른 금액을 입력하세요 (0 이상의 정수)');
+    return;
+  }
+  const note = document.getElementById('bg-modal-note').value.trim() || null;
+
+  const id = budgetDocId(ym, flow, category);
+  const data = {
+    ym, flow, category,
+    budget: amount,
+    note,
+    updatedAt: serverTimestamp(),
+  };
+  if (!existing) data.createdAt = serverTimestamp();
+
+  try {
+    await setDoc(pathBudget(id), data, { merge: true });
+    closeOv('ov-budget');
+    editingBudget = null;
+    showToast(existing ? '예산이 수정되었습니다' : '예산이 설정되었습니다');
+  } catch (e) {
+    console.error('[budget] 저장 실패', e);
+    showToast('저장 실패: ' + (e.message || e.code || '알 수 없는 오류'));
+  }
+});
+
+// 삭제
+document.getElementById('btn-bg-delete').addEventListener('click', async () => {
+  if (!editingBudget || !editingBudget.existing) return;
+  const { ym, flow, category } = editingBudget;
+  if (!confirm(`"${category}" 카테고리의 ${ym} 예산을 삭제하시겠습니까?`)) return;
+
+  const id = budgetDocId(ym, flow, category);
+  try {
+    await deleteDoc(pathBudget(id));
+    closeOv('ov-budget');
+    editingBudget = null;
+    showToast('예산이 삭제되었습니다');
+  } catch (e) {
+    console.error('[budget] 삭제 실패', e);
+    showToast('삭제 실패: ' + (e.message || e.code || '알 수 없는 오류'));
+  }
+});
+
+// 금액 입력 — 콤마 자동 포맷
+document.getElementById('bg-modal-amount').addEventListener('input', e => {
+  const raw = e.target.value.replace(/[^0-9]/g, '');
+  if (!raw) { e.target.value = ''; return; }
+  e.target.value = Number(raw).toLocaleString('ko-KR');
+});
 
 // ── 잔액 입력 모달 ──
 
