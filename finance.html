@@ -474,11 +474,83 @@ body {
 .backup-info { flex: 1; min-width: 0; }
 .backup-info-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
 .backup-info-desc  { font-size: 11px; color: var(--text3); line-height: 1.5; }
-.backup-card .btn-p { flex-shrink: 0; }
+.backup-info-desc.danger { color: var(--red); }
+.backup-card .btn-p, .backup-card .btn-d { flex-shrink: 0; }
+
+/* 복원 카드 (v0.3-1) — 백업 카드 사이 간격 */
+.backup-card + .backup-card { margin-top: 10px; }
+.backup-card-restore { border-color: rgba(239,68,68,0.28); }
+
 @media (max-width: 480px) {
   .backup-card { flex-direction: column; align-items: stretch; }
-  .backup-card .btn-p { width: 100%; }
+  .backup-card .btn-p, .backup-card .btn-d { width: 100%; }
 }
+
+/* 복원 모달 (v0.3-1) */
+.modal-restore { max-width: 520px; }
+.restore-meta {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+.restore-meta-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 12px; padding: 4px 0;
+  font-size: 12px;
+}
+.restore-meta-row + .restore-meta-row { border-top: 1px dashed var(--border); }
+.restore-meta-k { color: var(--text3); flex-shrink: 0; }
+.restore-meta-v {
+  color: var(--text); font-family: var(--font-mono);
+  text-align: right; word-break: break-all; min-width: 0;
+}
+.restore-meta-v.uid-mismatch { color: var(--red); }
+
+.restore-counts {
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  gap: 6px; margin-bottom: 12px;
+}
+.restore-count {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 4px; text-align: center;
+}
+.rc-n { font-size: 16px; font-weight: 500; font-family: var(--font-mono); color: var(--text); }
+.rc-l { font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+.restore-warn {
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.55;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  color: #fbbf24;
+  margin-bottom: 10px;
+}
+.restore-warn-danger {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.32);
+  color: #fca5a5;
+}
+
+.restore-progress {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 16px 4px;
+}
+.restore-progress-step {
+  font-size: 13px; color: var(--text3);
+  padding: 8px 12px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+.restore-progress-step.active { color: var(--accent); border-color: var(--accent); }
+.restore-progress-step.done { color: var(--green); }
 
 /* ── 거래내역 탭 ── */
 .tx-header {
@@ -1838,27 +1910,115 @@ body {
       </div>
     </div>
 
-    <!-- ───────── 데이터 관리 (v0.2-2) ───────── -->
+    <!-- ───────── 데이터 관리 (v0.2-2 / v0.3-1) ───────── -->
     <div class="section-card">
       <div class="section-head">
         <div>
           <div class="section-title">💾 데이터 관리</div>
-          <div class="section-sub">백업 다운로드</div>
+          <div class="section-sub">백업 다운로드 / 복원</div>
         </div>
       </div>
       <div class="backup-card">
         <div class="backup-info">
           <div class="backup-info-title">전체 데이터 백업</div>
           <div class="backup-info-desc">
-            계좌·결제수단·카테고리·부채 마스터·환율·거래·재무상태 스냅샷을<br>
+            계좌·결제수단·카테고리·부채 마스터·환율·거래·재무상태 스냅샷·반복지출을<br>
             JSON 파일 한 개로 다운로드합니다
           </div>
         </div>
         <button class="btn-p" id="btn-backup-download">📥 백업 다운로드</button>
       </div>
-      <div class="form-hint" style="margin-top:10px;">
-        ※ 복원 기능은 v0.3에서 제공됩니다. 백업 파일은 클라우드 동기화 외 별도 저장소(이메일·드라이브 등)에 보관하세요.
+      <div class="backup-card backup-card-restore">
+        <div class="backup-info">
+          <div class="backup-info-title">백업 파일에서 복원</div>
+          <div class="backup-info-desc danger">
+            ⚠️ 현재 데이터는 모두 덮어쓰여집니다.<br>
+            실행 전 자동으로 현재 상태가 백업 다운로드됩니다.
+          </div>
+        </div>
+        <button class="btn-d" id="btn-restore-open">📤 복원하기</button>
+        <input type="file" id="restore-file-input" accept=".json,application/json" style="display:none;">
       </div>
+      <div class="form-hint" style="margin-top:10px;">
+        ※ 백업 파일은 클라우드 동기화 외 별도 저장소(이메일·드라이브 등)에 보관하세요.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 모달: 복원 (v0.3-1) ── -->
+<div class="ov" id="ov-restore">
+  <div class="modal modal-restore">
+    <div class="modal-head">
+      <h3>📤 데이터 복원</h3>
+      <button class="modal-close" data-close="ov-restore">×</button>
+    </div>
+    <div class="modal-body">
+      <!-- 단계 1: 파일 메타 미리보기 -->
+      <div id="restore-step-preview">
+        <div class="restore-meta">
+          <div class="restore-meta-row">
+            <span class="restore-meta-k">파일</span>
+            <span class="restore-meta-v" id="restore-meta-filename">—</span>
+          </div>
+          <div class="restore-meta-row">
+            <span class="restore-meta-k">백업 시각</span>
+            <span class="restore-meta-v" id="restore-meta-exported">—</span>
+          </div>
+          <div class="restore-meta-row">
+            <span class="restore-meta-k">앱 버전</span>
+            <span class="restore-meta-v" id="restore-meta-appver">—</span>
+          </div>
+          <div class="restore-meta-row">
+            <span class="restore-meta-k">스키마</span>
+            <span class="restore-meta-v" id="restore-meta-schema">—</span>
+          </div>
+          <div class="restore-meta-row" id="restore-meta-uid-row">
+            <span class="restore-meta-k">백업 계정</span>
+            <span class="restore-meta-v" id="restore-meta-uid">—</span>
+          </div>
+        </div>
+
+        <div class="restore-counts">
+          <div class="restore-count"><div class="rc-n" id="rc-tx">—</div><div class="rc-l">거래</div></div>
+          <div class="restore-count"><div class="rc-n" id="rc-snap">—</div><div class="rc-l">스냅</div></div>
+          <div class="restore-count"><div class="rc-n" id="rc-rec">—</div><div class="rc-l">반복지출</div></div>
+          <div class="restore-count"><div class="rc-n" id="rc-acc">—</div><div class="rc-l">계좌</div></div>
+          <div class="restore-count"><div class="rc-n" id="rc-liab">—</div><div class="rc-l">부채</div></div>
+        </div>
+
+        <div class="restore-warn" id="restore-uid-warn" style="display:none;">
+          ⚠️ 이 백업은 <strong>다른 계정</strong>에서 만들어졌습니다.<br>
+          현재 계정으로 데이터를 옮기시려면 그대로 진행하셔도 됩니다.
+        </div>
+
+        <div class="restore-warn restore-warn-danger">
+          🚨 <strong>현재 계정의 모든 데이터가 삭제되고 백업 파일 내용으로 교체됩니다.</strong><br>
+          이 작업은 되돌릴 수 없습니다.<br>
+          복원 직전 현재 상태가 자동으로 백업 다운로드됩니다.
+        </div>
+
+        <div class="form-group" style="margin-top:14px;">
+          <label class="form-label" for="restore-confirm-input">
+            계속하려면 <strong>복원</strong> 이라고 정확히 입력하세요
+          </label>
+          <input type="text" id="restore-confirm-input" class="form-input" placeholder="복원" autocomplete="off">
+        </div>
+      </div>
+
+      <!-- 단계 2: 진행 표시 -->
+      <div id="restore-step-progress" style="display:none;">
+        <div class="restore-progress">
+          <div class="restore-progress-step" id="rps-1">⏳ 현재 상태 자동 백업 중…</div>
+          <div class="restore-progress-step" id="rps-2">⏳ 기존 데이터 삭제 중…</div>
+          <div class="restore-progress-step" id="rps-3">⏳ 백업 데이터 쓰는 중…</div>
+          <div class="restore-progress-step" id="rps-4">⏳ 마무리…</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" data-close="ov-restore" id="restore-cancel">취소</button>
+      <button class="btn-d" id="restore-execute" disabled>복원 실행</button>
     </div>
   </div>
 </div>
@@ -2293,7 +2453,7 @@ import {
 } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection,
          onSnapshot, query, orderBy, getDocs, addDoc, updateDoc,
-         where, serverTimestamp, writeBatch } from 'firebase/firestore';
+         where, serverTimestamp, writeBatch, Timestamp } from 'firebase/firestore';
 
 // ── Firebase 설정 ──
 const firebaseConfig = {
@@ -3861,6 +4021,281 @@ async function downloadBackup() {
 }
 
 document.getElementById('btn-backup-download').addEventListener('click', downloadBackup);
+
+// ──────────────────────────────────────────────────────
+// JSON 복원 (v0.3-1)
+// ──────────────────────────────────────────────────────
+// 동작 흐름:
+//   1) 파일 선택 → 파싱 → 검증
+//   2) 미리보기 모달 (메타 + 카운트 + "복원" 텍스트 confirm)
+//   3) 실행:
+//        a. 자동 사전 백업 (downloadBackup 재사용 - 강제 다운로드)
+//        b. 기존 컬렉션 삭제 (writeBatch, 500개 분할)
+//        c. 백업 데이터 쓰기 (Timestamp 마커 → Timestamp 인스턴스 역변환)
+//        d. 페이지 새로고침 (구독 상태 정리)
+
+// 현재 파싱된 백업 데이터 (모달 단계 사이 보관)
+let restorePayload = null;
+
+// 파일명 (사용자 표시용)
+let restoreFilename = null;
+
+// JSON 파싱 reviver — Timestamp 마커를 Timestamp 인스턴스로 역변환
+function reviveTimestamps(_key, value) {
+  if (value && typeof value === 'object' && value.__ts__ === true &&
+      typeof value.seconds === 'number' && typeof value.nanoseconds === 'number') {
+    return new Timestamp(value.seconds, value.nanoseconds);
+  }
+  return value;
+}
+
+// 백업 페이로드 구조 검증
+function validateBackupPayload(p) {
+  if (!p || typeof p !== 'object') return '유효하지 않은 JSON 구조입니다';
+  if (p.schemaVersion !== 2) return `지원하지 않는 스키마 버전입니다 (v${p.schemaVersion}). 이 앱은 v2만 지원합니다`;
+  if (!p.data || typeof p.data !== 'object') return 'data 필드가 없습니다';
+
+  const d = p.data;
+  // 6개 필드 존재 확인 (값은 null/배열/객체 허용)
+  const requiredKeys = ['sharedConfigAccounts', 'sharedAccountsItems', 'financeSettings', 'snapshots', 'transactions', 'recurring'];
+  for (const k of requiredKeys) {
+    if (!(k in d)) return `data.${k} 필드가 없습니다`;
+  }
+  if (!Array.isArray(d.sharedAccountsItems)) return 'sharedAccountsItems는 배열이어야 합니다';
+  if (!Array.isArray(d.snapshots))            return 'snapshots는 배열이어야 합니다';
+  if (!Array.isArray(d.transactions))         return 'transactions는 배열이어야 합니다';
+  if (!Array.isArray(d.recurring))            return 'recurring은 배열이어야 합니다';
+  return null;
+}
+
+// 파일 선택 → 파싱 → 모달 오픈
+function openRestoreFromFile() {
+  if (!currentUid) { showToast('로그인이 필요합니다'); return; }
+  document.getElementById('restore-file-input').click();
+}
+
+async function handleRestoreFileChosen(e) {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  try {
+    const text = await file.text();
+    const payload = JSON.parse(text, reviveTimestamps);
+
+    const err = validateBackupPayload(payload);
+    if (err) {
+      showToast('백업 파일 오류: ' + err);
+      e.target.value = '';   // 같은 파일 재선택 가능하게
+      return;
+    }
+
+    restorePayload = payload;
+    restoreFilename = file.name;
+
+    fillRestorePreview();
+    openOv('ov-restore');
+  } catch (ex) {
+    console.error('[restore] parse error', ex);
+    showToast('JSON 파싱 실패: ' + (ex.message || '알 수 없는 오류'));
+  } finally {
+    e.target.value = '';     // 같은 파일을 다시 선택할 수 있게 input 리셋
+  }
+}
+
+// 미리보기 채우기
+function fillRestorePreview() {
+  const p = restorePayload;
+  const d = p.data;
+
+  document.getElementById('restore-meta-filename').textContent = restoreFilename || '—';
+
+  // exportedAt 표시 — ISO 문자열을 사람이 읽기 좋게
+  let exportedStr = p.exportedAt || '—';
+  try {
+    if (p.exportedAt) {
+      const dt = new Date(p.exportedAt);
+      if (!isNaN(dt)) {
+        const pad = n => String(n).padStart(2, '0');
+        exportedStr = `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`;
+      }
+    }
+  } catch (_) { /* ignore */ }
+
+  document.getElementById('restore-meta-exported').textContent = exportedStr;
+  document.getElementById('restore-meta-appver').textContent   = p.appVersion || '—';
+  document.getElementById('restore-meta-schema').textContent   = `v${p.schemaVersion}`;
+
+  // uid 표시 + 불일치 경고
+  const $uidV = document.getElementById('restore-meta-uid');
+  const $uidWarn = document.getElementById('restore-uid-warn');
+  const backupUid = p.uid || '(없음)';
+  const mismatched = p.uid && p.uid !== currentUid;
+  // 너무 길면 앞 8자 + ... + 뒤 4자
+  const uidShort = backupUid.length > 16 ? backupUid.slice(0, 8) + '…' + backupUid.slice(-4) : backupUid;
+  $uidV.textContent = mismatched ? `${uidShort} (다른 계정)` : uidShort;
+  $uidV.classList.toggle('uid-mismatch', mismatched);
+  $uidWarn.style.display = mismatched ? '' : 'none';
+
+  // 카운트
+  document.getElementById('rc-tx').textContent   = d.transactions.length;
+  document.getElementById('rc-snap').textContent = d.snapshots.length;
+  document.getElementById('rc-rec').textContent  = d.recurring.length;
+  document.getElementById('rc-acc').textContent  = d.sharedAccountsItems.length;
+  const liabCount = Array.isArray(d.financeSettings?.liabilities) ? d.financeSettings.liabilities.length : 0;
+  document.getElementById('rc-liab').textContent = liabCount;
+
+  // confirm 입력 초기화 + 실행 버튼 비활성화
+  document.getElementById('restore-confirm-input').value = '';
+  document.getElementById('restore-execute').disabled = true;
+
+  // 단계 UI 초기화
+  document.getElementById('restore-step-preview').style.display = '';
+  document.getElementById('restore-step-progress').style.display = 'none';
+  document.querySelectorAll('.restore-progress-step').forEach(el => {
+    el.classList.remove('active', 'done');
+    // 텍스트도 원래대로 복원
+    const orig = el.dataset.orig;
+    if (orig) el.textContent = orig;
+  });
+  document.getElementById('restore-cancel').disabled = false;
+}
+
+// "복원" 입력 감시 → 실행 버튼 활성화
+document.getElementById('restore-confirm-input').addEventListener('input', e => {
+  document.getElementById('restore-execute').disabled = e.target.value.trim() !== '복원';
+});
+
+// 복원 다이얼로그 열기 버튼
+document.getElementById('btn-restore-open').addEventListener('click', openRestoreFromFile);
+document.getElementById('restore-file-input').addEventListener('change', handleRestoreFileChosen);
+
+// ── 진행 단계 표시 헬퍼 ──
+function setRestoreStep(idx, state /* 'active' | 'done' */, customText) {
+  const el = document.getElementById('rps-' + idx);
+  if (!el) return;
+  if (!el.dataset.orig) el.dataset.orig = el.textContent;
+  el.classList.remove('active', 'done');
+  if (state === 'active') el.classList.add('active');
+  if (state === 'done')   el.classList.add('done');
+  if (customText) el.textContent = customText;
+}
+
+// ── 컬렉션 일괄 삭제 (writeBatch 500개 분할) ──
+async function deleteAllInCollection(collRef) {
+  const snap = await getDocs(collRef);
+  if (snap.empty) return 0;
+  let count = 0;
+  let batch = writeBatch(db);
+  let inBatch = 0;
+  for (const d of snap.docs) {
+    batch.delete(d.ref);
+    inBatch++; count++;
+    if (inBatch >= 450) {     // 500 미만에서 commit (보수적)
+      await batch.commit();
+      batch = writeBatch(db);
+      inBatch = 0;
+    }
+  }
+  if (inBatch > 0) await batch.commit();
+  return count;
+}
+
+// ── 컬렉션 일괄 쓰기 (writeBatch 500개 분할) ──
+//   items: [{ id, ...rest }] — id를 빼고 나머지가 도큐먼트 데이터
+async function writeAllToCollection(collRef, items, idField) {
+  if (!Array.isArray(items) || items.length === 0) return 0;
+  let count = 0;
+  let batch = writeBatch(db);
+  let inBatch = 0;
+  for (const it of items) {
+    const id = it[idField];
+    if (!id) {
+      console.warn('[restore] id 누락 항목 스킵', it);
+      continue;
+    }
+    const { [idField]: _omit, ...data } = it;
+    batch.set(doc(collRef, id), data);
+    inBatch++; count++;
+    if (inBatch >= 450) {
+      await batch.commit();
+      batch = writeBatch(db);
+      inBatch = 0;
+    }
+  }
+  if (inBatch > 0) await batch.commit();
+  return count;
+}
+
+// ── 메인: 복원 실행 ──
+async function executeRestore() {
+  if (!restorePayload) { showToast('복원할 데이터가 없습니다'); return; }
+  if (!currentUid)     { showToast('로그인이 필요합니다'); return; }
+
+  const $exec   = document.getElementById('restore-execute');
+  const $cancel = document.getElementById('restore-cancel');
+  $exec.disabled = true;
+  $cancel.disabled = true;
+
+  // 진행 화면으로 전환
+  document.getElementById('restore-step-preview').style.display = 'none';
+  document.getElementById('restore-step-progress').style.display = '';
+
+  // 구독자 정지 — 삭제/쓰기 도중 onSnapshot 콜백이 발화해 렌더 에러를 내는 것 방지.
+  // 곧 페이지를 새로고침하므로 UI 상태가 잠시 비어 보일 수 있다 (의도된 동작).
+  try { unsubscribeAll(); } catch (_) { /* ignore */ }
+
+  try {
+    // 1. 자동 사전 백업 (강제 다운로드)
+    setRestoreStep(1, 'active');
+    await downloadBackup();
+    // downloadBackup 내부에서 토스트가 뜨고 파일이 다운로드됨
+    // 실패해도 throw하지 않으므로 명시적으로 알 수 없음 — 사용자 경험상 단계 표시만
+    setRestoreStep(1, 'done', '✓ 현재 상태 자동 백업 완료');
+
+    // 2. 기존 데이터 삭제
+    setRestoreStep(2, 'active');
+    const delTx   = await deleteAllInCollection(pathTransactions());
+    const delSnap = await deleteAllInCollection(pathSnapshots());
+    const delRec  = await deleteAllInCollection(pathRecurring());
+    const delAcc  = await deleteAllInCollection(pathAccountsItems());
+    setRestoreStep(2, 'done', `✓ 기존 데이터 삭제 (${delTx + delSnap + delRec + delAcc}건)`);
+
+    // 3. 새 데이터 쓰기
+    setRestoreStep(3, 'active');
+    const d = restorePayload.data;
+
+    // 3a. sharedConfigAccounts (단일 도큐먼트)
+    if (d.sharedConfigAccounts && typeof d.sharedConfigAccounts === 'object') {
+      await setDoc(pathAccountsSettings(), d.sharedConfigAccounts);
+    }
+    // 3b. financeSettings (단일 도큐먼트)
+    if (d.financeSettings && typeof d.financeSettings === 'object') {
+      await setDoc(pathFinanceSettings(), d.financeSettings);
+    }
+    // 3c. 컬렉션들
+    const wAcc  = await writeAllToCollection(pathAccountsItems(), d.sharedAccountsItems, 'id');
+    const wSnap = await writeAllToCollection(pathSnapshots(),     d.snapshots,           'ym');
+    const wTx   = await writeAllToCollection(pathTransactions(),  d.transactions,        'id');
+    const wRec  = await writeAllToCollection(pathRecurring(),     d.recurring,           'id');
+    setRestoreStep(3, 'done', `✓ 데이터 복원 (거래 ${wTx} · 스냅 ${wSnap} · 반복 ${wRec} · 계좌 ${wAcc})`);
+
+    // 4. 마무리 — 페이지 새로고침으로 모든 구독 상태 깨끗이 정리
+    setRestoreStep(4, 'active', '⏳ 새로고침 준비 중…');
+    await new Promise(r => setTimeout(r, 600));   // 사용자가 단계 결과를 볼 수 있게 잠깐 대기
+    setRestoreStep(4, 'done', '✓ 완료 — 3초 후 새로고침됩니다');
+
+    showToast('복원 완료 — 페이지를 새로고침합니다');
+    setTimeout(() => { window.location.reload(); }, 3000);
+  } catch (e) {
+    console.error('[restore] 실행 오류', e);
+    showToast('복원 실패: ' + (e.message || e.code || '알 수 없는 오류'));
+    // 사용자가 모달을 닫고 다시 시도할 수 있도록 취소 버튼 복구
+    $cancel.disabled = false;
+    setRestoreStep(2, '', '⚠️ 중단됨 — 콘솔(F12)에서 오류 확인 후 다시 시도하세요');
+  }
+}
+
+document.getElementById('restore-execute').addEventListener('click', executeRestore);
 
 // ──────────────────────────────────────────────────────
 // 월 네비게이션
