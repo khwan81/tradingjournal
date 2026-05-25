@@ -589,16 +589,10 @@ body {
   color: var(--text3);
 }
 
-/* 자산 종류 칩 — 클릭 가능 표시 (v0.3-2) */
+/* 자산 종류 칩 — 클릭 가능 표시 (v0.3-2) — 다른 칩과 동일한 hover */
 #chip-asset-current .chip,
 #chip-asset-noncurrent .chip {
   cursor: pointer;
-  transition: all 0.15s;
-}
-#chip-asset-current .chip:hover,
-#chip-asset-noncurrent .chip:hover {
-  border-color: var(--red);
-  color: var(--red);
 }
 
 /* ── 거래내역 탭 ── */
@@ -1871,7 +1865,7 @@ body {
       <div class="section-head">
         <div>
           <div class="section-title">🏷️ 자산 종류 <span class="hint">공유 마스터</span></div>
-          <div class="section-sub">계좌 추가 시 선택 옵션 · 칩을 클릭하면 삭제</div>
+          <div class="section-sub">계좌 추가 시 선택 옵션</div>
         </div>
         <div class="section-actions">
           <button class="btn-s" id="btn-add-asset-type">+ 추가</button>
@@ -2215,11 +2209,11 @@ body {
   </div>
 </div>
 
-<!-- ── 모달: 자산 종류 추가 (v0.3-2) ── -->
+<!-- ── 모달: 자산 종류 추가/편집 (v0.3-2) ── -->
 <div class="ov" id="ov-asset-type">
   <div class="modal">
     <div class="modal-head">
-      <h3>자산 종류 추가</h3>
+      <h3 id="at-modal-title">자산 종류 추가</h3>
       <button class="modal-close" data-close="ov-asset-type">×</button>
     </div>
     <div class="modal-body">
@@ -2237,52 +2231,20 @@ body {
           <label class="form-label">이름</label>
           <input class="input" id="at-name" placeholder="예: 비트코인, 부동산" autocomplete="off">
         </div>
-        <div class="form-hint">
-          이미 사용 중인 항목과 중복되지 않도록 입력하세요.
+        <!-- 편집 모드 전용: 사용 중인 계좌 표시 -->
+        <div class="form-group" id="at-usage-row" style="display:none;">
+          <label class="form-label">사용 중인 계좌</label>
+          <div class="atd-account-list" id="at-usage-list"></div>
+          <div class="form-hint" style="margin-top:6px;">
+            이름이나 구분을 변경하면 위 계좌들에도 자동 반영됩니다.
+          </div>
         </div>
       </form>
     </div>
     <div class="modal-foot">
+      <button class="btn-danger grow" id="btn-at-delete" style="display:none;">삭제</button>
       <button class="btn-s" data-close="ov-asset-type">취소</button>
       <button class="btn-p" id="btn-at-save">저장</button>
-    </div>
-  </div>
-</div>
-
-<!-- ── 모달: 자산 종류 삭제 확인 (v0.3-2) ── -->
-<div class="ov" id="ov-asset-type-delete">
-  <div class="modal">
-    <div class="modal-head">
-      <h3 id="atd-title">자산 종류 삭제</h3>
-      <button class="modal-close" data-close="ov-asset-type-delete">×</button>
-    </div>
-    <div class="modal-body">
-      <!-- 차단 상태 (사용 중인 계좌 있음) -->
-      <div id="atd-blocked" style="display:none;">
-        <div class="restore-warn restore-warn-danger">
-          🚫 <strong id="atd-blocked-name"></strong> 항목을 삭제할 수 없습니다.
-        </div>
-        <div class="form-label" style="margin-bottom:6px;">이 종류를 사용 중인 계좌:</div>
-        <div class="atd-account-list" id="atd-account-list"></div>
-        <div class="form-hint" style="margin-top:12px;">
-          먼저 위 계좌들의 자산 종류를 다른 항목으로 변경하거나
-          계좌를 삭제한 후 다시 시도하세요.
-        </div>
-      </div>
-      <!-- 허용 상태 (사용 중인 계좌 없음) -->
-      <div id="atd-allowed" style="display:none;">
-        <div class="form-label" style="margin-bottom:8px;">
-          <strong id="atd-allowed-name"></strong> 을(를) 삭제하시겠습니까?
-        </div>
-        <div class="form-hint">
-          이 종류를 사용 중인 계좌가 없어 안전하게 삭제할 수 있습니다.<br>
-          삭제 후에도 새 항목을 다시 추가할 수 있습니다.
-        </div>
-      </div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn-s" data-close="ov-asset-type-delete" id="atd-close-btn">취소</button>
-      <button class="btn-danger" id="btn-atd-confirm" style="display:none;">삭제</button>
     </div>
   </div>
 </div>
@@ -2959,9 +2921,11 @@ function renderCategories() {
 }
 
 // ──────────────────────────────────────────────────────
-// 자산 종류 렌더 (v0.3-2) — sharedSettings.categoriesEnum
+// 자산 종류 렌더 + CRUD (v0.3-2) — sharedSettings.categoriesEnum
 // ──────────────────────────────────────────────────────
-// 현재 단계: 추가 + 삭제 지원. 편집(이름 변경)은 향후 단계.
+// 거래 카테고리(openCategoryModal)와 동일한 패턴 — 칩 클릭으로 추가/편집/삭제.
+// 이름·구분 변경 시 사용 중인 계좌(financeType + financeCategory)도 cascade 자동 갱신.
+
 function renderAssetTypes() {
   const enums = sharedSettings?.categoriesEnum || DEFAULT_CATEGORIES_ENUM;
   const groups = [
@@ -2976,149 +2940,194 @@ function renderAssetTypes() {
       $c.innerHTML = '<div class="chip-empty">없음</div>';
       return;
     }
-    // 칩 클릭 → 삭제 흐름 시작
     $c.innerHTML = list.map(name =>
-      `<span class="chip" data-del-at="${key}::${escapeHtml(name)}" title="클릭하여 삭제">${escapeHtml(name)}</span>`
+      `<span class="chip" data-edit-at="${key}::${escapeHtml(name)}">${escapeHtml(name)}</span>`
     ).join('');
-    $c.querySelectorAll('[data-del-at]').forEach(el => {
+    $c.querySelectorAll('[data-edit-at]').forEach(el => {
       el.addEventListener('click', () => {
-        const [tier, name] = el.dataset.delAt.split('::');
-        startAssetTypeDelete(tier, name);
+        const [tier, name] = el.dataset.editAt.split('::');
+        openAssetTypeModal(tier, name);
       });
     });
   });
 }
 
-// 자산 종류 추가 모달 열기
-document.getElementById('btn-add-asset-type').addEventListener('click', () => {
-  document.getElementById('at-current').checked = true;
-  document.getElementById('at-name').value = '';
+// 편집/추가 중인 항목 (모달 단계 사이 보관)
+let editingAssetType = null;   // { tier, name } | null
+
+// 사용 중인 계좌 찾기 (tier + name 둘 다 매칭)
+function findAccountsUsingAssetType(tier, name) {
+  return accounts.filter(a =>
+    a.financeType === tier && a.financeCategory === name
+  );
+}
+
+// 모달 열기 — name이 null이면 추가, 있으면 편집
+function openAssetTypeModal(tier = 'current', name = null) {
+  editingAssetType = name ? { tier, name } : null;
+  const isEdit = !!name;
+
+  document.getElementById('at-modal-title').textContent = isEdit ? '자산 종류 편집' : '자산 종류 추가';
+  document.getElementById('btn-at-delete').style.display = isEdit ? 'inline-flex' : 'none';
+
+  // 구분 라디오
+  document.getElementById(tier === 'nonCurrent' ? 'at-noncurrent' : 'at-current').checked = true;
+  // 이름
+  document.getElementById('at-name').value = name || '';
+
+  // 편집 모드: 사용 중인 계좌 표시
+  const $usageRow = document.getElementById('at-usage-row');
+  if (isEdit) {
+    const usedBy = findAccountsUsingAssetType(tier, name);
+    if (usedBy.length > 0) {
+      const $list = document.getElementById('at-usage-list');
+      $list.innerHTML = usedBy.map(a =>
+        `<div class="atd-account-row">${escapeHtml(a.name)}</div>`
+      ).join('');
+      $usageRow.style.display = '';
+    } else {
+      $usageRow.style.display = 'none';
+    }
+  } else {
+    $usageRow.style.display = 'none';
+  }
+
   openOv('ov-asset-type');
   setTimeout(() => document.getElementById('at-name').focus(), 50);
+}
+
+// "+ 추가" 버튼
+document.getElementById('btn-add-asset-type').addEventListener('click', () => {
+  openAssetTypeModal('current', null);
 });
 
-// 자산 종류 저장 (추가 전용)
+// 저장 (추가 또는 편집)
 document.getElementById('btn-at-save').addEventListener('click', async () => {
-  const tier = document.querySelector('input[name="at-tier"]:checked')?.value || 'current';
-  const name = document.getElementById('at-name').value.trim();
-  if (!name) { showToast('이름을 입력하세요'); return; }
+  const newTier = document.querySelector('input[name="at-tier"]:checked')?.value || 'current';
+  const newName = document.getElementById('at-name').value.trim();
+  if (!newName) { showToast('이름을 입력하세요'); return; }
 
-  // 현재 enum 복사 (방어적)
   const enums = sharedSettings?.categoriesEnum || DEFAULT_CATEGORIES_ENUM;
   const next = {
     current:    [...(enums.current    || [])],
     nonCurrent: [...(enums.nonCurrent || [])],
   };
 
-  // 같은 그룹 안에서 중복 차단
-  if (next[tier].includes(name)) {
+  // 편집: 변경 없으면 그냥 닫기
+  if (editingAssetType) {
+    const { tier: oldTier, name: oldName } = editingAssetType;
+    if (oldTier === newTier && oldName === newName) {
+      closeOv('ov-asset-type');
+      return;
+    }
+
+    // 같은 그룹 내 중복 차단 (자기 자신 제외)
+    if (next[newTier].some((n, i) => n === newName && !(newTier === oldTier && i === next[oldTier].indexOf(oldName)))) {
+      showToast('이미 같은 이름의 항목이 있습니다');
+      return;
+    }
+
+    // 기존 항목 제거
+    const oldIdx = next[oldTier].indexOf(oldName);
+    if (oldIdx >= 0) next[oldTier].splice(oldIdx, 1);
+    // 새 위치 추가
+    next[newTier].push(newName);
+
+    // cascade — 영향 받는 계좌들 일괄 갱신
+    const affected = findAccountsUsingAssetType(oldTier, oldName);
+    try {
+      // 1. sharedSettings 갱신
+      await setDoc(pathAccountsSettings(), { categoriesEnum: next }, { merge: true });
+
+      // 2. 영향 받는 계좌들 cascade (writeBatch)
+      if (affected.length > 0) {
+        const batch = writeBatch(db);
+        for (const a of affected) {
+          batch.update(pathAccount(a.id), {
+            financeType:     newTier,
+            financeCategory: newName,
+          });
+        }
+        await batch.commit();
+      }
+
+      closeOv('ov-asset-type');
+      editingAssetType = null;
+      const cascadeMsg = affected.length > 0 ? ` (계좌 ${affected.length}개 자동 갱신)` : '';
+      showToast(`자산 종류 "${oldName}" → "${newName}" 변경됨${cascadeMsg}`);
+    } catch (e) {
+      console.error('[asset-type] 편집 실패', e);
+      showToast('저장 실패: ' + (e.message || e.code || '알 수 없는 오류'));
+    }
+    return;
+  }
+
+  // 추가
+  if (next[newTier].includes(newName)) {
     showToast('이미 같은 이름의 항목이 있습니다');
     return;
   }
-  // 다른 그룹에 같은 이름이 있어도 경고 (혼동 방지)
-  const otherTier = tier === 'current' ? 'nonCurrent' : 'current';
-  if (next[otherTier].includes(name)) {
-    if (!confirm(`"${name}"이(가) 이미 ${otherTier === 'current' ? '유동' : '비유동'} 자산에도 있습니다. 그래도 추가할까요?`)) return;
+  // 다른 그룹에 같은 이름이 있으면 confirm
+  const otherTier = newTier === 'current' ? 'nonCurrent' : 'current';
+  if (next[otherTier].includes(newName)) {
+    if (!confirm(`"${newName}"이(가) 이미 ${otherTier === 'current' ? '유동' : '비유동'} 자산에도 있습니다. 그래도 추가할까요?`)) return;
   }
 
-  next[tier].push(name);
+  next[newTier].push(newName);
 
   try {
-    // sharedSettings는 config/accounts 도큐먼트 — merge로 다른 필드 보존
     await setDoc(pathAccountsSettings(), { categoriesEnum: next }, { merge: true });
     closeOv('ov-asset-type');
-    showToast(`자산 종류 "${name}" 추가됨`);
+    showToast(`자산 종류 "${newName}" 추가됨`);
   } catch (e) {
-    console.error('[asset-type] 저장 실패', e);
+    console.error('[asset-type] 추가 실패', e);
     showToast('저장 실패: ' + (e.message || e.code || '알 수 없는 오류'));
   }
 });
 
-// ──────────────────────────────────────────────────────
-// 자산 종류 삭제 흐름 (v0.3-2)
-// ──────────────────────────────────────────────────────
-// 정책: 사용 중인 계좌가 있으면 차단. 어떤 계좌가 쓰는지 목록 표시.
+// 삭제 (편집 모달 안의 삭제 버튼)
+document.getElementById('btn-at-delete').addEventListener('click', async () => {
+  if (!editingAssetType) return;
+  const { tier, name } = editingAssetType;
 
-// 삭제 대상 임시 보관 (모달 단계 사이)
-let pendingAssetTypeDelete = null;   // { tier, name }
-
-function startAssetTypeDelete(tier, name) {
-  pendingAssetTypeDelete = { tier, name };
-
-  // 사용 중인 계좌 찾기
-  // — financeType이 tier와 일치하고 financeCategory가 name인 계좌만
-  // — 다른 tier에 동명 항목이 있는 경우 영향 받지 않게 tier도 함께 매칭
-  const usedBy = accounts.filter(a =>
-    a.financeType === tier && a.financeCategory === name
-  );
-
-  // 모달 텍스트 채우기
-  document.getElementById('atd-title').textContent =
-    `"${name}" 삭제 — ${tier === 'current' ? '유동' : '비유동'} 자산`;
-  document.getElementById('atd-blocked-name').textContent = `"${name}"`;
-  document.getElementById('atd-allowed-name').textContent = `"${name}"`;
-
-  const $blocked = document.getElementById('atd-blocked');
-  const $allowed = document.getElementById('atd-allowed');
-  const $confirm = document.getElementById('btn-atd-confirm');
-  const $cancel  = document.getElementById('atd-close-btn');
-
+  // 사용 중인 계좌 검사 — 있으면 차단
+  const usedBy = findAccountsUsingAssetType(tier, name);
   if (usedBy.length > 0) {
-    // 차단 모드
-    const $list = document.getElementById('atd-account-list');
-    $list.innerHTML = usedBy.map(a =>
-      `<div class="atd-account-row">${escapeHtml(a.name)}</div>`
-    ).join('');
-    $blocked.style.display = '';
-    $allowed.style.display = 'none';
-    $confirm.style.display = 'none';
-    $cancel.textContent = '확인';
-  } else {
-    // 허용 모드
-    $blocked.style.display = 'none';
-    $allowed.style.display = '';
-    $confirm.style.display = '';
-    $cancel.textContent = '취소';
+    const names = usedBy.map(a => `• ${a.name}`).join('\n');
+    alert(
+      `"${name}" 삭제 불가\n\n` +
+      `다음 ${usedBy.length}개 계좌가 이 종류를 사용 중입니다:\n\n${names}\n\n` +
+      `먼저 이 계좌들의 자산 종류를 다른 항목으로 변경하거나\n계좌를 삭제한 후 다시 시도하세요.`
+    );
+    return;
   }
 
-  openOv('ov-asset-type-delete');
-}
-
-// 삭제 실행
-document.getElementById('btn-atd-confirm').addEventListener('click', async () => {
-  if (!pendingAssetTypeDelete) return;
-  const { tier, name } = pendingAssetTypeDelete;
+  if (!confirm(`"${name}" 자산 종류를 삭제하시겠습니까?`)) return;
 
   const enums = sharedSettings?.categoriesEnum || DEFAULT_CATEGORIES_ENUM;
   const next = {
     current:    [...(enums.current    || [])],
     nonCurrent: [...(enums.nonCurrent || [])],
   };
-
   const idx = next[tier].indexOf(name);
   if (idx < 0) {
     showToast('이미 삭제된 항목입니다');
-    closeOv('ov-asset-type-delete');
+    closeOv('ov-asset-type');
     return;
   }
   next[tier].splice(idx, 1);
 
-  // 안전장치 재검증: 모달을 연 사이에 다른 곳에서 계좌가 추가됐을 수도 있음
-  const usedNow = accounts.filter(a =>
-    a.financeType === tier && a.financeCategory === name
-  );
+  // 안전장치 재검증
+  const usedNow = findAccountsUsingAssetType(tier, name);
   if (usedNow.length > 0) {
     showToast(`삭제 취소됨 — "${name}"을(를) 사용하는 계좌가 생겼습니다`);
-    closeOv('ov-asset-type-delete');
-    // 모달 다시 열어 차단 화면 보여주기
-    startAssetTypeDelete(tier, name);
     return;
   }
 
   try {
     await setDoc(pathAccountsSettings(), { categoriesEnum: next }, { merge: true });
-    closeOv('ov-asset-type-delete');
-    pendingAssetTypeDelete = null;
+    closeOv('ov-asset-type');
+    editingAssetType = null;
     showToast(`자산 종류 "${name}" 삭제됨`);
   } catch (e) {
     console.error('[asset-type] 삭제 실패', e);
