@@ -5970,6 +5970,123 @@ function renderBgBody() {
   });
 }
 
+// ── 예산 전월 복사 (v0.4 A5) ──
+// 정책: 전월 도큐먼트를 가져와 마스터(settings.categories)에 있는 카테고리만
+//       이번 달로 복사. 마스터에서 사라진 카테고리는 스킵하고 안내.
+//       이번 달에 이미 있는 예산은 confirm 후 덮어쓰기.
+async function copyBudgetsFromPrevMonth() {
+  if (!currentUid) { showToast('로그인이 필요합니다'); return; }
+  if (!settings) { showToast('설정 로딩 중…'); return; }
+
+  const prev = prevYm(bgMonth);
+  const $btn = document.getElementById('btn-bg-copy-prev');
+
+  // 이번 달에 이미 예산이 있으면 확인
+  const hasExisting = bgBudgets.length > 0;
+  if (hasExisting) {
+    if (!confirm(
+      `${bgMonth}에 이미 예산이 ${bgBudgets.length}개 설정되어 있습니다.\n\n` +
+      `전월(${prev})에서 복사하면 같은 카테고리의 기존 값을 덮어씁니다.\n\n계속하시겠습니까?`
+    )) return;
+  }
+
+  $btn.disabled = true;
+  const orig = $btn.textContent;
+  $btn.textContent = '⏳ 복사 중…';
+
+  try {
+    // 1. 전월 예산 조회
+    const prevSnap = await getDocs(
+      query(pathBudgets(), where('ym', '==', prev))
+    );
+    if (prevSnap.empty) {
+      showToast(`${prev}에 예산이 없습니다`);
+      return;
+    }
+
+    // 2. 마스터 카테고리 인덱스 (flow별 Set)
+    const masterByFlow = {
+      revenue:  new Set(settings?.categories?.revenue  || []),
+      fixed:    new Set(settings?.categories?.fixed    || []),
+      variable: new Set(settings?.categories?.variable || []),
+    };
+
+    // 3. 분류 — 마스터에 있는 항목과 사라진 항목
+    const toCopy = [];
+    const skipped = [];
+    for (const d of prevSnap.docs) {
+      const b = d.data();
+      const flow = b.flow;
+      const category = b.category;
+      if (!flow || !category) continue;
+      if (masterByFlow[flow]?.has(category)) {
+        toCopy.push(b);
+      } else {
+        skipped.push({ flow, category });
+      }
+    }
+
+    if (toCopy.length === 0) {
+      const skipMsg = skipped.length
+        ? `\n\n전월 예산 ${skipped.length}개는 모두 마스터에서 사라진 카테고리입니다:\n` +
+          skipped.map(s => `• ${s.category}`).join('\n')
+        : '';
+      showToast(`복사할 항목이 없습니다${skipMsg ? ' (콘솔 확인)' : ''}`);
+      if (skipMsg) console.log('[budget copy] 스킵된 항목', skipped);
+      return;
+    }
+
+    // 4. 일괄 쓰기 (writeBatch, 500개 분할)
+    let batch = writeBatch(db);
+    let inBatch = 0;
+    let written = 0;
+    for (const b of toCopy) {
+      const id = budgetDocId(bgMonth, b.flow, b.category);
+      batch.set(pathBudget(id), {
+        ym: bgMonth,
+        flow: b.flow,
+        category: b.category,
+        budget: Number(b.budget) || 0,
+        note: b.note || null,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        copiedFrom: prev,   // 흔적
+      });
+      inBatch++; written++;
+      if (inBatch >= 450) {
+        await batch.commit();
+        batch = writeBatch(db);
+        inBatch = 0;
+      }
+    }
+    if (inBatch > 0) await batch.commit();
+
+    // 5. 결과 안내
+    let msg = `${prev} → ${bgMonth} 복사 완료: ${written}개`;
+    if (skipped.length > 0) {
+      msg += ` (마스터에서 사라진 ${skipped.length}개 제외)`;
+      console.log('[budget copy] 스킵된 항목', skipped);
+      // 사용자에게 무엇이 빠졌는지 별도 알림
+      const names = skipped.map(s => s.category).join(', ');
+      setTimeout(() => {
+        alert(
+          `다음 카테고리는 현재 마스터에 없어 복사에서 제외되었습니다:\n\n${names}\n\n` +
+          `필요하면 설정 → 카테고리에서 다시 추가한 후, 예산 탭에서 개별 설정하세요.`
+        );
+      }, 200);
+    }
+    showToast(msg);
+  } catch (e) {
+    console.error('[budget copy] 실패', e);
+    showToast('전월 복사 실패: ' + (e.message || e.code || '알 수 없는 오류'));
+  } finally {
+    $btn.disabled = false;
+    $btn.textContent = orig;
+  }
+}
+
+document.getElementById('btn-bg-copy-prev').addEventListener('click', copyBudgetsFromPrevMonth);
+
 // ── 예산 모달 (v0.4 A4) ──
 // 도큐먼트 ID 규칙: `{ym}__{flow}__{category}` (구분자 더블 언더스코어)
 // — 카테고리 이름에 들어갈 가능성이 매우 낮은 패턴
