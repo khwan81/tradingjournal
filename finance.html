@@ -29,6 +29,9 @@
 }
 </script>
 
+<!-- Chart.js 4.4.1 (v0.5 대시보드 차트) -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
 <style>
 /* ── Reset & Base ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1172,6 +1175,45 @@ body {
 .dash-kpi-sub.red   { color: var(--red); }
 .dash-kpi-sub.amber { color: #fbbf24; }
 
+/* 대시보드 차트 카드 (B3) */
+.dash-card {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 14px;
+}
+.dash-card-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 12px;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.dash-card-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+.dash-card-sub {
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+}
+.dash-chart-wrap {
+  position: relative;
+  height: 280px;
+  width: 100%;
+}
+.dash-chart-empty {
+  padding: 40px 16px;
+  text-align: center;
+  color: var(--text3);
+  font-size: 12px;
+}
+@media (max-width: 700px) {
+  .dash-chart-wrap { height: 220px; }
+}
+
 /* 전체 요약 카드 */
 .bg-summary {
   background: var(--bg2);
@@ -2258,8 +2300,18 @@ body {
     </div>
 
     <div id="dash-body">
-      <div class="dash-placeholder">
-        차트 영역은 다음 단계(B3~)에서 추가됩니다
+      <!-- 순자산 추이 12개월 (B3) -->
+      <div class="dash-card">
+        <div class="dash-card-head">
+          <div class="dash-card-title">순자산 추이</div>
+          <div class="dash-card-sub" id="dash-networth-sub">최근 12개월</div>
+        </div>
+        <div class="dash-chart-wrap">
+          <canvas id="dash-networth-chart"></canvas>
+        </div>
+        <div class="dash-chart-empty" id="dash-networth-empty" style="display:none;">
+          스냅샷이 없습니다 — 재무상태 탭에서 잔액을 입력하세요
+        </div>
       </div>
     </div>
   </div>
@@ -3120,6 +3172,12 @@ document.querySelectorAll('.tab').forEach(btn => {
     document.querySelectorAll('.tab-content').forEach(c => {
       c.classList.toggle('active', c.id === `tab-${target}`);
     });
+    // 대시보드 탭 진입 시 차트 그리기 (v0.5 B3)
+    // — Chart.js는 숨겨진 캔버스에 렌더링이 어색할 수 있어, 탭이 보일 때 그리는 게 안전
+    if (target === 'dashboard') {
+      renderDashKpi();
+      renderDashNetworthChart();
+    }
   });
 });
 
@@ -6014,6 +6072,10 @@ function subscribeBsSnapshot() {
       bsSnapshot = snap.exists() ? snap.data() : null;
       renderBsHeader();
       renderDashKpi();   // v0.5 B2
+      // 대시보드 탭이 활성이면 차트도 재로드 (B3)
+      if (document.getElementById('tab-dashboard')?.classList.contains('active')) {
+        renderDashNetworthChart();
+      }
     },
     err => { console.error('bs snapshot subscribe error', err); }
   );
@@ -6529,6 +6591,193 @@ function renderDashKpi() {
     else if (pct >= 80) { $bud.classList.add('amber'); $budSub.classList.add('amber'); label = '임박'; }
     else                { $bud.classList.add('green'); $budSub.classList.add('green'); label = '여유'; }
     $budSub.textContent = `${fmtAmount(expense)} / ${fmtAmount(expenseBudget)} · ${label}`;
+  }
+}
+
+// ── 대시보드 차트 (v0.5 B3) ──
+// 순자산 추이: 최근 12개월 스냅샷 일괄 fetch → 라인 차트 (자산/부채/순자산)
+
+let dashNetworthChart = null;   // Chart.js 인스턴스 (재생성 시 destroy)
+let dashChartsLoaded = false;   // 12개월 데이터 캐시 여부
+
+// CSS 변수에서 색상 가져오기 (다크 테마 일관성)
+function getCssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+// 최근 N개월 ym 배열 반환 (오래된 → 최신 순)
+function recentYmList(n, anchor) {
+  // anchor: 기준 ym (없으면 이번 달)
+  const [ay, am] = (anchor || currentYm()).split('-').map(Number);
+  const out = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(ay, am - 1 - i, 1);
+    out.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+  }
+  return out;
+}
+
+// 스냅샷 도큐먼트에서 totals 계산 (renderDashKpi의 로직과 동일, computePrevTotals 재사용)
+// snap이 null이면 null 반환
+function snapToTotals(snap) {
+  if (!snap) return null;
+  return computePrevTotals(snap);
+}
+
+// 12개월 스냅샷 fetch + 차트 그리기
+async function renderDashNetworthChart() {
+  const $canvas = document.getElementById('dash-networth-chart');
+  const $empty  = document.getElementById('dash-networth-empty');
+  const $sub    = document.getElementById('dash-networth-sub');
+  if (!$canvas || !window.Chart) return;
+  if (!currentUid) return;
+
+  // 1) 최근 12개월 ym 배열
+  const ymList = recentYmList(12, currentMonth);
+  const fromYm = ymList[0];
+  const toYm   = ymList[ymList.length - 1];
+
+  try {
+    // 2) 스냅샷 일괄 fetch (ym >= fromYm AND ym <= toYm)
+    // 스냅샷 도큐먼트 id가 ym이므로 그냥 12개를 따로 getDoc...은 비효율. 컬렉션 전체에서 필터.
+    // ym 범위 쿼리: Firestore는 string 비교가 가능하지만, 도큐먼트 id로 쿼리하려면 documentId() 필요.
+    // 간단히: getDocs로 전부 가져와 클라이언트 필터. 스냅샷이 그렇게 많지 않음 (월 1개씩).
+    const allSnap = await getDocs(pathSnapshots());
+    const byYm = new Map();
+    allSnap.forEach(d => {
+      byYm.set(d.id, d.data());
+    });
+
+    // 3) ymList 순서로 totals 배열 만들기
+    const labels = ymList.map(ym => ym.slice(2));   // "26-05" 식으로 축약
+    const assetData = [];
+    const liabData  = [];
+    const netData   = [];
+    let validCount = 0;
+    for (const ym of ymList) {
+      const t = snapToTotals(byYm.get(ym));
+      if (t) {
+        assetData.push(t.totalAssets);
+        liabData.push(t.totalLiab);
+        netData.push(t.net);
+        validCount++;
+      } else {
+        assetData.push(null);
+        liabData.push(null);
+        netData.push(null);
+      }
+    }
+
+    // 4) 데이터 없으면 empty 표시
+    if (validCount === 0) {
+      $canvas.style.display = 'none';
+      $empty.style.display = '';
+      if ($sub) $sub.textContent = '데이터 없음';
+      if (dashNetworthChart) { dashNetworthChart.destroy(); dashNetworthChart = null; }
+      return;
+    }
+    $canvas.style.display = '';
+    $empty.style.display = 'none';
+    if ($sub) $sub.textContent = `${fromYm} ~ ${toYm} (${validCount}개월 데이터)`;
+
+    // 5) 색상 토큰 (다크 테마)
+    const colorText  = getCssVar('--text2')  || '#9aa5b1';
+    const colorGrid  = getCssVar('--border') || 'rgba(255,255,255,0.08)';
+    const colorAsset = getCssVar('--green')  || '#34d399';
+    const colorLiab  = getCssVar('--red')    || '#ef4444';
+    const colorNet   = getCssVar('--accent') || '#4f8fff';
+
+    // 6) Chart.js 데이터셋
+    const datasets = [
+      {
+        label: '자산',
+        data: assetData,
+        borderColor: colorAsset,
+        backgroundColor: colorAsset + '20',
+        tension: 0.25,
+        spanGaps: true,
+        pointRadius: 3,
+        pointHoverRadius: 5,
+      },
+      {
+        label: '부채',
+        data: liabData,
+        borderColor: colorLiab,
+        backgroundColor: colorLiab + '20',
+        tension: 0.25,
+        spanGaps: true,
+        pointRadius: 3,
+        pointHoverRadius: 5,
+      },
+      {
+        label: '순자산',
+        data: netData,
+        borderColor: colorNet,
+        backgroundColor: colorNet + '20',
+        tension: 0.25,
+        spanGaps: true,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        borderWidth: 2.5,
+      },
+    ];
+
+    // 7) 기존 차트 destroy 후 재생성
+    if (dashNetworthChart) { dashNetworthChart.destroy(); dashNetworthChart = null; }
+
+    dashNetworthChart = new Chart($canvas, {
+      type: 'line',
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        scales: {
+          x: {
+            ticks: { color: colorText, font: { size: 11 } },
+            grid:  { color: colorGrid, drawBorder: false },
+          },
+          y: {
+            ticks: {
+              color: colorText, font: { size: 11 },
+              callback: (v) => {
+                const abs = Math.abs(v);
+                if (abs >= 100000000) return (v / 100000000).toFixed(1) + '억';
+                if (abs >= 10000)     return (v / 10000).toFixed(0)   + '만';
+                return v.toLocaleString();
+              },
+            },
+            grid: { color: colorGrid, drawBorder: false },
+          },
+        },
+        plugins: {
+          legend: {
+            labels: { color: colorText, font: { size: 12 }, usePointStyle: true, padding: 14 },
+            position: 'top',
+          },
+          tooltip: {
+            backgroundColor: 'rgba(20,22,28,0.95)',
+            titleColor: '#fff',
+            bodyColor: '#cbd2db',
+            borderColor: colorGrid,
+            borderWidth: 1,
+            padding: 10,
+            callbacks: {
+              label: (ctx) => {
+                const v = ctx.parsed.y;
+                if (v == null) return `${ctx.dataset.label}: —`;
+                return `${ctx.dataset.label}: ${(v >= 0 ? '+' : '−')}${fmtAmount(Math.abs(v))}`;
+              },
+            },
+          },
+        },
+      },
+    });
+
+    dashChartsLoaded = true;
+  } catch (e) {
+    console.error('[dashboard] networth chart error', e);
+    if ($sub) $sub.textContent = '차트 로드 실패';
   }
 }
 
