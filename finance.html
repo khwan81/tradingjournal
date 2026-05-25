@@ -961,6 +961,19 @@ body {
   color: var(--text3);
 }
 
+/* 손익 KPI 그리드 (A2) — 4개라 데스크탑은 4열, 모바일은 2x2 */
+.pl-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+@media (max-width: 700px) {
+  .pl-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 /* BS KPI */
 .bs-kpi-grid {
   display: grid;
@@ -1836,7 +1849,7 @@ body {
     </div>
   </div>
 
-  <!-- 손익 탭 (v0.3-4 A1) -->
+  <!-- 손익 탭 (v0.3-4 A1 + A2) -->
   <div class="tab-content" id="tab-pl">
     <div class="pl-header">
       <div class="month-nav">
@@ -1846,10 +1859,33 @@ body {
       </div>
     </div>
 
+    <!-- KPI 4개 (A2) -->
+    <div class="pl-kpi-grid">
+      <div class="kpi-card">
+        <div class="label">매출</div>
+        <div class="value green" id="pl-kpi-revenue">0</div>
+        <div class="sub"  id="pl-kpi-revenue-sub">0건</div>
+      </div>
+      <div class="kpi-card">
+        <div class="label">고정비</div>
+        <div class="value red" id="pl-kpi-fixed">0</div>
+        <div class="sub"  id="pl-kpi-fixed-sub">0건</div>
+      </div>
+      <div class="kpi-card">
+        <div class="label">변동비</div>
+        <div class="value red" id="pl-kpi-variable">0</div>
+        <div class="sub"  id="pl-kpi-variable-sub">0건</div>
+      </div>
+      <div class="kpi-card">
+        <div class="label">순이익</div>
+        <div class="value" id="pl-kpi-net">0</div>
+        <div class="sub"  id="pl-kpi-net-sub">—</div>
+      </div>
+    </div>
+
     <div id="pl-body">
       <div class="pl-placeholder">
-        손익계산서 — 단계적으로 구현 중<br>
-        <span class="hint">(곧 KPI, 카테고리별 상세, 6개월 차트 추가 예정)</span>
+        카테고리별 상세는 다음 단계(A3·B)에서 추가됩니다
       </div>
     </div>
   </div>
@@ -2675,6 +2711,7 @@ let bsMonth = currentYm();      // YYYY-MM 형식 (재무상태 탭 — 독립)
 let bsSnapshot = null;          // 현재 bsMonth의 스냅샷 (없으면 null)
 let bsPrevSnapshot = null;      // bsMonth 직전 달 스냅샷 (없으면 null)
 let plMonth = currentYm();      // YYYY-MM 형식 (손익 탭 — 독립, v0.3-4)
+let plTransactions = [];        // 손익 탭에서 보고 있는 월의 거래 (A2)
 let filterFlows = new Set(); // 활성 flow 필터: 'revenue'|'fixed'|'variable'
 let filterPays  = new Set(); // 활성 결제상태 필터: 'unpaid'|'card'|'cash'
 let editingRecurringId = null; // 반복지출 모달 편집 중인 id
@@ -2685,6 +2722,7 @@ let unsubTransactions = null;
 let unsubBsSnapshot = null;
 let unsubBsPrevSnapshot = null;
 let unsubRecurring = null;
+let unsubPlTransactions = null;  // 손익 탭 거래 구독 (A2)
 
 // 자산 종류 enum (categoriesEnum 기본값)
 const DEFAULT_CATEGORIES_ENUM = {
@@ -2805,8 +2843,9 @@ async function loadAll() {
   subscribeBsSnapshot();
   renderBsHeader();
 
-  // 손익 탭 — A1: 헤더만 (구독은 A2에서 추가 예정)
+  // 손익 탭 — A2: 헤더 + 거래 구독
   renderPlHeader();
+  subscribePlTransactions();
 }
 
 function subscribeRecurring() {
@@ -2852,6 +2891,69 @@ function subscribeTransactions() {
   );
 }
 
+// 손익 탭 거래 구독 (v0.3-4 A2)
+// 거래내역 탭의 currentMonth와 plMonth가 다를 수 있어 별도 구독.
+// 같은 월일 때는 Firestore가 동일 쿼리 결과를 캐시하므로 비용 없음.
+function subscribePlTransactions() {
+  if (unsubPlTransactions) { unsubPlTransactions(); unsubPlTransactions = null; }
+  if (!currentUid) return;
+  unsubPlTransactions = onSnapshot(
+    query(pathTransactions(), where('ym', '==', plMonth)),
+    snap => {
+      plTransactions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderPlKpi();
+    },
+    err => { console.error('pl transactions subscribe error', err); showToast('손익 데이터 로드 실패'); }
+  );
+}
+
+// 손익 KPI 렌더 (A2)
+function renderPlKpi() {
+  let revenue = 0, fixed = 0, variable = 0;
+  let revenueCnt = 0, fixedCnt = 0, variableCnt = 0;
+
+  for (const t of plTransactions) {
+    const flow = txFlow(t);
+    const amt = Number(t.amount) || 0;
+    if (flow === 'revenue')        { revenue  += amt; revenueCnt++; }
+    else if (flow === 'fixed')     { fixed    += amt; fixedCnt++; }
+    else if (flow === 'variable')  { variable += amt; variableCnt++; }
+  }
+  const net = revenue - fixed - variable;
+
+  // 매출 — 양수
+  document.getElementById('pl-kpi-revenue').textContent =
+    revenue ? `+${fmtAmount(revenue)}` : '0';
+  document.getElementById('pl-kpi-revenue-sub').textContent = `${revenueCnt}건`;
+
+  // 고정비 — 음수로 표시 (지출이므로)
+  document.getElementById('pl-kpi-fixed').textContent =
+    fixed ? `-${fmtAmount(fixed)}` : '0';
+  document.getElementById('pl-kpi-fixed-sub').textContent = `${fixedCnt}건`;
+
+  // 변동비 — 음수로 표시
+  document.getElementById('pl-kpi-variable').textContent =
+    variable ? `-${fmtAmount(variable)}` : '0';
+  document.getElementById('pl-kpi-variable-sub').textContent = `${variableCnt}건`;
+
+  // 순이익 — 부호 + 색상
+  const $net = document.getElementById('pl-kpi-net');
+  $net.classList.remove('green', 'red', 'muted');
+  if (net > 0) {
+    $net.textContent = `+${fmtAmount(net)}`;
+    $net.classList.add('green');
+    document.getElementById('pl-kpi-net-sub').textContent = '흑자';
+  } else if (net < 0) {
+    $net.textContent = `-${fmtAmount(Math.abs(net))}`;
+    $net.classList.add('red');
+    document.getElementById('pl-kpi-net-sub').textContent = '적자';
+  } else {
+    $net.textContent = '0';
+    $net.classList.add('muted');
+    document.getElementById('pl-kpi-net-sub').textContent = '—';
+  }
+}
+
 function unsubscribeAll() {
   if (unsubAccounts) { unsubAccounts(); unsubAccounts = null; }
   if (unsubSharedSettings) { unsubSharedSettings(); unsubSharedSettings = null; }
@@ -2861,6 +2963,7 @@ function unsubscribeAll() {
   if (unsubBsSnapshot) { unsubBsSnapshot(); unsubBsSnapshot = null; }
   if (unsubBsPrevSnapshot) { unsubBsPrevSnapshot(); unsubBsPrevSnapshot = null; }
   if (unsubRecurring) { unsubRecurring(); unsubRecurring = null; }
+  if (unsubPlTransactions) { unsubPlTransactions(); unsubPlTransactions = null; }  // A2
   accounts = [];
   settings = null;
   sharedSettings = null;
@@ -2869,6 +2972,7 @@ function unsubscribeAll() {
   allUnpaidTxs = [];
   bsSnapshot = null;
   bsPrevSnapshot = null;
+  plTransactions = [];   // A2
   renderUnpaidBar();
 }
 
@@ -5297,7 +5401,7 @@ function goPlMonth(delta) {
   const d = new Date(y, m - 1 + delta, 1);
   plMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   renderPlHeader();
-  // A2에서 여기에 subscribePlTransactions() 호출 추가 예정
+  subscribePlTransactions();   // A2: 새 월의 거래 재구독
 }
 
 // ── 잔액 입력 모달 ──
