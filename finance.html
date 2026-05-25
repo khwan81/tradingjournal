@@ -961,18 +961,72 @@ body {
   color: var(--text3);
 }
 
-/* 손익 KPI 그리드 (A2) — 4개라 데스크탑은 4열, 모바일은 2x2 */
-.pl-kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  margin-bottom: 14px;
+/* 손익 카테고리별 상세 (A3) */
+.pl-table {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  overflow: hidden;
 }
-@media (max-width: 700px) {
-  .pl-kpi-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+.pl-group {
+  border-bottom: 1px solid var(--border);
 }
+.pl-group:last-child { border-bottom: none; }
+
+/* 그룹 헤더 (매출 / (-)고정비 / (-)변동비) */
+.pl-group-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 14px 16px 6px 16px;
+  font-size: 14px;
+  font-weight: 500;
+}
+.pl-group-head .pl-group-title { color: var(--text); }
+.pl-group-head .pl-group-total {
+  font-family: var(--font-mono);
+  font-size: 16px;
+}
+.pl-group.revenue .pl-group-total  { color: var(--green); }
+.pl-group.expense .pl-group-total  { color: var(--red); }
+
+/* 카테고리 행 */
+.pl-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 6px 16px 6px 28px;
+  font-size: 13px;
+}
+.pl-row .pl-name {
+  color: var(--text2);
+  flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pl-row .pl-amt {
+  font-family: var(--font-mono);
+  color: var(--text);
+  flex-shrink: 0;
+}
+.pl-group:last-of-type .pl-row:last-child { padding-bottom: 12px; }
+
+/* 당기순이익 푸터 */
+.pl-net-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 14px 16px;
+  background: var(--bg);
+  border-top: 2px solid var(--border2);
+  font-size: 15px;
+  font-weight: 500;
+}
+.pl-net-row .pl-net-label { color: var(--text); }
+.pl-net-row .pl-net-amt {
+  font-family: var(--font-mono);
+  font-size: 18px;
+}
+.pl-net-row .pl-net-amt.up   { color: var(--green); }
+.pl-net-row .pl-net-amt.down { color: var(--red); }
+.pl-net-row .pl-net-amt.muted { color: var(--text3); }
+
+/* 빈 그룹 (카테고리별 0건일 때 그룹 헤더는 표시하되 행은 "—") */
+.pl-row.empty .pl-amt,
+.pl-row.empty .pl-name { color: var(--text3); font-style: italic; }
 
 /* BS KPI */
 .bs-kpi-grid {
@@ -1849,7 +1903,7 @@ body {
     </div>
   </div>
 
-  <!-- 손익 탭 (v0.3-4 A1 + A2) -->
+  <!-- 손익 탭 (v0.3-4) -->
   <div class="tab-content" id="tab-pl">
     <div class="pl-header">
       <div class="month-nav">
@@ -1859,33 +1913,10 @@ body {
       </div>
     </div>
 
-    <!-- KPI 4개 (A2) -->
-    <div class="pl-kpi-grid">
-      <div class="kpi-card">
-        <div class="label">매출</div>
-        <div class="value green" id="pl-kpi-revenue">0</div>
-        <div class="sub"  id="pl-kpi-revenue-sub">0건</div>
-      </div>
-      <div class="kpi-card">
-        <div class="label">고정비</div>
-        <div class="value red" id="pl-kpi-fixed">0</div>
-        <div class="sub"  id="pl-kpi-fixed-sub">0건</div>
-      </div>
-      <div class="kpi-card">
-        <div class="label">변동비</div>
-        <div class="value red" id="pl-kpi-variable">0</div>
-        <div class="sub"  id="pl-kpi-variable-sub">0건</div>
-      </div>
-      <div class="kpi-card">
-        <div class="label">순이익</div>
-        <div class="value" id="pl-kpi-net">0</div>
-        <div class="sub"  id="pl-kpi-net-sub">—</div>
-      </div>
-    </div>
-
+    <!-- 카테고리별 상세 (A3) -->
     <div id="pl-body">
       <div class="pl-placeholder">
-        카테고리별 상세는 다음 단계(A3·B)에서 추가됩니다
+        거래가 없습니다
       </div>
     </div>
   </div>
@@ -2711,7 +2742,7 @@ let bsMonth = currentYm();      // YYYY-MM 형식 (재무상태 탭 — 독립)
 let bsSnapshot = null;          // 현재 bsMonth의 스냅샷 (없으면 null)
 let bsPrevSnapshot = null;      // bsMonth 직전 달 스냅샷 (없으면 null)
 let plMonth = currentYm();      // YYYY-MM 형식 (손익 탭 — 독립, v0.3-4)
-let plTransactions = [];        // 손익 탭에서 보고 있는 월의 거래 (A2)
+let plTransactions = [];        // 손익 탭에서 보고 있는 월의 거래
 let filterFlows = new Set(); // 활성 flow 필터: 'revenue'|'fixed'|'variable'
 let filterPays  = new Set(); // 활성 결제상태 필터: 'unpaid'|'card'|'cash'
 let editingRecurringId = null; // 반복지출 모달 편집 중인 id
@@ -2722,7 +2753,7 @@ let unsubTransactions = null;
 let unsubBsSnapshot = null;
 let unsubBsPrevSnapshot = null;
 let unsubRecurring = null;
-let unsubPlTransactions = null;  // 손익 탭 거래 구독 (A2)
+let unsubPlTransactions = null;     // 손익 탭 거래 구독
 
 // 자산 종류 enum (categoriesEnum 기본값)
 const DEFAULT_CATEGORIES_ENUM = {
@@ -2901,57 +2932,106 @@ function subscribePlTransactions() {
     query(pathTransactions(), where('ym', '==', plMonth)),
     snap => {
       plTransactions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      renderPlKpi();
+      renderPlBody();
     },
     err => { console.error('pl transactions subscribe error', err); showToast('손익 데이터 로드 실패'); }
   );
 }
 
-// 손익 KPI 렌더 (A2)
-function renderPlKpi() {
-  let revenue = 0, fixed = 0, variable = 0;
-  let revenueCnt = 0, fixedCnt = 0, variableCnt = 0;
+// 손익 본문 렌더 (A3) — 카테고리별 상세 표
+// 매출/고정비/변동비 각 그룹에 그 달에 등장한 카테고리만 집계해서 나열.
+// settings.categories 마스터 순서를 따라 일관된 순서로 표시.
+function renderPlBody() {
+  const $body = document.getElementById('pl-body');
+  if (!$body) return;
+
+  if (plTransactions.length === 0) {
+    $body.innerHTML = `<div class="pl-placeholder">${plMonth} 거래 없음</div>`;
+    return;
+  }
+
+  // 1) flow별 카테고리 합계 집계
+  const sums = { revenue: new Map(), fixed: new Map(), variable: new Map() };
+  let totalRevenue = 0, totalFixed = 0, totalVariable = 0;
 
   for (const t of plTransactions) {
     const flow = txFlow(t);
     const amt = Number(t.amount) || 0;
-    if (flow === 'revenue')        { revenue  += amt; revenueCnt++; }
-    else if (flow === 'fixed')     { fixed    += amt; fixedCnt++; }
-    else if (flow === 'variable')  { variable += amt; variableCnt++; }
+    if (!sums[flow]) continue;     // 알 수 없는 flow 무시
+    const cat = t.category || '(분류 없음)';
+    sums[flow].set(cat, (sums[flow].get(cat) || 0) + amt);
+    if (flow === 'revenue')        totalRevenue  += amt;
+    else if (flow === 'fixed')     totalFixed    += amt;
+    else if (flow === 'variable')  totalVariable += amt;
   }
-  const net = revenue - fixed - variable;
 
-  // 매출 — 양수
-  document.getElementById('pl-kpi-revenue').textContent =
-    revenue ? `+${fmtAmount(revenue)}` : '0';
-  document.getElementById('pl-kpi-revenue-sub').textContent = `${revenueCnt}건`;
+  // 2) 카테고리 순서 결정 — settings.categories 마스터 순서 우선,
+  //    마스터에 없는 카테고리(거래 시점엔 있었지만 이후 삭제됨)는 뒤에 붙임
+  const orderCats = (flow) => {
+    const masterList = settings?.categories?.[flow] || [];
+    const inMap = sums[flow];
+    const ordered = [];
+    for (const m of masterList) {
+      if (inMap.has(m)) ordered.push(m);
+    }
+    // 마스터에 없지만 거래엔 등장한 카테고리들 (정렬: 금액 내림차순)
+    const extras = [];
+    for (const k of inMap.keys()) {
+      if (!masterList.includes(k)) extras.push(k);
+    }
+    extras.sort((a, b) => inMap.get(b) - inMap.get(a));
+    return [...ordered, ...extras];
+  };
 
-  // 고정비 — 음수로 표시 (지출이므로)
-  document.getElementById('pl-kpi-fixed').textContent =
-    fixed ? `-${fmtAmount(fixed)}` : '0';
-  document.getElementById('pl-kpi-fixed-sub').textContent = `${fixedCnt}건`;
+  // 3) 그룹 HTML 빌더
+  const buildGroup = (flow, label, total, sign /* '+'|'-' */, cls /* 'revenue'|'expense' */) => {
+    const cats = orderCats(flow);
+    const totalStr = total === 0 ? '0' : `${sign}${fmtAmount(total)}`;
 
-  // 변동비 — 음수로 표시
-  document.getElementById('pl-kpi-variable').textContent =
-    variable ? `-${fmtAmount(variable)}` : '0';
-  document.getElementById('pl-kpi-variable-sub').textContent = `${variableCnt}건`;
+    let rowsHtml;
+    if (cats.length === 0) {
+      rowsHtml = `<div class="pl-row empty"><span class="pl-name">—</span><span class="pl-amt">—</span></div>`;
+    } else {
+      rowsHtml = cats.map(cat => {
+        const amt = sums[flow].get(cat) || 0;
+        const amtStr = amt === 0 ? '0' : `${sign}${fmtAmount(amt)}`;
+        return `
+          <div class="pl-row">
+            <span class="pl-name">${escapeHtml(cat)}</span>
+            <span class="pl-amt">${amtStr}</span>
+          </div>`;
+      }).join('');
+    }
 
-  // 순이익 — 부호 + 색상
-  const $net = document.getElementById('pl-kpi-net');
-  $net.classList.remove('green', 'red', 'muted');
-  if (net > 0) {
-    $net.textContent = `+${fmtAmount(net)}`;
-    $net.classList.add('green');
-    document.getElementById('pl-kpi-net-sub').textContent = '흑자';
-  } else if (net < 0) {
-    $net.textContent = `-${fmtAmount(Math.abs(net))}`;
-    $net.classList.add('red');
-    document.getElementById('pl-kpi-net-sub').textContent = '적자';
-  } else {
-    $net.textContent = '0';
-    $net.classList.add('muted');
-    document.getElementById('pl-kpi-net-sub').textContent = '—';
-  }
+    return `
+      <div class="pl-group ${cls}">
+        <div class="pl-group-head">
+          <span class="pl-group-title">${label}</span>
+          <span class="pl-group-total">${totalStr}</span>
+        </div>
+        ${rowsHtml}
+      </div>`;
+  };
+
+  // 4) 순이익 계산 + 표시
+  const net = totalRevenue - totalFixed - totalVariable;
+  let netStr, netCls;
+  if (net > 0)      { netStr = `+${fmtAmount(net)}`;            netCls = 'up'; }
+  else if (net < 0) { netStr = `-${fmtAmount(Math.abs(net))}`;  netCls = 'down'; }
+  else              { netStr = '0';                              netCls = 'muted'; }
+
+  // 5) 전체 HTML 조립
+  $body.innerHTML = `
+    <div class="pl-table">
+      ${buildGroup('revenue',  '💰 매출',      totalRevenue, '+', 'revenue')}
+      ${buildGroup('fixed',    '🔵 (-) 고정비', totalFixed,   '-', 'expense')}
+      ${buildGroup('variable', '🟡 (-) 변동비', totalVariable,'-', 'expense')}
+      <div class="pl-net-row">
+        <span class="pl-net-label">당기순이익</span>
+        <span class="pl-net-amt ${netCls}">${netStr}</span>
+      </div>
+    </div>
+  `;
 }
 
 function unsubscribeAll() {
