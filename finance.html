@@ -3384,10 +3384,9 @@ async function loadAll() {
   subscribeBgBudgets();
   subscribeBgTransactions();
 
-  // 대시보드 탭 — KPI + 빈 본문
+  // 대시보드 탭 — KPI (차트는 탭 진입 시 그림)
   renderDashHeader();
   renderDashKpi();
-  renderDashBody();
 
   // 글로벌 월 헤더 초기 라벨 (v0.5+)
   const $gm = document.getElementById('gm-label');
@@ -6476,15 +6475,7 @@ function renderDashHeader() {
   $asof.textContent = `as of ${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
 }
 
-function renderDashBody() {
-  const $body = document.getElementById('dash-body');
-  if (!$body) return;
-  $body.innerHTML = `
-    <div class="dash-placeholder">
-      차트 영역은 다음 단계(B3~)에서 추가됩니다
-    </div>
-  `;
-}
+// (v0.5 B3에서 renderDashBody 제거 — 차트 카드를 덮어쓰던 placeholder 함수였음)
 
 // ── 대시보드 KPI (v0.5 B2) ──
 // 데이터 소스:
