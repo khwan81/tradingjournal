@@ -939,6 +939,28 @@ body {
   font-size: 13px;
 }
 
+/* ── 손익 탭 (v0.3-4) ── */
+.pl-header {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.pl-placeholder {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--text2);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.pl-placeholder .hint {
+  font-size: 11px;
+  color: var(--text3);
+}
+
 /* BS KPI */
 .bs-kpi-grid {
   display: grid;
@@ -1724,6 +1746,7 @@ body {
   <div class="tab-bar" role="tablist">
     <button class="tab active" data-tab="transactions" role="tab">거래내역</button>
     <button class="tab"        data-tab="balance"      role="tab">재무상태</button>
+    <button class="tab"        data-tab="pl"           role="tab">손익</button>
     <button class="tab"        data-tab="settings"     role="tab">설정</button>
   </div>
 
@@ -1809,6 +1832,24 @@ body {
     <div id="bs-body">
       <div class="bs-placeholder">
         이번 달 잔액 스냅샷 없음 — 우상단 "잔액 입력" 버튼으로 시작
+      </div>
+    </div>
+  </div>
+
+  <!-- 손익 탭 (v0.3-4 A1) -->
+  <div class="tab-content" id="tab-pl">
+    <div class="pl-header">
+      <div class="month-nav">
+        <button type="button" id="btn-pl-prev" aria-label="이전 달">‹</button>
+        <span class="ym" id="pl-ym-label">—</span>
+        <button type="button" id="btn-pl-next" aria-label="다음 달">›</button>
+      </div>
+    </div>
+
+    <div id="pl-body">
+      <div class="pl-placeholder">
+        손익계산서 — 단계적으로 구현 중<br>
+        <span class="hint">(곧 KPI, 카테고리별 상세, 6개월 차트 추가 예정)</span>
       </div>
     </div>
   </div>
@@ -2633,6 +2674,7 @@ let currentMonth = currentYm(); // YYYY-MM 형식 (거래내역 탭)
 let bsMonth = currentYm();      // YYYY-MM 형식 (재무상태 탭 — 독립)
 let bsSnapshot = null;          // 현재 bsMonth의 스냅샷 (없으면 null)
 let bsPrevSnapshot = null;      // bsMonth 직전 달 스냅샷 (없으면 null)
+let plMonth = currentYm();      // YYYY-MM 형식 (손익 탭 — 독립, v0.3-4)
 let filterFlows = new Set(); // 활성 flow 필터: 'revenue'|'fixed'|'variable'
 let filterPays  = new Set(); // 활성 결제상태 필터: 'unpaid'|'card'|'cash'
 let editingRecurringId = null; // 반복지출 모달 편집 중인 id
@@ -2762,6 +2804,9 @@ async function loadAll() {
   // 재무상태 탭 — 현재 bsMonth 스냅샷 구독
   subscribeBsSnapshot();
   renderBsHeader();
+
+  // 손익 탭 — A1: 헤더만 (구독은 A2에서 추가 예정)
+  renderPlHeader();
 }
 
 function subscribeRecurring() {
@@ -5240,6 +5285,21 @@ function goBsMonth(delta) {
   renderBsHeader();
 }
 
+// ── 손익 탭 (v0.3-4 A1) ──
+// 단계: A1 = 빈 화면 + 월 네비만. A2부터 KPI/구독 추가 예정.
+function renderPlHeader() {
+  const $label = document.getElementById('pl-ym-label');
+  if ($label) $label.textContent = plMonth;
+}
+
+function goPlMonth(delta) {
+  const [y, m] = plMonth.split('-').map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  plMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  renderPlHeader();
+  // A2에서 여기에 subscribePlTransactions() 호출 추가 예정
+}
+
 // ── 잔액 입력 모달 ──
 
 // 모달이 현재 활성화한 ym (저장 시 사용)
@@ -6180,6 +6240,10 @@ document.getElementById('btn-bulk-confirm').addEventListener('click', confirmBul
 // 재무상태표 — 월 네비 + 모달
 document.getElementById('btn-bs-prev').addEventListener('click', () => goBsMonth(-1));
 document.getElementById('btn-bs-next').addEventListener('click', () => goBsMonth(+1));
+
+// 손익 탭 월 네비 (v0.3-4 A1)
+document.getElementById('btn-pl-prev').addEventListener('click', () => goPlMonth(-1));
+document.getElementById('btn-pl-next').addEventListener('click', () => goPlMonth(+1));
 document.getElementById('btn-bs-edit').addEventListener('click', openBalanceModal);
 document.getElementById('btn-bal-save').addEventListener('click', saveBalanceSnapshot);
 document.getElementById('btn-bal-delete').addEventListener('click', deleteBalanceSnapshot);
