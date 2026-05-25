@@ -566,6 +566,41 @@ body {
 .restore-progress-step.active { color: var(--accent); border-color: var(--accent); }
 .restore-progress-step.done { color: var(--green); }
 
+/* 자산 종류 삭제 모달 (v0.3-2) */
+.atd-account-list {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 4px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.atd-account-list .atd-account-row {
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text2);
+  font-family: var(--font-mono);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.atd-account-list .atd-account-row::before {
+  content: "•";
+  color: var(--text3);
+}
+
+/* 자산 종류 칩 — 클릭 가능 표시 (v0.3-2) */
+#chip-asset-current .chip,
+#chip-asset-noncurrent .chip {
+  cursor: pointer;
+  transition: all 0.15s;
+}
+#chip-asset-current .chip:hover,
+#chip-asset-noncurrent .chip:hover {
+  border-color: var(--red);
+  color: var(--red);
+}
+
 /* ── 거래내역 탭 ── */
 .tx-header {
   display: flex; justify-content: space-between; align-items: center;
@@ -1836,7 +1871,7 @@ body {
       <div class="section-head">
         <div>
           <div class="section-title">🏷️ 자산 종류 <span class="hint">공유 마스터</span></div>
-          <div class="section-sub">계좌 추가 시 선택 옵션</div>
+          <div class="section-sub">계좌 추가 시 선택 옵션 · 칩을 클릭하면 삭제</div>
         </div>
         <div class="section-actions">
           <button class="btn-s" id="btn-add-asset-type">+ 추가</button>
@@ -2210,6 +2245,44 @@ body {
     <div class="modal-foot">
       <button class="btn-s" data-close="ov-asset-type">취소</button>
       <button class="btn-p" id="btn-at-save">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 모달: 자산 종류 삭제 확인 (v0.3-2) ── -->
+<div class="ov" id="ov-asset-type-delete">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="atd-title">자산 종류 삭제</h3>
+      <button class="modal-close" data-close="ov-asset-type-delete">×</button>
+    </div>
+    <div class="modal-body">
+      <!-- 차단 상태 (사용 중인 계좌 있음) -->
+      <div id="atd-blocked" style="display:none;">
+        <div class="restore-warn restore-warn-danger">
+          🚫 <strong id="atd-blocked-name"></strong> 항목을 삭제할 수 없습니다.
+        </div>
+        <div class="form-label" style="margin-bottom:6px;">이 종류를 사용 중인 계좌:</div>
+        <div class="atd-account-list" id="atd-account-list"></div>
+        <div class="form-hint" style="margin-top:12px;">
+          먼저 위 계좌들의 자산 종류를 다른 항목으로 변경하거나
+          계좌를 삭제한 후 다시 시도하세요.
+        </div>
+      </div>
+      <!-- 허용 상태 (사용 중인 계좌 없음) -->
+      <div id="atd-allowed" style="display:none;">
+        <div class="form-label" style="margin-bottom:8px;">
+          <strong id="atd-allowed-name"></strong> 을(를) 삭제하시겠습니까?
+        </div>
+        <div class="form-hint">
+          이 종류를 사용 중인 계좌가 없어 안전하게 삭제할 수 있습니다.<br>
+          삭제 후에도 새 항목을 다시 추가할 수 있습니다.
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-s" data-close="ov-asset-type-delete" id="atd-close-btn">취소</button>
+      <button class="btn-danger" id="btn-atd-confirm" style="display:none;">삭제</button>
     </div>
   </div>
 </div>
@@ -2888,7 +2961,7 @@ function renderCategories() {
 // ──────────────────────────────────────────────────────
 // 자산 종류 렌더 (v0.3-2) — sharedSettings.categoriesEnum
 // ──────────────────────────────────────────────────────
-// 현재 단계: 표시 + 추가만 지원. 편집/삭제는 다음 단계.
+// 현재 단계: 추가 + 삭제 지원. 편집(이름 변경)은 향후 단계.
 function renderAssetTypes() {
   const enums = sharedSettings?.categoriesEnum || DEFAULT_CATEGORIES_ENUM;
   const groups = [
@@ -2903,10 +2976,16 @@ function renderAssetTypes() {
       $c.innerHTML = '<div class="chip-empty">없음</div>';
       return;
     }
-    // 현재는 클릭 동작 없음 (편집/삭제는 다음 단계에서)
+    // 칩 클릭 → 삭제 흐름 시작
     $c.innerHTML = list.map(name =>
-      `<span class="chip">${escapeHtml(name)}</span>`
+      `<span class="chip" data-del-at="${key}::${escapeHtml(name)}" title="클릭하여 삭제">${escapeHtml(name)}</span>`
     ).join('');
+    $c.querySelectorAll('[data-del-at]').forEach(el => {
+      el.addEventListener('click', () => {
+        const [tier, name] = el.dataset.delAt.split('::');
+        startAssetTypeDelete(tier, name);
+      });
+    });
   });
 }
 
@@ -2952,6 +3031,98 @@ document.getElementById('btn-at-save').addEventListener('click', async () => {
   } catch (e) {
     console.error('[asset-type] 저장 실패', e);
     showToast('저장 실패: ' + (e.message || e.code || '알 수 없는 오류'));
+  }
+});
+
+// ──────────────────────────────────────────────────────
+// 자산 종류 삭제 흐름 (v0.3-2)
+// ──────────────────────────────────────────────────────
+// 정책: 사용 중인 계좌가 있으면 차단. 어떤 계좌가 쓰는지 목록 표시.
+
+// 삭제 대상 임시 보관 (모달 단계 사이)
+let pendingAssetTypeDelete = null;   // { tier, name }
+
+function startAssetTypeDelete(tier, name) {
+  pendingAssetTypeDelete = { tier, name };
+
+  // 사용 중인 계좌 찾기
+  // — financeType이 tier와 일치하고 financeCategory가 name인 계좌만
+  // — 다른 tier에 동명 항목이 있는 경우 영향 받지 않게 tier도 함께 매칭
+  const usedBy = accounts.filter(a =>
+    a.financeType === tier && a.financeCategory === name
+  );
+
+  // 모달 텍스트 채우기
+  document.getElementById('atd-title').textContent =
+    `"${name}" 삭제 — ${tier === 'current' ? '유동' : '비유동'} 자산`;
+  document.getElementById('atd-blocked-name').textContent = `"${name}"`;
+  document.getElementById('atd-allowed-name').textContent = `"${name}"`;
+
+  const $blocked = document.getElementById('atd-blocked');
+  const $allowed = document.getElementById('atd-allowed');
+  const $confirm = document.getElementById('btn-atd-confirm');
+  const $cancel  = document.getElementById('atd-close-btn');
+
+  if (usedBy.length > 0) {
+    // 차단 모드
+    const $list = document.getElementById('atd-account-list');
+    $list.innerHTML = usedBy.map(a =>
+      `<div class="atd-account-row">${escapeHtml(a.name)}</div>`
+    ).join('');
+    $blocked.style.display = '';
+    $allowed.style.display = 'none';
+    $confirm.style.display = 'none';
+    $cancel.textContent = '확인';
+  } else {
+    // 허용 모드
+    $blocked.style.display = 'none';
+    $allowed.style.display = '';
+    $confirm.style.display = '';
+    $cancel.textContent = '취소';
+  }
+
+  openOv('ov-asset-type-delete');
+}
+
+// 삭제 실행
+document.getElementById('btn-atd-confirm').addEventListener('click', async () => {
+  if (!pendingAssetTypeDelete) return;
+  const { tier, name } = pendingAssetTypeDelete;
+
+  const enums = sharedSettings?.categoriesEnum || DEFAULT_CATEGORIES_ENUM;
+  const next = {
+    current:    [...(enums.current    || [])],
+    nonCurrent: [...(enums.nonCurrent || [])],
+  };
+
+  const idx = next[tier].indexOf(name);
+  if (idx < 0) {
+    showToast('이미 삭제된 항목입니다');
+    closeOv('ov-asset-type-delete');
+    return;
+  }
+  next[tier].splice(idx, 1);
+
+  // 안전장치 재검증: 모달을 연 사이에 다른 곳에서 계좌가 추가됐을 수도 있음
+  const usedNow = accounts.filter(a =>
+    a.financeType === tier && a.financeCategory === name
+  );
+  if (usedNow.length > 0) {
+    showToast(`삭제 취소됨 — "${name}"을(를) 사용하는 계좌가 생겼습니다`);
+    closeOv('ov-asset-type-delete');
+    // 모달 다시 열어 차단 화면 보여주기
+    startAssetTypeDelete(tier, name);
+    return;
+  }
+
+  try {
+    await setDoc(pathAccountsSettings(), { categoriesEnum: next }, { merge: true });
+    closeOv('ov-asset-type-delete');
+    pendingAssetTypeDelete = null;
+    showToast(`자산 종류 "${name}" 삭제됨`);
+  } catch (e) {
+    console.error('[asset-type] 삭제 실패', e);
+    showToast('삭제 실패: ' + (e.message || e.code || '알 수 없는 오류'));
   }
 });
 
