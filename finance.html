@@ -31,6 +31,8 @@
 
 <!-- Chart.js 4.4.1 (v0.5 대시보드 차트) -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<!-- chartjs-chart-treemap 3.1.0 — Chart.js v4 지원 -->
+<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-treemap@3.1.0"></script>
 
 <style>
 /* ── Reset & Base ── */
@@ -1338,6 +1340,16 @@ body {
   .dash-doughnut-legend { max-height: none; }
 }
 
+/* 지출 트리맵 (B6) */
+.dash-treemap-wrap {
+  position: relative;
+  width: 100%;
+  height: 360px;
+}
+@media (max-width: 700px) {
+  .dash-treemap-wrap { height: 300px; }
+}
+
 /* 전체 요약 카드 */
 .bg-summary {
   background: var(--bg2);
@@ -2458,17 +2470,14 @@ body {
         </div>
       </div>
 
-      <!-- 지출 카테고리 도넛 (B6) -->
+      <!-- 지출 트리맵 (v0.5 B6) — 카테고리 → 메모 2단계 -->
       <div class="dash-card">
         <div class="dash-card-head">
-          <div class="dash-card-title">지출 카테고리</div>
+          <div class="dash-card-title">지출 트리맵</div>
           <div class="dash-card-sub" id="dash-expense-sub">—</div>
         </div>
-        <div class="dash-doughnut-wrap">
-          <div class="dash-doughnut-chart">
-            <canvas id="dash-expense-chart"></canvas>
-          </div>
-          <div class="dash-doughnut-legend" id="dash-expense-legend"></div>
+        <div class="dash-treemap-wrap">
+          <canvas id="dash-expense-chart"></canvas>
         </div>
         <div class="dash-chart-empty" id="dash-expense-empty" style="display:none;">
           이번 달 비용 거래가 없습니다
@@ -7298,14 +7307,15 @@ function renderDashAssetsChart() {
 }
 
 
-// ── 지출 카테고리 도넛 (v0.5 B6) ──
-// 데이터: transactions(currentMonth) 중 비용 거래만, category 필드로 그룹화
-// 표시: 도넛 + 우측 범례 — 고정비/변동비 그룹 헤더로 구분
+// ── 지출 트리맵 (v0.5 B6) ──
+// 데이터: transactions(currentMonth) 중 비용 거래만
+// 그룹: category(1차) → memo(2차, 메모별 합산, 메모 없으면 '기타')
+// 표시: chartjs-chart-treemap 사용. 고정비/변동비는 카테고리 색상으로 자동 구분.
 let dashExpenseChart = null;
 
-// 카테고리 그룹별 색상 팔레트
-// — 고정비: 블루/퍼플 (안정적 색), 변동비: 그린/시안 (활동적 색)
-const EXPENSE_CATEGORY_COLORS = {
+// 카테고리 그룹별 색상 팔레트 — flow별로 톤 구분
+// 고정비: 블루/퍼플 (안정적), 변동비: 그린/시안 (활동적)
+const EXPENSE_TREEMAP_COLORS = {
   fixed: [
     '#4f8fff', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899',
   ],
@@ -7318,21 +7328,26 @@ function renderDashExpenseChart() {
   const $canvas = document.getElementById('dash-expense-chart');
   const $empty  = document.getElementById('dash-expense-empty');
   const $sub    = document.getElementById('dash-expense-sub');
-  const $legend = document.getElementById('dash-expense-legend');
   if (!$canvas || !window.Chart) return;
   if (!currentUid) return;
 
   try {
-    // 1) 비용 거래 → flow별 카테고리 합계
-    const sums = { fixed: new Map(), variable: new Map() };
+    // 1) 거래 → (flow, category, memo) 키로 합산
+    //    같은 카테고리 + 같은 메모는 합쳐서 하나의 노드.
+    //    메모 없으면 '기타'.
+    const buckets = new Map();   // key = `${flow}|${category}|${memo}` → { flow, category, memo, value }
     let total = 0;
     for (const t of transactions) {
       const flow = txFlow(t);
       if (flow !== 'fixed' && flow !== 'variable') continue;
-      const cat = t.category || '(분류 없음)';
       const amt = Number(t.amount) || 0;
       if (amt <= 0) continue;
-      sums[flow].set(cat, (sums[flow].get(cat) || 0) + amt);
+      const category = t.category || '(분류 없음)';
+      const memo = (t.memo && t.memo.trim()) ? t.memo.trim() : '기타';
+      const key = `${flow}|${category}|${memo}`;
+      const cur = buckets.get(key);
+      if (cur) cur.value += amt;
+      else     buckets.set(key, { flow, category, memo, value: amt });
       total += amt;
     }
 
@@ -7340,69 +7355,116 @@ function renderDashExpenseChart() {
       $canvas.style.display = 'none';
       $empty.style.display = '';
       if ($sub) $sub.textContent = `${currentMonth}`;
-      if ($legend) $legend.innerHTML = '';
       if (dashExpenseChart) { dashExpenseChart.destroy(); dashExpenseChart = null; }
       return;
     }
     $canvas.style.display = '';
     $empty.style.display = 'none';
 
-    // 2) 슬라이스 데이터 — 고정비 먼저, 변동비 그 다음
-    const labels = [];
-    const data   = [];
-    const colors = [];
-    const flowOf = [];   // 'fixed' | 'variable'
+    // 2) 카테고리별로 색상 결정 — flow + 카테고리 등장 순서로 팔레트 인덱스
+    //    같은 카테고리는 항상 같은 색이라 메모 슬라이스가 같은 색 계열로 묶임
+    const categoryColor = new Map();   // category → color
+    const flowCatCounter = { fixed: 0, variable: 0 };
+    for (const b of buckets.values()) {
+      if (categoryColor.has(b.category)) continue;
+      const palette = EXPENSE_TREEMAP_COLORS[b.flow] || EXPENSE_TREEMAP_COLORS.variable;
+      const idx = flowCatCounter[b.flow]++;
+      categoryColor.set(b.category, palette[idx % palette.length]);
+    }
 
-    let fixedTotal = 0, variableTotal = 0;
-    const buildSlices = (flowKey) => {
-      const palette = EXPENSE_CATEGORY_COLORS[flowKey];
-      const entries = [...sums[flowKey].entries()].sort((a, b) => b[1] - a[1]);
-      entries.forEach(([cat, amt], i) => {
-        labels.push(cat);
-        data.push(amt);
-        colors.push(palette[i % palette.length]);
-        flowOf.push(flowKey);
-        if (flowKey === 'fixed') fixedTotal += amt;
-        else                     variableTotal += amt;
-      });
-    };
-    buildSlices('fixed');
-    buildSlices('variable');
+    // 3) tree 데이터 (배열 of {category, memo, value})
+    const tree = [...buckets.values()];
 
-    const colorBg = getCssVar('--bg2') || '#1a1d24';
+    // 4) 색상 + 텍스트 토큰
+    const colorBg   = getCssVar('--bg2')   || '#1a1d24';
+    const colorGrid = getCssVar('--border') || 'rgba(255,255,255,0.08)';
 
-    // 3) Chart.js 도넛
+    // 5) treemap 차트 생성
     if (dashExpenseChart) { dashExpenseChart.destroy(); dashExpenseChart = null; }
     dashExpenseChart = new Chart($canvas, {
-      type: 'doughnut',
+      type: 'treemap',
       data: {
-        labels,
         datasets: [{
-          data,
-          backgroundColor: colors,
+          tree,
+          key: 'value',
+          groups: ['category', 'memo'],   // 1단계: 카테고리, 2단계: 메모
+          spacing: 1,
+          borderWidth: 0.5,
           borderColor: colorBg,
-          borderWidth: 2,
-          hoverOffset: 8,
+          // 슬라이스 색상 — 카테고리에 매핑된 색을 사용. 같은 카테고리는 같은 색.
+          // 2단계(메모) 슬라이스만 색칠하고 카테고리 박스는 투명에 가깝게.
+          backgroundColor: (ctx) => {
+            if (!ctx.raw) return 'transparent';
+            // l=0: 카테고리 박스(그룹 헤더용 큰 박스), l=1: 메모 슬라이스
+            const item = ctx.raw._data;
+            if (!item) return 'transparent';
+            const cat = item.category;
+            const color = categoryColor.get(cat) || '#9aa5b1';
+            // 그룹 박스(l=0)는 흐리게, 리프(l=1)는 진하게
+            if (ctx.raw.l === 0) return color + '33';   // 20% 투명
+            return color;
+          },
+          // 라벨 — 메모 + 금액. 슬라이스가 너무 작으면 자동 생략됨 (overflow:'fit')
+          labels: {
+            display: true,
+            align: 'left',
+            position: 'top',
+            color: '#fff',
+            font: { size: 11, weight: 500 },
+            padding: 4,
+            formatter: (ctx) => {
+              if (!ctx.raw || ctx.raw.l !== 1) return '';  // 리프만 라벨
+              const item = ctx.raw._data;
+              if (!item) return '';
+              // 슬라이스가 충분히 클 때만 (대략 폭 60px 이상)
+              const w = ctx.raw.w || 0;
+              const h = ctx.raw.h || 0;
+              if (w < 60 || h < 24) return '';
+              return [item.memo, fmtAmount(item.value)];
+            },
+            overflow: 'fit',
+          },
+          // 카테고리 헤더 라벨 (l=0)
+          captions: {
+            display: true,
+            align: 'left',
+            color: '#fff',
+            font: { size: 12, weight: 600 },
+            padding: 5,
+            formatter: (ctx) => {
+              if (!ctx.raw || ctx.raw.l !== 0) return '';
+              // 그룹의 합계
+              const item = ctx.raw;
+              return `${item.g} ${fmtAmount(item.v)}`;
+            },
+          },
         }],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        cutout: '60%',
         plugins: {
           legend: { display: false },
           tooltip: {
             backgroundColor: 'rgba(20,22,28,0.95)',
             titleColor: '#fff',
             bodyColor: '#cbd2db',
-            borderColor: getCssVar('--border') || 'rgba(255,255,255,0.08)',
+            borderColor: colorGrid,
             borderWidth: 1,
             padding: 10,
             callbacks: {
+              title: (items) => {
+                if (!items.length) return '';
+                const raw = items[0].raw;
+                if (raw.l === 0) return raw.g;  // 카테고리 그룹
+                const item = raw._data;
+                return item ? `${item.category} / ${item.memo}` : '';
+              },
               label: (ctx) => {
-                const v = ctx.parsed;
+                const raw = ctx.raw;
+                const v = raw.l === 0 ? raw.v : (raw._data?.value || 0);
                 const pct = total > 0 ? (v / total) * 100 : 0;
-                return ` ${ctx.label}: ${fmtAmount(v)} (${pct.toFixed(1)}%)`;
+                return `${fmtAmount(v)} (${pct.toFixed(1)}%)`;
               },
             },
           },
@@ -7410,63 +7472,9 @@ function renderDashExpenseChart() {
       },
     });
 
-    // 4) 커스텀 범례 — 그룹 헤더 + 항목
-    const pctOf = (v) => total > 0 ? (v / total) * 100 : 0;
-    const legendRows = [];
-
-    // 고정비 그룹
-    if (fixedTotal > 0) {
-      legendRows.push(`
-        <div class="dash-legend-row group-head">
-          <div class="dash-legend-left">
-            <span class="dash-legend-swatch"></span>
-            <span class="dash-legend-name">🔵 고정비</span>
-          </div>
-          <span class="dash-legend-pct">${pctOf(fixedTotal).toFixed(1)}%</span>
-        </div>
-      `);
-      labels.forEach((lbl, i) => {
-        if (flowOf[i] !== 'fixed') return;
-        legendRows.push(`
-          <div class="dash-legend-row">
-            <div class="dash-legend-left">
-              <span class="dash-legend-swatch" style="background:${colors[i]}"></span>
-              <span class="dash-legend-name">${escapeHtml(lbl)}</span>
-            </div>
-            <span class="dash-legend-pct">${pctOf(data[i]).toFixed(1)}%</span>
-          </div>
-        `);
-      });
-    }
-    // 변동비 그룹
-    if (variableTotal > 0) {
-      legendRows.push(`
-        <div class="dash-legend-row group-head">
-          <div class="dash-legend-left">
-            <span class="dash-legend-swatch"></span>
-            <span class="dash-legend-name">🟡 변동비</span>
-          </div>
-          <span class="dash-legend-pct">${pctOf(variableTotal).toFixed(1)}%</span>
-        </div>
-      `);
-      labels.forEach((lbl, i) => {
-        if (flowOf[i] !== 'variable') return;
-        legendRows.push(`
-          <div class="dash-legend-row">
-            <div class="dash-legend-left">
-              <span class="dash-legend-swatch" style="background:${colors[i]}"></span>
-              <span class="dash-legend-name">${escapeHtml(lbl)}</span>
-            </div>
-            <span class="dash-legend-pct">${pctOf(data[i]).toFixed(1)}%</span>
-          </div>
-        `);
-      });
-    }
-    if ($legend) $legend.innerHTML = legendRows.join('');
-
     if ($sub) $sub.textContent = `${currentMonth} · 총 ${fmtAmount(total)}`;
   } catch (e) {
-    console.error('[dashboard] expense chart error', e);
+    console.error('[dashboard] expense treemap error', e);
     if ($sub) $sub.textContent = '차트 로드 실패';
   }
 }
