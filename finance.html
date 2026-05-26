@@ -5740,6 +5740,14 @@ function renderEventsList() {
   // 글로벌 월 기준 — 시스템 오늘이 아니라 currentMonth(사용자가 보고 있는 월) 기준
   // 으로 처리 상태/임박 등을 판단해야 글로벌 월 이동 시 정확히 갱신됨
   const today = currentMonth;
+  // 디버그 — 콘솔에서 데이터 확인
+  console.log('[debug] renderEventsList today=', today, 'events=', eventsMasters.map(e => ({
+    title: e.title,
+    type: e.type,
+    recurMonth: e.recurMonth,
+    lastDoneYm: e.lastDoneYm,
+    statusEquals: e.lastDoneYm === today,
+  })));
   $list.innerHTML = eventsMasters.map(ev => {
     const next = nextEventYm(ev);
     const monthly = eventMonthlySaving(ev);
