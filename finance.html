@@ -7560,103 +7560,168 @@ function renderBsHeader() {
   // (v0.5+) 월 라벨은 글로벌 헤더로 통합. 옛 bs-ym-label는 DOM에서 제거됨 — 방어적 가드.
   const $ymLabel = document.getElementById('bs-ym-label');
   if ($ymLabel) $ymLabel.textContent = currentMonth;
+
+  // v0.7-5d — asOf는 monthly 도큐먼트 중 가장 최근 것 사용
+  let latestAsOf = null;
+  for (const d of monthlyDocs) {
+    if (d.asOf && (!latestAsOf || d.asOf > latestAsOf)) latestAsOf = d.asOf;
+  }
+  for (const d of monthlyLiabDocs) {
+    if (d.asOf && (!latestAsOf || d.asOf > latestAsOf)) latestAsOf = d.asOf;
+  }
   document.getElementById('bs-asof').textContent =
-    bsSnapshot?.asOf ? `(asOf ${bsSnapshot.asOf})` : '';
-  document.getElementById('btn-bs-edit').textContent = bsSnapshot ? '잔액 수정' : '잔액 입력';
+    latestAsOf ? `(asOf ${latestAsOf})` : '';
+
+  // 버튼 텍스트: 현재 월에 monthly 데이터 있으면 "잔액 수정", 없으면 "잔액 입력"
+  const hasData = monthlyDocs.length > 0 || monthlyLiabDocs.length > 0;
+  document.getElementById('btn-bs-edit').textContent = hasData ? '잔액 수정' : '잔액 입력';
 
   renderBsBody();
 }
 
-// 자산·부채 표 렌더링 (스냅샷 + 자동 카드 미지급금 합쳐서)
+// 자산·부채 표 렌더링 — v0.7-5d: monthly / monthly_liab 기반
 function renderBsBody() {
   const $body = document.getElementById('bs-body');
   if (!$body) return; // 로그인 화면 등 DOM 없을 때
 
-  // 스냅샷이 아예 없으면: placeholder
-  if (!bsSnapshot) {
-    $body.innerHTML = `<div class="bs-placeholder">${currentMonth} 잔액 스냅샷 없음 — 우상단 "잔액 입력" 버튼으로 시작</div>`;
+  // monthly 데이터 + 카드 미지급금이 모두 없으면 placeholder
+  const hasMonthly     = monthlyDocs.length > 0;
+  const hasMonthlyLiab = monthlyLiabDocs.length > 0;
+  const cardUnpaidPre = calcCardUnpaidTotal();
+  if (!hasMonthly && !hasMonthlyLiab && cardUnpaidPre <= 0) {
+    $body.innerHTML = `<div class="bs-placeholder">${currentMonth} 잔액 입력 없음 — 우상단 "잔액 입력" 버튼으로 시작</div>`;
     return;
   }
 
-  // 자산 행 빌드 (계좌 마스터 active=true 전체. 입력 안 된 항목은 "—")
-  const prevAssets = bsPrevSnapshot?.assetBalances || {};
-  const prevLiabs  = bsPrevSnapshot?.liabilityBalances || {};
+  // ── 자산 행 빌드 ──────────────────────────────
+  // 1) 마스터 활성 계좌: monthly에 도큐먼트가 있으면 표시 (없으면 미입력)
+  // 2) 마스터에 없거나 비활성: monthly 도큐먼트가 있으면 박제 정보로 표시 ("해지" 메타)
+  // 시점성 보존: monthly 도큐먼트가 진실의 출처. 마스터는 표시명/카테고리 우선.
+  const fx = (sharedSettings && sharedSettings.fxRates) || {};
   const assetRows = { current: [], noncurrent: [] };
+  const usedAccIds = new Set();
+
+  // 1단계: 마스터 활성 계좌 순회
   for (const a of accounts) {
     if (a.active === false) continue;
+    usedAccIds.add(a.id);
     const tier = a.financeType === 'nonCurrent' ? 'noncurrent' : 'current';
-    const saved = bsSnapshot.assetBalances?.[a.id];
+    const doc = findMonthlyDoc(a.id, currentMonth);
+    const prevDoc = findMonthlyDoc(a.id, prevYm(currentMonth));
     const isFx = (a.currency || 'KRW') !== 'KRW';
-    const prevKrw = prevAssets[a.id] ? (Number(prevAssets[a.id].krw) || 0) : null;
-    const curKrw = saved ? (Number(saved.krw) || 0) : 0;
+    // 외화는 현재 환율로 재계산 (BS 표시는 현 시점 환산)
+    const curFxRate = isFx ? Number(fx[a.currency] || 0) : null;
+    let curKrw = 0;
+    if (doc) {
+      const native = Number(doc.balance);
+      if (isFx && Number.isFinite(native) && curFxRate > 0) {
+        curKrw = Math.round(native * curFxRate);
+      } else {
+        curKrw = Number(doc.balanceKrw) || 0;
+      }
+    }
+    const prevKrw = prevDoc ? (Number(prevDoc.balanceKrw) || 0) : null;
     assetRows[tier].push({
       key: a.id,
       name: a.name,
-      meta: isFx ? a.currency : '',
+      meta: isFx ? a.currency : (a.trackPerformance ? '추적' : ''),
       isFx,
-      filled: !!saved,
+      filled: !!doc,
       krw: curKrw,
-      native: saved ? saved.native : null,
-      currency: saved?.currency || a.currency || 'KRW',
-      fxRate: saved?.fxRate || null,
+      native: doc?.balance ?? null,
+      currency: a.currency || 'KRW',
+      fxRate: doc?.fxRate ?? null,
       auto: false,
       prevKrw,
-      delta: (prevKrw != null && saved) ? curKrw - prevKrw : null,
+      delta: (prevKrw != null && doc) ? curKrw - prevKrw : null,
+      deleted: false,
     });
   }
 
-  // 부채 행 빌드 (마스터 + 자동 카드 미지급금 + 마스터에 없는 스냅 고아)
-  // - 마스터 항목: key = `liab:{id}` (id 없는 fallback은 `liab:{name}`)
-  // - 마스터에서 삭제된 부채: 스냅에 남아있으면 표시 (상환 완료 부채의 과거 기록)
-  // - 스냅 값: 객체({krw,name,type}) 또는 숫자(v0.1 잔재) 둘 다 처리
+  // 2단계: 마스터에 없는 monthly 도큐먼트 = 마스터 삭제·비활성 자산의 과거 잔재
+  //         박제된 정보로 표시 ("해지" 메타)
+  for (const doc of monthlyDocs) {
+    if (usedAccIds.has(doc.accountId)) continue;
+    // 마스터의 비활성 계좌도 위 루프에서 skip됐으므로 여기 들어옴
+    const accInactive = accounts.find(a => a.id === doc.accountId);
+    const tier = (doc.financeType === 'nonCurrent') ? 'noncurrent' : 'current';
+    const isFx = (doc.currency || 'KRW') !== 'KRW';
+    const curFxRate = isFx ? Number(fx[doc.currency] || 0) : null;
+    let curKrw = 0;
+    const native = Number(doc.balance);
+    if (isFx && Number.isFinite(native) && curFxRate > 0) {
+      curKrw = Math.round(native * curFxRate);
+    } else {
+      curKrw = Number(doc.balanceKrw) || 0;
+    }
+    const prevDoc = findMonthlyDoc(doc.accountId, prevYm(currentMonth));
+    const prevKrw = prevDoc ? (Number(prevDoc.balanceKrw) || 0) : null;
+    assetRows[tier].push({
+      key: doc.accountId,
+      name: doc.accountName || doc.accountId,
+      meta: accInactive ? '(비활성)' : '(해지·마스터 삭제됨)',
+      isFx,
+      filled: true,
+      krw: curKrw,
+      native: doc.balance ?? null,
+      currency: doc.currency || 'KRW',
+      fxRate: doc.fxRate ?? null,
+      auto: false,
+      prevKrw,
+      delta: prevKrw != null ? curKrw - prevKrw : null,
+      deleted: !accInactive,
+    });
+  }
+
+  // ── 부채 행 빌드 ──────────────────────────────
   const liabRows = { current: [], noncurrent: [] };
-  const usedKeys = new Set();  // 마스터로 처리한 키
+  const usedLiabKeys = new Set();
+
+  // 1단계: 마스터 부채 순회
   for (const l of (settings?.liabilities || [])) {
     const tier = l.type === 'nonCurrent' ? 'noncurrent' : 'current';
     const key = l.id ? `liab:${l.id}` : `liab:${l.name}`;
-    usedKeys.add(key);
-    const savedRaw = bsSnapshot.liabilityBalances?.[key];
-    const prevRaw  = prevLiabs[key];
-    const saved = normalizeLiabSnap(savedRaw, l.name, l.type || 'current');
-    const prev  = normalizeLiabSnap(prevRaw,  l.name, l.type || 'current');
-    const curKrw  = saved ? saved.krw : 0;
-    const prevKrw = prev  ? prev.krw  : null;
+    usedLiabKeys.add(key);
+    const doc = findMonthlyLiabDoc(key, currentMonth);
+    const prevDoc = findMonthlyLiabDoc(key, prevYm(currentMonth));
+    const curKrw  = doc ? (Number(doc.balanceKrw) || 0) : 0;
+    const prevKrw = prevDoc ? (Number(prevDoc.balanceKrw) || 0) : null;
     liabRows[tier].push({
       key,
       name: l.name,
       meta: l.note || '',
       isFx: false,
-      filled: saved != null,
+      filled: !!doc,
       krw: curKrw,
       auto: false,
       prevKrw,
-      delta: (prev != null && saved != null) ? curKrw - prevKrw : null,
+      delta: (prevKrw != null && doc) ? curKrw - prevKrw : null,
+      deleted: false,
     });
   }
-  // 고아 스냅 항목: 마스터에서 삭제됐지만 스냅에 잔액이 남은 부채
-  // (상환 완료된 부채 등 — 과거 재무상태표에 계속 표시)
-  for (const [key, savedRaw] of Object.entries(bsSnapshot.liabilityBalances || {})) {
-    if (usedKeys.has(key)) continue;
-    // 키에서 fallback 이름 추출 (liab:liab_xxx 같은 id면 의미 없으므로 객체의 name 우선)
-    const fallbackName = key.startsWith('liab:') ? key.slice(5) : key;
-    const saved = normalizeLiabSnap(savedRaw, fallbackName, 'current');
-    if (!saved || saved.krw === 0) continue;
-    const tier = saved.type === 'nonCurrent' ? 'noncurrent' : 'current';
-    const prevRaw = prevLiabs[key];
-    const prev = normalizeLiabSnap(prevRaw, fallbackName, saved.type);
-    const prevKrw = prev ? prev.krw : null;
+
+  // 2단계: 마스터에서 삭제된 부채 (monthly_liab에만 있음)
+  for (const doc of monthlyLiabDocs) {
+    if (usedLiabKeys.has(doc.liabKey)) continue;
+    const curKrw  = Number(doc.balanceKrw) || 0;
+    if (curKrw === 0) continue;
+    const tier = doc.type === 'nonCurrent' ? 'noncurrent' : 'current';
+    const prevDoc = findMonthlyLiabDoc(doc.liabKey, prevYm(currentMonth));
+    const prevKrw = prevDoc ? (Number(prevDoc.balanceKrw) || 0) : null;
     liabRows[tier].push({
-      key,
-      name: saved.name,
+      key: doc.liabKey,
+      name: doc.name || doc.liabKey,
       meta: '(완납·마스터 삭제됨)',
       isFx: false,
       filled: true,
-      krw: saved.krw,
+      krw: curKrw,
       auto: false,
       prevKrw,
-      delta: prevKrw != null ? saved.krw - prevKrw : null,
+      delta: prevKrw != null ? curKrw - prevKrw : null,
+      deleted: true,
     });
   }
+
   // 자동 카드 미지급금 (변화 추적 불가 → delta null)
   const cardUnpaid = calcCardUnpaidTotal();
   if (cardUnpaid > 0) {
@@ -7670,6 +7735,7 @@ function renderBsBody() {
       auto: true,
       prevKrw: null,
       delta: null,
+      deleted: false,
     });
   }
 
@@ -7686,7 +7752,7 @@ function renderBsBody() {
   const debtRatio = totalAssets > 0 ? (totalLiab / totalAssets) * 100 : 0;
 
   // 이전 달 집계 (MoM 비교용)
-  const prevTotals = computePrevTotals(bsPrevSnapshot);
+  const prevTotals = computeTotals(monthlyPrevDocs, monthlyLiabPrevDocs);
   const dAssets = prevTotals ? (totalAssets - prevTotals.totalAssets) : null;
   const dLiab   = prevTotals ? (totalLiab   - prevTotals.totalLiab)   : null;
   const dNet    = prevTotals ? (net         - prevTotals.net)         : null;
@@ -7734,29 +7800,34 @@ function renderBsBody() {
 }
 
 // 이전 달 스냅샷에서 합계 계산
-function computePrevTotals(snap) {
-  if (!snap) return null;
+// v0.7-5d — 임의 시점의 자산/부채 집계 (monthly / monthly_liab 도큐먼트 배열을 인수로 받음)
+function computeTotals(monDocs, monLiabDocs) {
   let curAssets = 0, nonAssets = 0, curLiab = 0, nonLiab = 0;
+  let hasAny = false;
 
-  // 자산: 이전 달 입력된 항목만 계산 (마스터에 없는 계좌도 포함하려면 키로 룩업)
   const aMap = new Map(accounts.map(a => [a.id, a]));
-  for (const [aid, v] of Object.entries(snap.assetBalances || {})) {
-    const a = aMap.get(aid);
-    const tier = a?.financeType === 'nonCurrent' ? 'noncurrent' : 'current';
-    const krw = Number(v.krw) || 0;
+  for (const doc of (monDocs || [])) {
+    hasAny = true;
+    const a = aMap.get(doc.accountId);
+    const tier = (a ? a.financeType : doc.financeType) === 'nonCurrent' ? 'noncurrent' : 'current';
+    const krw = Number(doc.balanceKrw) || 0;
     if (tier === 'current') curAssets += krw;
-    else                     nonAssets += krw;
+    else                    nonAssets += krw;
   }
 
-  // 부채: 객체형 {krw, type} 또는 숫자형(v0.1 잔재) 둘 다 지원
-  // 마스터에 없는 키도 그대로 합산 (마스터 삭제됐어도 스냅의 type을 신뢰)
-  for (const [key, raw] of Object.entries(snap.liabilityBalances || {})) {
-    const fallbackName = key.startsWith('liab:') ? key.slice(5) : key;
-    const n = normalizeLiabSnap(raw, fallbackName, 'current');
-    if (!n) continue;
-    if (n.type === 'nonCurrent') nonLiab += n.krw;
-    else                          curLiab += n.krw;
+  const lMap = new Map((settings?.liabilities || []).map(l =>
+    [l.id ? `liab:${l.id}` : `liab:${l.name}`, l]
+  ));
+  for (const doc of (monLiabDocs || [])) {
+    hasAny = true;
+    const l = lMap.get(doc.liabKey);
+    const tier = (l ? l.type : doc.type) === 'nonCurrent' ? 'noncurrent' : 'current';
+    const krw = Number(doc.balanceKrw) || 0;
+    if (tier === 'current') curLiab += krw;
+    else                    nonLiab += krw;
   }
+
+  if (!hasAny) return null;
 
   const totalAssets = curAssets + nonAssets;
   const totalLiab = curLiab + nonLiab;
@@ -7765,6 +7836,11 @@ function computePrevTotals(snap) {
     totalAssets, totalLiab,
     net: totalAssets - totalLiab,
   };
+}
+
+// 호환: 옛 이름의 인수 없는 호출 = 전월 집계
+function computePrevTotals() {
+  return computeTotals(monthlyPrevDocs, monthlyLiabPrevDocs);
 }
 
 // KPI용 MoM (절대값 + 퍼센트)
@@ -8890,57 +8966,56 @@ function renderDashKpi() {
   // 헬퍼: 클래스 초기화
   const resetCls = (el) => el.classList.remove('green', 'red', 'amber', 'muted');
 
-  if (bsSnapshot) {
-    const cur = computePrevTotals(bsSnapshot);  // "prev" 이름이지만 임의의 스냅을 받음
-    if (cur) {
-      // 순자산
-      resetCls($nw);
-      const netStr = (cur.net >= 0 ? '+' : '−') + fmtAmount(Math.abs(cur.net));
-      $nw.textContent = netStr;
-      $nw.classList.add(cur.net > 0 ? 'green' : cur.net < 0 ? 'red' : 'muted');
+  // v0.7-5d — monthly 기반 집계
+  const cur = computeTotals(monthlyDocs, monthlyLiabDocs);
+  if (cur) {
+    // 순자산
+    resetCls($nw);
+    const netStr = (cur.net >= 0 ? '+' : '−') + fmtAmount(Math.abs(cur.net));
+    $nw.textContent = netStr;
+    $nw.classList.add(cur.net > 0 ? 'green' : cur.net < 0 ? 'red' : 'muted');
 
-      // MoM (전월 대비)
-      const prev = computePrevTotals(bsPrevSnapshot);
-      resetCls($nwSub);
-      if (prev && prev.net !== 0) {
-        const delta = cur.net - prev.net;
-        const pct = (delta / Math.abs(prev.net)) * 100;
-        const sign = delta > 0 ? '+' : delta < 0 ? '−' : '';
-        $nwSub.textContent = `${sign}${fmtAmount(Math.abs(delta))} (${sign}${Math.abs(pct).toFixed(1)}%) MoM`;
-        $nwSub.classList.add(delta > 0 ? 'green' : delta < 0 ? 'red' : 'muted');
-      } else {
-        $nwSub.textContent = `${currentMonth} 기준`;
-      }
-
-      // 부채비율
-      resetCls($debt);
-      const dr = cur.totalAssets > 0 ? (cur.totalLiab / cur.totalAssets) * 100 : 0;
-      $debt.textContent = `${dr.toFixed(1)}%`;
-      let drLabel;
-      if (cur.totalAssets <= 0) {
-        $debt.classList.add('muted');
-        drLabel = '자산 없음';
-      } else if (dr >= 70) {
-        $debt.classList.add('red');
-        drLabel = '위험';
-      } else if (dr >= 40) {
-        $debt.classList.add('amber');
-        drLabel = '주의';
-      } else {
-        $debt.classList.add('green');
-        drLabel = '안정';
-      }
-      resetCls($debtSub);
-      $debtSub.textContent = `자산 ${fmtAmount(cur.totalAssets)} · ${drLabel}`;
-      if (drLabel === '위험') $debtSub.classList.add('red');
-      else if (drLabel === '주의') $debtSub.classList.add('amber');
-      else if (drLabel === '안정') $debtSub.classList.add('green');
+    // MoM (전월 대비)
+    const prev = computeTotals(monthlyPrevDocs, monthlyLiabPrevDocs);
+    resetCls($nwSub);
+    if (prev && prev.net !== 0) {
+      const delta = cur.net - prev.net;
+      const pct = (delta / Math.abs(prev.net)) * 100;
+      const sign = delta > 0 ? '+' : delta < 0 ? '−' : '';
+      $nwSub.textContent = `${sign}${fmtAmount(Math.abs(delta))} (${sign}${Math.abs(pct).toFixed(1)}%) MoM`;
+      $nwSub.classList.add(delta > 0 ? 'green' : delta < 0 ? 'red' : 'muted');
+    } else {
+      $nwSub.textContent = `${currentMonth} 기준`;
     }
+
+    // 부채비율
+    resetCls($debt);
+    const dr = cur.totalAssets > 0 ? (cur.totalLiab / cur.totalAssets) * 100 : 0;
+    $debt.textContent = `${dr.toFixed(1)}%`;
+    let drLabel;
+    if (cur.totalAssets <= 0) {
+      $debt.classList.add('muted');
+      drLabel = '자산 없음';
+    } else if (dr >= 70) {
+      $debt.classList.add('red');
+      drLabel = '위험';
+    } else if (dr >= 40) {
+      $debt.classList.add('amber');
+      drLabel = '주의';
+    } else {
+      $debt.classList.add('green');
+      drLabel = '안정';
+    }
+    resetCls($debtSub);
+    $debtSub.textContent = `자산 ${fmtAmount(cur.totalAssets)} · ${drLabel}`;
+    if (drLabel === '위험') $debtSub.classList.add('red');
+    else if (drLabel === '주의') $debtSub.classList.add('amber');
+    else if (drLabel === '안정') $debtSub.classList.add('green');
   } else {
     resetCls($nw);    $nw.classList.add('muted');     $nw.textContent = '—';
-    resetCls($nwSub);                                 $nwSub.textContent = `${currentMonth} 스냅 없음`;
+    resetCls($nwSub);                                 $nwSub.textContent = `${currentMonth} 잔액 없음`;
     resetCls($debt);  $debt.classList.add('muted');   $debt.textContent = '—';
-    resetCls($debtSub);                               $debtSub.textContent = '스냅 입력 필요';
+    resetCls($debtSub);                               $debtSub.textContent = '잔액 입력 필요';
   }
 
   // ── 2) 이번달 순이익 (거래내역 탭 transactions에서) ──
@@ -9018,11 +9093,38 @@ function recentYmList(n, anchor) {
   return out;
 }
 
-// 스냅샷 도큐먼트에서 totals 계산 (renderDashKpi의 로직과 동일, computePrevTotals 재사용)
-// snap이 null이면 null 반환
+// 스냅샷 도큐먼트에서 totals 계산 (v0.7-5e에서 monthly fetch 기반으로 교체 예정)
+// 현재 단계엔 옛 snapshots 의존이지만 호환 레이어로 데이터가 없으면 null 반환
 function snapToTotals(snap) {
   if (!snap) return null;
-  return computePrevTotals(snap);
+  // 옛 snapshots 도큐먼트 형식 직접 계산
+  let curAssets = 0, nonAssets = 0, curLiab = 0, nonLiab = 0;
+  let hasAny = false;
+  const aMap = new Map(accounts.map(a => [a.id, a]));
+  for (const [aid, v] of Object.entries(snap.assetBalances || {})) {
+    hasAny = true;
+    const a = aMap.get(aid);
+    const tier = a?.financeType === 'nonCurrent' ? 'noncurrent' : 'current';
+    const krw = Number(v.krw) || 0;
+    if (tier === 'current') curAssets += krw;
+    else                     nonAssets += krw;
+  }
+  for (const [key, raw] of Object.entries(snap.liabilityBalances || {})) {
+    hasAny = true;
+    const fallbackName = key.startsWith('liab:') ? key.slice(5) : key;
+    const n = normalizeLiabSnap(raw, fallbackName, 'current');
+    if (!n) continue;
+    if (n.type === 'nonCurrent') nonLiab += n.krw;
+    else                          curLiab += n.krw;
+  }
+  if (!hasAny) return null;
+  const totalAssets = curAssets + nonAssets;
+  const totalLiab = curLiab + nonLiab;
+  return {
+    curAssets, nonAssets, curLiab, nonLiab,
+    totalAssets, totalLiab,
+    net: totalAssets - totalLiab,
+  };
 }
 
 // 12개월 스냅샷 fetch + 차트 그리기
@@ -10174,8 +10276,9 @@ function openBalanceModal() {
     recalcBalancePreview();
   };
 
-  // 삭제 버튼: 기존 스냅샷 있을 때만
-  document.getElementById('btn-bal-delete').style.display = bsSnapshot ? '' : 'none';
+  // 삭제 버튼: 기존 잔액 데이터(monthly/monthly_liab) 있을 때만 표시
+  const hasAnyData = monthlyDocs.length > 0 || monthlyLiabDocs.length > 0;
+  document.getElementById('btn-bal-delete').style.display = hasAnyData ? '' : 'none';
 
   // 미리보기 초기 계산
   recalcBalancePreview();
@@ -10568,15 +10671,25 @@ async function saveBalanceSnapshot() {
 }
 
 async function deleteBalanceSnapshot() {
-  if (!balModalYm || !bsSnapshot) return;
-  if (!confirm(`${balModalYm} 잔액 스냅샷을 삭제하시겠습니까?`)) return;
+  if (!balModalYm) return;
+  const ym = balModalYm;
+  const assetCount = monthlyDocs.length;
+  const liabCount  = monthlyLiabDocs.length;
+  if (assetCount + liabCount === 0) {
+    showToast('삭제할 잔액 데이터가 없습니다');
+    return;
+  }
+  if (!confirm(`${ym} 잔액 데이터를 모두 삭제할까요?\n자산 ${assetCount}건 + 부채 ${liabCount}건`)) return;
 
   const $btn = document.getElementById('btn-bal-delete');
   $btn.disabled = true;
   try {
-    await deleteDoc(pathSnapshot(balModalYm));
+    const batch = writeBatch(db);
+    for (const d of monthlyDocs)     batch.delete(pathMonthlyDoc(ym, d.accountId));
+    for (const d of monthlyLiabDocs) batch.delete(pathMonthlyLiabDoc(ym, d.liabKey));
+    await batch.commit();
     closeOv('ov-balance');
-    showToast('스냅샷이 삭제되었습니다');
+    showToast(`${ym} 잔액 데이터가 삭제되었습니다`);
   } catch (e) {
     console.error('deleteBalanceSnapshot error', e);
     showToast('삭제 실패: ' + (e.message || e.code));
