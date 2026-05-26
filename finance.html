@@ -2458,19 +2458,19 @@ body {
         </div>
       </div>
 
-      <!-- 결제수단별 지출 도넛 (B6) -->
+      <!-- 지출 카테고리 도넛 (B6) -->
       <div class="dash-card">
         <div class="dash-card-head">
-          <div class="dash-card-title">결제수단별 지출</div>
-          <div class="dash-card-sub" id="dash-payments-sub">—</div>
+          <div class="dash-card-title">지출 카테고리</div>
+          <div class="dash-card-sub" id="dash-expense-sub">—</div>
         </div>
         <div class="dash-doughnut-wrap">
           <div class="dash-doughnut-chart">
-            <canvas id="dash-payments-chart"></canvas>
+            <canvas id="dash-expense-chart"></canvas>
           </div>
-          <div class="dash-doughnut-legend" id="dash-payments-legend"></div>
+          <div class="dash-doughnut-legend" id="dash-expense-legend"></div>
         </div>
-        <div class="dash-chart-empty" id="dash-payments-empty" style="display:none;">
+        <div class="dash-chart-empty" id="dash-expense-empty" style="display:none;">
           이번 달 비용 거래가 없습니다
         </div>
       </div>
@@ -3340,7 +3340,7 @@ document.querySelectorAll('.tab').forEach(btn => {
       renderDashNetworthChart();
       renderDashPlChart();
       renderDashAssetsChart();
-      renderDashPaymentsChart();
+      renderDashExpenseChart();
     }
   });
 });
@@ -3488,9 +3488,9 @@ async function loadAll() {
       renderTransactions(); // 카테고리/결제수단 라벨 색상이 settings에 의존
       renderBsBody();       // 부채 마스터가 BS에 들어가니 갱신
       renderDashKpi();      // v0.5 B2 — flow 결정에 settings 의존
-      // 결제수단 마스터 변경(카드↔현금성 타입 등)은 대시보드 도넛 분류에 영향
+      // 카테고리 마스터 변경(이름·flow 등)은 대시보드 카테고리 도넛 분류에 영향
       if (document.getElementById('tab-dashboard')?.classList.contains('active')) {
-        renderDashPaymentsChart();
+        renderDashExpenseChart();
       }
     },
     err => { console.error('settings subscribe error', err); showToast('설정 로드 실패'); }
@@ -3571,7 +3571,7 @@ function subscribeTransactions() {
       // 대시보드 차트들 — 활성일 때만 갱신 (불필요 부담 방지)
       if (document.getElementById('tab-dashboard')?.classList.contains('active')) {
         renderDashPlChart();
-        renderDashPaymentsChart();
+        renderDashExpenseChart();
       }
     },
     err => { console.error('transactions subscribe error', err); showToast('거래 로드 실패'); }
@@ -7297,41 +7297,42 @@ function renderDashAssetsChart() {
   }
 }
 
-// ── 결제수단별 지출 도넛 (v0.5 B6) ──
-// 데이터: transactions(currentMonth) 중 비용 거래만, payment 필드로 그룹화
-// 표시: 도넛 + 우측 범례 (자산 도넛과 동일 레이아웃)
-let dashPaymentsChart = null;
 
-// 결제수단별 색상 팔레트
-// — 카드 계열은 블루/퍼플, 현금성은 그린/티얼
-const PAYMENT_COLORS = {
-  card: [
+// ── 지출 카테고리 도넛 (v0.5 B6) ──
+// 데이터: transactions(currentMonth) 중 비용 거래만, category 필드로 그룹화
+// 표시: 도넛 + 우측 범례 — 고정비/변동비 그룹 헤더로 구분
+let dashExpenseChart = null;
+
+// 카테고리 그룹별 색상 팔레트
+// — 고정비: 블루/퍼플 (안정적 색), 변동비: 그린/시안 (활동적 색)
+const EXPENSE_CATEGORY_COLORS = {
+  fixed: [
     '#4f8fff', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899',
   ],
-  cash: [
+  variable: [
     '#34d399', '#22c55e', '#10b981', '#06b6d4', '#0ea5e9', '#84cc16',
   ],
 };
 
-function renderDashPaymentsChart() {
-  const $canvas = document.getElementById('dash-payments-chart');
-  const $empty  = document.getElementById('dash-payments-empty');
-  const $sub    = document.getElementById('dash-payments-sub');
-  const $legend = document.getElementById('dash-payments-legend');
+function renderDashExpenseChart() {
+  const $canvas = document.getElementById('dash-expense-chart');
+  const $empty  = document.getElementById('dash-expense-empty');
+  const $sub    = document.getElementById('dash-expense-sub');
+  const $legend = document.getElementById('dash-expense-legend');
   if (!$canvas || !window.Chart) return;
   if (!currentUid) return;
 
   try {
-    // 1) 비용 거래 → 결제수단별 합계
-    const sums = new Map();   // paymentName → amount
+    // 1) 비용 거래 → flow별 카테고리 합계
+    const sums = { fixed: new Map(), variable: new Map() };
     let total = 0;
     for (const t of transactions) {
       const flow = txFlow(t);
       if (flow !== 'fixed' && flow !== 'variable') continue;
-      const pay = t.payment || '(결제수단 없음)';
+      const cat = t.category || '(분류 없음)';
       const amt = Number(t.amount) || 0;
       if (amt <= 0) continue;
-      sums.set(pay, (sums.get(pay) || 0) + amt);
+      sums[flow].set(cat, (sums[flow].get(cat) || 0) + amt);
       total += amt;
     }
 
@@ -7340,53 +7341,39 @@ function renderDashPaymentsChart() {
       $empty.style.display = '';
       if ($sub) $sub.textContent = `${currentMonth}`;
       if ($legend) $legend.innerHTML = '';
-      if (dashPaymentsChart) { dashPaymentsChart.destroy(); dashPaymentsChart = null; }
+      if (dashExpenseChart) { dashExpenseChart.destroy(); dashExpenseChart = null; }
       return;
     }
     $canvas.style.display = '';
     $empty.style.display = 'none';
 
-    // 2) 결제수단 마스터 인덱스 (타입 확인용)
-    const payMaster = new Map();
-    for (const p of (settings?.payments || [])) {
-      payMaster.set(p.name, p);
-    }
-
-    // 3) 슬라이스 데이터 구성 — 카드 먼저, 그 다음 현금
+    // 2) 슬라이스 데이터 — 고정비 먼저, 변동비 그 다음
     const labels = [];
     const data   = [];
     const colors = [];
-    const typeOf = [];   // 'card' | 'cash' | 'unknown'
+    const flowOf = [];   // 'fixed' | 'variable'
 
-    let cardTotal = 0, cashTotal = 0;
-    const buildSlices = (typeKey, label) => {
-      const palette = PAYMENT_COLORS[typeKey];
-      const entries = [...sums.entries()]
-        .filter(([name]) => {
-          const m = payMaster.get(name);
-          if (typeKey === 'card') return m?.type === 'card';
-          if (typeKey === 'cash') return m?.type !== 'card';   // 현금/현금성 또는 마스터에 없음
-          return true;
-        })
-        .sort((a, b) => b[1] - a[1]);
-      entries.forEach(([name, amt], i) => {
-        labels.push(name);
+    let fixedTotal = 0, variableTotal = 0;
+    const buildSlices = (flowKey) => {
+      const palette = EXPENSE_CATEGORY_COLORS[flowKey];
+      const entries = [...sums[flowKey].entries()].sort((a, b) => b[1] - a[1]);
+      entries.forEach(([cat, amt], i) => {
+        labels.push(cat);
         data.push(amt);
         colors.push(palette[i % palette.length]);
-        typeOf.push(typeKey);
-        if (typeKey === 'card') cardTotal += amt;
-        else                    cashTotal += amt;
+        flowOf.push(flowKey);
+        if (flowKey === 'fixed') fixedTotal += amt;
+        else                     variableTotal += amt;
       });
     };
-    buildSlices('card', '카드');
-    buildSlices('cash', '현금성');
+    buildSlices('fixed');
+    buildSlices('variable');
 
-    // 4) 색상 토큰
-    const colorBg = getCssVar('--bg2')   || '#1a1d24';
+    const colorBg = getCssVar('--bg2') || '#1a1d24';
 
-    // 5) Chart.js 도넛
-    if (dashPaymentsChart) { dashPaymentsChart.destroy(); dashPaymentsChart = null; }
-    dashPaymentsChart = new Chart($canvas, {
+    // 3) Chart.js 도넛
+    if (dashExpenseChart) { dashExpenseChart.destroy(); dashExpenseChart = null; }
+    dashExpenseChart = new Chart($canvas, {
       type: 'doughnut',
       data: {
         labels,
@@ -7423,23 +7410,23 @@ function renderDashPaymentsChart() {
       },
     });
 
-    // 6) 커스텀 범례 — 그룹 헤더 + 항목
+    // 4) 커스텀 범례 — 그룹 헤더 + 항목
     const pctOf = (v) => total > 0 ? (v / total) * 100 : 0;
     const legendRows = [];
 
-    // 카드 그룹
-    if (cardTotal > 0) {
+    // 고정비 그룹
+    if (fixedTotal > 0) {
       legendRows.push(`
         <div class="dash-legend-row group-head">
           <div class="dash-legend-left">
             <span class="dash-legend-swatch"></span>
-            <span class="dash-legend-name">카드</span>
+            <span class="dash-legend-name">🔵 고정비</span>
           </div>
-          <span class="dash-legend-pct">${pctOf(cardTotal).toFixed(1)}%</span>
+          <span class="dash-legend-pct">${pctOf(fixedTotal).toFixed(1)}%</span>
         </div>
       `);
       labels.forEach((lbl, i) => {
-        if (typeOf[i] !== 'card') return;
+        if (flowOf[i] !== 'fixed') return;
         legendRows.push(`
           <div class="dash-legend-row">
             <div class="dash-legend-left">
@@ -7451,19 +7438,19 @@ function renderDashPaymentsChart() {
         `);
       });
     }
-    // 현금성 그룹
-    if (cashTotal > 0) {
+    // 변동비 그룹
+    if (variableTotal > 0) {
       legendRows.push(`
         <div class="dash-legend-row group-head">
           <div class="dash-legend-left">
             <span class="dash-legend-swatch"></span>
-            <span class="dash-legend-name">현금성</span>
+            <span class="dash-legend-name">🟡 변동비</span>
           </div>
-          <span class="dash-legend-pct">${pctOf(cashTotal).toFixed(1)}%</span>
+          <span class="dash-legend-pct">${pctOf(variableTotal).toFixed(1)}%</span>
         </div>
       `);
       labels.forEach((lbl, i) => {
-        if (typeOf[i] !== 'cash') return;
+        if (flowOf[i] !== 'variable') return;
         legendRows.push(`
           <div class="dash-legend-row">
             <div class="dash-legend-left">
@@ -7479,7 +7466,7 @@ function renderDashPaymentsChart() {
 
     if ($sub) $sub.textContent = `${currentMonth} · 총 ${fmtAmount(total)}`;
   } catch (e) {
-    console.error('[dashboard] payments chart error', e);
+    console.error('[dashboard] expense chart error', e);
     if ($sub) $sub.textContent = '차트 로드 실패';
   }
 }
