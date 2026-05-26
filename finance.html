@@ -885,6 +885,123 @@ body {
 }
 .rec-row .actions button:hover { background: var(--bg3); color: var(--text); }
 
+/* ── 경조사 (v0.6) ── */
+/* 적립 계좌 선택 바 */
+.event-account-bar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+.event-account-label {
+  font-size: 12px;
+  color: var(--text2);
+  flex-shrink: 0;
+}
+#event-account-select {
+  flex: 0 0 auto;
+  min-width: 160px;
+  max-width: 260px;
+}
+.event-account-hint {
+  font-size: 11px;
+  color: var(--text3);
+  flex: 1;
+  min-width: 0;
+}
+@media (max-width: 600px) {
+  .event-account-bar { gap: 6px; }
+  .event-account-hint { width: 100%; }
+}
+
+/* 경조사 마스터 리스트 행 — rec-row와 동일 구조 */
+.event-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+}
+.event-row:last-child { border-bottom: none; }
+.event-row .event-main { flex: 1; min-width: 0; }
+.event-row .event-name-wrap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.event-row .event-name { font-size: 14px; color: var(--text); }
+.event-row .event-amount { font-size: 13px; color: var(--text2); font-family: var(--font-mono); }
+.event-row .event-meta { font-size: 11px; color: var(--text3); margin-top: 4px; }
+.event-row .event-meta .dot { margin: 0 6px; }
+.event-row .badge {
+  font-size: 10px; padding: 2px 7px; border-radius: 10px;
+  background: var(--bg4); color: var(--text2);
+  font-weight: 500;
+}
+.event-row .badge.done {
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--green);
+}
+.event-row .badge.upcoming {
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+}
+.event-row .badge.yearly {
+  background: rgba(79, 143, 255, 0.12);
+  color: var(--accent);
+}
+.event-row .actions { display: flex; gap: 4px; flex-shrink: 0; }
+.event-row .actions button {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text2);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-family: var(--font);
+}
+.event-row .actions button:hover { background: var(--bg3); color: var(--text); }
+.event-row.done { opacity: 0.55; }
+
+/* 경조사 모달 — 라디오 + 미리보기 */
+.radio-label {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  background: var(--bg2);
+  transition: all 0.15s;
+  font-size: 13px;
+  color: var(--text2);
+}
+.radio-label:has(input:checked) {
+  border-color: var(--accent);
+  background: rgba(79, 143, 255, 0.08);
+  color: var(--text);
+}
+.radio-label input { margin: 0; }
+
+.event-modal-preview {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-top: 8px;
+}
+.event-preview-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 4px 0;
+  font-size: 12px;
+  color: var(--text2);
+}
+.event-preview-row + .event-preview-row {
+  border-top: 1px dashed var(--border);
+}
+.event-preview-strong {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 14px;
+}
+
 /* 일괄결제 모달 */
 .bulk-list {
   display: flex; flex-direction: column; gap: 6px;
@@ -1357,6 +1474,67 @@ body {
 #btn-dash-expense-back {
   padding: 4px 10px;
   font-size: 11px;
+}
+
+/* 대시보드 경조사 카드 (v0.6 C2) */
+#dash-events-body {
+  display: flex; flex-direction: column;
+}
+.dash-event-summary {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 12px 14px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.dash-event-summary-label { color: var(--text2); font-size: 12px; }
+.dash-event-summary-val {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--accent);
+}
+.dash-event-summary-hint {
+  font-size: 11px;
+  color: var(--text3);
+}
+.dash-event-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--border);
+  gap: 10px;
+}
+.dash-event-row:last-child { border-bottom: none; }
+.dash-event-row-left { flex: 1; min-width: 0; }
+.dash-event-row-title {
+  font-size: 13px;
+  color: var(--text);
+  display: flex; align-items: center; gap: 8px;
+  flex-wrap: wrap;
+}
+.dash-event-row-meta {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 2px;
+}
+.dash-event-row-monthly {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text2);
+  text-align: right;
+  flex-shrink: 0;
+}
+.dash-event-row-monthly.upcoming { color: #fbbf24; }
+.dash-event-more {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text3);
+  padding-top: 8px;
+  margin-top: 4px;
+  border-top: 1px dashed var(--border);
 }
 
 /* 전체 요약 카드 */
@@ -2495,6 +2673,17 @@ body {
           이번 달 비용 거래가 없습니다
         </div>
       </div>
+
+      <!-- 경조사 카드 (v0.6 C2) -->
+      <div class="dash-card">
+        <div class="dash-card-head">
+          <div class="dash-card-title">경조사</div>
+          <div class="dash-card-sub" id="dash-events-sub">—</div>
+        </div>
+        <div id="dash-events-body">
+          <div class="dash-placeholder" style="padding:24px 16px;">로딩 중…</div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -2655,6 +2844,32 @@ body {
         </div>
       </div>
       <div id="recurring-list">
+        <div class="chip-empty" style="text-align:center; padding:24px 0;">로딩 중…</div>
+      </div>
+    </div>
+
+    <!-- ───────── 경조사 (v0.6) ───────── -->
+    <div class="section-card">
+      <div class="section-head">
+        <div>
+          <div class="section-title">🎀 경조사</div>
+          <div class="section-sub">결혼식·돌잔치 등 비정기 행사 계획 및 적립</div>
+        </div>
+        <div class="section-actions">
+          <button class="btn-s" id="btn-add-event">+ 경조사 추가</button>
+        </div>
+      </div>
+
+      <!-- 적립 계좌 설정 -->
+      <div class="event-account-bar">
+        <span class="event-account-label">적립 계좌</span>
+        <select class="select" id="event-account-select">
+          <option value="">미지정</option>
+        </select>
+        <span class="event-account-hint" id="event-account-hint">행사 시점까지 모아둘 계좌를 선택하세요</span>
+      </div>
+
+      <div id="events-list">
         <div class="chip-empty" style="text-align:center; padding:24px 0;">로딩 중…</div>
       </div>
     </div>
@@ -3115,6 +3330,90 @@ body {
   </div>
 </div>
 
+<!-- ── 모달: 경조사 추가/편집 (v0.6) ── -->
+<div class="ov" id="ov-event">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="event-modal-title">경조사 추가</h3>
+      <button class="modal-close" data-close="ov-event">×</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-event" onsubmit="return false;">
+        <div class="form-group">
+          <label class="form-label">제목</label>
+          <input class="input" id="event-name" placeholder="예: 친구 결혼식 — 김철수, 설날" autocomplete="off">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">종류</label>
+          <div class="form-row cols-2">
+            <label class="radio-label">
+              <input type="radio" name="event-type" value="once" checked>
+              <span>일회성</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="event-type" value="yearly">
+              <span>매년 반복</span>
+            </label>
+          </div>
+          <div class="form-hint">일회성: 한 번만 / 매년: 같은 달에 반복</div>
+        </div>
+
+        <!-- 일회성: 행사 월 -->
+        <div class="form-group" id="event-once-group">
+          <label class="form-label">행사 월</label>
+          <input class="input" type="month" id="event-target-ym">
+        </div>
+
+        <!-- 매년: 몇 월 -->
+        <div class="form-group" id="event-yearly-group" style="display:none;">
+          <label class="form-label">매년 몇 월</label>
+          <select class="select" id="event-recur-month">
+            <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
+            <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
+            <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
+            <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
+          </select>
+        </div>
+
+        <div class="form-row cols-2 form-group">
+          <div>
+            <label class="form-label">예상 금액</label>
+            <input class="input" type="text" inputmode="numeric" id="event-amount" placeholder="0" style="text-align:right; font-family: var(--font-mono);">
+          </div>
+          <div>
+            <label class="form-label">적립 시작 월</label>
+            <input class="input" type="month" id="event-start-ym">
+          </div>
+        </div>
+        <div class="form-hint">행사 월 - 시작 월 + 1 개월 동안 균등 분할 적립</div>
+
+        <div class="form-group">
+          <label class="form-label">메모 <span style="color:var(--text3);">(선택)</span></label>
+          <input class="input" id="event-note" placeholder="" autocomplete="off">
+        </div>
+
+        <!-- 이번 달 필요 적립액 미리 보기 -->
+        <div class="event-modal-preview" id="event-modal-preview" style="display:none;">
+          <div class="event-preview-row">
+            <span>총 기간</span>
+            <span id="event-preview-period">—</span>
+          </div>
+          <div class="event-preview-row">
+            <span>월 적립액</span>
+            <span id="event-preview-monthly" class="event-preview-strong">—</span>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-danger grow" id="btn-event-delete" style="display:none;">삭제</button>
+      <button class="btn-s" data-close="ov-event">취소</button>
+      <button class="btn-p" id="btn-event-save">저장</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── 모달: 거래 추가/편집 ── -->
 <div class="ov" id="ov-tx">
   <div class="modal">
@@ -3362,6 +3661,7 @@ document.querySelectorAll('.tab').forEach(btn => {
       renderDashPlChart();
       renderDashAssetsChart();
       renderDashExpenseChart();
+      renderDashEventsCard();    // v0.6 C2
     }
   });
 });
@@ -3374,6 +3674,7 @@ let settings = null; // finance/config 도큐먼트
 let sharedSettings = null; // config/accounts 도큐먼트 (categoriesEnum + fxRates)
 let transactions = []; // 현재 월의 거래
 let recurringMasters = []; // 반복지출 마스터 (전체)
+let eventsMasters = []; // 경조사 마스터 (v0.6+)
 let currentMonth = currentYm(); // YYYY-MM 형식 (글로벌 — 모든 탭 공유, v0.5+)
 let bsSnapshot = null;          // 현재 currentMonth의 스냅샷 (없으면 null)
 let bsPrevSnapshot = null;      // 직전 달 스냅샷 (없으면 null)
@@ -3391,6 +3692,7 @@ let unsubTransactions = null;
 let unsubBsSnapshot = null;
 let unsubBsPrevSnapshot = null;
 let unsubRecurring = null;
+let unsubEvents = null;          // v0.6+ 경조사
 let unsubPlTransactions = null;     // 손익 탭 거래 구독
 let unsubBgBudgets = null;          // 예산 탭 예산 구독 (v0.4)
 let unsubBgTransactions = null;     // 예산 탭 거래 구독 (v0.4)
@@ -3425,6 +3727,8 @@ const pathSnapshots = () => collection(db, `users/${currentUid}/finance/config/s
 const pathSnapshot = ym => doc(db, `users/${currentUid}/finance/config/snapshots/${ym}`);
 const pathRecurring = () => collection(db, `users/${currentUid}/finance/config/recurring`);
 const pathRecurringItem = id => doc(db, `users/${currentUid}/finance/config/recurring/${id}`);
+const pathEvents = () => collection(db, `users/${currentUid}/finance/config/events`);   // v0.6
+const pathEvent = id => doc(db, `users/${currentUid}/finance/config/events/${id}`);     // v0.6
 const pathBudgets = () => collection(db, `users/${currentUid}/finance/config/budgets`);   // v0.4
 const pathBudget = id => doc(db, `users/${currentUid}/finance/config/budgets/${id}`);     // v0.4
 
@@ -3458,6 +3762,7 @@ async function loadAll() {
       accounts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       renderAccounts();
       renderBsBody(); // 재무상태표에도 영향
+      renderEventAccountSelect();   // v0.6 적립 계좌 옵션 갱신
       // 자산 분류가 바뀌면 도넛도 갱신 (대시보드 활성일 때)
       if (document.getElementById('tab-dashboard')?.classList.contains('active')) {
         renderDashAssetsChart();
@@ -3509,9 +3814,12 @@ async function loadAll() {
       renderTransactions(); // 카테고리/결제수단 라벨 색상이 settings에 의존
       renderBsBody();       // 부채 마스터가 BS에 들어가니 갱신
       renderDashKpi();      // v0.5 B2 — flow 결정에 settings 의존
+      renderEventAccountSelect();   // v0.6 — eventSavingAccountId 선택 표시
+      renderEventsList();           // v0.6 — settings 변경 시 다시 정렬 등
       // 카테고리 마스터 변경(이름·flow 등)은 대시보드 카테고리 도넛 분류에 영향
       if (document.getElementById('tab-dashboard')?.classList.contains('active')) {
         renderDashExpenseChart();
+        renderDashEventsCard();   // v0.6 — 적립 계좌 이름 표시 영향
       }
     },
     err => { console.error('settings subscribe error', err); showToast('설정 로드 실패'); }
@@ -3525,6 +3833,7 @@ async function loadAll() {
 
   // 반복지출 마스터 구독
   subscribeRecurring();
+  subscribeEvents();   // v0.6 경조사
 
   // 거래내역 탭 — 예산 알림바용 (v0.4 A7)
   subscribeTxTabBudgets();
@@ -3543,6 +3852,7 @@ async function loadAll() {
   // 대시보드 탭 — KPI (차트는 탭 진입 시 그림)
   renderDashHeader();
   renderDashKpi();
+  renderDashEventsCard();   // v0.6 — 가벼운 렌더라 즉시
 
   // 글로벌 월 헤더 초기 라벨 (v0.5+)
   const $gm = document.getElementById('gm-label');
@@ -3568,6 +3878,97 @@ function subscribeRecurring() {
     },
     err => { console.error('recurring subscribe error', err); showToast('반복지출 로드 실패'); }
   );
+}
+
+// 경조사 마스터 구독 (v0.6)
+function subscribeEvents() {
+  if (unsubEvents) { unsubEvents(); unsubEvents = null; }
+  if (!currentUid) return;
+  unsubEvents = onSnapshot(
+    pathEvents(),
+    snap => {
+      eventsMasters = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // 정렬: planning 먼저 (가까운 행사 위), 그 다음 done
+      // 같은 status 내에서는 다음 발생 ym 오름차순
+      eventsMasters.sort((a, b) => {
+        const aDone = a.status === 'done' ? 1 : 0;
+        const bDone = b.status === 'done' ? 1 : 0;
+        if (aDone !== bDone) return aDone - bDone;
+        const aNext = nextEventYm(a) || '9999-12';
+        const bNext = nextEventYm(b) || '9999-12';
+        if (aNext !== bNext) return aNext.localeCompare(bNext);
+        return String(a.title || '').localeCompare(String(b.title || ''), 'ko');
+      });
+      renderEventsList();
+      renderEventAccountSelect();
+      // 대시보드도 즉시 갱신 (C2)
+      if (typeof renderDashEventsCard === 'function') renderDashEventsCard();
+    },
+    err => { console.error('events subscribe error', err); showToast('경조사 로드 실패'); }
+  );
+}
+
+// 경조사 다음 발생 ym 계산 (정렬 + 표시용)
+// — 일회성: targetYm 그대로 (done이면 null)
+// — 매년: 올해 또는 다음 해 recurMonth (현재 월이 이미 지났으면 내년)
+function nextEventYm(ev) {
+  if (!ev) return null;
+  if (ev.type === 'once') {
+    if (ev.status === 'done') return null;
+    return ev.targetYm || null;
+  }
+  if (ev.type === 'yearly') {
+    const m = parseInt(ev.recurMonth, 10);
+    if (!m || m < 1 || m > 12) return null;
+    const [cy, cm] = currentMonth.split('-').map(Number);
+    const targetYear = (m >= cm) ? cy : cy + 1;
+    return `${targetYear}-${String(m).padStart(2, '0')}`;
+  }
+  return null;
+}
+
+// 경조사 월 적립액 계산
+// — 일회성: amount / (targetYm - startYm + 1). startYm > targetYm이면 0
+// — 매년: amount / 12 (단순화 — 등록 후 첫 사이클도 12로 가정. 부족분은 사용자가 인지)
+function eventMonthlySaving(ev) {
+  if (!ev || !ev.amount) return 0;
+  const amount = Number(ev.amount) || 0;
+  if (amount <= 0) return 0;
+
+  if (ev.type === 'once') {
+    if (ev.status === 'done') return 0;
+    if (!ev.startYm || !ev.targetYm) return 0;
+    const months = monthsBetween(ev.startYm, ev.targetYm);
+    if (months <= 0) return 0;
+    return Math.round(amount / months);
+  }
+  if (ev.type === 'yearly') {
+    return Math.round(amount / 12);
+  }
+  return 0;
+}
+
+// 두 ym 사이의 개월 수 (포함, 즉 같으면 1)
+function monthsBetween(fromYm, toYm) {
+  if (!fromYm || !toYm) return 0;
+  const [fy, fm] = fromYm.split('-').map(Number);
+  const [ty, tm] = toYm.split('-').map(Number);
+  return (ty - fy) * 12 + (tm - fm) + 1;
+}
+
+// 이번 달이 해당 경조사 적립 기간 안인지
+function isEventActiveInMonth(ev, ym) {
+  if (!ev) return false;
+  if (ev.type === 'once') {
+    if (ev.status === 'done') return false;
+    if (!ev.startYm || !ev.targetYm) return false;
+    return ev.startYm <= ym && ym <= ev.targetYm;
+  }
+  if (ev.type === 'yearly') {
+    // 매년은 항상 활성 (적립 사이클이 끊임없음)
+    return true;
+  }
+  return false;
 }
 
 function subscribeTransactions() {
@@ -3857,11 +4258,13 @@ function unsubscribeAll() {
   if (unsubBgBudgets) { unsubBgBudgets(); unsubBgBudgets = null; }                 // v0.4
   if (unsubBgTransactions) { unsubBgTransactions(); unsubBgTransactions = null; } // v0.4
   if (unsubTxTabBudgets) { unsubTxTabBudgets(); unsubTxTabBudgets = null; }       // v0.4 A7
+  if (unsubEvents) { unsubEvents(); unsubEvents = null; }                         // v0.6
   accounts = [];
   settings = null;
   sharedSettings = null;
   transactions = [];
   recurringMasters = [];
+  eventsMasters = [];    // v0.6
   allUnpaidTxs = [];
   bsSnapshot = null;
   bsPrevSnapshot = null;
@@ -5293,6 +5696,316 @@ document.getElementById('btn-rec-delete').addEventListener('click', async () => 
 });
 
 // ──────────────────────────────────────────────────────
+// 경조사 관리 (v0.6)
+// ──────────────────────────────────────────────────────
+
+let editingEventId = null;  // 모달이 편집 중인 경조사 id (null이면 새 추가)
+
+// 적립 계좌 선택 셀렉트 렌더
+function renderEventAccountSelect() {
+  const $sel = document.getElementById('event-account-select');
+  if (!$sel) return;
+  const active = accounts.filter(a => a.active !== false);
+  const current = settings?.eventSavingAccountId || '';
+  $sel.innerHTML =
+    '<option value="">미지정</option>' +
+    active.map(a =>
+      `<option value="${escapeHtml(a.id)}"${a.id === current ? ' selected' : ''}>${escapeHtml(a.name)}</option>`
+    ).join('');
+
+  // hint 메시지 갱신
+  const $hint = document.getElementById('event-account-hint');
+  if ($hint) {
+    if (current) {
+      const acc = accounts.find(a => a.id === current);
+      $hint.textContent = acc ? `${acc.name}에 적립` : '계좌를 찾을 수 없음';
+    } else {
+      $hint.textContent = '행사 시점까지 모아둘 계좌를 선택하세요';
+    }
+  }
+}
+
+// 적립 계좌 변경 — 즉시 저장
+document.getElementById('event-account-select').addEventListener('change', async e => {
+  if (!currentUid) return;
+  const newId = e.target.value || null;
+  try {
+    await setDoc(pathSettings(), { eventSavingAccountId: newId }, { merge: true });
+    showToast(newId ? '적립 계좌 설정됨' : '적립 계좌 해제됨');
+  } catch (err) {
+    console.error('[event] account save error', err);
+    showToast('저장 실패');
+  }
+});
+
+// 마스터 리스트 렌더
+function renderEventsList() {
+  const $list = document.getElementById('events-list');
+  if (!$list) return;
+  if (!eventsMasters.length) {
+    $list.innerHTML = '<div class="chip-empty" style="text-align:center; padding:24px 0;">아직 등록된 경조사가 없습니다</div>';
+    return;
+  }
+
+  const today = currentYm();
+  $list.innerHTML = eventsMasters.map(ev => {
+    const next = nextEventYm(ev);
+    const monthly = eventMonthlySaving(ev);
+    const isDone = ev.status === 'done';
+    const isUpcoming = next && next <= today && !isDone && ev.type === 'once';
+
+    let badge;
+    if (isDone)            badge = '<span class="badge done">완료</span>';
+    else if (ev.type === 'yearly') badge = '<span class="badge yearly">매년</span>';
+    else if (isUpcoming)   badge = '<span class="badge upcoming">임박</span>';
+    else                   badge = '<span class="badge">예정</span>';
+
+    const targetText = ev.type === 'yearly'
+      ? `매년 ${ev.recurMonth}월`
+      : (ev.targetYm || '—');
+
+    const periodText = ev.type === 'once'
+      ? (ev.startYm && ev.targetYm
+          ? `${ev.startYm} → ${ev.targetYm} (${monthsBetween(ev.startYm, ev.targetYm)}개월)`
+          : '기간 미정')
+      : `${ev.startYm || '—'}부터 매년`;
+
+    const doneBtn = ev.type === 'once' && !isDone
+      ? `<button data-event-done="${ev.id}" title="완료 처리">✓ 완료</button>`
+      : '';
+    const reopenBtn = ev.type === 'once' && isDone
+      ? `<button data-event-reopen="${ev.id}" title="다시 예정으로">↩ 재예정</button>`
+      : '';
+
+    return `
+      <div class="event-row ${isDone ? 'done' : ''}">
+        <div class="event-main">
+          <div class="event-name-wrap">
+            <span class="event-name">${escapeHtml(ev.title || '(제목 없음)')}</span>
+            ${badge}
+          </div>
+          <div class="event-meta">
+            <span class="event-amount">${fmtAmount(Number(ev.amount) || 0)}원</span>
+            <span class="dot">·</span>
+            ${escapeHtml(targetText)}
+            ${monthly > 0 ? `<span class="dot">·</span>월 ${fmtAmount(monthly)}원 적립` : ''}
+            <br>
+            <span style="color:var(--text3);">${escapeHtml(periodText)}</span>
+            ${ev.note ? `<br><span style="color:var(--text3);">${escapeHtml(ev.note)}</span>` : ''}
+          </div>
+        </div>
+        <div class="actions">
+          ${doneBtn}${reopenBtn}
+          <button data-event-edit="${ev.id}">편집</button>
+        </div>
+      </div>`;
+  }).join('');
+
+  // 이벤트 위임
+  $list.querySelectorAll('[data-event-edit]').forEach(el => {
+    el.addEventListener('click', () => openEventModal(el.dataset.eventEdit));
+  });
+  $list.querySelectorAll('[data-event-done]').forEach(el => {
+    el.addEventListener('click', () => setEventStatus(el.dataset.eventDone, 'done'));
+  });
+  $list.querySelectorAll('[data-event-reopen]').forEach(el => {
+    el.addEventListener('click', () => setEventStatus(el.dataset.eventReopen, 'planning'));
+  });
+}
+
+// 완료/재예정 토글 (C3)
+async function setEventStatus(id, status) {
+  if (!currentUid) return;
+  const ev = eventsMasters.find(e => e.id === id);
+  if (!ev) return;
+  try {
+    await setDoc(pathEvent(id), { status, updatedAt: serverTimestamp() }, { merge: true });
+    showToast(status === 'done' ? `"${ev.title}" 완료 처리됨` : `"${ev.title}" 다시 예정으로`);
+  } catch (e) {
+    console.error('[event] setStatus error', e);
+    showToast('처리 실패');
+  }
+}
+
+// 모달 열기
+function openEventModal(id = null) {
+  editingEventId = id;
+  const isEdit = id !== null;
+  const ev = isEdit ? eventsMasters.find(e => e.id === id) : null;
+
+  document.getElementById('event-modal-title').textContent = isEdit ? '경조사 편집' : '경조사 추가';
+  document.getElementById('btn-event-delete').style.display = isEdit ? 'inline-flex' : 'none';
+
+  // 기본값 채우기
+  const today = currentYm();
+  document.getElementById('event-name').value = ev?.title || '';
+  document.getElementById('event-amount').value = ev?.amount ? Number(ev.amount).toLocaleString('en-US') : '';
+  document.getElementById('event-note').value = ev?.note || '';
+
+  // 종류 라디오
+  const type = ev?.type || 'once';
+  document.querySelectorAll('input[name="event-type"]').forEach(r => {
+    r.checked = (r.value === type);
+  });
+
+  // 일회성 vs 매년 입력 토글
+  document.getElementById('event-once-group').style.display   = type === 'once'   ? '' : 'none';
+  document.getElementById('event-yearly-group').style.display = type === 'yearly' ? '' : 'none';
+
+  // 일회성 행사 월
+  if (type === 'once') {
+    // 기본: 3개월 뒤
+    let defaultTarget = ev?.targetYm;
+    if (!defaultTarget) {
+      const [cy, cm] = today.split('-').map(Number);
+      const d = new Date(cy, cm - 1 + 3, 1);
+      defaultTarget = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    }
+    document.getElementById('event-target-ym').value = defaultTarget;
+  }
+
+  // 매년 — 월 선택
+  document.getElementById('event-recur-month').value = ev?.recurMonth || (new Date().getMonth() + 1);
+
+  // 적립 시작 월
+  document.getElementById('event-start-ym').value = ev?.startYm || today;
+
+  // 미리보기 갱신
+  refreshEventPreview();
+
+  openOv('ov-event');
+}
+
+// 종류 라디오 변경 시 토글
+document.querySelectorAll('input[name="event-type"]').forEach(r => {
+  r.addEventListener('change', e => {
+    const type = e.target.value;
+    document.getElementById('event-once-group').style.display   = type === 'once'   ? '' : 'none';
+    document.getElementById('event-yearly-group').style.display = type === 'yearly' ? '' : 'none';
+    refreshEventPreview();
+  });
+});
+
+// 모달 안의 모든 입력 변경 시 미리보기 갱신
+['event-amount', 'event-target-ym', 'event-start-ym', 'event-recur-month'].forEach(id => {
+  document.getElementById(id).addEventListener('input', refreshEventPreview);
+  document.getElementById(id).addEventListener('change', refreshEventPreview);
+});
+
+// 미리보기 — 월 적립액 계산
+function refreshEventPreview() {
+  const $prev = document.getElementById('event-modal-preview');
+  if (!$prev) return;
+  const type = document.querySelector('input[name="event-type"]:checked')?.value || 'once';
+  const amountRaw = document.getElementById('event-amount').value.replace(/[^\d]/g, '');
+  const amount = parseInt(amountRaw, 10);
+  if (!isFinite(amount) || amount <= 0) {
+    $prev.style.display = 'none';
+    return;
+  }
+  const startYm  = document.getElementById('event-start-ym').value;
+  let periodText, monthly;
+  if (type === 'once') {
+    const targetYm = document.getElementById('event-target-ym').value;
+    if (!startYm || !targetYm) { $prev.style.display = 'none'; return; }
+    const months = monthsBetween(startYm, targetYm);
+    if (months <= 0) {
+      periodText = '시작 월이 행사 월보다 늦음';
+      monthly = 0;
+    } else {
+      periodText = `${startYm} → ${targetYm} (${months}개월)`;
+      monthly = Math.round(amount / months);
+    }
+  } else {
+    periodText = '매년 12개월 분할';
+    monthly = Math.round(amount / 12);
+  }
+  $prev.style.display = '';
+  document.getElementById('event-preview-period').textContent = periodText;
+  document.getElementById('event-preview-monthly').textContent = `${fmtAmount(monthly)}원`;
+}
+
+// 금액 콤마 포맷
+document.getElementById('event-amount').addEventListener('input', e => {
+  const raw = e.target.value.replace(/[^\d]/g, '');
+  e.target.value = raw ? Number(raw).toLocaleString('en-US') : '';
+});
+
+// 추가 버튼
+document.getElementById('btn-add-event').addEventListener('click', () => openEventModal(null));
+
+// 저장
+document.getElementById('btn-event-save').addEventListener('click', async () => {
+  if (!currentUid) return;
+  const title = document.getElementById('event-name').value.trim();
+  if (!title) { showToast('제목을 입력하세요'); return; }
+
+  const amountRaw = document.getElementById('event-amount').value.replace(/[^\d]/g, '');
+  const amount = parseInt(amountRaw, 10);
+  if (!isFinite(amount) || amount <= 0) { showToast('예상 금액을 입력하세요'); return; }
+
+  const type = document.querySelector('input[name="event-type"]:checked')?.value || 'once';
+  const startYm = document.getElementById('event-start-ym').value;
+  if (!startYm) { showToast('적립 시작 월을 선택하세요'); return; }
+
+  let targetYm = null, recurMonth = null;
+  if (type === 'once') {
+    targetYm = document.getElementById('event-target-ym').value;
+    if (!targetYm) { showToast('행사 월을 선택하세요'); return; }
+    if (targetYm < startYm) { showToast('행사 월이 시작 월보다 빠릅니다'); return; }
+  } else {
+    recurMonth = parseInt(document.getElementById('event-recur-month').value, 10);
+    if (!recurMonth || recurMonth < 1 || recurMonth > 12) { showToast('월을 선택하세요'); return; }
+  }
+
+  const note = document.getElementById('event-note').value.trim() || null;
+
+  const data = {
+    title,
+    type,
+    amount,
+    startYm,
+    targetYm,
+    recurMonth,
+    status: editingEventId ? (eventsMasters.find(e => e.id === editingEventId)?.status || 'planning') : 'planning',
+    note,
+    updatedAt: serverTimestamp(),
+  };
+
+  try {
+    if (editingEventId) {
+      await setDoc(pathEvent(editingEventId), data, { merge: true });
+      showToast(`"${title}" 수정됨`);
+    } else {
+      data.createdAt = serverTimestamp();
+      const newRef = doc(pathEvents());
+      await setDoc(newRef, data);
+      showToast(`"${title}" 추가됨`);
+    }
+    closeOv('ov-event');
+  } catch (e) {
+    console.error('[event] save error', e);
+    showToast('저장 실패');
+  }
+});
+
+// 삭제
+document.getElementById('btn-event-delete').addEventListener('click', async () => {
+  if (!editingEventId) return;
+  const ev = eventsMasters.find(e => e.id === editingEventId);
+  if (!ev) return;
+  if (!confirm(`"${ev.title}" 경조사를 삭제할까요?`)) return;
+  try {
+    await deleteDoc(pathEvent(editingEventId));
+    closeOv('ov-event');
+    showToast(`"${ev.title}" 삭제됨`);
+  } catch (e) {
+    console.error('[event] delete error', e);
+    showToast('삭제 실패');
+  }
+});
+
+// ──────────────────────────────────────────────────────
 // 데이터 백업 (v0.2-2)
 // ──────────────────────────────────────────────────────
 // 백업 범위:
@@ -5744,6 +6457,7 @@ function setMonth(ym) {
     renderDashPlChart();
     renderDashAssetsChart();
     renderDashExpenseChart();
+    renderDashEventsCard();   // v0.6
   }
 }
 function shiftMonth(delta) {
@@ -7559,6 +8273,115 @@ document.getElementById('btn-dash-expense-back').addEventListener('click', () =>
   dashExpenseDrillCategory = null;
   renderDashExpenseChart();
 });
+
+// ── 대시보드 경조사 카드 (v0.6 C2) ──
+// 이번 달 적립 필요액 + 임박 경조사 목록
+// 적립 계좌 잔액과는 비교 안 함 (사용자 결정 — 단순 표시)
+function renderDashEventsCard() {
+  const $body = document.getElementById('dash-events-body');
+  const $sub  = document.getElementById('dash-events-sub');
+  if (!$body) return;
+
+  const today = currentMonth;
+
+  // 1) 이번 달 적립 대상인 경조사 추리기
+  const activeEvents = eventsMasters
+    .filter(ev => isEventActiveInMonth(ev, today))
+    .map(ev => ({
+      ev,
+      monthly: eventMonthlySaving(ev),
+      nextYm: nextEventYm(ev),
+    }))
+    .filter(x => x.monthly > 0);
+
+  // 2) 총 적립 필요액
+  const totalMonthly = activeEvents.reduce((s, x) => s + x.monthly, 0);
+
+  // 3) 빈 상태
+  if (eventsMasters.length === 0) {
+    $body.innerHTML = `
+      <div class="dash-placeholder" style="padding:24px 16px;">
+        등록된 경조사가 없습니다<br>
+        <span class="hint">설정 → 경조사에서 추가하세요</span>
+      </div>`;
+    if ($sub) $sub.textContent = `${today}`;
+    return;
+  }
+  if (activeEvents.length === 0) {
+    $body.innerHTML = `
+      <div class="dash-placeholder" style="padding:24px 16px;">
+        이번 달 적립 대상 경조사가 없습니다
+      </div>`;
+    if ($sub) $sub.textContent = `${today}`;
+    return;
+  }
+
+  // 4) 적립 계좌 정보 (있으면 잔액도 비교)
+  const savingAccId = settings?.eventSavingAccountId || null;
+  const savingAcc = savingAccId ? accounts.find(a => a.id === savingAccId) : null;
+
+  // 5) 정렬 — 다음 행사 가까운 순
+  activeEvents.sort((a, b) => {
+    const an = a.nextYm || '9999-12';
+    const bn = b.nextYm || '9999-12';
+    return an.localeCompare(bn);
+  });
+
+  // 6) 요약 카드
+  const summaryHtml = `
+    <div class="dash-event-summary">
+      <div>
+        <div class="dash-event-summary-label">이번 달 적립 필요액</div>
+        <div class="dash-event-summary-hint">
+          ${activeEvents.length}건의 경조사 ${savingAcc ? `· ${escapeHtml(savingAcc.name)}에 적립` : ''}
+        </div>
+      </div>
+      <div class="dash-event-summary-val">${fmtAmount(totalMonthly)}원</div>
+    </div>
+  `;
+
+  // 7) 항목 리스트 (상위 5개 + 외 N)
+  const MAX = 5;
+  const top = activeEvents.slice(0, MAX);
+  const more = activeEvents.length - top.length;
+
+  const rowsHtml = top.map(({ ev, monthly, nextYm }) => {
+    const isUpcoming = nextYm && nextYm <= today;
+    const isDoneEv = ev.status === 'done';
+    let badge = '';
+    if (isDoneEv)            badge = '<span class="badge done">완료</span>';
+    else if (ev.type === 'yearly') badge = '<span class="badge yearly">매년</span>';
+    else if (isUpcoming)     badge = '<span class="badge upcoming">임박</span>';
+
+    const targetText = ev.type === 'yearly'
+      ? `매년 ${ev.recurMonth}월`
+      : (ev.targetYm ? `${ev.targetYm}` : '—');
+
+    return `
+      <div class="dash-event-row">
+        <div class="dash-event-row-left">
+          <div class="dash-event-row-title">
+            <span>${escapeHtml(ev.title || '(제목 없음)')}</span>
+            ${badge}
+          </div>
+          <div class="dash-event-row-meta">
+            ${escapeHtml(targetText)} · 예상 ${fmtAmount(Number(ev.amount) || 0)}원
+          </div>
+        </div>
+        <div class="dash-event-row-monthly ${isUpcoming ? 'upcoming' : ''}">
+          ${fmtAmount(monthly)}원
+        </div>
+      </div>`;
+  }).join('');
+
+  const moreHtml = more > 0
+    ? `<div class="dash-event-more">외 ${more}건 — 설정 탭에서 모두 보기</div>`
+    : '';
+
+  $body.innerHTML = summaryHtml + rowsHtml + moreHtml;
+
+  if ($sub) $sub.textContent = `${today} · ${activeEvents.length}건 활성`;
+}
 
 // ── 예산 모달 (v0.4 A4) ──
 // 도큐먼트 ID 규칙: `{ym}__{flow}__{category}` (구분자 더블 언더스코어)
