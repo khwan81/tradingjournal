@@ -5464,7 +5464,15 @@ function snapshotToMonthlyLiabs(snap) {
   const out = {};
   for (const [key, raw] of Object.entries(snap.liabilityBalances)) {
     const norm = normalizeLiabSnap(raw, null, null);
-    if (norm) out[key] = norm;
+    if (norm) {
+      // normalizeLiabSnap은 { krw, name, type }만 반환 — 마이그레이션 호환을 위해
+      // native/fxRate를 명시적으로 채워준다 (Firestore는 undefined 거부)
+      out[key] = {
+        ...norm,
+        native: (raw && typeof raw === 'object' && raw.native != null) ? raw.native : null,
+        fxRate: (raw && typeof raw === 'object' && raw.fxRate != null) ? raw.fxRate : null,
+      };
+    }
   }
   return out;
 }
@@ -7002,8 +7010,8 @@ async function migrationRun() {
           ym,
           accountId:  accId,
           balance:    v.native ?? null,
-          balanceKrw: v.krw,
-          fxRate:     v.fxRate,
+          balanceKrw: v.krw ?? 0,
+          fxRate:     v.fxRate ?? null,
           currency:   null,                  // 비추적 자산은 통화 정보 없이도 작동 (krw 위주)
           // 추적용 필드는 비워둠 — 사용자가 자산결산 화면에서 입력
           deposit:    null,
@@ -7026,11 +7034,11 @@ async function migrationRun() {
           docId:      monthlyLiabKeyFor(ym, key),
           ym,
           liabKey:    key,
-          name:       v.name,
-          type:       v.type,
+          name:       v.name ?? '',
+          type:       v.type ?? 'current',
           balance:    v.native ?? null,
-          balanceKrw: v.krw,
-          fxRate:     v.fxRate,
+          balanceKrw: v.krw ?? 0,
+          fxRate:     v.fxRate ?? null,
           asOf,
           migratedFromSnapshot: true,
           createdAt: serverTimestamp(),
@@ -7040,6 +7048,15 @@ async function migrationRun() {
     });
 
     // writeBatch 500개 단위로 commit
+    // Firestore는 undefined 필드를 거부하므로 안전망: 어떤 필드도 undefined가 가지 않도록 sanitize
+    const sanitize = obj => {
+      const out = {};
+      for (const [k, v] of Object.entries(obj)) {
+        out[k] = v === undefined ? null : v;
+      }
+      return out;
+    };
+
     let writeCount = 0;
     let batch = writeBatch(db);
     let inBatch = 0;
@@ -7052,13 +7069,13 @@ async function migrationRun() {
     };
     for (const r of monthlyRows) {
       const { docId, ...payload } = r;
-      batch.set(pathMonthlyDoc(payload.ym, payload.accountId), payload);
+      batch.set(pathMonthlyDoc(payload.ym, payload.accountId), sanitize(payload));
       inBatch++; writeCount++;
       if (inBatch >= 450) await flush();
     }
     for (const r of monthlyLiabRows) {
       const { docId, ...payload } = r;
-      batch.set(pathMonthlyLiabDoc(payload.ym, payload.liabKey), payload);
+      batch.set(pathMonthlyLiabDoc(payload.ym, payload.liabKey), sanitize(payload));
       inBatch++; writeCount++;
       if (inBatch >= 450) await flush();
     }
