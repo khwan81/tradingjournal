@@ -228,6 +228,36 @@ body {
 .tab-content { display: none; }
 .tab-content.active { display: block; }
 
+/* 서브탭 (v0.7) */
+.subtab-bar {
+  display: flex; gap: 6px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.subtab {
+  padding: 7px 14px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text2);
+  font-size: 12.5px; font-weight: 500;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.subtab:hover { color: var(--text); border-color: rgba(255,255,255,0.14); }
+.subtab.active {
+  background: var(--bg3);
+  color: var(--text);
+  border-color: var(--accent);
+}
+.subtab-content { display: none; }
+.subtab-content.active { display: block; }
+@media (max-width: 600px) {
+  .subtab-bar { gap: 4px; }
+  .subtab { padding: 6px 10px; font-size: 12px; }
+}
+
 /* 빈 상태 (placeholder) */
 .empty-state {
   display: flex; flex-direction: column;
@@ -532,6 +562,14 @@ body {
 .backup-info-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
 .backup-info-desc  { font-size: 11px; color: var(--text3); line-height: 1.5; }
 .backup-info-desc.danger { color: var(--red); }
+.backup-info-desc code {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  background: var(--bg3);
+  color: var(--text2);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
 .backup-card .btn-p, .backup-card .btn-d { flex-shrink: 0; }
 
 /* 마지막 백업 시각 (v0.3-1) */
@@ -2560,13 +2598,12 @@ body {
     <button type="button" id="btn-gm-today" class="gm-today" title="이번 달로">오늘</button>
   </div>
 
-  <!-- 탭바 -->
+  <!-- 탭바 (v0.7 — 5탑탭 + 서브탭) -->
   <div class="tab-bar" role="tablist">
     <button class="tab active" data-tab="transactions" role="tab">거래내역</button>
-    <button class="tab"        data-tab="balance"      role="tab">재무상태</button>
-    <button class="tab"        data-tab="pl"           role="tab">손익</button>
-    <button class="tab"        data-tab="budget"       role="tab">예산</button>
-    <button class="tab"        data-tab="dashboard"    role="tab">대시보드</button>
+    <button class="tab"        data-tab="closing"      role="tab">결산</button>
+    <button class="tab"        data-tab="analysis"     role="tab">분석</button>
+    <button class="tab"        data-tab="planning"     role="tab">계획</button>
     <button class="tab"        data-tab="settings"     role="tab">설정</button>
   </div>
 
@@ -2652,47 +2689,65 @@ body {
     </div>
   </div>
 
-  <div class="tab-content" id="tab-balance">
-    <div class="bs-header">
-      <div class="bs-asof-wrap">
-        <span class="bs-asof" id="bs-asof"></span>
-      </div>
-      <button class="btn-p" id="btn-bs-edit">잔액 입력</button>
+  <!-- ═══ 결산 탭 (v0.7) — 재무상태 / 자산결산 ═══ -->
+  <div class="tab-content" id="tab-closing">
+    <div class="subtab-bar" data-subtab-group="closing">
+      <button class="subtab active" data-subtab="balance">재무상태</button>
+      <button class="subtab"        data-subtab="savings">자산결산</button>
     </div>
 
-    <div id="bs-body">
+    <div class="subtab-content active" id="tab-balance">
+      <div class="bs-header">
+        <div class="bs-asof-wrap">
+          <span class="bs-asof" id="bs-asof"></span>
+        </div>
+        <button class="btn-p" id="btn-bs-edit">잔액 입력</button>
+      </div>
+
+      <div id="bs-body">
+        <div class="bs-placeholder">
+          이번 달 잔액 스냅샷 없음 — 우상단 "잔액 입력" 버튼으로 시작
+        </div>
+      </div>
+    </div>
+
+    <!-- 자산결산 서브탭 (v0.7-3b에서 콘텐츠 채움) -->
+    <div class="subtab-content" id="tab-savings">
+      <div id="sv-body">
+        <div class="bs-placeholder">
+          자산결산 — 다음 단계에서 구현 예정
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 분석 탭 (v0.7) — 손익 / 수익률 / 대시보드 ═══ -->
+  <div class="tab-content" id="tab-analysis">
+    <div class="subtab-bar" data-subtab-group="analysis">
+      <button class="subtab active" data-subtab="pl">손익</button>
+      <button class="subtab"        data-subtab="returns">수익률</button>
+      <button class="subtab"        data-subtab="dashboard">대시보드</button>
+    </div>
+
+    <!-- 손익 서브탭 (v0.3-4) -->
+    <div class="subtab-content active" id="tab-pl">
+      <!-- 카테고리별 상세 (A3) -->
+      <div id="pl-body">
+        <div class="pl-placeholder">
+          거래가 없습니다
+        </div>
+      </div>
+    </div>
+
+    <!-- 수익률 서브탭 (v0.7-7에서 콘텐츠 채움) -->
+    <div class="subtab-content" id="tab-returns">
       <div class="bs-placeholder">
-        이번 달 잔액 스냅샷 없음 — 우상단 "잔액 입력" 버튼으로 시작
+        수익률 분석 — 다음 단계에서 구현 예정
       </div>
     </div>
-  </div>
 
-  <!-- 손익 탭 (v0.3-4) -->
-  <div class="tab-content" id="tab-pl">
-    <!-- 카테고리별 상세 (A3) -->
-    <div id="pl-body">
-      <div class="pl-placeholder">
-        거래가 없습니다
-      </div>
-    </div>
-  </div>
-
-  <!-- 예산 탭 (v0.4) -->
-  <div class="tab-content" id="tab-budget">
-    <div class="bg-header">
-      <div></div>
-      <button class="btn-s" id="btn-bg-copy-prev">📋 전월 복사</button>
-    </div>
-
-    <div id="bg-body">
-      <div class="bg-placeholder">
-        예산 데이터 로딩 중…
-      </div>
-    </div>
-  </div>
-
-  <!-- 대시보드 탭 (v0.5 B1 + B2) -->
-  <div class="tab-content" id="tab-dashboard">
+  <!-- 대시보드 서브탭 (v0.5 B1 + B2 / v0.7 분석 탭 안으로 이동) -->
+  <div class="subtab-content" id="tab-dashboard">
     <div class="dash-header">
       <div class="dash-title">대시보드</div>
       <div class="dash-sub" id="dash-asof">—</div>
@@ -2793,6 +2848,30 @@ body {
         </div>
         <div id="dash-events-body">
           <div class="dash-placeholder" style="padding:24px 16px;">로딩 중…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- /tab-dashboard subtab -->
+  </div>
+  <!-- /tab-analysis -->
+
+  <!-- ═══ 계획 탭 (v0.7) — 예산 (경조사·배당은 추후 이동) ═══ -->
+  <div class="tab-content" id="tab-planning">
+    <div class="subtab-bar" data-subtab-group="planning">
+      <button class="subtab active" data-subtab="budget">예산</button>
+    </div>
+
+    <!-- 예산 서브탭 (v0.4) -->
+    <div class="subtab-content active" id="tab-budget">
+      <div class="bg-header">
+        <div></div>
+        <button class="btn-s" id="btn-bg-copy-prev">📋 전월 복사</button>
+      </div>
+
+      <div id="bg-body">
+        <div class="bg-placeholder">
+          예산 데이터 로딩 중…
         </div>
       </div>
     </div>
@@ -3004,6 +3083,21 @@ body {
         </div>
         <button class="btn-p" id="btn-backup-download">📥 백업 다운로드</button>
       </div>
+
+      <!-- v0.7 — 자산결산 통합 마이그레이션 -->
+      <div class="backup-card" id="migration-card">
+        <div class="backup-info">
+          <div class="backup-info-title">🔀 자산결산 통합 (v0.7)</div>
+          <div class="backup-info-desc">
+            기존 <code>snapshots</code> 컬렉션의 월별 자산·부채 잔고를<br>
+            새 <code>monthly</code> / <code>monthly_liab</code> 컬렉션으로 변환합니다.<br>
+            <span id="mig-status">상태 확인 중…</span>
+          </div>
+        </div>
+        <button class="btn-p" id="btn-migration-check">🔍 점검</button>
+        <button class="btn-p" id="btn-migration-run" style="display:none;">▶ 변환 실행</button>
+      </div>
+
       <div class="backup-card backup-card-restore">
         <div class="backup-info">
           <div class="backup-info-title">백업 파일에서 복원</div>
@@ -3735,25 +3829,77 @@ function showApp() {
   $app.style.display     = 'block';
 }
 
-// ── 탭 전환 ──
-document.querySelectorAll('.tab').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const target = btn.dataset.tab;
-    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t === btn));
-    document.querySelectorAll('.tab-content').forEach(c => {
-      c.classList.toggle('active', c.id === `tab-${target}`);
-    });
-    // 대시보드 탭 진입 시 차트 그리기 (v0.5 B3)
-    // — Chart.js는 숨겨진 캔버스에 렌더링이 어색할 수 있어, 탭이 보일 때 그리는 게 안전
-    if (target === 'dashboard') {
-      renderDashKpi();
-      renderDashNetworthChart();
-      renderDashPlChart();
-      renderDashAssetsChart();
-      renderDashExpenseChart();
-      renderDashEventsCard();    // v0.6 C2
+// ── 탭 전환 (v0.7 — 5톱탭 + 서브탭) ──
+// switchTab(name, subtab?): 톱탭(+선택적 서브탭) 활성화. 외부에서 호출 가능한 헬퍼.
+//   - subtab 생략 시: 그 톱탭의 현재 활성 서브탭 유지 (없으면 첫 서브탭)
+function switchTab(name, subtab) {
+  // 1) 톱탭 활성화
+  document.querySelectorAll('.tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.tab === name)
+  );
+  document.querySelectorAll('.tab-content').forEach(c =>
+    c.classList.toggle('active', c.id === `tab-${name}`)
+  );
+
+  // 2) 활성화된 톱탭 내부의 서브탭 처리 — activateSubtab이 dashboard 진입 시 차트 재렌더도 같이 처리함
+  const $topPane = document.getElementById(`tab-${name}`);
+  if ($topPane) {
+    const $bar = $topPane.querySelector('.subtab-bar');
+    if ($bar) {
+      // 명시된 subtab이 있으면 그걸로, 없으면 현재 활성 유지, 그것도 없으면 첫 서브탭
+      let target = subtab;
+      if (!target) {
+        const $cur = $bar.querySelector('.subtab.active');
+        target = $cur ? $cur.dataset.subtab : ($bar.querySelector('.subtab')?.dataset.subtab);
+      }
+      activateSubtab($topPane, target);
     }
-  });
+  }
+}
+
+// 단일 톱탭 영역 내에서 서브탭 활성화
+function activateSubtab($topPane, subtab) {
+  if (!$topPane || !subtab) return;
+  $topPane.querySelectorAll(':scope > .subtab-bar .subtab').forEach(b =>
+    b.classList.toggle('active', b.dataset.subtab === subtab)
+  );
+  $topPane.querySelectorAll(':scope > .subtab-content').forEach(c =>
+    c.classList.toggle('active', c.id === `tab-${subtab}`)
+  );
+
+  // 서브탭 진입 시 후처리 — 대시보드는 차트 재렌더
+  if (subtab === 'dashboard') {
+    renderDashKpi();
+    renderDashNetworthChart();
+    renderDashPlChart();
+    renderDashAssetsChart();
+    renderDashExpenseChart();
+    renderDashEventsCard();
+  }
+}
+
+// v0.7 — 대시보드 가시성 검사 헬퍼
+// 톱탭(분석) 활성 + 서브탭(대시보드) 활성을 모두 충족해야 화면에 보임
+function isDashboardVisible() {
+  const $top = document.getElementById('tab-analysis');
+  if (!$top || !$top.classList.contains('active')) return false;
+  const $sub = document.getElementById('tab-dashboard');
+  return !!$sub?.classList.contains('active');
+}
+
+// 톱탭 클릭 핸들러
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+});
+
+// 서브탭 클릭 핸들러 — 이벤트 위임으로 한 번에 처리 (앞으로 추가될 서브탭도 자동 포함)
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.subtab');
+  if (!btn) return;
+  const $bar = btn.closest('.subtab-bar');
+  const $topPane = $bar?.closest('.tab-content');
+  if (!$topPane) return;
+  activateSubtab($topPane, btn.dataset.subtab);
 });
 
 // ──────────────────────────────────────────────────────
@@ -3875,7 +4021,7 @@ async function loadAll() {
       renderBsBody(); // 재무상태표에도 영향
       renderEventAccountSelect();   // v0.6 적립 계좌 옵션 갱신
       // 자산 분류가 바뀌면 도넛도 갱신 (대시보드 활성일 때)
-      if (document.getElementById('tab-dashboard')?.classList.contains('active')) {
+      if (isDashboardVisible()) {
         renderDashAssetsChart();
       }
     },
@@ -3896,7 +4042,7 @@ async function loadAll() {
       renderAssetTypes();   // v0.3-2
       renderBsBody(); // 외화 환율 라벨이 BS에 들어가니 갱신
       // 환율 변경되면 외화 자산 환산값이 바뀌니 도넛도 갱신
-      if (document.getElementById('tab-dashboard')?.classList.contains('active')) {
+      if (isDashboardVisible()) {
         renderDashAssetsChart();
       }
     },
@@ -3928,7 +4074,7 @@ async function loadAll() {
       renderEventAccountSelect();   // v0.6 — eventSavingAccountId 선택 표시
       renderEventsList();           // v0.6 — settings 변경 시 다시 정렬 등
       // 카테고리 마스터 변경(이름·flow 등)은 대시보드 카테고리 도넛 분류에 영향
-      if (document.getElementById('tab-dashboard')?.classList.contains('active')) {
+      if (isDashboardVisible()) {
         renderDashExpenseChart();
         renderDashEventsCard();   // v0.6 — 적립 계좌 이름 표시 영향
       }
@@ -4071,7 +4217,7 @@ function subscribeTransactions() {
       renderEventBar();    // v0.6 — 경조사 적립 부족 알림
       renderDashKpi();     // v0.5 B2
       // 대시보드 차트들 — 활성일 때만 갱신 (불필요 부담 방지)
-      if (document.getElementById('tab-dashboard')?.classList.contains('active')) {
+      if (isDashboardVisible()) {
         renderDashPlChart();
         renderDashExpenseChart();
         renderDashEventsCard();   // v0.6 D1 — 이번 달 적립 거래 영향
@@ -4220,14 +4366,9 @@ function renderBudgetBar() {
   $bar.classList.toggle('severe', over.length > 0);
 }
 
-// "예산 보기" 버튼 → 예산 탭으로 이동 (월은 글로벌이라 자동 일치)
+// "예산 보기" 버튼 → 계획 탭의 예산 서브탭으로 이동 (v0.7)
 document.getElementById('btn-budget-goto').addEventListener('click', () => {
-  document.querySelectorAll('.tab').forEach(t =>
-    t.classList.toggle('active', t.dataset.tab === 'budget')
-  );
-  document.querySelectorAll('.tab-content').forEach(c =>
-    c.classList.toggle('active', c.id === 'tab-budget')
-  );
+  switchTab('planning', 'budget');
 });
 
 // "+ 적립 거래" 버튼 (v0.6 경조사 알림바) — 거래 모달 열고 경조사 카테고리 + 적립 계좌 + 권장 금액 prefill
@@ -6483,6 +6624,182 @@ async function writeAllToCollection(collRef, items, idField) {
   return count;
 }
 
+// ──────────────────────────────────────────────────────
+// v0.7 — snapshots → monthly / monthly_liab 마이그레이션
+// ──────────────────────────────────────────────────────
+// 점검: snapshots / monthly / monthly_liab 컬렉션 도큐먼트 수를 확인하고
+//      변환 필요 여부를 결정한다. 안내문구를 갱신한다.
+async function migrationCheck() {
+  if (!currentUid) { showToast('로그인이 필요합니다'); return; }
+  const $status = document.getElementById('mig-status');
+  const $btnRun = document.getElementById('btn-migration-run');
+  const $btnChk = document.getElementById('btn-migration-check');
+  $btnChk.disabled = true;
+  $status.textContent = '점검 중…';
+
+  try {
+    const [snapSnap, monthlySnap, monthlyLiabSnap] = await Promise.all([
+      getDocs(pathSnapshots()),
+      getDocs(pathMonthly()),
+      getDocs(pathMonthlyLiab()),
+    ]);
+    const snapN  = snapSnap.size;
+    const monN   = monthlySnap.size;
+    const monLN  = monthlyLiabSnap.size;
+
+    if (snapN === 0 && monN === 0 && monLN === 0) {
+      $status.innerHTML = '✅ 변환할 데이터 없음 — 새로 입력하는 결산부터 신규 컬렉션에 저장됩니다.';
+      $btnRun.style.display = 'none';
+      return;
+    }
+
+    if (snapN === 0 && (monN > 0 || monLN > 0)) {
+      $status.innerHTML = `✅ 이미 변환 완료 — monthly ${monN}건 / monthly_liab ${monLN}건`;
+      $btnRun.style.display = 'none';
+      return;
+    }
+
+    if (snapN > 0 && monN === 0 && monLN === 0) {
+      // 변환 결과 예측: 각 snapshot의 자산/부채 객체 키 수를 합산
+      let predAssets = 0, predLiabs = 0;
+      snapSnap.forEach(d => {
+        const data = d.data() || {};
+        predAssets += Object.keys(data.assetBalances || {}).length;
+        predLiabs  += Object.keys(data.liabilityBalances || {}).length;
+      });
+      $status.innerHTML = `🔄 변환 대상 — snapshots ${snapN}개월<br>→ monthly ${predAssets}건 + monthly_liab ${predLiabs}건 생성 예정`;
+      $btnRun.style.display = '';
+      return;
+    }
+
+    // 양쪽 다 있음 — 충돌 가능
+    $status.innerHTML = `⚠️ snapshots ${snapN}개 + monthly ${monN}건 / monthly_liab ${monLN}건이 함께 존재합니다.<br>먼저 백업을 받으세요. 변환 실행 시 monthly 측을 덮어씁니다.`;
+    $btnRun.style.display = '';
+  } catch (e) {
+    console.error('[migration check]', e);
+    $status.textContent = '❌ 점검 실패: ' + (e.message || e.code);
+  } finally {
+    $btnChk.disabled = false;
+  }
+}
+
+// 실행: snapshots를 monthly / monthly_liab으로 변환
+async function migrationRun() {
+  if (!currentUid) { showToast('로그인이 필요합니다'); return; }
+  const ok = confirm(
+    '⚠️ snapshots를 monthly / monthly_liab으로 변환합니다.\n\n' +
+    '진행 전 [백업 다운로드]를 먼저 수행하셨나요?\n\n' +
+    '[확인]을 누르면 변환을 시작합니다.'
+  );
+  if (!ok) return;
+
+  const $status = document.getElementById('mig-status');
+  const $btnRun = document.getElementById('btn-migration-run');
+  const $btnChk = document.getElementById('btn-migration-check');
+  $btnRun.disabled = true;
+  $btnChk.disabled = true;
+  $status.textContent = '🔄 변환 진행 중…';
+
+  try {
+    const snapSnap = await getDocs(pathSnapshots());
+    if (snapSnap.empty) {
+      $status.innerHTML = '✅ 변환할 snapshots 없음.';
+      $btnRun.style.display = 'none';
+      return;
+    }
+
+    // 변환 결과를 배열로 모은 뒤 writeBatch로 일괄 쓰기
+    const monthlyRows = [];
+    const monthlyLiabRows = [];
+    snapSnap.forEach(d => {
+      const ym = d.id;
+      const data = d.data() || {};
+      const asOf = data.asOf || null;
+
+      const assets = snapshotToMonthlyAssets(data);
+      for (const [accId, v] of Object.entries(assets)) {
+        monthlyRows.push({
+          docId:      monthlyKeyFor(ym, accId),
+          ym,
+          accountId:  accId,
+          balance:    v.native ?? null,
+          balanceKrw: v.krw,
+          fxRate:     v.fxRate,
+          currency:   null,                  // 비추적 자산은 통화 정보 없이도 작동 (krw 위주)
+          // 추적용 필드는 비워둠 — 사용자가 자산결산 화면에서 입력
+          deposit:    null,
+          depositKrw: null,
+          principal:  null,
+          monthlyReturn: null,
+          cumReturn:     null,
+          cumReturnRate: null,
+          isStart:    false,
+          asOf,
+          migratedFromSnapshot: true,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      }
+
+      const liabs = snapshotToMonthlyLiabs(data);
+      for (const [key, v] of Object.entries(liabs)) {
+        monthlyLiabRows.push({
+          docId:      monthlyLiabKeyFor(ym, key),
+          ym,
+          liabKey:    key,
+          name:       v.name,
+          type:       v.type,
+          balance:    v.native ?? null,
+          balanceKrw: v.krw,
+          fxRate:     v.fxRate,
+          asOf,
+          migratedFromSnapshot: true,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      }
+    });
+
+    // writeBatch 500개 단위로 commit
+    let writeCount = 0;
+    let batch = writeBatch(db);
+    let inBatch = 0;
+    const flush = async () => {
+      if (inBatch > 0) {
+        await batch.commit();
+        batch = writeBatch(db);
+        inBatch = 0;
+      }
+    };
+    for (const r of monthlyRows) {
+      const { docId, ...payload } = r;
+      batch.set(pathMonthlyDoc(payload.ym, payload.accountId), payload);
+      inBatch++; writeCount++;
+      if (inBatch >= 450) await flush();
+    }
+    for (const r of monthlyLiabRows) {
+      const { docId, ...payload } = r;
+      batch.set(pathMonthlyLiabDoc(payload.ym, payload.liabKey), payload);
+      inBatch++; writeCount++;
+      if (inBatch >= 450) await flush();
+    }
+    await flush();
+
+    $status.innerHTML = `✅ 변환 완료 — monthly ${monthlyRows.length}건 / monthly_liab ${monthlyLiabRows.length}건 (총 ${writeCount}건 쓰기)<br>※ snapshots 컬렉션은 호환 레이어를 위해 남겨둡니다. 검증 완료 후 다시 점검 시 삭제 옵션이 표시됩니다.`;
+    $btnRun.style.display = 'none';
+    showToast('자산결산 통합 변환 완료');
+  } catch (e) {
+    console.error('[migration run]', e);
+    $status.textContent = '❌ 변환 실패: ' + (e.message || e.code);
+  } finally {
+    $btnRun.disabled = false;
+    $btnChk.disabled = false;
+  }
+}
+
+document.getElementById('btn-migration-check').addEventListener('click', migrationCheck);
+document.getElementById('btn-migration-run').addEventListener('click', migrationRun);
+
 // ── 메인: 복원 실행 ──
 async function executeRestore() {
   if (!restorePayload) { showToast('복원할 데이터가 없습니다'); return; }
@@ -6574,7 +6891,7 @@ function setMonth(ym) {
   // 글로벌 월 변경 시 트리맵 drill-down 상태 리셋 (다른 월에 그 카테고리가 없을 수 있음)
   dashExpenseDrillCategory = null;
   // 대시보드 차트는 활성일 때만 재로드
-  if (document.getElementById('tab-dashboard')?.classList.contains('active')) {
+  if (isDashboardVisible()) {
     renderDashNetworthChart();
     renderDashPlChart();
     renderDashAssetsChart();
@@ -7160,7 +7477,7 @@ function subscribeBsSnapshot() {
       renderBsHeader();
       renderDashKpi();   // v0.5 B2
       // 대시보드 탭이 활성이면 차트도 재로드 (B3, B5, D1)
-      if (document.getElementById('tab-dashboard')?.classList.contains('active')) {
+      if (isDashboardVisible()) {
         renderDashNetworthChart();
         renderDashAssetsChart();
         renderDashEventsCard();   // v0.6 D1 — 적립 계좌 잔액 변동
@@ -9671,10 +9988,7 @@ document.getElementById('btn-fx-save').addEventListener('click', saveFxRates);
 // 환율 수정 링크 — 설정 탭의 환율 섹션으로 스크롤
 document.getElementById('fx-edit-link').addEventListener('click', () => {
   closeOv('ov-balance');
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-  document.querySelector('.tab[data-tab="settings"]').classList.add('active');
-  document.getElementById('tab-settings').classList.add('active');
+  switchTab('settings');
   // 환율 섹션으로 스크롤 + 강조
   const $sec = document.getElementById('sec-fxrates');
   if ($sec) {
