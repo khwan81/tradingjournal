@@ -5744,7 +5744,9 @@ function renderEventsList() {
     const isUpcoming = next && next <= today && !isDone && ev.type === 'once';
 
     let badge;
+    const isYearlyDoneThisMonth = ev.type === 'yearly' && ev.lastDoneYm === today;
     if (isDone)            badge = '<span class="badge done">완료</span>';
+    else if (isYearlyDoneThisMonth) badge = '<span class="badge done">이번 달 처리됨</span>';
     else if (ev.type === 'yearly') badge = '<span class="badge yearly">매년</span>';
     else if (isUpcoming)   badge = '<span class="badge upcoming">임박</span>';
     else                   badge = '<span class="badge">예정</span>';
@@ -5766,8 +5768,19 @@ function renderEventsList() {
       ? `<button data-event-reopen="${ev.id}" title="다시 예정으로">↩ 재예정</button>`
       : '';
 
+    // 매년 행사 — 이번 달이 행사 월이면 '이번 달 처리' 토글
+    const [curYear, curMonth] = today.split('-').map(Number);
+    const isYearlyInRecurMonth = ev.type === 'yearly'
+      && parseInt(ev.recurMonth, 10) === curMonth;
+    const yearlyDoneBtn = isYearlyInRecurMonth && ev.lastDoneYm !== today
+      ? `<button data-event-yearly-done="${ev.id}" title="이번 달 인출 완료">✓ 이번 달 처리</button>`
+      : '';
+    const yearlyUndoBtn = isYearlyInRecurMonth && ev.lastDoneYm === today
+      ? `<button data-event-yearly-undo="${ev.id}" title="처리 해제">↩ 해제</button>`
+      : '';
+
     return `
-      <div class="event-row ${isDone ? 'done' : ''}">
+      <div class="event-row ${(isDone || isYearlyDoneThisMonth) ? 'done' : ''}">
         <div class="event-main">
           <div class="event-name-wrap">
             <span class="event-name">${escapeHtml(ev.title || '(제목 없음)')}</span>
@@ -5784,7 +5797,7 @@ function renderEventsList() {
           </div>
         </div>
         <div class="actions">
-          ${doneBtn}${reopenBtn}
+          ${doneBtn}${reopenBtn}${yearlyDoneBtn}${yearlyUndoBtn}
           <button data-event-edit="${ev.id}">편집</button>
         </div>
       </div>`;
@@ -5800,6 +5813,31 @@ function renderEventsList() {
   $list.querySelectorAll('[data-event-reopen]').forEach(el => {
     el.addEventListener('click', () => setEventStatus(el.dataset.eventReopen, 'planning'));
   });
+  // 매년 행사 토글 (v0.6 후속) — lastDoneYm으로 이번 달 처리 표시
+  $list.querySelectorAll('[data-event-yearly-done]').forEach(el => {
+    el.addEventListener('click', () => setEventYearlyDone(el.dataset.eventYearlyDone, true));
+  });
+  $list.querySelectorAll('[data-event-yearly-undo]').forEach(el => {
+    el.addEventListener('click', () => setEventYearlyDone(el.dataset.eventYearlyUndo, false));
+  });
+}
+
+// 매년 행사 — 이번 달 처리 토글 (lastDoneYm 설정/해제)
+async function setEventYearlyDone(id, isDone) {
+  if (!currentUid) return;
+  const ev = eventsMasters.find(e => e.id === id);
+  if (!ev) return;
+  const today = currentYm();
+  try {
+    await setDoc(pathEvent(id), {
+      lastDoneYm: isDone ? today : null,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+    showToast(isDone ? `"${ev.title}" 이번 달 처리됨` : `"${ev.title}" 처리 해제`);
+  } catch (e) {
+    console.error('[event] yearly done error', e);
+    showToast('처리 실패');
+  }
 }
 
 // 완료/재예정 토글 (C3)
@@ -8378,7 +8416,11 @@ function estimateEventProgress(ev, ym) {
     // 행사 월 = 인출 예정 — 잔여를 전체 금액으로
     const [cy, cm] = ym.split('-').map(Number);
     const recurM = parseInt(ev.recurMonth, 10);
-    if (recurM === cm) return 0;
+    if (recurM === cm) {
+      // 이번 달 인출 완료 토글이 켜져 있으면 잔여 0
+      if (ev.lastDoneYm === ym) return 1;
+      return 0;
+    }
 
     const cycleStart = getEventCycleStart(ev, ym);
     if (!cycleStart) return 0;
