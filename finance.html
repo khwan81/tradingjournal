@@ -3287,6 +3287,19 @@ body {
         <button class="btn-p" id="btn-migration-run" style="display:none;">▶ 변환 실행</button>
       </div>
 
+      <!-- v0.7-5a — 잔고 초기화 도구 (개발/테스트용) -->
+      <div class="backup-card" id="reset-card">
+        <div class="backup-info">
+          <div class="backup-info-title">🧹 자산/부채 잔고 초기화</div>
+          <div class="backup-info-desc danger">
+            <code>snapshots</code> · <code>monthly</code> · <code>monthly_liab</code> 컬렉션을 모두 삭제합니다.<br>
+            거래내역·계좌 마스터·예산은 보존됩니다. 진행 전 백업을 받으세요.<br>
+            <span id="reset-status">—</span>
+          </div>
+        </div>
+        <button class="btn-d" id="btn-reset-balances">전체 초기화</button>
+      </div>
+
       <div class="backup-card backup-card-restore">
         <div class="backup-info">
           <div class="backup-info-title">백업 파일에서 복원</div>
@@ -5580,11 +5593,42 @@ function openAccountModal(id = null) {
   document.getElementById('acc-acat').value = a.assetsCategory || '';
   document.getElementById('acc-startym').value = a.startYm || currentYm();
 
-  // 추적 잠금: 결산 데이터가 있는 경우 (v0.1에선 항상 풀어두고 v0.2에 monthly 조회로 잠금 적용)
-  // 일단 신규 생성 시엔 자유, 편집 시엔 추적이 켜져있다면 잠금
-  const lockTrack = isEdit && !!a.trackPerformance;
-  document.getElementById('acc-track-toggle').classList.toggle('locked', lockTrack);
-  document.getElementById('acc-track-lock-hint').style.display = lockTrack ? 'block' : 'none';
+  // 추적 잠금 (v0.7-5b — monthly 컬렉션 실제 도큐먼트 유무로 결정)
+  // 1차: 보수적으로 잠금 (편집 + 추적 ON)
+  // 2차: 비동기로 monthly 도큐먼트 개수를 세서 0건이면 잠금 해제
+  const $trackToggle = document.getElementById('acc-track-toggle');
+  const $trackHint   = document.getElementById('acc-track-lock-hint');
+  const initiallyLocked = isEdit && !!a.trackPerformance;
+  $trackToggle.classList.toggle('locked', initiallyLocked);
+  $trackHint.style.display = initiallyLocked ? 'block' : 'none';
+  $trackHint.textContent = '🔒 결산 데이터 조회 중…';
+
+  if (isEdit && !!a.trackPerformance && currentUid) {
+    (async () => {
+      try {
+        const snap = await getDocs(
+          query(pathMonthly(), where('accountId', '==', id))
+        );
+        // 모달이 닫혔거나 다른 계좌를 편집 중이면 중단
+        if (editingAccountId !== id) return;
+        const n = snap.size;
+        if (n === 0) {
+          // 결산 없음 → 잠금 해제
+          $trackToggle.classList.remove('locked');
+          $trackHint.style.display = 'none';
+        } else {
+          $trackToggle.classList.add('locked');
+          $trackHint.style.display = 'block';
+          $trackHint.textContent = `🔒 결산 데이터 ${n}건이 있어 추적을 끌 수 없습니다 (자산결산에서 결산을 모두 삭제하면 해제됩니다)`;
+        }
+      } catch (e) {
+        console.warn('[track lock check]', e);
+        if (editingAccountId === id) {
+          $trackHint.textContent = '🔒 결산 데이터가 있어 변경 불가';
+        }
+      }
+    })();
+  }
 
   // 통화 잠금: 편집 시(=거래 가능성 있음)면 일단 잠금
   document.getElementById('acc-currency').disabled = isEdit;
@@ -7096,6 +7140,47 @@ async function migrationRun() {
 document.getElementById('btn-migration-check').addEventListener('click', migrationCheck);
 document.getElementById('btn-migration-run').addEventListener('click', migrationRun);
 
+// ──────────────────────────────────────────────────────
+// v0.7-5a — 자산/부채 잔고 초기화 (snapshots/monthly/monthly_liab 일괄 삭제)
+// ──────────────────────────────────────────────────────
+async function resetBalances() {
+  if (!currentUid) { showToast('로그인이 필요합니다'); return; }
+
+  const ok1 = confirm(
+    '⚠️ 자산/부채 잔고 데이터를 모두 삭제합니다.\n\n' +
+    '• snapshots (재무상태 스냅샷)\n' +
+    '• monthly (자산 결산)\n' +
+    '• monthly_liab (부채 결산)\n\n' +
+    '거래내역·계좌 마스터·예산·반복지출·경조사는 보존됩니다.\n\n' +
+    '백업을 먼저 다운로드했나요?'
+  );
+  if (!ok1) return;
+  const ok2 = confirm('정말 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.');
+  if (!ok2) return;
+
+  const $btn = document.getElementById('btn-reset-balances');
+  const $status = document.getElementById('reset-status');
+  $btn.disabled = true;
+  $status.textContent = '삭제 중…';
+
+  try {
+    const [delSnap, delMonthly, delMonthlyLiab] = await Promise.all([
+      deleteAllInCollection(pathSnapshots()),
+      deleteAllInCollection(pathMonthly()),
+      deleteAllInCollection(pathMonthlyLiab()),
+    ]);
+    $status.innerHTML = `✅ 삭제 완료 — snapshots ${delSnap}건 / monthly ${delMonthly}건 / monthly_liab ${delMonthlyLiab}건`;
+    showToast('잔고 데이터 초기화 완료');
+  } catch (e) {
+    console.error('[reset balances]', e);
+    $status.textContent = '❌ 초기화 실패: ' + (e.message || e.code);
+  } finally {
+    $btn.disabled = false;
+  }
+}
+
+document.getElementById('btn-reset-balances').addEventListener('click', resetBalances);
+
 // ── 메인: 복원 실행 ──
 async function executeRestore() {
   if (!restorePayload) { showToast('복원할 데이터가 없습니다'); return; }
@@ -8268,9 +8353,15 @@ async function saveSavingsEntry() {
   const data = {
     ym,
     accountId: accId,
-    accountName: acc.name,
-    assetsCategory: acc.assetsCategory || null,
-    currency: acc.currency || 'KRW',
+
+    // 계좌 마스터 비정규화 박제 (v0.7-5b)
+    // — 마스터 삭제/변경되어도 그 시점의 정보로 BS·자산결산에 표시 가능
+    accountName:     acc.name,
+    currency:        acc.currency || 'KRW',
+    financeType:     acc.financeType || 'current',
+    financeCategory: acc.financeCategory || null,
+    trackPerformance: !!acc.trackPerformance,
+    assetsCategory:  acc.assetsCategory || null,
 
     balance:    balN,
     balanceKrw: balKrw,
