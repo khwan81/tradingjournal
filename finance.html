@@ -5483,7 +5483,8 @@ function renderRecurringList() {
     $l.innerHTML = '<div class="chip-empty" style="text-align:center; padding:24px 0;">아직 등록된 반복지출이 없습니다</div>';
     return;
   }
-  const today = currentYm();
+  // 글로벌 월 기준 — 사용자가 보고 있는 월 기준으로 진행/종료/예정 판단
+  const today = currentMonth;
   $l.innerHTML = recurringMasters.map(rec => {
     const isActive = isRecurringActiveInYm(rec, today);
     const ended = rec.validTo && rec.validTo < today;
@@ -5736,7 +5737,9 @@ function renderEventsList() {
     return;
   }
 
-  const today = currentYm();
+  // 글로벌 월 기준 — 시스템 오늘이 아니라 currentMonth(사용자가 보고 있는 월) 기준
+  // 으로 처리 상태/임박 등을 판단해야 글로벌 월 이동 시 정확히 갱신됨
+  const today = currentMonth;
   $list.innerHTML = eventsMasters.map(ev => {
     const next = nextEventYm(ev);
     const monthly = eventMonthlySaving(ev);
@@ -5823,17 +5826,18 @@ function renderEventsList() {
 }
 
 // 매년 행사 — 이번 달 처리 토글 (lastDoneYm 설정/해제)
+// '이번 달'은 사용자가 보고 있는 글로벌 월 기준. 시스템 오늘이 아님.
 async function setEventYearlyDone(id, isDone) {
   if (!currentUid) return;
   const ev = eventsMasters.find(e => e.id === id);
   if (!ev) return;
-  const today = currentYm();
+  const today = currentMonth;   // 글로벌 월
   try {
     await setDoc(pathEvent(id), {
       lastDoneYm: isDone ? today : null,
       updatedAt: serverTimestamp(),
     }, { merge: true });
-    showToast(isDone ? `"${ev.title}" 이번 달 처리됨` : `"${ev.title}" 처리 해제`);
+    showToast(isDone ? `"${ev.title}" ${today} 처리됨` : `"${ev.title}" 처리 해제`);
   } catch (e) {
     console.error('[event] yearly done error', e);
     showToast('처리 실패');
@@ -5863,8 +5867,8 @@ function openEventModal(id = null) {
   document.getElementById('event-modal-title').textContent = isEdit ? '경조사 편집' : '경조사 추가';
   document.getElementById('btn-event-delete').style.display = isEdit ? 'inline-flex' : 'none';
 
-  // 기본값 채우기
-  const today = currentYm();
+  // 기본값 채우기 — 시작 월 기본값은 사용자가 보고 있는 글로벌 월 기준
+  const today = currentMonth;
   document.getElementById('event-name').value = ev?.title || '';
   document.getElementById('event-amount').value = ev?.amount ? Number(ev.amount).toLocaleString('en-US') : '';
   document.getElementById('event-note').value = ev?.note || '';
