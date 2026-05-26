@@ -2201,6 +2201,10 @@ body {
   border-radius: 6px;
 }
 .bal-row.locked { opacity: 0.7; }
+/* v0.7-5c — 추적 자산 행 (자산결산으로 라우팅) */
+.bal-row.tracked { cursor: pointer; opacity: 0.9; }
+.bal-row.tracked:hover { background: var(--bg3); border-color: var(--accent); }
+.bal-row.tracked .bal-name .meta { color: var(--accent); }
 .bal-row .bal-name {
   font-size: 13px;
   color: var(--text);
@@ -4218,6 +4222,12 @@ let unsubMonthly = null;
 let unsubMonthlyPrev = null;
 let editingSavingsKey = null;       // 자산결산 모달이 편집 중인 monthly 도큐먼트 id (없으면 신규)
 
+// v0.7-5c — 부채 결산 (monthly_liab 컬렉션)
+let monthlyLiabDocs = [];           // 현재 currentMonth의 부채 결산 도큐먼트들
+let monthlyLiabPrevDocs = [];       // 직전 월
+let unsubMonthlyLiab = null;
+let unsubMonthlyLiabPrev = null;
+
 // 자산 종류 enum (categoriesEnum 기본값)
 const DEFAULT_CATEGORIES_ENUM = {
   current:    ["주식", "코인", "입출금", "CMA", "외화"],
@@ -4390,6 +4400,7 @@ async function loadAll() {
 
   // 자산결산 서브탭 — monthly 구독 (v0.7-3b)
   subscribeMonthly();
+  subscribeMonthlyLiab();   // v0.7-5c — 부채 결산도 구독
 
   // 손익 탭 — 거래 구독
   subscribePlTransactions();
@@ -7263,6 +7274,7 @@ function setMonth(ym) {
   subscribeBgBudgets();              // 예산
   subscribeBgTransactions();         // 예산 (사용액)
   subscribeMonthly();                // v0.7-3b — 자산결산 (현재월 + 전월)
+  subscribeMonthlyLiab();            // v0.7-5c — 부채 결산
 
   // 즉시 헤더/렌더 갱신 (구독 콜백 도착 전에 화면 일관성 유지)
   renderBsHeader();
@@ -7908,19 +7920,62 @@ function subscribeMonthly() {
     snap => {
       monthlyDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       renderSavings();
+      renderBsBody();   // v0.7-5c — BS도 monthly 데이터 변경 반영
+      renderBsHeader();
+      renderDashKpi();
+      if (isDashboardVisible()) {
+        renderDashNetworthChart();
+        renderDashAssetsChart();
+      }
     },
     err => { console.error('monthly subscribe error', err); showToast('자산결산 로드 실패'); }
   );
 
-  // 직전 월 (전월 잔고/원금 비교용)
+  // 직전 월 (전월 잔고/원금 비교용 + MoM 비교용)
   const prev = prevYm(currentMonth);
   unsubMonthlyPrev = onSnapshot(
     query(pathMonthly(), where('ym', '==', prev)),
     snap => {
       monthlyPrevDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      renderSavings();   // 전월 데이터 변경 시 표시도 갱신
+      renderSavings();
+      renderBsBody();   // v0.7-5c — MoM delta를 위해 BS도 갱신
+      renderBsHeader();
+      renderDashKpi();
     },
     err => { console.error('monthly prev subscribe error', err); }
+  );
+}
+
+// v0.7-5c — 부채 결산 구독
+function subscribeMonthlyLiab() {
+  if (unsubMonthlyLiab) { unsubMonthlyLiab(); unsubMonthlyLiab = null; }
+  if (unsubMonthlyLiabPrev) { unsubMonthlyLiabPrev(); unsubMonthlyLiabPrev = null; }
+  if (!currentUid) return;
+
+  unsubMonthlyLiab = onSnapshot(
+    query(pathMonthlyLiab(), where('ym', '==', currentMonth)),
+    snap => {
+      monthlyLiabDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderBsBody();
+      renderBsHeader();
+      renderDashKpi();
+      if (isDashboardVisible()) {
+        renderDashNetworthChart();
+      }
+    },
+    err => { console.error('monthly_liab subscribe error', err); }
+  );
+
+  const prev = prevYm(currentMonth);
+  unsubMonthlyLiabPrev = onSnapshot(
+    query(pathMonthlyLiab(), where('ym', '==', prev)),
+    snap => {
+      monthlyLiabPrevDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderBsBody();
+      renderBsHeader();
+      renderDashKpi();
+    },
+    err => { console.error('monthly_liab prev subscribe error', err); }
   );
 }
 
@@ -7929,6 +7984,14 @@ function findMonthlyDoc(accId, ym) {
   if (ym === currentMonth) return monthlyDocs.find(d => d.accountId === accId) || null;
   const prev = prevYm(currentMonth);
   if (ym === prev) return monthlyPrevDocs.find(d => d.accountId === accId) || null;
+  return null;
+}
+
+// 한 부채의 도큐먼트 찾기 (v0.7-5c)
+function findMonthlyLiabDoc(liabKey, ym) {
+  if (ym === currentMonth) return monthlyLiabDocs.find(d => d.liabKey === liabKey) || null;
+  const prev = prevYm(currentMonth);
+  if (ym === prev) return monthlyLiabPrevDocs.find(d => d.liabKey === liabKey) || null;
   return null;
 }
 
@@ -10031,12 +10094,14 @@ function openBalanceModal() {
   document.getElementById('fx-jpy').textContent  = fmtNum(curJpy);
   document.getElementById('fx-usdt').textContent = fmtNum(curUsdt);
 
-  // 스냅 환율: 저장된 자산 중 통화별 첫 항목의 fxRate
+  // 스냅 환율: monthly 도큐먼트들 중 외화 자산의 fxRate (v0.7-5c)
   const snapRates = {};
-  if (bsSnapshot?.assetBalances) {
-    for (const v of Object.values(bsSnapshot.assetBalances)) {
-      if (v.currency && v.currency !== 'KRW' && v.fxRate != null) {
-        if (!(v.currency in snapRates)) snapRates[v.currency] = v.fxRate;
+  let snapAsOfAny = null;
+  for (const d of monthlyDocs) {
+    if (d.currency && d.currency !== 'KRW' && d.fxRate != null) {
+      if (!(d.currency in snapRates)) {
+        snapRates[d.currency] = d.fxRate;
+        if (!snapAsOfAny && d.asOf) snapAsOfAny = d.asOf;
       }
     }
   }
@@ -10058,8 +10123,8 @@ function openBalanceModal() {
   const hasAnySnap = Object.keys(snapRates).length > 0
     && [['USD', curUsd], ['JPY', curJpy], ['USDT', curUsdt]]
         .some(([c, r]) => snapRates[c] != null && Math.abs(snapRates[c] - r) > 0.0001);
-  $date.textContent = hasAnySnap && bsSnapshot?.asOf
-    ? `스냅 환율은 ${bsSnapshot.asOf} 입력 시점`
+  $date.textContent = hasAnySnap && snapAsOfAny
+    ? `스냅 환율은 ${snapAsOfAny} 입력 시점`
     : '';
 
   // 스냅 유지 토글: 환율 다른 통화가 있을 때만 표시, 기본 ON
@@ -10123,27 +10188,31 @@ function buildBalanceRows() {
   const rows = [];
 
   // 자산: accounts 마스터 active=true만
+  // v0.7-5c — bsSnapshot 대신 monthly 컬렉션에서 prefill. 추적 자산은 잠금 + 자산결산 라우팅
   for (const a of accounts) {
     if (a.active === false) continue;
     const tier = a.financeType === 'nonCurrent' ? 'noncurrent' : 'current';
     const currency = a.currency || 'KRW';
     const isFx = currency !== 'KRW';
     const curFxRate = isFx ? (fx[currency] || null) : null;
+    const isTracked = !!a.trackPerformance;
 
-    // 저장된 스냅샷에서 prefill
+    // monthly 도큐먼트에서 prefill
     let native = '', krw = 0;
     let snapFxRate = null;
     let snapKrw = null;
-    const saved = bsSnapshot?.assetBalances?.[a.id];
-    if (saved) {
-      native = saved.native ?? '';
-      snapFxRate = saved.fxRate ?? null;
-      snapKrw    = Number(saved.krw) || 0;
+    let snapAsOf = null;
+    const doc = findMonthlyDoc(a.id, currentMonth);
+    if (doc) {
+      native = doc.balance ?? '';
+      snapFxRate = doc.fxRate ?? null;
+      snapKrw    = Number(doc.balanceKrw) || 0;
+      snapAsOf   = doc.asOf || null;
       // 외화는 현재 환율로 재계산 (저장 시 현재 환율로 박제될 것이므로)
       if (isFx && native !== '' && curFxRate) {
         krw = Math.round(Number(native) * curFxRate);
       } else {
-        krw = Number(saved.krw) || 0;
+        krw = Number(doc.balanceKrw) || 0;
       }
     }
 
@@ -10152,15 +10221,17 @@ function buildBalanceRows() {
       type: 'asset',
       tier,
       name: a.name,
-      meta: isFx ? currency : '',
+      meta: isFx ? currency : (isTracked ? '추적' : ''),
       currency,
       fxRate: curFxRate,           // 현재 환율 (입력·계산에 사용)
-      snapFxRate,                   // 이전 스냅의 환율 (참고용 표시)
-      snapKrw,                      // 이전 스냅의 KRW (스냅 유지 시 저장값)
-      snapAsOf: bsSnapshot?.asOf || null,
-      locked: false,
+      snapFxRate,                   // monthly 도큐먼트의 환율 (참고용 표시)
+      snapKrw,                      // monthly 도큐먼트의 KRW (스냅 유지 시 저장값)
+      snapAsOf,
+      // v0.7-5c — 추적 자산은 잠금. 행 클릭 시 자산결산 모달로 라우팅
+      locked: isTracked,
       auto: false,
       isFx,
+      isTracked,
       native,
       krw,
     });
@@ -10168,13 +10239,13 @@ function buildBalanceRows() {
 
   // 부채: settings.liabilities (v0.2: {id, name, type, note, createdAt})
   // - 마스터에 있는 부채만 입력 가능 (마스터 삭제된 잔재는 입력 화면에 표시 안 함 - 재무상태표에서만 자동 표시)
-  // - 스냅 값은 객체({krw,name,type}) 또는 숫자(v0.1) 둘 다 처리
+  // v0.7-5c — monthly_liab 컬렉션에서 prefill
   const liabs = settings?.liabilities || [];
   for (const l of liabs) {
     const key = l.id ? `liab:${l.id}` : `liab:${l.name}`;
     const tier = l.type === 'nonCurrent' ? 'noncurrent' : 'current';
-    const savedRaw = bsSnapshot?.liabilityBalances?.[key];
-    const saved = normalizeLiabSnap(savedRaw, l.name, l.type || 'current');
+    const doc = findMonthlyLiabDoc(key, currentMonth);
+    const krw = doc ? (Number(doc.balanceKrw) || 0) : 0;
     rows.push({
       key,
       type: 'liab',
@@ -10186,8 +10257,9 @@ function buildBalanceRows() {
       locked: false,
       auto: false,
       isFx: false,
-      native: saved ? saved.krw : '',
-      krw: saved ? saved.krw : 0,
+      isTracked: false,
+      native: doc ? krw : '',
+      krw,
     });
   }
 
@@ -10203,6 +10275,7 @@ function buildBalanceRows() {
     locked: true,
     auto: true,
     isFx: false,
+    isTracked: false,
     native: '',
     krw: calcCardUnpaidTotal(),
   });
@@ -10230,22 +10303,45 @@ function renderBalanceLists() {
   document.querySelectorAll('.bal-input').forEach($inp => {
     $inp.addEventListener('input', onBalanceInputChange);
   });
+
+  // v0.7-5c — 추적 자산 행 클릭 → 자산결산 모달로 라우팅
+  document.querySelectorAll('.bal-row.tracked').forEach($row => {
+    $row.addEventListener('click', (e) => {
+      // input 자체 클릭은 무시
+      if (e.target.tagName === 'INPUT') return;
+      const accId = $row.dataset.svRoute;
+      if (!accId) return;
+      closeOv('ov-balance');
+      // 자산결산 서브탭 표시 + 모달 열기
+      switchTab('closing', 'savings');
+      // openSavingsModal은 즉시 호출 가능 (구독은 이미 활성)
+      setTimeout(() => openSavingsModal(accId), 100);
+    });
+  });
 }
 
 function buildBalRowHtml(r) {
   const lockedCls = r.locked ? ' locked' : '';
   const autoCls = r.auto ? ' auto-badge' : '';
   const fxCls = r.isFx ? ' fx' : '';
+  const trackedCls = r.isTracked ? ' tracked' : '';
   const disabled = r.locked ? 'disabled' : '';
-  const placeholder = r.auto ? fmtNum(r.krw) : '';
+  const placeholder = r.auto ? fmtNum(r.krw)
+                    : r.isTracked ? '자산결산에서 입력'
+                    : '';
   const value = r.auto ? '' : (r.native === '' || r.native == null ? '' : r.native);
   const unit = r.isFx ? r.currency : (r.locked ? '' : '원');
   const effRate = r.isFx ? (r.effectiveFxRate != null ? r.effectiveFxRate : r.fxRate) : null;
+  // 잔고 KRW: 외화면 라인 표시. 추적 자산이면 monthly 데이터에서 가져온 KRW 그대로
   const krwLine = r.isFx
     ? `<div class="bal-krw" data-krw-for="${escapeHtml(r.key)}">${fmtNum(r.krw)} 원 (환율 ${fmtNum(effRate || 0)})</div>`
-    : '';
+    : (r.isTracked && r.krw > 0
+        ? `<div class="bal-krw" data-krw-for="${escapeHtml(r.key)}">${fmtNum(r.krw)} 원</div>`
+        : '');
+  // 추적 자산이면 행 클릭으로 자산결산 모달 열기
+  const editAttr = r.isTracked ? ` data-sv-route="${escapeHtml(r.key)}"` : '';
   return `
-    <div class="bal-row${lockedCls}${autoCls}${fxCls}" data-key="${escapeHtml(r.key)}" data-type="${r.type}" data-tier="${r.tier}">
+    <div class="bal-row${lockedCls}${autoCls}${fxCls}${trackedCls}" data-key="${escapeHtml(r.key)}" data-type="${r.type}" data-tier="${r.tier}"${editAttr}>
       <div class="bal-name">${escapeHtml(r.name)}${r.meta ? `<span class="meta">${escapeHtml(r.meta)}</span>` : ''}</div>
       <div class="bal-input-wrap">
         <input type="text" inputmode="decimal" class="bal-input" data-key="${escapeHtml(r.key)}"
@@ -10317,59 +10413,14 @@ function recalcBalancePreview() {
   $adj.classList.add(netAdj > 0 ? 'green' : netAdj < 0 ? 'red' : 'muted');
 }
 
+// v0.7-5c — 잔액 저장: snapshots 단일 도큐먼트 → monthly/monthly_liab N개 도큐먼트
 async function saveBalanceSnapshot() {
   if (!balModalYm) return;
   const ym = balModalYm;
 
-  // 자산·부채 객체 빌드
-  // ⚠ 핵심: balRowsCache는 입력 가능한 항목만 들어있다.
-  //   - 자산: active=false 계좌는 캐시에 없음
-  //   - 부채: 마스터에서 삭제된 부채(고아 스냅 잔재)는 캐시에 없음
-  //   { merge: false }로 통째 덮어쓰면 캐시에 없는 키가 모두 날아감
-  //   → 기존 스냅을 베이스로 깔고, 캐시 값으로 덮어쓰는 방식으로 보존
-  const cachedAssetKeys = new Set();
-  const cachedLiabKeys  = new Set();
-  for (const r of balRowsCache) {
-    if (r.auto) continue;
-    if (r.type === 'asset') cachedAssetKeys.add(r.key);
-    else                    cachedLiabKeys.add(r.key);
-  }
-
-  // 1) 베이스: 기존 스냅 — 단, 캐시에 있는 키는 일단 제거 (캐시 값으로 덮어쓸 예정)
-  //    캐시에 없는 키 = 비활성 자산 / 마스터 삭제된 부채 잔재 → 그대로 보존됨
-  const assetBalances = {};
-  for (const [k, v] of Object.entries(bsSnapshot?.assetBalances || {})) {
-    if (!cachedAssetKeys.has(k)) assetBalances[k] = v;
-  }
-  const liabilityBalances = {};
-  for (const [k, v] of Object.entries(bsSnapshot?.liabilityBalances || {})) {
-    if (!cachedLiabKeys.has(k)) liabilityBalances[k] = v;
-  }
-
-  // 2) 캐시에서 빌드한 활성 항목 값 덮어쓰기
-  //    부채는 v0.2부터 객체형으로 저장: {krw, name, type} (이름·타입 비정규화)
-  //    이렇게 하면 마스터에서 삭제돼도 과거 스냅이 자체적으로 표시 가능
-  for (const r of balRowsCache) {
-    if (r.auto) continue; // 자동 항목(카드 미지급금)은 저장 안 함
-    if (r.type === 'asset') {
-      // 빈 값은 저장 안 함 (사용자가 입력 안 한 항목 = 의도된 삭제)
-      if (r.native === '' || r.native == null) continue;
-      const effRate = r.isFx ? (r.effectiveFxRate != null ? r.effectiveFxRate : r.fxRate) : null;
-      assetBalances[r.key] = {
-        native:   Number(r.native) || 0,
-        currency: r.currency || 'KRW',
-        fxRate:   r.isFx ? (effRate || null) : null,
-        krw:      Number(r.krw) || 0,
-      };
-    } else {
-      if (r.native === '' || r.native == null) continue;
-      liabilityBalances[r.key] = {
-        krw:  Number(r.krw) || 0,
-        name: r.name,
-        type: r.tier === 'noncurrent' ? 'nonCurrent' : 'current',
-      };
-    }
-  }
+  // 입력 가능한 항목만 캐시에 있다. 입력 안 한 행(native='')은 저장 안 함 = 의도된 삭제.
+  // 추적 자산은 자산결산에서 입력하므로 잔액 모달에서는 스킵.
+  // 자동 항목(카드 미지급금)도 스킵.
 
   // asOf — 해당 월의 마지막 날 또는 오늘 (현재 월이면 오늘)
   const today = new Date();
@@ -10379,7 +10430,7 @@ async function saveBalanceSnapshot() {
     asOf = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   } else {
     const [y, m] = ym.split('-').map(Number);
-    const last = new Date(y, m, 0); // 다음달 0일 = 이번달 마지막
+    const last = new Date(y, m, 0);
     asOf = `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, '0')}-${String(last.getDate()).padStart(2, '0')}`;
   }
 
@@ -10389,17 +10440,102 @@ async function saveBalanceSnapshot() {
   $btn.textContent = '저장 중…';
 
   try {
-    await setDoc(pathSnapshot(ym), {
-      ym,
-      asOf,
-      assetBalances,
-      liabilityBalances,
-      createdAt: bsSnapshot?.createdAt || serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    }, { merge: false });
+    const batch = writeBatch(db);
+    let assetWrites = 0, assetDeletes = 0;
+    let liabWrites  = 0, liabDeletes  = 0;
 
+    for (const r of balRowsCache) {
+      if (r.auto) continue;       // 카드 미지급금은 저장 안 함
+      if (r.isTracked) continue;  // 추적 자산은 자산결산에서 입력 (잠금 행이라 사용자 입력값도 없을 것)
+
+      if (r.type === 'asset') {
+        const acc = accounts.find(a => a.id === r.key);
+        if (!acc) continue;
+        const ref = pathMonthlyDoc(ym, r.key);
+
+        // 빈 값 → 그 월 도큐먼트 삭제 (의도된 삭제)
+        if (r.native === '' || r.native == null) {
+          batch.delete(ref);
+          assetDeletes++;
+          continue;
+        }
+
+        const effRate = r.isFx ? (r.effectiveFxRate != null ? r.effectiveFxRate : r.fxRate) : null;
+        const native = Number(r.native) || 0;
+        const krw    = Number(r.krw) || 0;
+
+        // 시점성 박제: 계좌 마스터 정보를 monthly 도큐먼트에 비정규화
+        const data = {
+          ym,
+          accountId: r.key,
+
+          // 마스터 비정규화 (v0.7-5b 박제 룰)
+          accountName:     acc.name,
+          currency:        acc.currency || 'KRW',
+          financeType:     acc.financeType || 'current',
+          financeCategory: acc.financeCategory || null,
+          trackPerformance: false,         // 잔액 모달에서 저장하는 자산은 모두 비추적
+          assetsCategory:  null,
+
+          // 잔고 + 환율 박제
+          balance:    native,
+          balanceKrw: krw,
+          fxRate:     r.isFx ? (effRate || null) : null,
+
+          // 추적 전용 필드는 null
+          deposit:        null,
+          depositKrw:     null,
+          principal:      null,
+          monthlyReturn:  null,
+          cumReturn:      null,
+          cumReturnRate:  null,
+          isStart:        false,
+
+          memo:      null,
+          asOf,
+          updatedAt: serverTimestamp(),
+        };
+        // 신규면 createdAt 추가
+        const existing = findMonthlyDoc(r.key, ym);
+        if (!existing) data.createdAt = serverTimestamp();
+
+        batch.set(ref, data, { merge: true });
+        assetWrites++;
+      } else {
+        // 부채
+        const ref = pathMonthlyLiabDoc(ym, r.key);
+
+        if (r.native === '' || r.native == null) {
+          batch.delete(ref);
+          liabDeletes++;
+          continue;
+        }
+
+        const data = {
+          ym,
+          liabKey:    r.key,
+          // 시점성 박제 (이름·타입)
+          name:       r.name,
+          type:       r.tier === 'noncurrent' ? 'nonCurrent' : 'current',
+          // KRW만 (외화 부채는 v0.7 범위에서 미지원)
+          balance:    Number(r.krw) || 0,
+          balanceKrw: Number(r.krw) || 0,
+          fxRate:     null,
+          currency:   'KRW',
+          asOf,
+          updatedAt:  serverTimestamp(),
+        };
+        const existing = findMonthlyLiabDoc(r.key, ym);
+        if (!existing) data.createdAt = serverTimestamp();
+
+        batch.set(ref, data, { merge: true });
+        liabWrites++;
+      }
+    }
+
+    await batch.commit();
     closeOv('ov-balance');
-    showToast(`${ym} 잔액 스냅샷이 저장되었습니다`);
+    showToast(`${ym} 잔액 저장 — 자산 ${assetWrites}/${assetDeletes}d, 부채 ${liabWrites}/${liabDeletes}d`);
   } catch (e) {
     console.error('saveBalanceSnapshot error', e);
     showToast('저장 실패: ' + (e.message || e.code));
