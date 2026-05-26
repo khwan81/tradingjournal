@@ -5740,14 +5740,6 @@ function renderEventsList() {
   // 글로벌 월 기준 — 시스템 오늘이 아니라 currentMonth(사용자가 보고 있는 월) 기준
   // 으로 처리 상태/임박 등을 판단해야 글로벌 월 이동 시 정확히 갱신됨
   const today = currentMonth;
-  // 디버그 — 콘솔에서 데이터 확인
-  console.log('[debug] renderEventsList today=', today, 'events=', eventsMasters.map(e => ({
-    title: e.title,
-    type: e.type,
-    recurMonth: e.recurMonth,
-    lastDoneYm: e.lastDoneYm,
-    statusEquals: e.lastDoneYm === today,
-  })));
   $list.innerHTML = eventsMasters.map(ev => {
     const next = nextEventYm(ev);
     const monthly = eventMonthlySaving(ev);
@@ -6488,6 +6480,8 @@ function setMonth(ym) {
   // 즉시 헤더/렌더 갱신 (구독 콜백 도착 전에 화면 일관성 유지)
   renderBsHeader();
   renderRecurringBar();
+  renderRecurringList();   // 글로벌 월 기준 뱃지(진행 중/종료 등) 재계산
+  renderEventsList();      // v0.6 — 글로벌 월 기준 '이번 달 처리됨' 등 재계산
   // 글로벌 월 변경 시 트리맵 drill-down 상태 리셋 (다른 월에 그 카테고리가 없을 수 있음)
   dashExpenseDrillCategory = null;
   // 대시보드 차트는 활성일 때만 재로드
