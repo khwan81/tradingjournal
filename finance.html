@@ -3115,6 +3115,17 @@ body {
       <div class="acc-table" id="acc-table">
         <div class="acc-row empty">로딩 중…</div>
       </div>
+
+      <!-- 휴지통 (삭제된 계좌 복원용 v0.7-5d) — 비어있을 땐 숨김 -->
+      <div id="acc-trash-wrap" style="display:none; margin-top: 16px;">
+        <button type="button" id="acc-trash-toggle" class="trash-toggle" aria-expanded="false">
+          <span class="trash-icon">🗑️</span>
+          <span class="trash-label">최근 삭제됨</span>
+          <span class="trash-count" id="acc-trash-count">0</span>
+          <span class="trash-caret">▾</span>
+        </button>
+        <div id="acc-trash-list" style="display:none;"></div>
+      </div>
     </div>
 
     <!-- 자산 종류 (v0.3-2) — 계좌 추가 시 사용하는 enum -->
@@ -4312,6 +4323,7 @@ async function loadAll() {
     snap => {
       accounts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       renderAccounts();
+      renderAccountsTrash();         // v0.7-5d 계좌 휴지통
       renderBsBody(); // 재무상태표에도 영향
       renderEventAccountSelect();   // v0.6 적립 계좌 옵션 갱신
       renderSavings();              // v0.7-3b 자산결산도 갱신 (추적 토글 변경 등)
@@ -4842,7 +4854,9 @@ function unsubscribeAll() {
 // ──────────────────────────────────────────────────────
 function renderAccounts() {
   const $t = document.getElementById('acc-table');
-  if (!accounts.length) {
+  // v0.7-5d — 삭제된(휴지통) 계좌는 별도 영역으로 분리. 메인 목록엔 active=true와 active=false(숨김)만 표시.
+  const listed = accounts.filter(a => !a.deletedAt);
+  if (!listed.length) {
     $t.innerHTML = '<div class="acc-row empty">아직 등록된 계좌가 없습니다 — 우상단 "+ 계좌 추가" 버튼으로 시작하세요</div>';
     return;
   }
@@ -4855,7 +4869,7 @@ function renderAccounts() {
       <div></div>
     </div>
   `;
-  const rows = accounts.map(a => {
+  const rows = listed.map(a => {
     const typeBadge = a.financeType === 'nonCurrent'
       ? '<span class="badge noncurrent">비유동</span>'
       : '<span class="badge current">유동</span>';
@@ -5307,6 +5321,105 @@ function renderLiabilities() {
 }
 
 // ──────────────────────────────────────────────────────
+// 계좌 휴지통 — 삭제된 계좌 복원 UI (v0.7-5d)
+// ──────────────────────────────────────────────────────
+function renderAccountsTrash() {
+  const $wrap  = document.getElementById('acc-trash-wrap');
+  const $list  = document.getElementById('acc-trash-list');
+  const $count = document.getElementById('acc-trash-count');
+  if (!$wrap) return;
+
+  // 삭제됨 = deletedAt이 존재하는 계좌 (active=false + deletedAt 모두 만족)
+  const trash = accounts.filter(a => a.deletedAt && a.active === false);
+
+  if (!trash.length) {
+    $wrap.style.display = 'none';
+    return;
+  }
+  $wrap.style.display = '';
+  $count.textContent = trash.length;
+
+  // 정렬: 최근 삭제 먼저
+  const sorted = [...trash].sort((a, b) =>
+    String(b.deletedAt || '').localeCompare(String(a.deletedAt || ''))
+  );
+
+  $list.innerHTML = sorted.map(a => {
+    const isFx = (a.currency || 'KRW') !== 'KRW';
+    const isNon = a.financeType === 'nonCurrent';
+    const when = a.deletedAt ? fmtDeletedAt(a.deletedAt) : '';
+    const meta = [
+      when ? `삭제 ${when}` : '',
+      a.financeCategory || '',
+      isFx ? a.currency : '',
+      a.trackPerformance ? '추적' : '',
+    ].filter(Boolean).join(' · ');
+    return `
+      <div class="trash-row">
+        <div>
+          <div class="name-wrap">
+            <div>${escapeHtml(a.name)}</div>
+            <span class="badge ${isNon ? 'noncurrent' : ''}">${isNon ? '비유동' : '유동'}</span>
+          </div>
+          <div class="meta">${escapeHtml(meta)}</div>
+        </div>
+        <div class="actions">
+          <button type="button" class="restore" data-restore="${escapeHtml(a.id)}">복원</button>
+          <button type="button" class="purge"   data-purge="${escapeHtml(a.id)}">영구삭제</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  $list.querySelectorAll('[data-restore]').forEach(el => {
+    el.addEventListener('click', () => restoreAccount(el.dataset.restore));
+  });
+  $list.querySelectorAll('[data-purge]').forEach(el => {
+    el.addEventListener('click', () => purgeAccount(el.dataset.purge));
+  });
+}
+
+// 휴지통 토글 (펼침/접기)
+document.getElementById('acc-trash-toggle').addEventListener('click', () => {
+  const $btn  = document.getElementById('acc-trash-toggle');
+  const $list = document.getElementById('acc-trash-list');
+  const open = $btn.getAttribute('aria-expanded') === 'true';
+  $btn.setAttribute('aria-expanded', open ? 'false' : 'true');
+  $list.style.display = open ? 'none' : '';
+});
+
+async function restoreAccount(id) {
+  if (!id) return;
+  const a = accounts.find(x => x.id === id);
+  if (!a) { showToast('복원 대상을 찾을 수 없습니다'); return; }
+
+  // 이름 충돌 체크 (활성 마스터)
+  const conflict = accounts.find(x => x.active !== false && x.name === a.name && x.id !== id);
+  if (conflict) {
+    showToast(`"${a.name}" 이름이 이미 사용 중입니다. 충돌하는 계좌의 이름을 먼저 바꿔주세요`);
+    return;
+  }
+
+  try {
+    // deletedAt 제거 + active=true
+    const { deletedAt, ...rest } = a;
+    await setDoc(pathAccount(id), { ...rest, active: true });
+    showToast(`"${a.name}" 복원됨`);
+  } catch (e) { console.error(e); showToast('복원 실패: ' + (e.message || e.code)); }
+}
+
+async function purgeAccount(id) {
+  if (!id) return;
+  const a = accounts.find(x => x.id === id);
+  if (!a) return;
+  if (!confirm(`"${a.name}"을(를) 휴지통에서 영구 삭제할까요?\n\n관련 거래·결산 데이터는 보존되며,\n재무상태표에서 (해지·마스터 삭제됨)으로 계속 표시됩니다.\n\n복원은 불가능합니다.`)) return;
+  try {
+    await deleteDoc(pathAccount(id));
+    showToast('영구 삭제 완료');
+  } catch (e) { console.error(e); showToast('삭제 실패: ' + (e.message || e.code)); }
+}
+
+// ──────────────────────────────────────────────────────
 // 부채 휴지통 — 삭제된 부채 복원 UI
 // ──────────────────────────────────────────────────────
 function renderLiabilitiesTrash() {
@@ -5738,17 +5851,21 @@ document.getElementById('btn-acc-save').addEventListener('click', async () => {
   }
 });
 
-// 계좌 삭제
+// 계좌 삭제 (v0.7-5d — soft delete: active=false + deletedAt 박제)
+// 복원 가능. 영구 삭제는 휴지통에서.
 document.getElementById('btn-acc-delete').addEventListener('click', async () => {
   if (!editingAccountId) return;
   const a = accounts.find(x => x.id === editingAccountId);
   if (!a) return;
-  // v0.1: 거래/결산 존재 검증은 거래내역 탭 구현 후 추가. 현재는 단순 삭제 확인.
-  if (!confirm(`"${a.name}" 계좌를 삭제하시겠습니까?\n(이미 입력된 거래가 있다면 데이터가 남게 됩니다)`)) return;
+  if (!confirm(`"${a.name}" 계좌를 삭제하시겠습니까?\n\n관련 거래·결산 데이터는 보존되며,\n재무상태표에서 (비활성/해지)로 계속 표시됩니다.\n휴지통에서 복원 가능합니다.`)) return;
   try {
-    await deleteDoc(pathAccount(editingAccountId));
+    await setDoc(pathAccount(editingAccountId), {
+      ...a,
+      active: false,
+      deletedAt: new Date().toISOString(),
+    });
     closeOv('ov-account');
-    showToast('계좌가 삭제되었습니다');
+    showToast('계좌가 휴지통으로 이동되었습니다');
   } catch (e) {
     console.error(e);
     showToast('삭제 실패: ' + (e.message || e.code));
@@ -7638,12 +7755,11 @@ function renderBsBody() {
     });
   }
 
-  // 2단계: 마스터에 없는 monthly 도큐먼트 = 마스터 삭제·비활성 자산의 과거 잔재
-  //         박제된 정보로 표시 ("해지" 메타)
+  // 2단계: 마스터에 없거나 active=false인 monthly 도큐먼트 = 비활성·휴지통·완전 삭제 자산의 잔재
+  //         박제된 정보로 표시 (적절한 메타로 구분)
   for (const doc of monthlyDocs) {
     if (usedAccIds.has(doc.accountId)) continue;
-    // 마스터의 비활성 계좌도 위 루프에서 skip됐으므로 여기 들어옴
-    const accInactive = accounts.find(a => a.id === doc.accountId);
+    const accExist = accounts.find(a => a.id === doc.accountId);
     const tier = (doc.financeType === 'nonCurrent') ? 'noncurrent' : 'current';
     const isFx = (doc.currency || 'KRW') !== 'KRW';
     const curFxRate = isFx ? Number(fx[doc.currency] || 0) : null;
@@ -7656,10 +7772,18 @@ function renderBsBody() {
     }
     const prevDoc = findMonthlyDoc(doc.accountId, prevYm(currentMonth));
     const prevKrw = prevDoc ? (Number(prevDoc.balanceKrw) || 0) : null;
+    // 메타 결정:
+    //   - 마스터에 있고 deletedAt → "(휴지통)"
+    //   - 마스터에 있고 active=false → "(비활성)"
+    //   - 마스터에 없음 → "(해지·마스터 삭제됨)"
+    let meta;
+    if (accExist && accExist.deletedAt) meta = '(휴지통)';
+    else if (accExist)                  meta = '(비활성)';
+    else                                meta = '(해지·마스터 삭제됨)';
     assetRows[tier].push({
       key: doc.accountId,
       name: doc.accountName || doc.accountId,
-      meta: accInactive ? '(비활성)' : '(해지·마스터 삭제됨)',
+      meta,
       isFx,
       filled: true,
       krw: curKrw,
@@ -7669,7 +7793,7 @@ function renderBsBody() {
       auto: false,
       prevKrw,
       delta: prevKrw != null ? curKrw - prevKrw : null,
-      deleted: !accInactive,
+      deleted: !accExist,
     });
   }
 
@@ -8081,7 +8205,9 @@ function renderSavings() {
   const $asof = document.getElementById('sv-asof');
   if ($asof) $asof.textContent = `${currentMonth} 결산`;
 
-  // 추적 자산만 필터 (카드 계좌 제외 = 추적 자산은 카드일 수 없음)
+  // 추적 자산만 필터 (마스터 활성).
+  // 자산결산은 "현재 운용 중인 추적 자산"의 라이브 화면이라
+  // 마스터에서 삭제·비활성된 계좌는 자동 제외 (시점성 보존은 재무상태표가 담당).
   const tracked = (accounts || []).filter(a => a.trackPerformance && a.active !== false);
 
   if (tracked.length === 0) {
