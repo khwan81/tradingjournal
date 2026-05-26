@@ -1349,6 +1349,15 @@ body {
 @media (max-width: 700px) {
   .dash-treemap-wrap { height: 300px; }
 }
+/* 트리맵 카드 헤더 우측 (돌아가기 버튼 + sub) */
+.dash-card-head-right {
+  display: flex; align-items: center; gap: 10px;
+  flex-shrink: 0;
+}
+#btn-dash-expense-back {
+  padding: 4px 10px;
+  font-size: 11px;
+}
 
 /* 전체 요약 카드 */
 .bg-summary {
@@ -2470,11 +2479,14 @@ body {
         </div>
       </div>
 
-      <!-- 지출 트리맵 (v0.5 B6) — 카테고리 → 메모 2단계 -->
+      <!-- 지출 트리맵 (v0.5 B6) — 카테고리 → 메모 2단계 + drill-down -->
       <div class="dash-card">
         <div class="dash-card-head">
-          <div class="dash-card-title">지출 트리맵</div>
-          <div class="dash-card-sub" id="dash-expense-sub">—</div>
+          <div class="dash-card-title" id="dash-expense-title">지출 트리맵</div>
+          <div class="dash-card-head-right">
+            <button type="button" class="btn-s" id="btn-dash-expense-back" style="display:none;">← 돌아가기</button>
+            <div class="dash-card-sub" id="dash-expense-sub">—</div>
+          </div>
         </div>
         <div class="dash-treemap-wrap">
           <canvas id="dash-expense-chart"></canvas>
@@ -5724,11 +5736,14 @@ function setMonth(ym) {
   // 즉시 헤더/렌더 갱신 (구독 콜백 도착 전에 화면 일관성 유지)
   renderBsHeader();
   renderRecurringBar();
+  // 글로벌 월 변경 시 트리맵 drill-down 상태 리셋 (다른 월에 그 카테고리가 없을 수 있음)
+  dashExpenseDrillCategory = null;
   // 대시보드 차트는 활성일 때만 재로드
   if (document.getElementById('tab-dashboard')?.classList.contains('active')) {
     renderDashNetworthChart();
     renderDashPlChart();
     renderDashAssetsChart();
+    renderDashExpenseChart();
   }
 }
 function shiftMonth(delta) {
@@ -7306,12 +7321,13 @@ function renderDashAssetsChart() {
   }
 }
 
-
 // ── 지출 트리맵 (v0.5 B6) ──
-// 데이터: transactions(currentMonth) 중 비용 거래만
-// 그룹: category(1차) → memo(2차, 메모별 합산, 메모 없으면 '기타')
-// 표시: chartjs-chart-treemap 사용. 고정비/변동비는 카테고리 색상으로 자동 구분.
+// 그룹 모드:
+//   - dashExpenseDrillCategory === null  → 전체 비용 거래 / 카테고리 → 메모 2단계
+//   - dashExpenseDrillCategory === "외식" → 그 카테고리의 거래 1건씩 (날짜 + 메모)
+// 표시: chartjs-chart-treemap
 let dashExpenseChart = null;
+let dashExpenseDrillCategory = null;  // null이면 전체 모드, 아니면 drill-down 모드
 
 // 카테고리 그룹별 색상 팔레트 — flow별로 톤 구분
 // 고정비: 블루/퍼플 (안정적), 변동비: 그린/시안 (활동적)
@@ -7328,32 +7344,85 @@ function renderDashExpenseChart() {
   const $canvas = document.getElementById('dash-expense-chart');
   const $empty  = document.getElementById('dash-expense-empty');
   const $sub    = document.getElementById('dash-expense-sub');
+  const $title  = document.getElementById('dash-expense-title');
+  const $back   = document.getElementById('btn-dash-expense-back');
   if (!$canvas || !window.Chart) return;
   if (!currentUid) return;
 
   try {
-    // 1) 거래 → (flow, category, memo) 키로 합산
-    //    같은 카테고리 + 같은 메모는 합쳐서 하나의 노드.
-    //    메모 없으면 '기타'.
-    const buckets = new Map();   // key = `${flow}|${category}|${memo}` → { flow, category, memo, value }
-    let total = 0;
+    // 1) 카테고리 색상 인덱스 빌드 (drill-down 시에도 색상 일관성 유지)
+    //    전체 데이터를 한 번 훑어서 카테고리별 색상 결정
+    const categoryColor = new Map();
+    const flowCatCounter = { fixed: 0, variable: 0 };
+    const allCatsSeen = new Set();
     for (const t of transactions) {
       const flow = txFlow(t);
       if (flow !== 'fixed' && flow !== 'variable') continue;
-      const amt = Number(t.amount) || 0;
-      if (amt <= 0) continue;
-      const category = t.category || '(분류 없음)';
-      const memo = (t.memo && t.memo.trim()) ? t.memo.trim() : '기타';
-      const key = `${flow}|${category}|${memo}`;
-      const cur = buckets.get(key);
-      if (cur) cur.value += amt;
-      else     buckets.set(key, { flow, category, memo, value: amt });
-      total += amt;
+      const cat = t.category || '(분류 없음)';
+      if (allCatsSeen.has(cat)) continue;
+      allCatsSeen.add(cat);
+      const palette = EXPENSE_TREEMAP_COLORS[flow] || EXPENSE_TREEMAP_COLORS.variable;
+      const idx = flowCatCounter[flow]++;
+      categoryColor.set(cat, palette[idx % palette.length]);
     }
+
+    // 2) 모드별 데이터 빌드
+    let tree, groups, total = 0, totalForCard = 0;
+    const isDrill = dashExpenseDrillCategory !== null;
+
+    if (!isDrill) {
+      // 전체 모드: category → memo 2단계, 메모별 합산
+      const buckets = new Map();
+      for (const t of transactions) {
+        const flow = txFlow(t);
+        if (flow !== 'fixed' && flow !== 'variable') continue;
+        const amt = Number(t.amount) || 0;
+        if (amt <= 0) continue;
+        const category = t.category || '(분류 없음)';
+        const memo = (t.memo && t.memo.trim()) ? t.memo.trim() : '기타';
+        const key = `${flow}|${category}|${memo}`;
+        const cur = buckets.get(key);
+        if (cur) cur.value += amt;
+        else     buckets.set(key, { flow, category, memo, value: amt });
+        total += amt;
+      }
+      tree = [...buckets.values()];
+      groups = ['category', 'memo'];
+      totalForCard = total;
+    } else {
+      // drill-down 모드: 그 카테고리의 거래 1건씩 (날짜 + 메모로 식별)
+      // — 같은 메모 여러 번이어도 합치지 않고 각각 슬라이스로 표시
+      const cat = dashExpenseDrillCategory;
+      const items = [];
+      for (const t of transactions) {
+        const flow = txFlow(t);
+        if (flow !== 'fixed' && flow !== 'variable') continue;
+        const tCat = t.category || '(분류 없음)';
+        if (tCat !== cat) continue;
+        const amt = Number(t.amount) || 0;
+        if (amt <= 0) continue;
+        const memo = (t.memo && t.memo.trim()) ? t.memo.trim() : '(메모 없음)';
+        // 날짜 표시 — YYYY-MM-DD에서 MM/DD만
+        const dateShort = t.date ? t.date.slice(5).replace('-', '/') : '';
+        const label = dateShort ? `${dateShort} ${memo}` : memo;
+        items.push({ category: cat, label, value: amt });
+        total += amt;
+      }
+      tree = items;
+      groups = ['label'];   // 한 단계 — 거래 1건씩
+      totalForCard = total;
+    }
+
+    // UI 상태 갱신
+    if ($title) $title.textContent = isDrill ? `지출 트리맵 · ${dashExpenseDrillCategory}` : '지출 트리맵';
+    if ($back)  $back.style.display = isDrill ? '' : 'none';
 
     if (total <= 0) {
       $canvas.style.display = 'none';
       $empty.style.display = '';
+      $empty.textContent = isDrill
+        ? `이 카테고리에 거래가 없습니다`
+        : `이번 달 비용 거래가 없습니다`;
       if ($sub) $sub.textContent = `${currentMonth}`;
       if (dashExpenseChart) { dashExpenseChart.destroy(); dashExpenseChart = null; }
       return;
@@ -7361,25 +7430,11 @@ function renderDashExpenseChart() {
     $canvas.style.display = '';
     $empty.style.display = 'none';
 
-    // 2) 카테고리별로 색상 결정 — flow + 카테고리 등장 순서로 팔레트 인덱스
-    //    같은 카테고리는 항상 같은 색이라 메모 슬라이스가 같은 색 계열로 묶임
-    const categoryColor = new Map();   // category → color
-    const flowCatCounter = { fixed: 0, variable: 0 };
-    for (const b of buckets.values()) {
-      if (categoryColor.has(b.category)) continue;
-      const palette = EXPENSE_TREEMAP_COLORS[b.flow] || EXPENSE_TREEMAP_COLORS.variable;
-      const idx = flowCatCounter[b.flow]++;
-      categoryColor.set(b.category, palette[idx % palette.length]);
-    }
-
-    // 3) tree 데이터 (배열 of {category, memo, value})
-    const tree = [...buckets.values()];
-
-    // 4) 색상 + 텍스트 토큰
+    // 3) 색상 토큰
     const colorBg   = getCssVar('--bg2')   || '#1a1d24';
     const colorGrid = getCssVar('--border') || 'rgba(255,255,255,0.08)';
 
-    // 5) treemap 차트 생성
+    // 4) treemap 생성
     if (dashExpenseChart) { dashExpenseChart.destroy(); dashExpenseChart = null; }
     dashExpenseChart = new Chart($canvas, {
       type: 'treemap',
@@ -7387,24 +7442,21 @@ function renderDashExpenseChart() {
         datasets: [{
           tree,
           key: 'value',
-          groups: ['category', 'memo'],   // 1단계: 카테고리, 2단계: 메모
+          groups,
           spacing: 1,
           borderWidth: 0.5,
           borderColor: colorBg,
-          // 슬라이스 색상 — 카테고리에 매핑된 색을 사용. 같은 카테고리는 같은 색.
-          // 2단계(메모) 슬라이스만 색칠하고 카테고리 박스는 투명에 가깝게.
           backgroundColor: (ctx) => {
             if (!ctx.raw) return 'transparent';
-            // l=0: 카테고리 박스(그룹 헤더용 큰 박스), l=1: 메모 슬라이스
             const item = ctx.raw._data;
             if (!item) return 'transparent';
-            const cat = item.category;
+            // drill-down: 단일 카테고리 색상 사용
+            // 전체 모드: 카테고리 매핑 사용 (l=0은 그룹 박스, l=1은 메모 리프)
+            const cat = item.category || dashExpenseDrillCategory;
             const color = categoryColor.get(cat) || '#9aa5b1';
-            // 그룹 박스(l=0)는 흐리게, 리프(l=1)는 진하게
-            if (ctx.raw.l === 0) return color + '33';   // 20% 투명
+            if (ctx.raw.l === 0) return color + '33';   // 그룹 박스 흐리게
             return color;
           },
-          // 라벨 — 메모 + 금액. 슬라이스가 너무 작으면 자동 생략됨 (overflow:'fit')
           labels: {
             display: true,
             align: 'left',
@@ -7413,29 +7465,27 @@ function renderDashExpenseChart() {
             font: { size: 11, weight: 500 },
             padding: 4,
             formatter: (ctx) => {
-              if (!ctx.raw || ctx.raw.l !== 1) return '';  // 리프만 라벨
+              if (!ctx.raw || ctx.raw.l !== (isDrill ? 0 : 1)) return '';
               const item = ctx.raw._data;
               if (!item) return '';
-              // 슬라이스가 충분히 클 때만 (대략 폭 60px 이상)
               const w = ctx.raw.w || 0;
               const h = ctx.raw.h || 0;
               if (w < 60 || h < 24) return '';
-              return [item.memo, fmtAmount(item.value)];
+              // 전체 모드: memo, 금액 / drill-down: label, 금액
+              const lbl = isDrill ? item.label : item.memo;
+              return [lbl, fmtAmount(item.value)];
             },
             overflow: 'fit',
           },
-          // 카테고리 헤더 라벨 (l=0)
           captions: {
-            display: true,
+            display: !isDrill,   // drill-down에선 그룹 없음
             align: 'left',
             color: '#fff',
             font: { size: 12, weight: 600 },
             padding: 5,
             formatter: (ctx) => {
               if (!ctx.raw || ctx.raw.l !== 0) return '';
-              // 그룹의 합계
-              const item = ctx.raw;
-              return `${item.g} ${fmtAmount(item.v)}`;
+              return `${ctx.raw.g} ${fmtAmount(ctx.raw.v)}`;
             },
           },
         }],
@@ -7443,6 +7493,25 @@ function renderDashExpenseChart() {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        // 카테고리 헤더 클릭 → drill-down
+        onClick: (evt, elements) => {
+          if (isDrill) return;   // 이미 drill-down 모드면 무시
+          if (!elements.length) return;
+          const el = elements[0];
+          const raw = el.element?.$context?.raw;
+          if (!raw) return;
+          // l === 0 → 카테고리 그룹 박스 클릭
+          if (raw.l === 0 && raw.g) {
+            dashExpenseDrillCategory = raw.g;
+            renderDashExpenseChart();
+          }
+        },
+        onHover: (evt, elements) => {
+          // 카테고리 헤더에 마우스 올리면 포인터 커서 (드릴 가능 표시)
+          if (isDrill) { evt.native.target.style.cursor = 'default'; return; }
+          const hoveringGroup = elements.some(el => el.element?.$context?.raw?.l === 0);
+          evt.native.target.style.cursor = hoveringGroup ? 'pointer' : 'default';
+        },
         plugins: {
           legend: { display: false },
           tooltip: {
@@ -7456,14 +7525,16 @@ function renderDashExpenseChart() {
               title: (items) => {
                 if (!items.length) return '';
                 const raw = items[0].raw;
-                if (raw.l === 0) return raw.g;  // 카테고리 그룹
+                if (raw.l === 0) return `${raw.g} (클릭하여 상세보기)`;
                 const item = raw._data;
-                return item ? `${item.category} / ${item.memo}` : '';
+                if (!item) return '';
+                if (isDrill) return `${item.category} / ${item.label}`;
+                return `${item.category} / ${item.memo}`;
               },
               label: (ctx) => {
                 const raw = ctx.raw;
                 const v = raw.l === 0 ? raw.v : (raw._data?.value || 0);
-                const pct = total > 0 ? (v / total) * 100 : 0;
+                const pct = totalForCard > 0 ? (v / totalForCard) * 100 : 0;
                 return `${fmtAmount(v)} (${pct.toFixed(1)}%)`;
               },
             },
@@ -7472,12 +7543,22 @@ function renderDashExpenseChart() {
       },
     });
 
-    if ($sub) $sub.textContent = `${currentMonth} · 총 ${fmtAmount(total)}`;
+    if ($sub) {
+      $sub.textContent = isDrill
+        ? `${currentMonth} · ${dashExpenseDrillCategory} ${fmtAmount(total)} (${tree.length}건)`
+        : `${currentMonth} · 총 ${fmtAmount(total)}`;
+    }
   } catch (e) {
     console.error('[dashboard] expense treemap error', e);
     if ($sub) $sub.textContent = '차트 로드 실패';
   }
 }
+
+// 돌아가기 버튼 (B6 drill-down)
+document.getElementById('btn-dash-expense-back').addEventListener('click', () => {
+  dashExpenseDrillCategory = null;
+  renderDashExpenseChart();
+});
 
 // ── 예산 모달 (v0.4 A4) ──
 // 도큐먼트 ID 규칙: `{ym}__{flow}__{category}` (구분자 더블 언더스코어)
