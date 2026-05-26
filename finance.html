@@ -845,6 +845,49 @@ body {
   .budget-bar .bb-cta { width: 100%; }
 }
 
+/* 경조사 적립 알림바 (v0.6) */
+.event-bar {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(236, 72, 153, 0.08);
+  border: 1px solid rgba(236, 72, 153, 0.32);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: var(--text);
+}
+.event-bar.show { display: flex; }
+.event-bar .eb-left {
+  display: flex; align-items: center; gap: 8px;
+  min-width: 0; flex: 1;
+}
+.event-bar .eb-icon { font-size: 14px; }
+.event-bar .eb-text {
+  color: var(--text2);
+  overflow: hidden; text-overflow: ellipsis;
+}
+.event-bar .eb-strong { color: #ec4899; font-weight: 600; }
+.event-bar .eb-cta {
+  background: var(--accent);
+  color: #fff;
+  border: 0;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--font);
+  white-space: nowrap;
+}
+.event-bar .eb-cta:hover { filter: brightness(1.08); }
+@media (max-width: 640px) {
+  .event-bar { flex-direction: column; align-items: stretch; gap: 8px; }
+  .event-bar .eb-cta { width: 100%; }
+}
+
 /* 반복지출 마스터 리스트 행 */
 .rec-row {
   display: flex; justify-content: space-between; align-items: center;
@@ -2580,6 +2623,15 @@ body {
       <button type="button" class="bb-cta" id="btn-budget-goto">예산 보기</button>
     </div>
 
+    <!-- 경조사 적립 알림바 (v0.6) -->
+    <div class="event-bar" id="event-bar">
+      <div class="eb-left">
+        <span class="eb-icon">🎀</span>
+        <span class="eb-text" id="event-bar-text">경조사 적립</span>
+      </div>
+      <button type="button" class="eb-cta" id="btn-event-add-saving">+ 적립 거래</button>
+    </div>
+
     <!-- 필터 칩 -->
     <div class="filter-bar" id="filter-bar">
       <button type="button" class="fchip active" data-filter-all>전체</button>
@@ -3935,6 +3987,7 @@ function subscribeEvents() {
       });
       renderEventsList();
       renderEventAccountSelect();
+      renderEventBar();    // v0.6 — 경조사 마스터 변경 시 알림바 재평가
       // 대시보드도 즉시 갱신 (C2)
       if (typeof renderDashEventsCard === 'function') renderDashEventsCard();
     },
@@ -3993,6 +4046,7 @@ function subscribeTransactions() {
       renderTransactions();
       renderRecurringBar();
       renderBudgetBar();   // v0.4 A7
+      renderEventBar();    // v0.6 — 경조사 적립 부족 알림
       renderDashKpi();     // v0.5 B2
       // 대시보드 차트들 — 활성일 때만 갱신 (불필요 부담 방지)
       if (document.getElementById('tab-dashboard')?.classList.contains('active')) {
@@ -4152,6 +4206,43 @@ document.getElementById('btn-budget-goto').addEventListener('click', () => {
   document.querySelectorAll('.tab-content').forEach(c =>
     c.classList.toggle('active', c.id === 'tab-budget')
   );
+});
+
+// "+ 적립 거래" 버튼 (v0.6 경조사 알림바) — 거래 모달 열고 경조사 카테고리 + 적립 계좌 + 권장 금액 prefill
+document.getElementById('btn-event-add-saving').addEventListener('click', () => {
+  if (!settings) return;
+  openTxModal(null);
+
+  // 모달이 열린 후 prefill
+  // 1) 카테고리 = '경조사'
+  const $cat = document.getElementById('tx-category');
+  if ($cat && [...$cat.options].some(o => o.value === '경조사')) {
+    $cat.value = '경조사';
+    $cat.dispatchEvent(new Event('change'));   // flow 자동 결정
+  }
+
+  // 2) 계좌 = 적립 계좌
+  const savingAccId = settings?.eventSavingAccountId;
+  const $acc = document.getElementById('tx-account');
+  if (savingAccId && $acc) {
+    $acc.value = savingAccId;
+    $acc.dispatchEvent(new Event('change'));
+  }
+
+  // 3) 금액 = 부족분
+  const today = currentMonth;
+  let totalRec = 0;
+  for (const ev of eventsMasters) totalRec += eventThisMonthRecommend(ev, today);
+  const totalSaved = transactions
+    .filter(t => t.category === '경조사')
+    .reduce((s, t) => s + (Number(t.amount) || 0), 0);
+  const shortfall = Math.max(0, totalRec - totalSaved);
+  if (shortfall > 0) {
+    document.getElementById('tx-amount').value = fmtAmount(shortfall);
+  }
+
+  // 4) 메모 prefill
+  document.getElementById('tx-memo').value = `${today} 경조사 적립`;
 });
 
 // 손익 본문 렌더 (A3) — 카테고리별 상세 표
@@ -6378,6 +6469,7 @@ function setMonth(ym) {
   renderRecurringBar();
   renderRecurringList();   // 글로벌 월 기준 뱃지(진행 중/종료 등) 재계산
   renderEventsList();      // v0.6 — 글로벌 월 기준 '이번 달 처리됨' 등 재계산
+  renderEventBar();        // v0.6 — 글로벌 월 기준 적립 부족 재계산
   // 글로벌 월 변경 시 트리맵 drill-down 상태 리셋 (다른 월에 그 카테고리가 없을 수 있음)
   dashExpenseDrillCategory = null;
   // 대시보드 차트는 활성일 때만 재로드
@@ -6494,6 +6586,42 @@ function renderUnpaidBar() {
   // 카드 미지급금이 표 본문에도 들어가므로 같이 갱신
   // (단, 본문이 아직 안 그려졌으면 skip)
   if (document.getElementById('bs-body')) renderBsBody();
+}
+
+// 경조사 적립 알림바 (v0.6)
+// 표시 조건: 이번 달 권장 적립 > 0 AND 이번 달 적립 부족
+// — 권장 = 모든 경조사의 amount/12 합 (행사 월인 경조사는 0)
+// — 실제 = 이번 달 '경조사' 카테고리 거래 합계
+function renderEventBar() {
+  const $bar = document.getElementById('event-bar');
+  if (!$bar) return;
+
+  const today = currentMonth;
+  const [, curM] = today.split('-').map(Number);
+
+  // 이번 달이 행사 월인 경조사가 있으면 알림바 숨김 (대시보드 카드에서 처리)
+  // 그 외엔 적립이 부족하면 표시
+  if (!eventsMasters.length) { $bar.classList.remove('show'); return; }
+
+  // 이번 달 권장 적립 합
+  let totalRec = 0;
+  for (const ev of eventsMasters) {
+    totalRec += eventThisMonthRecommend(ev, today);
+  }
+  if (totalRec <= 0) { $bar.classList.remove('show'); return; }
+
+  // 이번 달 '경조사' 카테고리 거래 합 (변동지출/고정지출 어디든)
+  const totalSaved = transactions
+    .filter(t => t.category === '경조사')
+    .reduce((s, t) => s + (Number(t.amount) || 0), 0);
+
+  const shortfall = totalRec - totalSaved;
+  if (shortfall <= 0) { $bar.classList.remove('show'); return; }
+
+  // 표시
+  const $text = document.getElementById('event-bar-text');
+  $text.innerHTML = `이번 달 경조사 적립 <span class="eb-strong">${fmtAmount(shortfall)}원 부족</span> (권장 ${fmtAmount(totalRec)} · 적립 ${fmtAmount(totalSaved)})`;
+  $bar.classList.add('show');
 }
 
 // 카드별로 미결제 거래 그룹화
