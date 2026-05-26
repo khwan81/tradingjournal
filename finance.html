@@ -7072,6 +7072,7 @@ async function migrationRun() {
           deposit:    null,
           depositKrw: null,
           principal:  null,
+          principalNative: null,
           monthlyReturn: null,
           cumReturn:     null,
           cumReturnRate: null,
@@ -8258,8 +8259,21 @@ function openSavingsModal(accId) {
   const $dep = document.getElementById('sv-input-deposit');
   $dep.value = doc?.deposit != null ? doc.deposit : '';
   // - principal (첫 결산일 때만 의미)
+  //   외화 계좌는 원자값 입력 칸이므로 principalNative를 prefill,
+  //   KRW 계좌는 principal(KRW) 그대로
+  //   기존 데이터(v0.7-5c 이전)에 principalNative 없으면 fxRate로 역산
   const $prn = document.getElementById('sv-input-principal');
-  $prn.value = doc?.principal != null ? doc.principal : '';
+  if (isFx) {
+    let prefillNative = doc?.principalNative;
+    if (prefillNative == null && doc?.principal != null && doc?.fxRate) {
+      prefillNative = doc.principal / doc.fxRate;
+      // 깨끗한 숫자로 — 소수 2자리 반올림
+      prefillNative = Math.round(prefillNative * 100) / 100;
+    }
+    $prn.value = prefillNative != null ? prefillNative : '';
+  } else {
+    $prn.value = doc?.principal != null ? doc.principal : '';
+  }
   // - memo
   document.getElementById('sv-input-memo').value = doc?.memo || '';
 
@@ -8309,24 +8323,28 @@ function svUpdatePreview() {
   const depKrw = Math.round(depN * useRate);
 
   // 자동계산
-  let principal, mret, cumRet, cumRate;
+  let principal, principalNative, mret, cumRet, cumRate;
   if (isFirst) {
-    // 사용자가 입력한 원금 (KRW 단위가 아닌 원자값. 외화면 환산해서 KRW)
+    // 사용자가 입력한 원금 (외화면 USD, 비외화면 KRW)
     const prnKrw = Math.round(prnN * useRate);
-    principal = prnKrw;
+    principal       = prnKrw;
+    principalNative = isFx ? prnN : prnKrw;
     mret      = balKrw - prnKrw;   // 시작 시점 평가손익
     cumRet    = mret;
     cumRate   = principal > 0 ? cumRet / principal : 0;
   } else if (prev) {
     const prevBalKrw = Number(prev.balanceKrw) || 0;
     const prevPrn    = Number(prev.principal) || 0;
-    principal = prevPrn + depKrw;
+    const prevPrnNative = Number(prev.principalNative) || (isFx ? prevPrn / (Number(prev.fxRate) || 1) : prevPrn);
+    principal       = prevPrn + depKrw;
+    principalNative = isFx ? (prevPrnNative + depN) : principal;
     mret      = balKrw - prevBalKrw - depKrw;
     cumRet    = balKrw - principal;
     cumRate   = principal > 0 ? cumRet / principal : 0;
   } else {
     // 전월이 없는데 첫 결산도 아닌 어색한 경우 — 사용자가 startYm 잘못 설정. 첫 결산 모드로 fallback
-    principal = balKrw;
+    principal       = balKrw;
+    principalNative = isFx ? balN : balKrw;
     mret      = 0;
     cumRet    = 0;
     cumRate   = 0;
@@ -8361,6 +8379,7 @@ function svUpdatePreview() {
     $body.dataset.calcBalanceKrw   = balKrw;
     $body.dataset.calcDepositKrw   = depKrw;
     $body.dataset.calcPrincipal    = principal;
+    $body.dataset.calcPrincipalNative = principalNative;
     $body.dataset.calcMret         = mret;
     $body.dataset.calcCumRet       = cumRet;
     $body.dataset.calcCumRate      = cumRate;
@@ -8392,6 +8411,7 @@ async function saveSavingsEntry() {
   const balKrw    = Number($body.dataset.calcBalanceKrw) || 0;
   const depKrw    = Number($body.dataset.calcDepositKrw) || 0;
   const principal = Number($body.dataset.calcPrincipal) || 0;
+  const principalNative = Number($body.dataset.calcPrincipalNative) || 0;
   const mret      = Number($body.dataset.calcMret) || 0;
   const cumRet    = Number($body.dataset.calcCumRet) || 0;
   const cumRate   = Number($body.dataset.calcCumRate) || 0;
@@ -8435,6 +8455,7 @@ async function saveSavingsEntry() {
     depositKrw: isFirst ? null : depKrw,
 
     principal,
+    principalNative,
     monthlyReturn: mret,
     cumReturn:     cumRet,
     cumReturnRate: cumRate,
@@ -10483,13 +10504,14 @@ async function saveBalanceSnapshot() {
           fxRate:     r.isFx ? (effRate || null) : null,
 
           // 추적 전용 필드는 null
-          deposit:        null,
-          depositKrw:     null,
-          principal:      null,
-          monthlyReturn:  null,
-          cumReturn:      null,
-          cumReturnRate:  null,
-          isStart:        false,
+          deposit:         null,
+          depositKrw:      null,
+          principal:       null,
+          principalNative: null,
+          monthlyReturn:   null,
+          cumReturn:       null,
+          cumReturnRate:   null,
+          isStart:         false,
 
           memo:      null,
           asOf,
