@@ -1481,51 +1481,24 @@ body {
   display: flex; flex-direction: column;
 }
 
-/* 적립 계좌 현황 / 이번 달 적립 — 요약 카드들 */
+
+/* E1 — 이번 달 행사 카드 (강조 + 처리 버튼) */
 .dash-event-summary-card {
   background: var(--bg2);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 12px 14px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
-.dash-event-summary-card.warning {
+.dash-event-summary-card.highlight {
   background: rgba(245, 158, 11, 0.06);
-  border-color: rgba(245, 158, 11, 0.25);
+  border-color: rgba(245, 158, 11, 0.3);
 }
 .dash-event-summary-title {
   font-size: 12px;
   color: var(--text);
   margin-bottom: 8px;
   font-weight: 500;
-}
-.dash-event-summary-row {
-  display: flex; justify-content: space-between; align-items: baseline;
-  padding: 4px 0;
-  font-size: 12px;
-  color: var(--text2);
-}
-.dash-event-summary-row .num {
-  font-family: var(--font-mono);
-  color: var(--text);
-}
-.dash-event-summary-row + .dash-event-summary-row {
-  border-top: 1px dashed var(--border);
-}
-.dash-event-summary-row.diff {
-  font-weight: 500;
-  padding-top: 6px;
-  margin-top: 2px;
-}
-.dash-event-summary-row.diff.enough { color: var(--green); }
-.dash-event-summary-row.diff.enough .num { color: var(--green); }
-.dash-event-summary-row.diff.short  { color: var(--red); }
-.dash-event-summary-row.diff.short  .num { color: var(--red); }
-
-/* E1 — 이번 달 행사 카드 (강조) */
-.dash-event-summary-card.highlight {
-  background: rgba(245, 158, 11, 0.06);
-  border-color: rgba(245, 158, 11, 0.3);
 }
 .dash-event-thismonth-list {
   display: flex; flex-direction: column; gap: 6px;
@@ -1537,9 +1510,7 @@ body {
   border-radius: 6px;
   gap: 10px;
 }
-.dash-event-thismonth-row.processed {
-  opacity: 0.55;
-}
+.dash-event-thismonth-row.processed { opacity: 0.55; }
 .dash-event-thismonth-info {
   flex: 1; min-width: 0;
   font-size: 13px;
@@ -1561,40 +1532,66 @@ body {
   border-color: var(--accent) !important;
 }
 
-/* E2 — 이번 달 권장 적립 */
-.dash-event-recommend-amount {
-  font-family: var(--font-mono);
-  font-size: 20px;
-  font-weight: 500;
-  color: var(--accent);
-  text-align: center;
-  padding: 6px 0;
+/* E2 — 개별 진도 바 */
+.dash-event-progress-section-title {
+  font-size: 12px;
+  color: var(--text2);
+  margin: 4px 0 8px 2px;
 }
-.dash-event-recommend-detail {
-  font-size: 11px;
-  color: var(--text3);
-  text-align: center;
-  padding-top: 4px;
-  border-top: 1px dashed var(--border);
-}
-
-/* 적립 추이 차트 카드 */
-.dash-event-chart-card {
+.dash-event-progress-row {
   background: var(--bg2);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 12px 14px;
-  margin-bottom: 10px;
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
 }
-.dash-event-chart-wrap {
-  position: relative;
-  width: 100%;
-  height: 220px;
-  margin-top: 8px;
+.dash-event-progress-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
 }
-@media (max-width: 700px) {
-  .dash-event-chart-wrap { height: 180px; }
+.dash-event-progress-title {
+  font-size: 13px;
+  color: var(--text);
+  flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+.dash-event-progress-amt {
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+.dash-event-progress-bar {
+  height: 8px;
+  background: var(--bg);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.dash-event-progress-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+.dash-event-progress-bar-fill.normal   { background: var(--green); }
+.dash-event-progress-bar-fill.upcoming { background: var(--red); }
+.dash-event-progress-bar-fill.done     { background: var(--accent); }
+.dash-event-progress-foot {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-top: 4px;
+}
+.dash-event-progress-time {
+  font-size: 11px;
+  color: var(--text3);
+}
+.dash-event-progress-pct {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+.dash-event-progress-pct.normal   { color: var(--green); }
+.dash-event-progress-pct.upcoming { color: var(--red); }
+.dash-event-progress-pct.done     { color: var(--accent); }
 
 /* (v0.6 D 단순화) 개별 경조사 진행률 행 / dash-bg-bar / dash-event-more —
    대시보드 경조사 카드는 적립 계좌 현황만 표시하도록 단순화. 관련 CSS 제거. */
@@ -3403,32 +3400,10 @@ body {
       <form id="form-event" onsubmit="return false;">
         <div class="form-group">
           <label class="form-label">제목</label>
-          <input class="input" id="event-name" placeholder="예: 친구 결혼식 — 김철수, 설날" autocomplete="off">
+          <input class="input" id="event-name" placeholder="예: 어버이날, 설날, 부모님 생신" autocomplete="off">
         </div>
 
         <div class="form-group">
-          <label class="form-label">종류</label>
-          <div class="form-row cols-2">
-            <label class="radio-label">
-              <input type="radio" name="event-type" value="once" checked>
-              <span>일회성</span>
-            </label>
-            <label class="radio-label">
-              <input type="radio" name="event-type" value="yearly">
-              <span>매년 반복</span>
-            </label>
-          </div>
-          <div class="form-hint">일회성: 한 번만 / 매년: 같은 달에 반복</div>
-        </div>
-
-        <!-- 일회성: 행사 월 -->
-        <div class="form-group" id="event-once-group">
-          <label class="form-label">행사 월</label>
-          <input class="input" type="month" id="event-target-ym">
-        </div>
-
-        <!-- 매년: 몇 월 -->
-        <div class="form-group" id="event-yearly-group" style="display:none;">
           <label class="form-label">매년 몇 월</label>
           <select class="select" id="event-recur-month">
             <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
@@ -3436,6 +3411,7 @@ body {
             <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
             <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
           </select>
+          <div class="form-hint">매년 같은 달에 발생하는 행사</div>
         </div>
 
         <div class="form-row cols-2 form-group">
@@ -3950,12 +3926,8 @@ function subscribeEvents() {
     pathEvents(),
     snap => {
       eventsMasters = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      // 정렬: planning 먼저 (가까운 행사 위), 그 다음 done
-      // 같은 status 내에서는 다음 발생 ym 오름차순
+      // 정렬: 다음 발생 ym 오름차순, 같으면 제목 순
       eventsMasters.sort((a, b) => {
-        const aDone = a.status === 'done' ? 1 : 0;
-        const bDone = b.status === 'done' ? 1 : 0;
-        if (aDone !== bDone) return aDone - bDone;
         const aNext = nextEventYm(a) || '9999-12';
         const bNext = nextEventYm(b) || '9999-12';
         if (aNext !== bNext) return aNext.localeCompare(bNext);
@@ -3971,43 +3943,22 @@ function subscribeEvents() {
 }
 
 // 경조사 다음 발생 ym 계산 (정렬 + 표시용)
-// — 일회성: targetYm 그대로 (done이면 null)
-// — 매년: 올해 또는 다음 해 recurMonth (현재 월이 이미 지났으면 내년)
+// 매년 행사: 올해 또는 다음 해 recurMonth (현재 월이 이미 지났으면 내년)
 function nextEventYm(ev) {
   if (!ev) return null;
-  if (ev.type === 'once') {
-    if (ev.status === 'done') return null;
-    return ev.targetYm || null;
-  }
-  if (ev.type === 'yearly') {
-    const m = parseInt(ev.recurMonth, 10);
-    if (!m || m < 1 || m > 12) return null;
-    const [cy, cm] = currentMonth.split('-').map(Number);
-    const targetYear = (m >= cm) ? cy : cy + 1;
-    return `${targetYear}-${String(m).padStart(2, '0')}`;
-  }
-  return null;
+  const m = parseInt(ev.recurMonth, 10);
+  if (!m || m < 1 || m > 12) return null;
+  const [cy, cm] = currentMonth.split('-').map(Number);
+  const targetYear = (m >= cm) ? cy : cy + 1;
+  return `${targetYear}-${String(m).padStart(2, '0')}`;
 }
 
-// 경조사 월 적립액 계산
-// — 일회성: amount / (targetYm - startYm + 1). startYm > targetYm이면 0
-// — 매년: amount / 12 (단순화 — 등록 후 첫 사이클도 12로 가정. 부족분은 사용자가 인지)
+// 경조사 월 적립액 — amount / 12 (매년 균등)
 function eventMonthlySaving(ev) {
   if (!ev || !ev.amount) return 0;
   const amount = Number(ev.amount) || 0;
   if (amount <= 0) return 0;
-
-  if (ev.type === 'once') {
-    if (ev.status === 'done') return 0;
-    if (!ev.startYm || !ev.targetYm) return 0;
-    const months = monthsBetween(ev.startYm, ev.targetYm);
-    if (months <= 0) return 0;
-    return Math.round(amount / months);
-  }
-  if (ev.type === 'yearly') {
-    return Math.round(amount / 12);
-  }
-  return 0;
+  return Math.round(amount / 12);
 }
 
 // 두 ym 사이의 개월 수 (포함, 즉 같으면 1)
@@ -4018,19 +3969,10 @@ function monthsBetween(fromYm, toYm) {
   return (ty - fy) * 12 + (tm - fm) + 1;
 }
 
-// 이번 달이 해당 경조사 적립 기간 안인지
+// 이번 달이 해당 경조사 적립 기간 안인지 — 매년은 항상 활성
 function isEventActiveInMonth(ev, ym) {
   if (!ev) return false;
-  if (ev.type === 'once') {
-    if (ev.status === 'done') return false;
-    if (!ev.startYm || !ev.targetYm) return false;
-    return ev.startYm <= ym && ym <= ev.targetYm;
-  }
-  if (ev.type === 'yearly') {
-    // 매년은 항상 활성 (적립 사이클이 끊임없음)
-    return true;
-  }
-  return false;
+  return true;
 }
 
 function subscribeTransactions() {
@@ -5811,53 +5753,33 @@ function renderEventsList() {
     return;
   }
 
-  // 글로벌 월 기준 — 시스템 오늘이 아니라 currentMonth(사용자가 보고 있는 월) 기준
-  // 으로 처리 상태/임박 등을 판단해야 글로벌 월 이동 시 정확히 갱신됨
+  // 글로벌 월 기준 — 사용자가 보고 있는 월 기준으로 처리됨 판단
   const today = currentMonth;
+  const [, curMonth] = today.split('-').map(Number);
+
   $list.innerHTML = eventsMasters.map(ev => {
-    const next = nextEventYm(ev);
     const monthly = eventMonthlySaving(ev);
-    const isDone = ev.status === 'done';
-    const isUpcoming = next && next <= today && !isDone && ev.type === 'once';
+    const isDoneThisMonth = ev.lastDoneYm === today;
+    const isInRecurMonth = parseInt(ev.recurMonth, 10) === curMonth;
 
     let badge;
-    const isYearlyDoneThisMonth = ev.type === 'yearly' && ev.lastDoneYm === today;
-    if (isDone)            badge = '<span class="badge done">완료</span>';
-    else if (isYearlyDoneThisMonth) badge = '<span class="badge done">이번 달 처리됨</span>';
-    else if (ev.type === 'yearly') badge = '<span class="badge yearly">매년</span>';
-    else if (isUpcoming)   badge = '<span class="badge upcoming">임박</span>';
-    else                   badge = '<span class="badge">예정</span>';
+    if (isDoneThisMonth)      badge = '<span class="badge done">이번 달 처리됨</span>';
+    else if (isInRecurMonth)  badge = '<span class="badge upcoming">이번 달 인출</span>';
+    else                      badge = '<span class="badge yearly">매년</span>';
 
-    const targetText = ev.type === 'yearly'
-      ? `매년 ${ev.recurMonth}월`
-      : (ev.targetYm || '—');
+    const targetText = `매년 ${ev.recurMonth}월`;
+    const periodText = `${ev.startYm || '—'}부터 매년`;
 
-    const periodText = ev.type === 'once'
-      ? (ev.startYm && ev.targetYm
-          ? `${ev.startYm} → ${ev.targetYm} (${monthsBetween(ev.startYm, ev.targetYm)}개월)`
-          : '기간 미정')
-      : `${ev.startYm || '—'}부터 매년`;
-
-    const doneBtn = ev.type === 'once' && !isDone
-      ? `<button data-event-done="${ev.id}" title="완료 처리">✓ 완료</button>`
-      : '';
-    const reopenBtn = ev.type === 'once' && isDone
-      ? `<button data-event-reopen="${ev.id}" title="다시 예정으로">↩ 재예정</button>`
-      : '';
-
-    // 매년 행사 — 이번 달이 행사 월이면 '이번 달 처리' 토글
-    const [curYear, curMonth] = today.split('-').map(Number);
-    const isYearlyInRecurMonth = ev.type === 'yearly'
-      && parseInt(ev.recurMonth, 10) === curMonth;
-    const yearlyDoneBtn = isYearlyInRecurMonth && ev.lastDoneYm !== today
+    // 행사 월 도래 시 처리/해제 토글 노출
+    const yearlyDoneBtn = isInRecurMonth && !isDoneThisMonth
       ? `<button data-event-yearly-done="${ev.id}" title="이번 달 인출 완료">✓ 이번 달 처리</button>`
       : '';
-    const yearlyUndoBtn = isYearlyInRecurMonth && ev.lastDoneYm === today
+    const yearlyUndoBtn = isInRecurMonth && isDoneThisMonth
       ? `<button data-event-yearly-undo="${ev.id}" title="처리 해제">↩ 해제</button>`
       : '';
 
     return `
-      <div class="event-row ${(isDone || isYearlyDoneThisMonth) ? 'done' : ''}">
+      <div class="event-row ${isDoneThisMonth ? 'done' : ''}">
         <div class="event-main">
           <div class="event-name-wrap">
             <span class="event-name">${escapeHtml(ev.title || '(제목 없음)')}</span>
@@ -5874,7 +5796,7 @@ function renderEventsList() {
           </div>
         </div>
         <div class="actions">
-          ${doneBtn}${reopenBtn}${yearlyDoneBtn}${yearlyUndoBtn}
+          ${yearlyDoneBtn}${yearlyUndoBtn}
           <button data-event-edit="${ev.id}">편집</button>
         </div>
       </div>`;
@@ -5884,13 +5806,6 @@ function renderEventsList() {
   $list.querySelectorAll('[data-event-edit]').forEach(el => {
     el.addEventListener('click', () => openEventModal(el.dataset.eventEdit));
   });
-  $list.querySelectorAll('[data-event-done]').forEach(el => {
-    el.addEventListener('click', () => setEventStatus(el.dataset.eventDone, 'done'));
-  });
-  $list.querySelectorAll('[data-event-reopen]').forEach(el => {
-    el.addEventListener('click', () => setEventStatus(el.dataset.eventReopen, 'planning'));
-  });
-  // 매년 행사 토글 (v0.6 후속) — lastDoneYm으로 이번 달 처리 표시
   $list.querySelectorAll('[data-event-yearly-done]').forEach(el => {
     el.addEventListener('click', () => setEventYearlyDone(el.dataset.eventYearlyDone, true));
   });
@@ -5899,40 +5814,6 @@ function renderEventsList() {
   });
 }
 
-// 매년 행사 — 이번 달 처리 토글 (lastDoneYm 설정/해제)
-// '이번 달'은 사용자가 보고 있는 글로벌 월 기준. 시스템 오늘이 아님.
-async function setEventYearlyDone(id, isDone) {
-  if (!currentUid) return;
-  const ev = eventsMasters.find(e => e.id === id);
-  if (!ev) return;
-  const today = currentMonth;   // 글로벌 월
-  try {
-    await setDoc(pathEvent(id), {
-      lastDoneYm: isDone ? today : null,
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
-    showToast(isDone ? `"${ev.title}" ${today} 처리됨` : `"${ev.title}" 처리 해제`);
-  } catch (e) {
-    console.error('[event] yearly done error', e);
-    showToast('처리 실패');
-  }
-}
-
-// 완료/재예정 토글 (C3)
-async function setEventStatus(id, status) {
-  if (!currentUid) return;
-  const ev = eventsMasters.find(e => e.id === id);
-  if (!ev) return;
-  try {
-    await setDoc(pathEvent(id), { status, updatedAt: serverTimestamp() }, { merge: true });
-    showToast(status === 'done' ? `"${ev.title}" 완료 처리됨` : `"${ev.title}" 다시 예정으로`);
-  } catch (e) {
-    console.error('[event] setStatus error', e);
-    showToast('처리 실패');
-  }
-}
-
-// 모달 열기
 function openEventModal(id = null) {
   editingEventId = id;
   const isEdit = id !== null;
@@ -5947,28 +5828,6 @@ function openEventModal(id = null) {
   document.getElementById('event-amount').value = ev?.amount ? Number(ev.amount).toLocaleString('en-US') : '';
   document.getElementById('event-note').value = ev?.note || '';
 
-  // 종류 라디오
-  const type = ev?.type || 'once';
-  document.querySelectorAll('input[name="event-type"]').forEach(r => {
-    r.checked = (r.value === type);
-  });
-
-  // 일회성 vs 매년 입력 토글
-  document.getElementById('event-once-group').style.display   = type === 'once'   ? '' : 'none';
-  document.getElementById('event-yearly-group').style.display = type === 'yearly' ? '' : 'none';
-
-  // 일회성 행사 월
-  if (type === 'once') {
-    // 기본: 3개월 뒤
-    let defaultTarget = ev?.targetYm;
-    if (!defaultTarget) {
-      const [cy, cm] = today.split('-').map(Number);
-      const d = new Date(cy, cm - 1 + 3, 1);
-      defaultTarget = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    }
-    document.getElementById('event-target-ym').value = defaultTarget;
-  }
-
   // 매년 — 월 선택
   document.getElementById('event-recur-month').value = ev?.recurMonth || (new Date().getMonth() + 1);
 
@@ -5981,18 +5840,8 @@ function openEventModal(id = null) {
   openOv('ov-event');
 }
 
-// 종류 라디오 변경 시 토글
-document.querySelectorAll('input[name="event-type"]').forEach(r => {
-  r.addEventListener('change', e => {
-    const type = e.target.value;
-    document.getElementById('event-once-group').style.display   = type === 'once'   ? '' : 'none';
-    document.getElementById('event-yearly-group').style.display = type === 'yearly' ? '' : 'none';
-    refreshEventPreview();
-  });
-});
-
 // 모달 안의 모든 입력 변경 시 미리보기 갱신
-['event-amount', 'event-target-ym', 'event-start-ym', 'event-recur-month'].forEach(id => {
+['event-amount', 'event-start-ym', 'event-recur-month'].forEach(id => {
   document.getElementById(id).addEventListener('input', refreshEventPreview);
   document.getElementById(id).addEventListener('change', refreshEventPreview);
 });
@@ -6001,32 +5850,15 @@ document.querySelectorAll('input[name="event-type"]').forEach(r => {
 function refreshEventPreview() {
   const $prev = document.getElementById('event-modal-preview');
   if (!$prev) return;
-  const type = document.querySelector('input[name="event-type"]:checked')?.value || 'once';
   const amountRaw = document.getElementById('event-amount').value.replace(/[^\d]/g, '');
   const amount = parseInt(amountRaw, 10);
   if (!isFinite(amount) || amount <= 0) {
     $prev.style.display = 'none';
     return;
   }
-  const startYm  = document.getElementById('event-start-ym').value;
-  let periodText, monthly;
-  if (type === 'once') {
-    const targetYm = document.getElementById('event-target-ym').value;
-    if (!startYm || !targetYm) { $prev.style.display = 'none'; return; }
-    const months = monthsBetween(startYm, targetYm);
-    if (months <= 0) {
-      periodText = '시작 월이 행사 월보다 늦음';
-      monthly = 0;
-    } else {
-      periodText = `${startYm} → ${targetYm} (${months}개월)`;
-      monthly = Math.round(amount / months);
-    }
-  } else {
-    periodText = '매년 12개월 분할';
-    monthly = Math.round(amount / 12);
-  }
+  const monthly = Math.round(amount / 12);
   $prev.style.display = '';
-  document.getElementById('event-preview-period').textContent = periodText;
+  document.getElementById('event-preview-period').textContent = '매년 12개월 분할';
   document.getElementById('event-preview-monthly').textContent = `${fmtAmount(monthly)}원`;
 }
 
@@ -6049,30 +5881,20 @@ document.getElementById('btn-event-save').addEventListener('click', async () => 
   const amount = parseInt(amountRaw, 10);
   if (!isFinite(amount) || amount <= 0) { showToast('예상 금액을 입력하세요'); return; }
 
-  const type = document.querySelector('input[name="event-type"]:checked')?.value || 'once';
   const startYm = document.getElementById('event-start-ym').value;
   if (!startYm) { showToast('적립 시작 월을 선택하세요'); return; }
 
-  let targetYm = null, recurMonth = null;
-  if (type === 'once') {
-    targetYm = document.getElementById('event-target-ym').value;
-    if (!targetYm) { showToast('행사 월을 선택하세요'); return; }
-    if (targetYm < startYm) { showToast('행사 월이 시작 월보다 빠릅니다'); return; }
-  } else {
-    recurMonth = parseInt(document.getElementById('event-recur-month').value, 10);
-    if (!recurMonth || recurMonth < 1 || recurMonth > 12) { showToast('월을 선택하세요'); return; }
-  }
+  const recurMonth = parseInt(document.getElementById('event-recur-month').value, 10);
+  if (!recurMonth || recurMonth < 1 || recurMonth > 12) { showToast('월을 선택하세요'); return; }
 
   const note = document.getElementById('event-note').value.trim() || null;
 
   const data = {
     title,
-    type,
+    type: 'yearly',     // 매년만 지원 (v0.6+)
     amount,
     startYm,
-    targetYm,
     recurMonth,
-    status: editingEventId ? (eventsMasters.find(e => e.id === editingEventId)?.status || 'planning') : 'planning',
     note,
     updatedAt: serverTimestamp(),
   };
@@ -7591,7 +7413,6 @@ function renderDashKpi() {
 // 순자산 추이: 최근 12개월 스냅샷 일괄 fetch → 라인 차트 (자산/부채/순자산)
 
 let dashNetworthChart = null;   // Chart.js 인스턴스 (재생성 시 destroy)
-let dashEventsChart = null;     // 경조사 적립 추이 차트 (v0.6 F)
 let dashChartsLoaded = false;   // 12개월 데이터 캐시 여부
 
 // CSS 변수에서 색상 가져오기 (다크 테마 일관성)
@@ -8392,11 +8213,9 @@ function renderDashEventsCard() {
   if (!$body) return;
 
   const today = currentMonth;
+  const [, curMonth] = today.split('-').map(Number);
 
-  // 1) 활성 경조사
-  const activeEvents = eventsMasters.filter(ev => isEventActiveInMonth(ev, today));
-
-  // 2) 빈 케이스
+  // 빈 케이스
   if (eventsMasters.length === 0) {
     $body.innerHTML = `
       <div class="dash-placeholder" style="padding:24px 16px;">
@@ -8406,83 +8225,25 @@ function renderDashEventsCard() {
     if ($sub) $sub.textContent = `${today}`;
     return;
   }
-  if (activeEvents.length === 0) {
-    $body.innerHTML = `
-      <div class="dash-placeholder" style="padding:24px 16px;">
-        이번 달 적립 대상 경조사가 없습니다
-      </div>`;
-    if ($sub) $sub.textContent = `${today}`;
-    return;
-  }
 
-  // 3) 이번 달 발생 행사 식별 (E1용)
-  // — 일회성: targetYm === today && !done
-  // — 매년: recurMonth === 이번 달
-  const [, curM] = today.split('-').map(Number);
-  const thisMonthEvents = activeEvents.filter(ev => {
-    if (ev.type === 'once') {
-      return ev.targetYm === today && ev.status !== 'done';
-    }
-    if (ev.type === 'yearly') {
-      return parseInt(ev.recurMonth, 10) === curM;
-    }
-    return false;
-  });
+  // 이번 달 발생 행사 (E1용)
+  const thisMonthEvents = eventsMasters.filter(ev => parseInt(ev.recurMonth, 10) === curMonth);
 
-  // 4) 적립 계좌 정보 (E2용)
-  const savingAccId = settings?.eventSavingAccountId || null;
-  const savingAcc = savingAccId ? accounts.find(a => a.id === savingAccId) : null;
-  const accBalance = (() => {
-    if (!savingAccId || !bsSnapshot?.assetBalances) return null;
-    const raw = bsSnapshot.assetBalances[savingAccId];
-    if (raw == null) return null;
-    if (typeof raw === 'object') return Number(raw.krw) || 0;
-    return Number(raw) || 0;
-  })();
-
-  // 5) 목표 누적 잔액 (모든 활성 경조사 합)
-  let totalTarget = 0;
-  for (const ev of activeEvents) {
-    totalTarget += eventTargetBalance(ev, today);
-  }
-
-  // 6) 이번 달 권장 적립 (전체 + 행사별 내역)
-  const recommendDetail = activeEvents
-    .map(ev => ({ ev, rec: eventThisMonthRecommend(ev, today) }))
-    .filter(x => x.rec > 0);
-  const totalRecommend = recommendDetail.reduce((s, x) => s + x.rec, 0);
-
-  // 7) E1 — 이번 달 행사 카드
+  // E1 — 이번 달 행사 카드
   let e1Html = '';
   if (thisMonthEvents.length > 0) {
     const rows = thisMonthEvents.map(ev => {
       const amount = Number(ev.amount) || 0;
-      const isProcessed = (ev.type === 'once' && ev.status === 'done')
-        || (ev.type === 'yearly' && ev.lastDoneYm === today);
-
-      let actionBtn;
-      if (isProcessed) {
-        // 처리됨 → 해제 버튼
-        if (ev.type === 'once') {
-          actionBtn = `<button class="btn-s" data-event-undo-once="${escapeHtml(ev.id)}">↩ 해제</button>`;
-        } else {
-          actionBtn = `<button class="btn-s" data-event-undo-yearly="${escapeHtml(ev.id)}">↩ 해제</button>`;
-        }
-      } else {
-        if (ev.type === 'once') {
-          actionBtn = `<button class="btn-s btn-event-process" data-event-do-once="${escapeHtml(ev.id)}">✓ 처리 완료</button>`;
-        } else {
-          actionBtn = `<button class="btn-s btn-event-process" data-event-do-yearly="${escapeHtml(ev.id)}">✓ 처리 완료</button>`;
-        }
-      }
+      const isProcessed = ev.lastDoneYm === today;
+      const actionBtn = isProcessed
+        ? `<button class="btn-s" data-event-undo-yearly="${escapeHtml(ev.id)}">↩ 해제</button>`
+        : `<button class="btn-s btn-event-process" data-event-do-yearly="${escapeHtml(ev.id)}">✓ 처리 완료</button>`;
 
       return `
         <div class="dash-event-thismonth-row ${isProcessed ? 'processed' : ''}">
           <div class="dash-event-thismonth-info">
             <span class="dash-event-thismonth-title">${escapeHtml(ev.title)}</span>
-            ${isProcessed
-              ? '<span class="badge done" style="margin-left:6px;">처리됨</span>'
-              : ''}
+            ${isProcessed ? '<span class="badge done" style="margin-left:6px;">처리됨</span>' : ''}
           </div>
           <div class="dash-event-thismonth-right">
             <span class="dash-event-thismonth-amount">${fmtAmount(amount)}원</span>
@@ -8498,83 +8259,62 @@ function renderDashEventsCard() {
       </div>`;
   }
 
-  // 8) E2 — 적립 잔액 vs 목표
-  let e2Html;
-  if (!savingAcc) {
-    e2Html = `
-      <div class="dash-event-summary-card warning">
-        <div class="dash-event-summary-title">⚠️ 적립 계좌 미지정</div>
-        <div style="font-size:11px; color:var(--text3); margin-top:4px;">
-          설정 → 경조사에서 적립 계좌를 선택하세요
-        </div>
-      </div>`;
-  } else if (accBalance == null) {
-    e2Html = `
-      <div class="dash-event-summary-card warning">
-        <div class="dash-event-summary-title">💰 적립 계좌 — ${escapeHtml(savingAcc.name)}</div>
-        <div style="font-size:11px; color:var(--text3); margin-top:4px;">
-          이번 달 재무상태표 스냅이 없습니다 — 잔액 표시 불가
-        </div>
-      </div>`;
-  } else {
-    const diff = accBalance - totalTarget;
-    const isShort = diff < 0;
+  // E2 — 개별 진도 바
+  const sortedEvents = [...eventsMasters].sort((a, b) => {
+    const an = nextEventYm(a) || '9999-12';
+    const bn = nextEventYm(b) || '9999-12';
+    return an.localeCompare(bn);
+  });
 
-    // 권장 적립 행사별 내역 (간단히)
-    let recommendHint = '';
-    if (recommendDetail.length > 0 && recommendDetail.length <= 3) {
-      recommendHint = recommendDetail
-        .map(x => `${escapeHtml(x.ev.title)} ${fmtAmount(x.rec)}`)
-        .join(' + ');
-    } else if (recommendDetail.length > 3) {
-      const top3 = recommendDetail.slice(0, 3)
-        .map(x => `${escapeHtml(x.ev.title)} ${fmtAmount(x.rec)}`)
-        .join(' + ');
-      recommendHint = `${top3} 외 ${recommendDetail.length - 3}건`;
+  const rowsHtml = sortedEvents.map(ev => {
+    const amount = Number(ev.amount) || 0;
+    const progress = estimateEventProgress(ev, today);  // 0~1
+    const accumulated = Math.round(amount * progress);
+    const pct = Math.round(progress * 100);
+    const isInRecurMonth = parseInt(ev.recurMonth, 10) === curMonth;
+    const isDoneThisMonth = ev.lastDoneYm === today;
+    const nextYm = nextEventYm(ev);
+
+    // 색상 분류 (매년만이라 사이클 진도 기반)
+    let barCls, pctCls, stateLabel;
+    if (isDoneThisMonth) {
+      barCls = 'done'; pctCls = 'done'; stateLabel = '완료';
+    } else if (isInRecurMonth) {
+      barCls = 'upcoming'; pctCls = 'upcoming'; stateLabel = '인출 예정';
+    } else {
+      barCls = 'normal'; pctCls = 'normal'; stateLabel = '';
     }
 
-    e2Html = `
-      <div class="dash-event-summary-card">
-        <div class="dash-event-summary-title">💰 적립 현황 — ${escapeHtml(savingAcc.name)}</div>
-        <div class="dash-event-summary-row">
-          <span>계좌 잔액</span>
-          <span class="num">${fmtAmount(accBalance)}원</span>
+    // 남은 개월 (행사 월까지)
+    let timeText;
+    if (isInRecurMonth) {
+      timeText = isDoneThisMonth ? '이번 달 처리됨' : '이번 달 인출 예정';
+    } else {
+      const remain = monthsBetween(today, nextYm) - 1;
+      timeText = `매년 ${ev.recurMonth}월 · ${remain}개월 남음`;
+    }
+
+    return `
+      <div class="dash-event-progress-row">
+        <div class="dash-event-progress-head">
+          <span class="dash-event-progress-title">${escapeHtml(ev.title)}</span>
+          <span class="dash-event-progress-amt">${fmtAmount(accumulated)} / ${fmtAmount(amount)}원</span>
         </div>
-        <div class="dash-event-summary-row">
-          <span>목표 누적</span>
-          <span class="num">${fmtAmount(totalTarget)}원</span>
+        <div class="dash-event-progress-bar">
+          <div class="dash-event-progress-bar-fill ${barCls}" style="width:${Math.min(100, pct)}%"></div>
         </div>
-        <div class="dash-event-summary-row diff ${isShort ? 'short' : 'enough'}">
-          <span>${isShort ? '⚠️ 부족' : '✓ 초과'}</span>
-          <span class="num">${isShort ? '-' : '+'}${fmtAmount(Math.abs(diff))}원</span>
-        </div>
-      </div>
-      ${totalRecommend > 0 ? `
-        <div class="dash-event-summary-card">
-          <div class="dash-event-summary-title">📊 이번 달 권장 적립</div>
-          <div class="dash-event-recommend-amount">${fmtAmount(totalRecommend)}원</div>
-          ${recommendHint ? `<div class="dash-event-recommend-detail">${recommendHint}</div>` : ''}
-        </div>` : ''}
-      <div class="dash-event-chart-card">
-        <div class="dash-event-summary-title">📈 적립 추이 (최근 12개월)</div>
-        <div class="dash-event-chart-wrap">
-          <canvas id="dash-event-chart"></canvas>
-        </div>
-        <div class="dash-chart-empty" id="dash-event-chart-empty" style="display:none;">
-          잔액 스냅이 없습니다
+        <div class="dash-event-progress-foot">
+          <span class="dash-event-progress-time">${escapeHtml(timeText)}</span>
+          <span class="dash-event-progress-pct ${pctCls}">${pct}%${stateLabel ? ' · ' + stateLabel : ''}</span>
         </div>
       </div>`;
-  }
+  }).join('');
 
-  $body.innerHTML = e1Html + e2Html;
+  $body.innerHTML = e1Html + `
+    <div class="dash-event-progress-section-title">개별 진도</div>
+    ${rowsHtml}`;
 
   // 이벤트 위임 — 처리/해제 버튼
-  $body.querySelectorAll('[data-event-do-once]').forEach(el => {
-    el.addEventListener('click', () => setEventStatus(el.dataset.eventDoOnce, 'done'));
-  });
-  $body.querySelectorAll('[data-event-undo-once]').forEach(el => {
-    el.addEventListener('click', () => setEventStatus(el.dataset.eventUndoOnce, 'planning'));
-  });
   $body.querySelectorAll('[data-event-do-yearly]').forEach(el => {
     el.addEventListener('click', () => setEventYearlyDone(el.dataset.eventDoYearly, true));
   });
@@ -8582,210 +8322,30 @@ function renderDashEventsCard() {
     el.addEventListener('click', () => setEventYearlyDone(el.dataset.eventUndoYearly, false));
   });
 
-  if ($sub) $sub.textContent = `${today} · ${activeEvents.length}건 활성`;
-
-  // 차트 렌더는 비동기 (스냅 fetch 필요)
-  if (savingAccId) {
-    renderDashEventChart();
-  } else {
-    // 적립 계좌 없으면 차트 정리
-    if (dashEventsChart) { dashEventsChart.destroy(); dashEventsChart = null; }
-  }
+  if ($sub) $sub.textContent = `${today} · ${eventsMasters.length}건 활성`;
 }
 
-// 경조사 적립 추이 차트 (v0.6 F) — 잔액 vs 목표 누적, 최근 12개월
-async function renderDashEventChart() {
-  const $canvas = document.getElementById('dash-event-chart');
-  const $empty  = document.getElementById('dash-event-chart-empty');
-  if (!$canvas || !window.Chart) return;
-  if (!currentUid) return;
 
-  const savingAccId = settings?.eventSavingAccountId || null;
-  if (!savingAccId) {
-    if (dashEventsChart) { dashEventsChart.destroy(); dashEventsChart = null; }
-    return;
-  }
-
-  try {
-    // 1) 최근 12개월
-    const ymList = recentYmList(12, currentMonth);
-
-    // 2) 전체 스냅샷 fetch (월 1개씩이라 양 적음)
-    const allSnap = await getDocs(pathSnapshots());
-    const byYm = new Map();
-    allSnap.forEach(d => byYm.set(d.id, d.data()));
-
-    // 3) 잔액 추출
-    const balanceData = [];
-    const targetData = [];
-    let validCount = 0;
-    for (const ym of ymList) {
-      // 실제 잔액
-      const snap = byYm.get(ym);
-      let bal = null;
-      if (snap?.assetBalances) {
-        const raw = snap.assetBalances[savingAccId];
-        if (raw != null) {
-          if (typeof raw === 'object') bal = Number(raw.krw) || 0;
-          else                          bal = Number(raw) || 0;
-          validCount++;
-        }
-      }
-      balanceData.push(bal);
-
-      // 목표 누적 (모든 활성 경조사 합) — 그 시점 기준
-      let tgt = 0;
-      for (const ev of eventsMasters) {
-        if (isEventActiveInMonth(ev, ym)) {
-          tgt += eventTargetBalance(ev, ym);
-        }
-      }
-      targetData.push(tgt);
-    }
-
-    if (validCount === 0) {
-      $canvas.style.display = 'none';
-      $empty.style.display = '';
-      if (dashEventsChart) { dashEventsChart.destroy(); dashEventsChart = null; }
-      return;
-    }
-    $canvas.style.display = '';
-    $empty.style.display = 'none';
-
-    // 4) 색상
-    const colorText  = getCssVar('--text2')  || '#9aa5b1';
-    const colorGrid  = getCssVar('--border') || 'rgba(255,255,255,0.08)';
-    const colorBal   = getCssVar('--accent') || '#4f8fff';
-    const colorTgt   = getCssVar('--text3')  || '#6b7280';
-
-    // 5) 차트 생성
-    if (dashEventsChart) { dashEventsChart.destroy(); dashEventsChart = null; }
-    dashEventsChart = new Chart($canvas, {
-      type: 'line',
-      data: {
-        labels: ymList.map(ym => ym.slice(2)),   // "26-05"
-        datasets: [
-          {
-            label: '계좌 잔액',
-            data: balanceData,
-            borderColor: colorBal,
-            backgroundColor: 'rgba(79,143,255,0.1)',
-            borderWidth: 2,
-            tension: 0.3,
-            fill: true,
-            spanGaps: true,
-            pointRadius: 3,
-            pointHoverRadius: 5,
-          },
-          {
-            label: '목표 누적',
-            data: targetData,
-            borderColor: colorTgt,
-            backgroundColor: 'transparent',
-            borderWidth: 1.5,
-            borderDash: [5, 4],
-            tension: 0.2,
-            pointRadius: 0,
-            pointHoverRadius: 3,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { intersect: false, mode: 'index' },
-        plugins: {
-          legend: {
-            display: true,
-            position: 'top',
-            align: 'end',
-            labels: { color: colorText, font: { size: 11 }, boxWidth: 16, boxHeight: 2 },
-          },
-          tooltip: {
-            backgroundColor: 'rgba(20,22,28,0.95)',
-            titleColor: '#fff',
-            bodyColor: '#cbd2db',
-            borderColor: colorGrid,
-            borderWidth: 1,
-            padding: 10,
-            callbacks: {
-              label: (ctx) => {
-                const v = ctx.parsed.y;
-                if (v == null) return `${ctx.dataset.label}: -`;
-                return `${ctx.dataset.label}: ${fmtAmount(v)}원`;
-              },
-            },
-          },
-        },
-        scales: {
-          x: {
-            ticks: { color: colorText, font: { size: 10 } },
-            grid: { display: false },
-          },
-          y: {
-            ticks: {
-              color: colorText,
-              font: { size: 10 },
-              callback: (v) => {
-                if (Math.abs(v) >= 100000000) return (v / 100000000).toFixed(1) + '억';
-                if (Math.abs(v) >= 10000) return (v / 10000).toFixed(0) + '만';
-                return v.toLocaleString();
-              },
-            },
-            grid: { color: colorGrid, drawBorder: false },
-          },
-        },
-      },
-    });
-  } catch (e) {
-    console.error('[dashboard] event chart error', e);
-    if (dashEventsChart) { dashEventsChart.destroy(); dashEventsChart = null; }
-  }
-}
-
-// 경조사 진행률 추정 (0~1) — 잔여 필요액 계산용
-// — 일회성: (현재까지 지난 개월수) / (전체 개월수). 단 status='done'이면 1.
-// — 매년: 사이클 시작부터 현재까지 / 12.
-// — 행사 발생 월(이번 달이 행사 월)에는 0 반환 → 잔여 = 전체 금액으로 표시.
-//   (사용자가 그 달에 인출할 것이므로 직관적인 표시)
+// 경조사 진행률 추정 (0~1) — 매년 사이클
+// — 행사 월: lastDoneYm=ym이면 1 (인출 완료), 아니면 0 (인출 예정 — 전체가 잔여)
+// — 그 외: 사이클 시작부터 / 12
 function estimateEventProgress(ev, ym) {
   if (!ev) return 0;
-
-  if (ev.type === 'once') {
-    if (!ev.startYm || !ev.targetYm) return 0;
-    if (ev.status === 'done') return 1;
-    // 행사 월 = 인출 예정 — 잔여를 전체 금액으로 보여줘야 직관적
-    if (ym === ev.targetYm) return 0;
-    const total = monthsBetween(ev.startYm, ev.targetYm);
-    if (total <= 0) return 0;
-    if (ym < ev.startYm) return 0;
-    if (ym > ev.targetYm) return 1;
-    const elapsed = monthsBetween(ev.startYm, ym);
-    return Math.min(1, elapsed / total);
+  const [, cm] = ym.split('-').map(Number);
+  const recurM = parseInt(ev.recurMonth, 10);
+  if (recurM === cm) {
+    if (ev.lastDoneYm === ym) return 1;
+    return 0;
   }
-
-  if (ev.type === 'yearly') {
-    // 행사 월 = 인출 예정 — 잔여를 전체 금액으로
-    const [cy, cm] = ym.split('-').map(Number);
-    const recurM = parseInt(ev.recurMonth, 10);
-    if (recurM === cm) {
-      // 이번 달 인출 완료 토글이 켜져 있으면 잔여 0
-      if (ev.lastDoneYm === ym) return 1;
-      return 0;
-    }
-
-    const cycleStart = getEventCycleStart(ev, ym);
-    if (!cycleStart) return 0;
-    const elapsed = monthsBetween(cycleStart, ym);
-    return Math.min(1, elapsed / 12);
-  }
-
-  return 0;
+  const cycleStart = getEventCycleStart(ev, ym);
+  if (!cycleStart) return 0;
+  const elapsed = monthsBetween(cycleStart, ym);
+  return Math.min(1, elapsed / 12);
 }
 
 // 매년 사이클 시작 ym (다음 행사로부터 12개월 전)
 function getEventCycleStart(ev, ym) {
-  if (ev.type !== 'yearly') return null;
+  if (!ev) return null;
   const nextYm = nextEventYm(ev);
   if (!nextYm) return null;
   const [ny, nm] = nextYm.split('-').map(Number);
@@ -8793,67 +8353,32 @@ function getEventCycleStart(ev, ym) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
-// 경조사의 ym 말 시점 목표 누적 잔액 (KRW)
-// — 사이클 진도 × 금액. 행사 월에는 amount(인출 직전) 또는 0(처리됨).
+// 경조사의 ym 말 시점 목표 누적 잔액 (KRW) — 사이클 진도 × 금액
+// 행사 월: lastDoneYm=ym이면 0 (인출 후), 아니면 amount (인출 직전)
 function eventTargetBalance(ev, ym) {
   if (!ev) return 0;
   const amount = Number(ev.amount) || 0;
   if (amount <= 0) return 0;
-
-  if (ev.type === 'once') {
-    if (ev.status === 'done') return 0;
-    if (!ev.startYm || !ev.targetYm) return 0;
-    if (ym > ev.targetYm) return 0;       // 행사 지남
-    if (ym === ev.targetYm) return amount; // 행사 월 — 전체
-    if (ym < ev.startYm) return 0;
-    const total = monthsBetween(ev.startYm, ev.targetYm);
-    if (total <= 0) return 0;
-    const elapsed = monthsBetween(ev.startYm, ym);
-    return Math.round(amount * (elapsed / total));
+  const [, cm] = ym.split('-').map(Number);
+  const recurM = parseInt(ev.recurMonth, 10);
+  if (recurM === cm) {
+    return ev.lastDoneYm === ym ? 0 : amount;
   }
-
-  if (ev.type === 'yearly') {
-    const [cy, cm] = ym.split('-').map(Number);
-    const recurM = parseInt(ev.recurMonth, 10);
-    if (recurM === cm) {
-      // 행사 월: lastDoneYm=ym이면 인출 후니까 0, 아니면 전체
-      return ev.lastDoneYm === ym ? 0 : amount;
-    }
-    // 그 외: 사이클 진도 × 금액
-    const cycleStart = getEventCycleStart(ev, ym);
-    if (!cycleStart) return 0;
-    const elapsed = monthsBetween(cycleStart, ym);
-    return Math.round(amount * Math.min(1, elapsed / 12));
-  }
-  return 0;
+  const cycleStart = getEventCycleStart(ev, ym);
+  if (!cycleStart) return 0;
+  const elapsed = monthsBetween(cycleStart, ym);
+  return Math.round(amount * Math.min(1, elapsed / 12));
 }
 
-// 이번 달 권장 적립액 (KRW)
-// — 일회성: amount / 총 개월수. 행사 월이거나 종료된 행사는 0.
-// — 매년: amount / 12. 행사 월(현재 사이클 인출 예정 월)은 0.
+// 이번 달 권장 적립액 (KRW) — amount/12. 행사 월에는 0 (인출만)
 function eventThisMonthRecommend(ev, ym) {
   if (!ev) return 0;
   const amount = Number(ev.amount) || 0;
   if (amount <= 0) return 0;
-
-  if (ev.type === 'once') {
-    if (ev.status === 'done') return 0;
-    if (!ev.startYm || !ev.targetYm) return 0;
-    if (ym < ev.startYm) return 0;
-    if (ym >= ev.targetYm) return 0;   // 행사 월부터는 권장 0
-    const total = monthsBetween(ev.startYm, ev.targetYm);
-    if (total <= 0) return 0;
-    return Math.round(amount / total);
-  }
-
-  if (ev.type === 'yearly') {
-    const [, cm] = ym.split('-').map(Number);
-    const recurM = parseInt(ev.recurMonth, 10);
-    // 행사 월: 권장 0 (이번 달은 인출만)
-    if (recurM === cm) return 0;
-    return Math.round(amount / 12);
-  }
-  return 0;
+  const [, cm] = ym.split('-').map(Number);
+  const recurM = parseInt(ev.recurMonth, 10);
+  if (recurM === cm) return 0;
+  return Math.round(amount / 12);
 }
 
 // ── 예산 모달 (v0.4 A4) ──
