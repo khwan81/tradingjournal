@@ -1266,6 +1266,149 @@ body {
   .dash-chart-wrap { height: 220px; }
 }
 
+/* 자산 구성 도넛 (B5) — 차트 + 범례 가로 배치 */
+.dash-doughnut-wrap {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 20px;
+  align-items: center;
+}
+.dash-doughnut-chart {
+  position: relative;
+  width: 100%;
+  height: 240px;
+}
+.dash-doughnut-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.dash-legend-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 8px;
+  padding: 3px 0;
+}
+.dash-legend-row.group-head {
+  padding-top: 8px;
+  font-weight: 500;
+  color: var(--text);
+  border-top: 1px solid var(--border);
+}
+.dash-legend-row.group-head:first-child {
+  border-top: none; padding-top: 0;
+}
+.dash-legend-left {
+  display: flex; align-items: center; gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+.dash-legend-swatch {
+  width: 10px; height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.dash-legend-row.group-head .dash-legend-swatch {
+  visibility: hidden;
+}
+.dash-legend-name {
+  color: var(--text2);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.dash-legend-row.group-head .dash-legend-name {
+  color: var(--text);
+}
+.dash-legend-pct {
+  font-family: var(--font-mono);
+  color: var(--text3);
+  flex-shrink: 0;
+  font-size: 11px;
+}
+.dash-legend-row.group-head .dash-legend-pct {
+  color: var(--text2);
+}
+@media (max-width: 700px) {
+  .dash-doughnut-wrap {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .dash-doughnut-chart { height: 200px; }
+  .dash-doughnut-legend { max-height: none; }
+}
+
+/* 예산 진행 미니 바 (B6) */
+#dash-budget-list {
+  display: flex; flex-direction: column;
+  gap: 12px;
+}
+.dash-bg-row {
+  cursor: pointer;
+  padding: 4px 0;
+  transition: background 0.15s;
+}
+.dash-bg-row:hover { background: rgba(255,255,255,0.02); }
+
+.dash-bg-row-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+.dash-bg-cat {
+  color: var(--text2);
+  flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.dash-bg-cat.over,
+.dash-bg-cat.no-budget { color: var(--text); font-weight: 500; }
+
+.dash-bg-amt {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text);
+  flex-shrink: 0;
+}
+.dash-bg-budget-text { color: var(--text3); }
+.dash-bg-pct {
+  font-weight: 500;
+  font-family: var(--font-mono);
+  margin-left: 4px;
+}
+.dash-bg-pct.ok    { color: var(--green); }
+.dash-bg-pct.warn  { color: #fbbf24; }
+.dash-bg-pct.over  { color: var(--red); }
+
+.dash-bg-bar {
+  height: 6px;
+  background: var(--bg);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.dash-bg-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+.dash-bg-bar-fill.ok    { background: var(--green); }
+.dash-bg-bar-fill.warn  { background: #fbbf24; }
+.dash-bg-bar-fill.over  { background: var(--red); }
+
+.dash-bg-no-budget-tag {
+  color: #fbbf24;
+  font-size: 11px;
+}
+.dash-bg-more {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text3);
+  padding-top: 6px;
+  margin-top: 4px;
+  border-top: 1px dashed var(--border);
+}
+
 /* 전체 요약 카드 */
 .bg-summary {
   background: var(--bg2);
@@ -2368,6 +2511,37 @@ body {
           거래가 없습니다 — 거래내역 탭에서 거래를 추가하세요
         </div>
       </div>
+
+      <!-- 자산 구성 도넛 (B5) -->
+      <div class="dash-card">
+        <div class="dash-card-head">
+          <div class="dash-card-title">자산 구성</div>
+          <div class="dash-card-sub" id="dash-assets-sub">—</div>
+        </div>
+        <div class="dash-doughnut-wrap">
+          <div class="dash-doughnut-chart">
+            <canvas id="dash-assets-chart"></canvas>
+          </div>
+          <div class="dash-doughnut-legend" id="dash-assets-legend"></div>
+        </div>
+        <div class="dash-chart-empty" id="dash-assets-empty" style="display:none;">
+          스냅샷이 없거나 자산이 0입니다
+        </div>
+      </div>
+
+      <!-- 예산 진행 (B6) -->
+      <div class="dash-card">
+        <div class="dash-card-head">
+          <div class="dash-card-title">예산 진행</div>
+          <div class="dash-card-sub" id="dash-budget-sub">—</div>
+        </div>
+        <div id="dash-budget-list">
+          <!-- renderDashBudgetList 가 채움 -->
+        </div>
+        <div class="dash-chart-empty" id="dash-budget-empty" style="display:none;">
+          이번 달 비용 거래도 예산도 없습니다
+        </div>
+      </div>
     </div>
   </div>
 
@@ -3233,6 +3407,8 @@ document.querySelectorAll('.tab').forEach(btn => {
       renderDashKpi();
       renderDashNetworthChart();
       renderDashPlChart();
+      renderDashAssetsChart();
+      renderDashBudgetList();
     }
   });
 });
@@ -3329,6 +3505,10 @@ async function loadAll() {
       accounts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       renderAccounts();
       renderBsBody(); // 재무상태표에도 영향
+      // 자산 분류가 바뀌면 도넛도 갱신 (대시보드 활성일 때)
+      if (document.getElementById('tab-dashboard')?.classList.contains('active')) {
+        renderDashAssetsChart();
+      }
     },
     err => { console.error('accounts subscribe error', err); showToast('계좌 로드 실패'); }
   );
@@ -3346,6 +3526,10 @@ async function loadAll() {
       renderFxRates();
       renderAssetTypes();   // v0.3-2
       renderBsBody(); // 외화 환율 라벨이 BS에 들어가니 갱신
+      // 환율 변경되면 외화 자산 환산값이 바뀌니 도넛도 갱신
+      if (document.getElementById('tab-dashboard')?.classList.contains('active')) {
+        renderDashAssetsChart();
+      }
     },
     err => { console.error('shared settings subscribe error', err); }
   );
@@ -3372,6 +3556,7 @@ async function loadAll() {
       renderTransactions(); // 카테고리/결제수단 라벨 색상이 settings에 의존
       renderBsBody();       // 부채 마스터가 BS에 들어가니 갱신
       renderDashKpi();      // v0.5 B2 — flow 결정에 settings 의존
+      renderDashBudgetList();  // v0.5 B6 — 같은 이유
     },
     err => { console.error('settings subscribe error', err); showToast('설정 로드 실패'); }
   );
@@ -3402,6 +3587,7 @@ async function loadAll() {
   // 대시보드 탭 — KPI (차트는 탭 진입 시 그림)
   renderDashHeader();
   renderDashKpi();
+  renderDashBudgetList();  // v0.5 B6 — 가벼운 렌더라 즉시
 
   // 글로벌 월 헤더 초기 라벨 (v0.5+)
   const $gm = document.getElementById('gm-label');
@@ -3448,6 +3634,7 @@ function subscribeTransactions() {
       renderRecurringBar();
       renderBudgetBar();   // v0.4 A7
       renderDashKpi();     // v0.5 B2
+      renderDashBudgetList();   // v0.5 B6 — 가벼운 렌더라 항상 갱신
       // 손익 차트도 거래 변경에 영향 받음 (대시보드 활성일 때만 갱신)
       if (document.getElementById('tab-dashboard')?.classList.contains('active')) {
         renderDashPlChart();
@@ -3513,6 +3700,7 @@ function subscribeTxTabBudgets() {
       txTabBudgets = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       renderBudgetBar();
       renderDashKpi();   // v0.5 B2
+      renderDashBudgetList();   // v0.5 B6
     },
     err => { console.error('tx tab budgets subscribe error', err); }
   );
@@ -5598,6 +5786,7 @@ function setMonth(ym) {
   if (document.getElementById('tab-dashboard')?.classList.contains('active')) {
     renderDashNetworthChart();
     renderDashPlChart();
+    renderDashAssetsChart();
   }
 }
 function shiftMonth(delta) {
@@ -6141,9 +6330,10 @@ function subscribeBsSnapshot() {
       bsSnapshot = snap.exists() ? snap.data() : null;
       renderBsHeader();
       renderDashKpi();   // v0.5 B2
-      // 대시보드 탭이 활성이면 차트도 재로드 (B3)
+      // 대시보드 탭이 활성이면 차트도 재로드 (B3, B5)
       if (document.getElementById('tab-dashboard')?.classList.contains('active')) {
         renderDashNetworthChart();
+        renderDashAssetsChart();
       }
     },
     err => { console.error('bs snapshot subscribe error', err); }
@@ -6955,6 +7145,351 @@ async function renderDashPlChart() {
     console.error('[dashboard] pl chart error', e);
     if ($sub) $sub.textContent = '차트 로드 실패';
   }
+}
+
+// ── 자산 구성 도넛 (v0.5 B5) ──
+// 데이터: 현재 월 bsSnapshot의 자산 잔액 + accounts 마스터 join
+// 표시: 자산 종류(financeCategory)별 합계로 도넛 + 우측 범례 (유동/비유동 그룹화)
+let dashAssetsChart = null;
+
+// 자산 종류별 고정 색상 팔레트 (유동은 따뜻한 톤, 비유동은 차가운 톤)
+const ASSET_COLORS = {
+  current: [    // 유동 자산 — 그린/시안 계열
+    '#34d399', '#22c55e', '#10b981', '#06b6d4', '#0ea5e9', '#84cc16',
+  ],
+  nonCurrent: [ // 비유동 자산 — 블루/퍼플 계열
+    '#4f8fff', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899',
+  ],
+};
+
+function renderDashAssetsChart() {
+  const $canvas = document.getElementById('dash-assets-chart');
+  const $empty  = document.getElementById('dash-assets-empty');
+  const $sub    = document.getElementById('dash-assets-sub');
+  const $legend = document.getElementById('dash-assets-legend');
+  if (!$canvas || !window.Chart) return;
+  if (!currentUid) return;
+
+  try {
+    // 1) 스냅 + 계좌 매핑
+    if (!bsSnapshot || !bsSnapshot.assetBalances) {
+      $canvas.style.display = 'none';
+      $empty.style.display = '';
+      if ($sub) $sub.textContent = `${currentMonth} 스냅 없음`;
+      if ($legend) $legend.innerHTML = '';
+      if (dashAssetsChart) { dashAssetsChart.destroy(); dashAssetsChart = null; }
+      return;
+    }
+
+    // 2) 카테고리(자산 종류)별 KRW 환산 합계
+    //    accounts 마스터에서 financeType + financeCategory + currency를 가져옴.
+    //    외화 계좌는 sharedSettings.fxRates 로 KRW 환산.
+    const groups = {
+      current:    new Map(),   // category → krwAmount
+      nonCurrent: new Map(),
+    };
+    let totalKrw = 0;
+
+    for (const [accId, raw] of Object.entries(bsSnapshot.assetBalances)) {
+      const v = Number(raw) || 0;
+      if (v <= 0) continue;
+
+      const acc = accounts.find(a => a.id === accId);
+      if (!acc) continue;   // 마스터에 없는 계좌는 건너뜀
+
+      const tier = acc.financeType === 'nonCurrent' ? 'nonCurrent' : 'current';
+      const cat  = acc.financeCategory || '(분류 없음)';
+
+      // KRW 환산
+      let krw = v;
+      if (acc.currency && acc.currency !== 'KRW') {
+        const rate = Number(sharedSettings?.fxRates?.[acc.currency]) || 0;
+        if (rate > 0) krw = v * rate;
+        else continue;       // 환율 없으면 스킵 (음수 영향 방지)
+      }
+
+      groups[tier].set(cat, (groups[tier].get(cat) || 0) + krw);
+      totalKrw += krw;
+    }
+
+    if (totalKrw <= 0) {
+      $canvas.style.display = 'none';
+      $empty.style.display = '';
+      if ($sub) $sub.textContent = '자산 0';
+      if ($legend) $legend.innerHTML = '';
+      if (dashAssetsChart) { dashAssetsChart.destroy(); dashAssetsChart = null; }
+      return;
+    }
+    $canvas.style.display = '';
+    $empty.style.display = 'none';
+
+    // 3) 슬라이스 데이터 구성 (유동 먼저, 그 다음 비유동)
+    const labels = [];
+    const data   = [];
+    const colors = [];
+    const tierOf = [];   // 각 슬라이스가 어느 그룹인지
+
+    let currentTotal = 0, nonCurrentTotal = 0;
+    const buildSlices = (tierKey) => {
+      const palette = ASSET_COLORS[tierKey];
+      const entries = [...groups[tierKey].entries()].sort((a, b) => b[1] - a[1]);
+      entries.forEach(([cat, amt], i) => {
+        labels.push(cat);
+        data.push(amt);
+        colors.push(palette[i % palette.length]);
+        tierOf.push(tierKey);
+        if (tierKey === 'current')      currentTotal += amt;
+        else                            nonCurrentTotal += amt;
+      });
+    };
+    buildSlices('current');
+    buildSlices('nonCurrent');
+
+    // 4) 색상 + 텍스트 토큰
+    const colorText = getCssVar('--text2') || '#9aa5b1';
+    const colorBg   = getCssVar('--bg2')   || '#1a1d24';
+
+    // 5) Chart.js 도넛 생성
+    if (dashAssetsChart) { dashAssetsChart.destroy(); dashAssetsChart = null; }
+    dashAssetsChart = new Chart($canvas, {
+      type: 'doughnut',
+      data: {
+        labels,
+        datasets: [{
+          data,
+          backgroundColor: colors,
+          borderColor: colorBg,
+          borderWidth: 2,
+          hoverOffset: 8,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '60%',
+        plugins: {
+          legend: { display: false },     // 커스텀 범례 사용
+          tooltip: {
+            backgroundColor: 'rgba(20,22,28,0.95)',
+            titleColor: '#fff',
+            bodyColor: '#cbd2db',
+            borderColor: getCssVar('--border') || 'rgba(255,255,255,0.08)',
+            borderWidth: 1,
+            padding: 10,
+            callbacks: {
+              label: (ctx) => {
+                const v = ctx.parsed;
+                const pct = totalKrw > 0 ? (v / totalKrw) * 100 : 0;
+                return ` ${ctx.label}: ${fmtAmount(Math.round(v))} (${pct.toFixed(1)}%)`;
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // 6) 커스텀 범례 — 그룹 헤더 + 항목
+    const legendRows = [];
+    const pctOf = (v) => totalKrw > 0 ? (v / totalKrw) * 100 : 0;
+
+    // 유동 그룹
+    if (currentTotal > 0) {
+      legendRows.push(`
+        <div class="dash-legend-row group-head">
+          <div class="dash-legend-left">
+            <span class="dash-legend-swatch"></span>
+            <span class="dash-legend-name">유동 자산</span>
+          </div>
+          <span class="dash-legend-pct">${pctOf(currentTotal).toFixed(1)}%</span>
+        </div>
+      `);
+      labels.forEach((lbl, i) => {
+        if (tierOf[i] !== 'current') return;
+        legendRows.push(`
+          <div class="dash-legend-row">
+            <div class="dash-legend-left">
+              <span class="dash-legend-swatch" style="background:${colors[i]}"></span>
+              <span class="dash-legend-name">${escapeHtml(lbl)}</span>
+            </div>
+            <span class="dash-legend-pct">${pctOf(data[i]).toFixed(1)}%</span>
+          </div>
+        `);
+      });
+    }
+    // 비유동 그룹
+    if (nonCurrentTotal > 0) {
+      legendRows.push(`
+        <div class="dash-legend-row group-head">
+          <div class="dash-legend-left">
+            <span class="dash-legend-swatch"></span>
+            <span class="dash-legend-name">비유동 자산</span>
+          </div>
+          <span class="dash-legend-pct">${pctOf(nonCurrentTotal).toFixed(1)}%</span>
+        </div>
+      `);
+      labels.forEach((lbl, i) => {
+        if (tierOf[i] !== 'nonCurrent') return;
+        legendRows.push(`
+          <div class="dash-legend-row">
+            <div class="dash-legend-left">
+              <span class="dash-legend-swatch" style="background:${colors[i]}"></span>
+              <span class="dash-legend-name">${escapeHtml(lbl)}</span>
+            </div>
+            <span class="dash-legend-pct">${pctOf(data[i]).toFixed(1)}%</span>
+          </div>
+        `);
+      });
+    }
+    if ($legend) $legend.innerHTML = legendRows.join('');
+
+    if ($sub) $sub.textContent = `${currentMonth} · 총 ${fmtAmount(Math.round(totalKrw))}`;
+  } catch (e) {
+    console.error('[dashboard] assets chart error', e);
+    if ($sub) $sub.textContent = '차트 로드 실패';
+  }
+}
+
+// ── 예산 진행 (v0.5 B6) ──
+// 데이터: txTabBudgets (currentMonth 예산) + transactions (currentMonth 거래)
+// 표시: 비용 카테고리 중 우선순위 높은 상위 N개의 미니 진행률 바
+// 정렬: 초과 → 임박 → 정상 → 예산 미설정
+const DASH_BUDGET_MAX_ROWS = 8;
+
+function renderDashBudgetList() {
+  const $list  = document.getElementById('dash-budget-list');
+  const $empty = document.getElementById('dash-budget-empty');
+  const $sub   = document.getElementById('dash-budget-sub');
+  if (!$list || !$empty) return;
+
+  // 1) 비용 거래 집계
+  const usage = { fixed: new Map(), variable: new Map() };
+  for (const t of transactions) {
+    const flow = txFlow(t);
+    if (flow !== 'fixed' && flow !== 'variable') continue;
+    const cat = t.category || '(분류 없음)';
+    usage[flow].set(cat, (usage[flow].get(cat) || 0) + (Number(t.amount) || 0));
+  }
+
+  // 2) 예산 인덱스 (비용만)
+  const budgetByCat = { fixed: new Map(), variable: new Map() };
+  for (const b of txTabBudgets) {
+    if (b.flow !== 'fixed' && b.flow !== 'variable') continue;
+    if (!b.category) continue;
+    budgetByCat[b.flow].set(b.category, b);
+  }
+
+  // 3) 모든 비용 카테고리 행 빌드 (예산 있음 + 거래 있음, 또는 둘 중 하나)
+  const rows = [];   // { flow, cat, actual, budget, pct (null if no budget), sortKey }
+  for (const flow of ['fixed', 'variable']) {
+    const allCats = new Set([
+      ...usage[flow].keys(),
+      ...budgetByCat[flow].keys(),
+    ]);
+    for (const cat of allCats) {
+      const actual = usage[flow].get(cat) || 0;
+      const b = budgetByCat[flow].get(cat);
+      const budget = b ? (Number(b.budget) || 0) : 0;
+      // 거래도 예산도 0이면 표시 안 함
+      if (actual === 0 && budget === 0) continue;
+      const pct = budget > 0 ? (actual / budget) * 100 : null;
+
+      // 정렬 우선순위 키 (낮을수록 위)
+      let sortKey;
+      if (pct === null && actual > 0)  sortKey = 1.5;      // 예산 미설정 (중간)
+      else if (pct > 100)              sortKey = 0;        // 초과 (최상위)
+      else if (pct >= 80)              sortKey = 1;        // 임박
+      else if (pct === 0)              sortKey = 3;        // 예산만 있고 거래 0
+      else                             sortKey = 2;        // 정상
+
+      rows.push({ flow, cat, actual, budget, pct, sortKey });
+    }
+  }
+
+  // 빈 케이스
+  if (rows.length === 0) {
+    $list.innerHTML = '';
+    $empty.style.display = '';
+    if ($sub) $sub.textContent = `${currentMonth}`;
+    return;
+  }
+  $empty.style.display = 'none';
+
+  // 4) 정렬 — sortKey 오름차순, 같으면 pct 내림차순 (초과 큰 것 먼저)
+  rows.sort((a, b) => {
+    if (a.sortKey !== b.sortKey) return a.sortKey - b.sortKey;
+    const apct = a.pct == null ? -1 : a.pct;
+    const bpct = b.pct == null ? -1 : b.pct;
+    return bpct - apct;
+  });
+
+  // 5) 상위 N개만
+  const top = rows.slice(0, DASH_BUDGET_MAX_ROWS);
+  const more = rows.length - top.length;
+
+  // 6) 행 HTML
+  const html = top.map(r => {
+    let barCls, pctCls, catCls;
+    let amtRight, barHtml;
+
+    if (r.pct === null) {
+      // 예산 미설정
+      catCls = 'no-budget';
+      amtRight = `<span class="dash-bg-amt">${fmtAmount(r.actual)}</span> <span class="dash-bg-no-budget-tag">⚠️ 예산 미설정</span>`;
+      barHtml = '';   // 바 없음
+    } else {
+      // 색상 분류
+      if (r.pct > 100)        { barCls = 'over'; pctCls = 'over'; catCls = 'over'; }
+      else if (r.pct >= 80)   { barCls = 'warn'; pctCls = 'warn'; catCls = ''; }
+      else                    { barCls = 'ok';   pctCls = 'ok';   catCls = ''; }
+
+      const barWidth = Math.min(100, r.pct);
+      amtRight = `
+        <span class="dash-bg-amt">${fmtAmount(r.actual)}</span>
+        <span class="dash-bg-budget-text"> / ${fmtAmount(r.budget)}</span>
+        <span class="dash-bg-pct ${pctCls}">${Math.round(r.pct)}%</span>
+      `;
+      barHtml = `<div class="dash-bg-bar"><div class="dash-bg-bar-fill ${barCls}" style="width:${barWidth}%"></div></div>`;
+    }
+
+    return `
+      <div class="dash-bg-row" data-bg-goto>
+        <div class="dash-bg-row-head">
+          <span class="dash-bg-cat ${catCls}">${escapeHtml(r.cat)}</span>
+          <span>${amtRight}</span>
+        </div>
+        ${barHtml}
+      </div>`;
+  }).join('');
+
+  const moreHtml = more > 0
+    ? `<div class="dash-bg-more">외 ${more}개 — 예산 탭에서 모두 보기</div>`
+    : '';
+
+  $list.innerHTML = html + moreHtml;
+
+  // 행 클릭 → 예산 탭 이동
+  $list.querySelectorAll('[data-bg-goto]').forEach(el => {
+    el.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t =>
+        t.classList.toggle('active', t.dataset.tab === 'budget')
+      );
+      document.querySelectorAll('.tab-content').forEach(c =>
+        c.classList.toggle('active', c.id === 'tab-budget')
+      );
+    });
+  });
+
+  // 부제목 — 요약
+  const over = rows.filter(r => r.pct !== null && r.pct > 100).length;
+  const warn = rows.filter(r => r.pct !== null && r.pct >= 80 && r.pct <= 100).length;
+  const noBudget = rows.filter(r => r.pct === null).length;
+  const parts = [];
+  if (over > 0)     parts.push(`초과 ${over}`);
+  if (warn > 0)     parts.push(`임박 ${warn}`);
+  if (noBudget > 0) parts.push(`예산 미설정 ${noBudget}`);
+  if ($sub) $sub.textContent = parts.length > 0
+    ? `${currentMonth} · ${parts.join(' · ')}`
+    : `${currentMonth} · 정상`;
 }
 
 // ── 예산 모달 (v0.4 A4) ──
