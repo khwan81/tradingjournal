@@ -8354,13 +8354,18 @@ function renderDashEventsCard() {
 }
 
 // 경조사 진행률 추정 (0~1) — 잔여 필요액 계산용
-// — 일회성: (현재까지 지난 개월수) / (전체 개월수)
-// — 매년: 사이클 시작부터 현재까지 / 12
+// — 일회성: (현재까지 지난 개월수) / (전체 개월수). 단 status='done'이면 1.
+// — 매년: 사이클 시작부터 현재까지 / 12.
+// — 행사 발생 월(이번 달이 행사 월)에는 0 반환 → 잔여 = 전체 금액으로 표시.
+//   (사용자가 그 달에 인출할 것이므로 직관적인 표시)
 function estimateEventProgress(ev, ym) {
   if (!ev) return 0;
+
   if (ev.type === 'once') {
     if (!ev.startYm || !ev.targetYm) return 0;
     if (ev.status === 'done') return 1;
+    // 행사 월 = 인출 예정 — 잔여를 전체 금액으로 보여줘야 직관적
+    if (ym === ev.targetYm) return 0;
     const total = monthsBetween(ev.startYm, ev.targetYm);
     if (total <= 0) return 0;
     if (ym < ev.startYm) return 0;
@@ -8368,12 +8373,19 @@ function estimateEventProgress(ev, ym) {
     const elapsed = monthsBetween(ev.startYm, ym);
     return Math.min(1, elapsed / total);
   }
+
   if (ev.type === 'yearly') {
+    // 행사 월 = 인출 예정 — 잔여를 전체 금액으로
+    const [cy, cm] = ym.split('-').map(Number);
+    const recurM = parseInt(ev.recurMonth, 10);
+    if (recurM === cm) return 0;
+
     const cycleStart = getEventCycleStart(ev, ym);
     if (!cycleStart) return 0;
     const elapsed = monthsBetween(cycleStart, ym);
     return Math.min(1, elapsed / 12);
   }
+
   return 0;
 }
 
