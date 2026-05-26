@@ -7183,7 +7183,8 @@ function renderDashAssetsChart() {
 
     // 2) 카테고리(자산 종류)별 KRW 환산 합계
     //    accounts 마스터에서 financeType + financeCategory + currency를 가져옴.
-    //    외화 계좌는 sharedSettings.fxRates 로 KRW 환산.
+    //    bsSnapshot.assetBalances는 v0.2-4부터 객체 { native, krw, fxRate } 형식.
+    //    옛 v0.1 스냅은 숫자로 직접 저장됐을 수 있어 둘 다 지원.
     const groups = {
       current:    new Map(),   // category → krwAmount
       nonCurrent: new Map(),
@@ -7191,23 +7192,37 @@ function renderDashAssetsChart() {
     let totalKrw = 0;
 
     for (const [accId, raw] of Object.entries(bsSnapshot.assetBalances)) {
-      const v = Number(raw) || 0;
-      if (v <= 0) continue;
-
       const acc = accounts.find(a => a.id === accId);
-      if (!acc) continue;   // 마스터에 없는 계좌는 건너뜀
+      if (!acc) continue;   // 마스터에 없는 계좌는 건너뜀 (active=false 포함)
+      if (acc.active === false) continue;
 
       const tier = acc.financeType === 'nonCurrent' ? 'nonCurrent' : 'current';
       const cat  = acc.financeCategory || '(분류 없음)';
 
-      // KRW 환산
-      let krw = v;
-      if (acc.currency && acc.currency !== 'KRW') {
-        const rate = Number(sharedSettings?.fxRates?.[acc.currency]) || 0;
-        if (rate > 0) krw = v * rate;
-        else continue;       // 환율 없으면 스킵 (음수 영향 방지)
+      // KRW 값 추출 — 신/구 스냅 형식 모두 지원
+      let krw = 0;
+      if (raw && typeof raw === 'object') {
+        // 새 형식: { native, krw, fxRate } — 저장된 krw 우선,
+        // 현재 환율로 재계산이 가능하면 그것 사용 (BS와 동일 동작)
+        const native = Number(raw.native);
+        const currency = acc.currency || 'KRW';
+        if (currency !== 'KRW' && Number.isFinite(native)) {
+          const curRate = Number(sharedSettings?.fxRates?.[currency]) || 0;
+          if (curRate > 0) {
+            krw = Math.round(native * curRate);
+          } else {
+            // 환율 없으면 스냅 시점 krw 사용 (없으면 스킵)
+            krw = Number(raw.krw) || 0;
+          }
+        } else {
+          krw = Number(raw.krw) || 0;
+        }
+      } else {
+        // 옛 형식: 숫자 (KRW로 가정)
+        krw = Number(raw) || 0;
       }
 
+      if (krw <= 0) continue;
       groups[tier].set(cat, (groups[tier].get(cat) || 0) + krw);
       totalKrw += krw;
     }
