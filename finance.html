@@ -8679,10 +8679,22 @@ async function saveSavingsEntry() {
     if (!existing) data.createdAt = serverTimestamp();
 
     await setDoc(pathMonthlyDoc(ym, accId), data, { merge: true });
-    closeOv('ov-savings');
-    showToast(`${acc.name} ${ym} 결산 저장됨`);
 
-    // TODO v0.7-4: 과거 월 수정이면 recalculateChain 호출
+    // v0.7-4 — 과거 월 수정이면 그 이후 월들 자동 재계산
+    // 미래 월 도큐먼트가 있는지 빠르게 검사 (이 계좌의 monthly 도큐먼트 중 ym > 저장ym)
+    const hasFutureSnap = await getDocs(
+      query(pathMonthly(), where('accountId', '==', accId), where('ym', '>', ym))
+    );
+    const futureN = hasFutureSnap.size;
+
+    closeOv('ov-savings');
+    if (futureN > 0) {
+      // 체인 재계산 — 이 ym 이후의 도큐먼트들 누적값 갱신
+      const updated = await recalculateChain(accId, ym);
+      showToast(`${acc.name} ${ym} 결산 저장 · 이후 ${updated}개월 자동 재계산`);
+    } else {
+      showToast(`${acc.name} ${ym} 결산 저장됨`);
+    }
   } catch (e) {
     console.error('saveSavingsEntry error', e);
     showToast('저장 실패: ' + (e.message || e.code));
@@ -8690,6 +8702,111 @@ async function saveSavingsEntry() {
     $btn.disabled = false;
     $btn.textContent = orig;
   }
+}
+
+// ──────────────────────────────────────────────────────
+// v0.7-4 — 누적 체인 재계산
+// ──────────────────────────────────────────────────────
+// 한 계좌의 결산이 수정·삭제되었을 때, 그 이후 월들의
+// principal / monthlyReturn / cumReturn / cumReturnRate / principalNative 를
+// 새 값으로 재계산해서 일괄 업데이트한다.
+//
+// 룰:
+//   월 N+1의 principal       = 월 N의 principal + 월 N+1의 depositKrw
+//   월 N+1의 principalNative = 월 N의 principalNative + 월 N+1의 deposit (외화 계좌만)
+//   월 N+1의 monthlyReturn   = 월 N+1의 balanceKrw - 월 N의 balanceKrw - 월 N+1의 depositKrw
+//   월 N+1의 cumReturn       = 월 N+1의 balanceKrw - 월 N+1의 principal
+//   월 N+1의 cumReturnRate   = 월 N+1의 cumReturn / 월 N+1의 principal  (principal>0일 때)
+//
+// 호출 패턴:
+//   - 수정: recalculateChain(accId, modifiedYm)  → 그 이후만
+//   - 삭제: recalculateChain(accId, null)        → 전체 체인 재구성
+//
+// startFromYm을 못 찾으면 가장 오래된 결산을 anchor로 삼아 전체 재계산.
+async function recalculateChain(accountId, startFromYm) {
+  if (!currentUid || !accountId) return 0;
+
+  // 1) 그 계좌의 모든 결산 fetch (ym 오름차순)
+  const snap = await getDocs(
+    query(pathMonthly(), where('accountId', '==', accountId), orderBy('ym', 'asc'))
+  );
+  const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  if (all.length === 0) return 0;
+  if (all.length === 1) return 0;   // 결산 1개면 체인 만들 게 없음
+
+  // 2) anchor 결정: startFromYm 도큐먼트가 있으면 그것, 없으면 가장 오래된 도큐먼트.
+  let startIdx = startFromYm ? all.findIndex(d => d.ym === startFromYm) : -1;
+  if (startIdx < 0) startIdx = 0;   // anchor를 처음 도큐먼트로
+
+  // 3) anchor 다음부터 순회하며 재계산
+  const batch = writeBatch(db);
+  let prev = all[startIdx];   // anchor — 자기 자신은 안 건드림
+  let writes = 0;
+
+  for (let i = startIdx + 1; i < all.length; i++) {
+    const cur = all[i];
+    if (cur.isStart) {
+      // 도중에 또 다른 시작점이 있으면 (사용자가 startYm을 옮긴 경우) 거기서부터 새 체인.
+      // 이 경우 cur 자체는 anchor, 재계산하지 않고 prev로만 갱신.
+      prev = cur;
+      continue;
+    }
+
+    const balKrw    = Number(cur.balanceKrw) || 0;
+    const depKrw    = Number(cur.depositKrw) || 0;
+    const depNative = Number(cur.deposit) || 0;
+
+    const prevBalKrw      = Number(prev.balanceKrw) || 0;
+    const prevPrn         = Number(prev.principal) || 0;
+    const prevPrnNative   = prev.principalNative != null
+                             ? Number(prev.principalNative)
+                             : (cur.currency && cur.currency !== 'KRW' && prev.fxRate
+                                ? prevPrn / Number(prev.fxRate)
+                                : prevPrn);
+
+    const principal       = prevPrn + depKrw;
+    const principalNative = (cur.currency && cur.currency !== 'KRW')
+                             ? (prevPrnNative + depNative)
+                             : principal;
+    const monthlyReturn   = balKrw - prevBalKrw - depKrw;
+    const cumReturn       = balKrw - principal;
+    const cumReturnRate   = principal > 0 ? cumReturn / principal : 0;
+
+    // 동일 값이면 쓰기 스킵 (불필요한 commit 줄임)
+    if (
+      Number(cur.principal)       === principal &&
+      Number(cur.principalNative) === principalNative &&
+      Number(cur.monthlyReturn)   === monthlyReturn &&
+      Number(cur.cumReturn)       === cumReturn &&
+      Math.abs((Number(cur.cumReturnRate) || 0) - cumReturnRate) < 1e-9
+    ) {
+      prev = cur;
+      continue;
+    }
+
+    batch.update(pathMonthlyDoc(cur.ym, accountId), {
+      principal,
+      principalNative,
+      monthlyReturn,
+      cumReturn,
+      cumReturnRate,
+      updatedAt: serverTimestamp(),
+    });
+    writes++;
+
+    // 이후 계산에서 cur의 갱신된 값을 prev로 사용
+    prev = {
+      ...cur,
+      principal,
+      principalNative,
+      monthlyReturn,
+      cumReturn,
+      cumReturnRate,
+    };
+  }
+
+  if (writes > 0) await batch.commit();
+  return writes;
 }
 
 // 삭제
@@ -8703,8 +8820,17 @@ async function deleteSavingsEntry() {
   $btn.disabled = true;
   try {
     await deleteDoc(pathMonthlyDoc(ym, accId));
+
+    // v0.7-4 — 삭제된 ym 이후의 도큐먼트들 누적값 재계산
+    // anchor를 못 찾으면 전체 체인 재구성됨 (가장 오래된 도큐먼트가 anchor)
+    const updated = await recalculateChain(accId, prevYm(ym));
+
     closeOv('ov-savings');
-    showToast('결산 삭제됨');
+    if (updated > 0) {
+      showToast(`결산 삭제 · 이후 ${updated}개월 자동 재계산`);
+    } else {
+      showToast('결산 삭제됨');
+    }
   } catch (e) {
     console.error(e);
     showToast('삭제 실패: ' + (e.message || e.code));
