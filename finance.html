@@ -4006,12 +4006,13 @@ function nextEventYm(ev) {
   return `${targetYear}-${String(m).padStart(2, '0')}`;
 }
 
-// 경조사 월 적립액 — amount / 12 (매년 균등)
+// 경조사 월 적립액 — amount / 11 (11개월 사이클, 행사 월 제외)
+// 경조사 월 적립액 — amount / 11 (11개월 사이클, 행사 월 제외)
 function eventMonthlySaving(ev) {
   if (!ev || !ev.amount) return 0;
   const amount = Number(ev.amount) || 0;
   if (amount <= 0) return 0;
-  return Math.round(amount / 12);
+  return Math.round(amount / 11);
 }
 
 // 두 ym 사이의 개월 수 (포함, 즉 같으면 1)
@@ -5947,9 +5948,9 @@ function refreshEventPreview() {
     $prev.style.display = 'none';
     return;
   }
-  const monthly = Math.round(amount / 12);
+  const monthly = Math.round(amount / 11);
   $prev.style.display = '';
-  document.getElementById('event-preview-period').textContent = '매년 12개월 분할';
+  document.getElementById('event-preview-period').textContent = '11개월 분할 (행사 월 제외)';
   document.getElementById('event-preview-monthly').textContent = `${fmtAmount(monthly)}원`;
 }
 
@@ -8456,7 +8457,7 @@ function renderDashEventsCard() {
 
 // 경조사 진행률 추정 (0~1) — 매년 사이클
 // — 행사 월: lastDoneYm=ym이면 1 (인출 완료), 아니면 0 (인출 예정 — 전체가 잔여)
-// — 그 외: 사이클 시작부터 / 12
+// — 그 외: 사이클 시작부터 / 11 (11개월 사이클, 행사 월 제외)
 function estimateEventProgress(ev, ym) {
   if (!ev) return 0;
   const [, cm] = ym.split('-').map(Number);
@@ -8468,21 +8469,23 @@ function estimateEventProgress(ev, ym) {
   const cycleStart = getEventCycleStart(ev, ym);
   if (!cycleStart) return 0;
   const elapsed = monthsBetween(cycleStart, ym);
-  return Math.min(1, elapsed / 12);
+  return Math.min(1, elapsed / 11);
 }
 
-// 매년 사이클 시작 ym (다음 행사로부터 12개월 전)
+// 매년 사이클 시작 ym (다음 행사로부터 11개월 전 = 이전 행사 다음 달)
+// 즉 사이클은 [이전 행사+1개월 ~ 다음 행사-1개월] = 총 11개월. 행사 월은 사이클 밖.
 function getEventCycleStart(ev, ym) {
   if (!ev) return null;
   const nextYm = nextEventYm(ev);
   if (!nextYm) return null;
   const [ny, nm] = nextYm.split('-').map(Number);
-  const d = new Date(ny, nm - 1 - 12, 1);
+  const d = new Date(ny, nm - 1 - 11, 1);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
 // 경조사의 ym 말 시점 목표 누적 잔액 (KRW) — 사이클 진도 × 금액
 // 행사 월: lastDoneYm=ym이면 0 (인출 후), 아니면 amount (인출 직전)
+// 그 외: 11개월 사이클(행사 직후~다음 행사 직전) 진도 × 금액
 function eventTargetBalance(ev, ym) {
   if (!ev) return 0;
   const amount = Number(ev.amount) || 0;
@@ -8495,10 +8498,10 @@ function eventTargetBalance(ev, ym) {
   const cycleStart = getEventCycleStart(ev, ym);
   if (!cycleStart) return 0;
   const elapsed = monthsBetween(cycleStart, ym);
-  return Math.round(amount * Math.min(1, elapsed / 12));
+  return Math.round(amount * Math.min(1, elapsed / 11));
 }
 
-// 이번 달 권장 적립액 (KRW) — amount/12. 행사 월에는 0 (인출만)
+// 이번 달 권장 적립액 (KRW) — amount/11 (11개월 사이클). 행사 월에는 0 (인출만).
 function eventThisMonthRecommend(ev, ym) {
   if (!ev) return 0;
   const amount = Number(ev.amount) || 0;
@@ -8506,7 +8509,7 @@ function eventThisMonthRecommend(ev, ym) {
   const [, cm] = ym.split('-').map(Number);
   const recurM = parseInt(ev.recurMonth, 10);
   if (recurM === cm) return 0;
-  return Math.round(amount / 12);
+  return Math.round(amount / 11);
 }
 
 // ── 예산 모달 (v0.4 A4) ──
