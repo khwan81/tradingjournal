@@ -1578,6 +1578,24 @@ body {
   border-top: 1px dashed var(--border);
 }
 
+/* 적립 추이 차트 카드 */
+.dash-event-chart-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.dash-event-chart-wrap {
+  position: relative;
+  width: 100%;
+  height: 220px;
+  margin-top: 8px;
+}
+@media (max-width: 700px) {
+  .dash-event-chart-wrap { height: 180px; }
+}
+
 /* (v0.6 D 단순화) 개별 경조사 진행률 행 / dash-bg-bar / dash-event-more —
    대시보드 경조사 카드는 적립 계좌 현황만 표시하도록 단순화. 관련 CSS 제거. */
 
@@ -7573,6 +7591,7 @@ function renderDashKpi() {
 // 순자산 추이: 최근 12개월 스냅샷 일괄 fetch → 라인 차트 (자산/부채/순자산)
 
 let dashNetworthChart = null;   // Chart.js 인스턴스 (재생성 시 destroy)
+let dashEventsChart = null;     // 경조사 적립 추이 차트 (v0.6 F)
 let dashChartsLoaded = false;   // 12개월 데이터 캐시 여부
 
 // CSS 변수에서 색상 가져오기 (다크 테마 일관성)
@@ -8535,7 +8554,16 @@ function renderDashEventsCard() {
           <div class="dash-event-summary-title">📊 이번 달 권장 적립</div>
           <div class="dash-event-recommend-amount">${fmtAmount(totalRecommend)}원</div>
           ${recommendHint ? `<div class="dash-event-recommend-detail">${recommendHint}</div>` : ''}
-        </div>` : ''}`;
+        </div>` : ''}
+      <div class="dash-event-chart-card">
+        <div class="dash-event-summary-title">📈 적립 추이 (최근 12개월)</div>
+        <div class="dash-event-chart-wrap">
+          <canvas id="dash-event-chart"></canvas>
+        </div>
+        <div class="dash-chart-empty" id="dash-event-chart-empty" style="display:none;">
+          잔액 스냅이 없습니다
+        </div>
+      </div>`;
   }
 
   $body.innerHTML = e1Html + e2Html;
@@ -8555,6 +8583,164 @@ function renderDashEventsCard() {
   });
 
   if ($sub) $sub.textContent = `${today} · ${activeEvents.length}건 활성`;
+
+  // 차트 렌더는 비동기 (스냅 fetch 필요)
+  if (savingAccId) {
+    renderDashEventChart();
+  } else {
+    // 적립 계좌 없으면 차트 정리
+    if (dashEventsChart) { dashEventsChart.destroy(); dashEventsChart = null; }
+  }
+}
+
+// 경조사 적립 추이 차트 (v0.6 F) — 잔액 vs 목표 누적, 최근 12개월
+async function renderDashEventChart() {
+  const $canvas = document.getElementById('dash-event-chart');
+  const $empty  = document.getElementById('dash-event-chart-empty');
+  if (!$canvas || !window.Chart) return;
+  if (!currentUid) return;
+
+  const savingAccId = settings?.eventSavingAccountId || null;
+  if (!savingAccId) {
+    if (dashEventsChart) { dashEventsChart.destroy(); dashEventsChart = null; }
+    return;
+  }
+
+  try {
+    // 1) 최근 12개월
+    const ymList = recentYmList(12, currentMonth);
+
+    // 2) 전체 스냅샷 fetch (월 1개씩이라 양 적음)
+    const allSnap = await getDocs(pathSnapshots());
+    const byYm = new Map();
+    allSnap.forEach(d => byYm.set(d.id, d.data()));
+
+    // 3) 잔액 추출
+    const balanceData = [];
+    const targetData = [];
+    let validCount = 0;
+    for (const ym of ymList) {
+      // 실제 잔액
+      const snap = byYm.get(ym);
+      let bal = null;
+      if (snap?.assetBalances) {
+        const raw = snap.assetBalances[savingAccId];
+        if (raw != null) {
+          if (typeof raw === 'object') bal = Number(raw.krw) || 0;
+          else                          bal = Number(raw) || 0;
+          validCount++;
+        }
+      }
+      balanceData.push(bal);
+
+      // 목표 누적 (모든 활성 경조사 합) — 그 시점 기준
+      let tgt = 0;
+      for (const ev of eventsMasters) {
+        if (isEventActiveInMonth(ev, ym)) {
+          tgt += eventTargetBalance(ev, ym);
+        }
+      }
+      targetData.push(tgt);
+    }
+
+    if (validCount === 0) {
+      $canvas.style.display = 'none';
+      $empty.style.display = '';
+      if (dashEventsChart) { dashEventsChart.destroy(); dashEventsChart = null; }
+      return;
+    }
+    $canvas.style.display = '';
+    $empty.style.display = 'none';
+
+    // 4) 색상
+    const colorText  = getCssVar('--text2')  || '#9aa5b1';
+    const colorGrid  = getCssVar('--border') || 'rgba(255,255,255,0.08)';
+    const colorBal   = getCssVar('--accent') || '#4f8fff';
+    const colorTgt   = getCssVar('--text3')  || '#6b7280';
+
+    // 5) 차트 생성
+    if (dashEventsChart) { dashEventsChart.destroy(); dashEventsChart = null; }
+    dashEventsChart = new Chart($canvas, {
+      type: 'line',
+      data: {
+        labels: ymList.map(ym => ym.slice(2)),   // "26-05"
+        datasets: [
+          {
+            label: '계좌 잔액',
+            data: balanceData,
+            borderColor: colorBal,
+            backgroundColor: 'rgba(79,143,255,0.1)',
+            borderWidth: 2,
+            tension: 0.3,
+            fill: true,
+            spanGaps: true,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+          },
+          {
+            label: '목표 누적',
+            data: targetData,
+            borderColor: colorTgt,
+            backgroundColor: 'transparent',
+            borderWidth: 1.5,
+            borderDash: [5, 4],
+            tension: 0.2,
+            pointRadius: 0,
+            pointHoverRadius: 3,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { intersect: false, mode: 'index' },
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+            align: 'end',
+            labels: { color: colorText, font: { size: 11 }, boxWidth: 16, boxHeight: 2 },
+          },
+          tooltip: {
+            backgroundColor: 'rgba(20,22,28,0.95)',
+            titleColor: '#fff',
+            bodyColor: '#cbd2db',
+            borderColor: colorGrid,
+            borderWidth: 1,
+            padding: 10,
+            callbacks: {
+              label: (ctx) => {
+                const v = ctx.parsed.y;
+                if (v == null) return `${ctx.dataset.label}: -`;
+                return `${ctx.dataset.label}: ${fmtAmount(v)}원`;
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            ticks: { color: colorText, font: { size: 10 } },
+            grid: { display: false },
+          },
+          y: {
+            ticks: {
+              color: colorText,
+              font: { size: 10 },
+              callback: (v) => {
+                if (Math.abs(v) >= 100000000) return (v / 100000000).toFixed(1) + '억';
+                if (Math.abs(v) >= 10000) return (v / 10000).toFixed(0) + '만';
+                return v.toLocaleString();
+              },
+            },
+            grid: { color: colorGrid, drawBorder: false },
+          },
+        },
+      },
+    });
+  } catch (e) {
+    console.error('[dashboard] event chart error', e);
+    if (dashEventsChart) { dashEventsChart.destroy(); dashEventsChart = null; }
+  }
 }
 
 // 경조사 진행률 추정 (0~1) — 잔여 필요액 계산용
