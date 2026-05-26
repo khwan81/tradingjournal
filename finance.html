@@ -9219,40 +9219,6 @@ function recentYmList(n, anchor) {
   return out;
 }
 
-// 스냅샷 도큐먼트에서 totals 계산 (v0.7-5e에서 monthly fetch 기반으로 교체 예정)
-// 현재 단계엔 옛 snapshots 의존이지만 호환 레이어로 데이터가 없으면 null 반환
-function snapToTotals(snap) {
-  if (!snap) return null;
-  // 옛 snapshots 도큐먼트 형식 직접 계산
-  let curAssets = 0, nonAssets = 0, curLiab = 0, nonLiab = 0;
-  let hasAny = false;
-  const aMap = new Map(accounts.map(a => [a.id, a]));
-  for (const [aid, v] of Object.entries(snap.assetBalances || {})) {
-    hasAny = true;
-    const a = aMap.get(aid);
-    const tier = a?.financeType === 'nonCurrent' ? 'noncurrent' : 'current';
-    const krw = Number(v.krw) || 0;
-    if (tier === 'current') curAssets += krw;
-    else                     nonAssets += krw;
-  }
-  for (const [key, raw] of Object.entries(snap.liabilityBalances || {})) {
-    hasAny = true;
-    const fallbackName = key.startsWith('liab:') ? key.slice(5) : key;
-    const n = normalizeLiabSnap(raw, fallbackName, 'current');
-    if (!n) continue;
-    if (n.type === 'nonCurrent') nonLiab += n.krw;
-    else                          curLiab += n.krw;
-  }
-  if (!hasAny) return null;
-  const totalAssets = curAssets + nonAssets;
-  const totalLiab = curLiab + nonLiab;
-  return {
-    curAssets, nonAssets, curLiab, nonLiab,
-    totalAssets, totalLiab,
-    net: totalAssets - totalLiab,
-  };
-}
-
 // 12개월 스냅샷 fetch + 차트 그리기
 async function renderDashNetworthChart() {
   const $canvas = document.getElementById('dash-networth-chart');
@@ -9267,14 +9233,27 @@ async function renderDashNetworthChart() {
   const toYm   = ymList[ymList.length - 1];
 
   try {
-    // 2) 스냅샷 일괄 fetch (ym >= fromYm AND ym <= toYm)
-    // 스냅샷 도큐먼트 id가 ym이므로 그냥 12개를 따로 getDoc...은 비효율. 컬렉션 전체에서 필터.
-    // ym 범위 쿼리: Firestore는 string 비교가 가능하지만, 도큐먼트 id로 쿼리하려면 documentId() 필요.
-    // 간단히: getDocs로 전부 가져와 클라이언트 필터. 스냅샷이 그렇게 많지 않음 (월 1개씩).
-    const allSnap = await getDocs(pathSnapshots());
-    const byYm = new Map();
-    allSnap.forEach(d => {
-      byYm.set(d.id, d.data());
+    // 2) v0.7-5e — monthly / monthly_liab 컬렉션 전체 fetch + ym별 그룹핑
+    //    데이터 양이 작아 클라이언트 필터링이 효율적 (현재 가정).
+    const [monthlySnap, monthlyLiabSnap] = await Promise.all([
+      getDocs(pathMonthly()),
+      getDocs(pathMonthlyLiab()),
+    ]);
+    const monByYm     = new Map();   // ym → monthly 도큐먼트 배열
+    const monLiabByYm = new Map();   // ym → monthly_liab 도큐먼트 배열
+    monthlySnap.forEach(d => {
+      const data = { id: d.id, ...d.data() };
+      const ym = data.ym;
+      if (!ym) return;
+      if (!monByYm.has(ym)) monByYm.set(ym, []);
+      monByYm.get(ym).push(data);
+    });
+    monthlyLiabSnap.forEach(d => {
+      const data = { id: d.id, ...d.data() };
+      const ym = data.ym;
+      if (!ym) return;
+      if (!monLiabByYm.has(ym)) monLiabByYm.set(ym, []);
+      monLiabByYm.get(ym).push(data);
     });
 
     // 3) ymList 순서로 totals 배열 만들기
@@ -9284,7 +9263,7 @@ async function renderDashNetworthChart() {
     const netData   = [];
     let validCount = 0;
     for (const ym of ymList) {
-      const t = snapToTotals(byYm.get(ym));
+      const t = computeTotals(monByYm.get(ym) || [], monLiabByYm.get(ym) || []);
       if (t) {
         assetData.push(t.totalAssets);
         liabData.push(t.totalLiab);
@@ -9586,55 +9565,48 @@ function renderDashAssetsChart() {
   if (!currentUid) return;
 
   try {
-    // 1) 스냅 + 계좌 매핑
-    if (!bsSnapshot || !bsSnapshot.assetBalances) {
+    // v0.7-5e — monthly 컬렉션 기반으로 전환
+    if (!monthlyDocs || monthlyDocs.length === 0) {
       $canvas.style.display = 'none';
       $empty.style.display = '';
-      if ($sub) $sub.textContent = `${currentMonth} 스냅 없음`;
+      if ($sub) $sub.textContent = `${currentMonth} 잔액 없음`;
       if ($legend) $legend.innerHTML = '';
       if (dashAssetsChart) { dashAssetsChart.destroy(); dashAssetsChart = null; }
       return;
     }
 
     // 2) 카테고리(자산 종류)별 KRW 환산 합계
-    //    accounts 마스터에서 financeType + financeCategory + currency를 가져옴.
-    //    bsSnapshot.assetBalances는 v0.2-4부터 객체 { native, krw, fxRate } 형식.
-    //    옛 v0.1 스냅은 숫자로 직접 저장됐을 수 있어 둘 다 지원.
+    //    마스터 활성 계좌 우선, 없거나 비활성/휴지통이면 박제 정보 fallback (BS와 일관).
+    //    외화는 현재 환율로 재계산.
     const groups = {
-      current:    new Map(),   // category → krwAmount
+      current:    new Map(),
       nonCurrent: new Map(),
     };
     let totalKrw = 0;
 
-    for (const [accId, raw] of Object.entries(bsSnapshot.assetBalances)) {
-      const acc = accounts.find(a => a.id === accId);
-      if (!acc) continue;   // 마스터에 없는 계좌는 건너뜀 (active=false 포함)
-      if (acc.active === false) continue;
+    for (const doc of monthlyDocs) {
+      const acc = accounts.find(a => a.id === doc.accountId);
+      // 마스터 활성이면 마스터 우선, 그 외는 박제값 사용 (시점성 보존)
+      const useDocFields = !acc || acc.active === false;
+      const financeType     = useDocFields ? doc.financeType     : acc.financeType;
+      const financeCategory = useDocFields ? doc.financeCategory : acc.financeCategory;
+      const currency        = useDocFields ? doc.currency        : (acc.currency || 'KRW');
 
-      const tier = acc.financeType === 'nonCurrent' ? 'nonCurrent' : 'current';
-      const cat  = acc.financeCategory || '(분류 없음)';
+      const tier = financeType === 'nonCurrent' ? 'nonCurrent' : 'current';
+      const cat  = financeCategory || '(분류 없음)';
 
-      // KRW 값 추출 — 신/구 스냅 형식 모두 지원
+      // KRW 값 — 외화면 현재 환율 재계산
       let krw = 0;
-      if (raw && typeof raw === 'object') {
-        // 새 형식: { native, krw, fxRate } — 저장된 krw 우선,
-        // 현재 환율로 재계산이 가능하면 그것 사용 (BS와 동일 동작)
-        const native = Number(raw.native);
-        const currency = acc.currency || 'KRW';
-        if (currency !== 'KRW' && Number.isFinite(native)) {
-          const curRate = Number(sharedSettings?.fxRates?.[currency]) || 0;
-          if (curRate > 0) {
-            krw = Math.round(native * curRate);
-          } else {
-            // 환율 없으면 스냅 시점 krw 사용 (없으면 스킵)
-            krw = Number(raw.krw) || 0;
-          }
+      const native = Number(doc.balance);
+      if (currency && currency !== 'KRW' && Number.isFinite(native)) {
+        const curRate = Number(sharedSettings?.fxRates?.[currency]) || 0;
+        if (curRate > 0) {
+          krw = Math.round(native * curRate);
         } else {
-          krw = Number(raw.krw) || 0;
+          krw = Number(doc.balanceKrw) || 0;
         }
       } else {
-        // 옛 형식: 숫자 (KRW로 가정)
-        krw = Number(raw) || 0;
+        krw = Number(doc.balanceKrw) || 0;
       }
 
       if (krw <= 0) continue;
