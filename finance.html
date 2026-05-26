@@ -3822,6 +3822,27 @@ const pathEvent = id => doc(db, `users/${currentUid}/finance/config/events/${id}
 const pathBudgets = () => collection(db, `users/${currentUid}/finance/config/budgets`);   // v0.4
 const pathBudget = id => doc(db, `users/${currentUid}/finance/config/budgets/${id}`);     // v0.4
 
+// v0.7+ — 자산결산 흡수 (assets.html 통합)
+// 한 컬렉션에 자산 월별 결산 도큐먼트들. id = `{ym}__{accountId}` (더블 언더스코어 구분자)
+const pathMonthly = () => collection(db, `users/${currentUid}/finance/config/monthly`);
+const pathMonthlyDoc = (ym, accId) => doc(db, `users/${currentUid}/finance/config/monthly/${ym}__${accId}`);
+// 부채 월별 결산. id = `{ym}__{liabKey}`
+const pathMonthlyLiab = () => collection(db, `users/${currentUid}/finance/config/monthly_liab`);
+const pathMonthlyLiabDoc = (ym, key) => doc(db, `users/${currentUid}/finance/config/monthly_liab/${ym}__${key}`);
+// 배당 거래
+const pathDividends = () => collection(db, `users/${currentUid}/finance/config/dividends`);
+const pathDividend = id => doc(db, `users/${currentUid}/finance/config/dividends/${id}`);
+
+// monthly 도큐먼트 id 만들기 / 쪼개기
+function monthlyKeyFor(ym, accId)      { return `${ym}__${accId}`; }
+function monthlyLiabKeyFor(ym, liabKey){ return `${ym}__${liabKey}`; }
+function parseMonthlyKey(id) {
+  // 'YYYY-MM__accId' → { ym, accId }. accId에는 더블언더스코어가 없다고 전제.
+  const i = id.indexOf('__');
+  if (i < 0) return { ym: null, accId: null };
+  return { ym: id.slice(0, i), accId: id.slice(i + 2) };
+}
+
 // ──────────────────────────────────────────────────────
 // 초기 데이터 로드
 // ──────────────────────────────────────────────────────
@@ -4986,6 +5007,85 @@ function prevYm(ym) {
   const [y, m] = ym.split('-').map(Number);
   const d = new Date(y, m - 2, 1); // m-1은 0-based 이번달, -1 더 빼면 전월
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+// ──────────────────────────────────────────────────────
+// v0.7 — snapshots ↔ monthly 호환 어댑터
+// ──────────────────────────────────────────────────────
+// 어느 시점이든 "ym의 자산/부채 잔고"를 동일 형식으로 돌려준다.
+// monthly 컬렉션이 비어있으면 snapshots에서 변환해서 반환 (fallback).
+// 마이그레이션 완료 후엔 monthly 우선 응답이 자동으로 채택됨.
+//
+// 반환 형식 (자산):  { [accountId]: { native, krw, fxRate, deposit?, depositKrw?, principal?, monthlyReturn?, cumReturn?, cumReturnRate?, isStart? } }
+// 반환 형식 (부채):  { [liabKey]:   { native?, krw, fxRate?, name, type } }   ← normalizeLiabSnap과 호환
+
+/** snapshots 도큐먼트 데이터를 monthly 형식 자산 객체로 변환 */
+function snapshotToMonthlyAssets(snap) {
+  if (!snap || !snap.assetBalances) return {};
+  const out = {};
+  for (const [accId, v] of Object.entries(snap.assetBalances)) {
+    if (!v || typeof v !== 'object') {
+      // 옛 숫자형 잔재 — krw만 갖춘 형태로 변환
+      out[accId] = { native: null, krw: Number(v) || 0, fxRate: null };
+    } else {
+      out[accId] = {
+        native: v.native ?? null,
+        krw:    Number(v.krw) || 0,
+        fxRate: v.fxRate ?? null,
+      };
+    }
+  }
+  return out;
+}
+
+/** snapshots 도큐먼트 데이터를 monthly_liab 형식 부채 객체로 변환 */
+function snapshotToMonthlyLiabs(snap) {
+  if (!snap || !snap.liabilityBalances) return {};
+  const out = {};
+  for (const [key, raw] of Object.entries(snap.liabilityBalances)) {
+    const norm = normalizeLiabSnap(raw, null, null);
+    if (norm) out[key] = norm;
+  }
+  return out;
+}
+
+/** monthly 도큐먼트 배열을 { [accId]: ... } 객체로 합치기 */
+function monthlyDocsToAssets(docs) {
+  const out = {};
+  for (const d of docs) {
+    const accId = d.accountId || parseMonthlyKey(d.id).accId;
+    if (!accId) continue;
+    out[accId] = {
+      native:        d.balance ?? null,
+      krw:           Number(d.balanceKrw) || 0,
+      fxRate:        d.fxRate ?? null,
+      deposit:       d.deposit ?? null,
+      depositKrw:    d.depositKrw ?? null,
+      principal:     d.principal ?? null,
+      monthlyReturn: d.monthlyReturn ?? null,
+      cumReturn:     d.cumReturn ?? null,
+      cumReturnRate: d.cumReturnRate ?? null,
+      isStart:       !!d.isStart,
+    };
+  }
+  return out;
+}
+
+/** monthly_liab 도큐먼트 배열을 { [liabKey]: ... } 객체로 합치기 */
+function monthlyLiabDocsToLiabs(docs) {
+  const out = {};
+  for (const d of docs) {
+    const key = d.liabKey || parseMonthlyKey(d.id).accId;
+    if (!key) continue;
+    out[key] = {
+      native: d.balance ?? null,
+      krw:    Number(d.balanceKrw) || 0,
+      fxRate: d.fxRate ?? null,
+      name:   d.name || key,
+      type:   d.type || 'current',
+    };
+  }
+  return out;
 }
 
 // ──────────────────────────────────────────────────────
