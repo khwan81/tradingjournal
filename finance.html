@@ -56,6 +56,12 @@
   --red-bg:    rgba(248,113,113,0.1);
   --amber:     #fbbf24;
   --amber-bg:  rgba(251,191,36,0.1);
+  /* v0.7 — 자산결산 카테고리 컬러 (assetsCategory: 현금/비상금/트레이딩/장기투자/연금) */
+  --acat-cash:      #60a5fa;  /* 현금     — 파랑 */
+  --acat-emergency: #a78bfa;  /* 비상금   — 보라 */
+  --acat-trading:   #f472b6;  /* 트레이딩 — 핑크 */
+  --acat-longterm:  #34d399;  /* 장기투자 — 초록 */
+  --acat-pension:   #fbbf24;  /* 연금     — 황색 */
   --radius-sm: 6px;
   --radius:    10px;
   --radius-lg: 14px;
@@ -1240,6 +1246,160 @@ body {
   text-align: center;
   color: var(--text2);
   font-size: 13px;
+}
+
+/* ── 자산결산 (v0.7-3b) ── */
+.sv-header {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.sv-asof {
+  font-size: 11px;
+  color: var(--text3);
+}
+.sv-info {
+  display: flex; gap: 8px; align-items: flex-start;
+  padding: 9px 12px;
+  background: rgba(79,143,255,0.07);
+  border: 1px solid rgba(79,143,255,0.18);
+  border-radius: 6px;
+  margin-top: 14px;
+  font-size: 11.5px;
+  color: var(--text2);
+  line-height: 1.55;
+}
+.sv-info .info-icon { color: var(--accent); font-size: 13px; }
+.sv-info a { color: var(--accent); text-decoration: none; }
+.sv-info a:hover { text-decoration: underline; }
+
+/* 카테고리 섹션 */
+.sv-cat {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.sv-cat-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 14px;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+}
+.sv-cat-name {
+  font-size: 13px; font-weight: 600; color: var(--text);
+  display: flex; align-items: center; gap: 8px;
+}
+.sv-cat-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  flex-shrink: 0;
+}
+.sv-cat-dot.cat-cash      { background: var(--acat-cash); }
+.sv-cat-dot.cat-emergency { background: var(--acat-emergency); }
+.sv-cat-dot.cat-trading   { background: var(--acat-trading); }
+.sv-cat-dot.cat-longterm  { background: var(--acat-longterm); }
+.sv-cat-dot.cat-pension   { background: var(--acat-pension); }
+.sv-cat-dot.cat-other     { background: var(--text3); }
+.sv-cat-sub {
+  font-size: 11px;
+  color: var(--text2);
+  font-family: var(--font-mono);
+  text-align: right;
+}
+.sv-cat-sub .pos { color: var(--green); }
+.sv-cat-sub .neg { color: var(--red); }
+
+/* 결산 행 — 데스크탑 테이블 */
+.sv-table { padding: 0; }
+.sv-row-head {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1fr 1fr 0.9fr 0.8fr 36px;
+  align-items: center;
+  padding: 8px 14px;
+  background: var(--bg2);
+  color: var(--text3);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border-bottom: 1px solid var(--border);
+}
+.sv-row {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1fr 1fr 0.9fr 0.8fr 36px;
+  align-items: center;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  border-bottom: 1px solid var(--border);
+}
+.sv-row:last-child { border-bottom: none; }
+.sv-row .sv-acc-name { color: var(--text); display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
+.sv-row .sv-cell { font-family: var(--font-mono); text-align: right; color: var(--text); }
+.sv-row .sv-cell.muted { color: var(--text2); }
+.sv-row .sv-cell.locked { color: var(--text3); }
+.sv-row .sv-cell.pos { color: var(--green); }
+.sv-row .sv-cell.neg { color: var(--red); }
+.sv-row .sv-cell-fx-sub {
+  font-size: 10px;
+  color: var(--text3);
+  margin-top: 1px;
+  font-family: var(--font-mono);
+  text-align: right;
+}
+.sv-row .sv-act {
+  display: flex; justify-content: flex-end;
+}
+.sv-row .sv-act button {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text2);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: var(--font);
+  line-height: 1;
+}
+.sv-row .sv-act button:hover { background: var(--bg3); color: var(--text); }
+
+/* 뱃지 */
+.sv-badge {
+  font-size: 9.5px;
+  padding: 1.5px 6px;
+  border-radius: 9px;
+  letter-spacing: 0;
+  font-family: var(--font);
+  font-weight: 500;
+  vertical-align: middle;
+}
+.sv-badge.start { background: rgba(79,143,255,0.15); color: var(--accent); }
+.sv-badge.fx    { background: rgba(139,144,158,0.18); color: var(--text2); }
+.sv-badge.missing { background: rgba(248,113,113,0.15); color: var(--red); }
+
+/* 빈 카테고리 */
+.sv-empty {
+  padding: 18px;
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--text3);
+}
+
+/* 모바일 — 카드형으로 전환 */
+@media (max-width: 700px) {
+  .sv-row-head { display: none; }
+  .sv-row {
+    grid-template-columns: 1fr auto;
+    gap: 8px 12px;
+    padding: 12px 14px;
+  }
+  .sv-row .sv-acc-name { grid-column: 1; }
+  .sv-row .sv-act { grid-column: 2; grid-row: 1; }
+  .sv-row .sv-cell { grid-column: 1 / -1; display: flex; justify-content: space-between; text-align: left; }
+  .sv-row .sv-cell::before { content: attr(data-label); color: var(--text3); font-family: var(--font); }
+  .sv-row .sv-cell.muted::before,
+  .sv-row .sv-cell.locked::before { color: var(--text3); }
+  .sv-row .sv-cell-fx-sub { display: none; }
 }
 
 /* ── 손익 탭 (v0.3-4) ── */
@@ -2711,12 +2871,41 @@ body {
       </div>
     </div>
 
-    <!-- 자산결산 서브탭 (v0.7-3b에서 콘텐츠 채움) -->
+    <!-- 자산결산 서브탭 (v0.7-3b) -->
     <div class="subtab-content" id="tab-savings">
-      <div id="sv-body">
-        <div class="bs-placeholder">
-          자산결산 — 다음 단계에서 구현 예정
+      <div class="sv-header">
+        <div class="sv-asof-wrap">
+          <span class="sv-asof" id="sv-asof"></span>
         </div>
+        <button class="btn-s" id="btn-sv-help" title="안내">?</button>
+      </div>
+
+      <!-- KPI 3개 -->
+      <div class="bs-kpi-grid">
+        <div class="bs-kpi-card">
+          <div class="label">총 평가액</div>
+          <div class="value" id="sv-kpi-total">—</div>
+          <div class="sub" id="sv-kpi-total-sub">—</div>
+        </div>
+        <div class="bs-kpi-card">
+          <div class="label">월수익</div>
+          <div class="value" id="sv-kpi-mret">—</div>
+          <div class="sub" id="sv-kpi-mret-sub">—</div>
+        </div>
+        <div class="bs-kpi-card">
+          <div class="label">누적수익률</div>
+          <div class="value" id="sv-kpi-cumret">—</div>
+          <div class="sub" id="sv-kpi-cumret-sub">—</div>
+        </div>
+      </div>
+
+      <div id="sv-body">
+        <div class="bs-placeholder">자산결산 로딩 중…</div>
+      </div>
+
+      <div class="sv-info">
+        <span class="info-icon">ⓘ</span>
+        <div>비추적 자산(입출금/CMA 등)은 <a href="#" id="sv-goto-balance">재무상태</a> 서브탭에서 입력합니다.</div>
       </div>
     </div>
   </div>
@@ -3765,6 +3954,81 @@ body {
   </div>
 </div>
 
+<!-- ── 모달: 자산결산 결산 입력 (v0.7-3b) ── -->
+<div class="ov" id="ov-savings">
+  <div class="modal modal-savings">
+    <div class="modal-head">
+      <div class="modal-title">
+        <span id="sv-modal-ym">—</span> ·
+        <span id="sv-modal-accname">—</span>
+        <span class="sv-badge start" id="sv-modal-start-badge" style="display:none;">시작</span>
+      </div>
+      <button class="modal-close" data-close="ov-savings">×</button>
+    </div>
+    <div class="modal-body">
+      <!-- 외화 환율 strip (외화 계좌일 때만 표시) -->
+      <div class="bal-fx-strip" id="sv-fx-strip" style="display:none;">
+        <div class="fx-row-wrap">
+          <span class="fx-item"><span id="sv-fx-cur">USD</span> <b id="sv-fx-now">0</b><span class="fx-snap" id="sv-fx-snap-display"></span></span>
+          <span class="fx-link" id="sv-fx-edit-link">환율 수정</span>
+        </div>
+        <label class="fx-keep-snap" id="sv-fx-keep-wrap" style="display:none;">
+          <input type="checkbox" id="sv-fx-keep" checked>
+          <span>스냅 환율 유지 (저장 시)</span>
+        </label>
+      </div>
+
+      <!-- 첫 결산 안내 -->
+      <div class="sv-info" id="sv-start-hint" style="display:none; margin-top: 0; margin-bottom: 12px;">
+        <span class="info-icon">ⓘ</span>
+        <div>첫 결산입니다. 시작 시점의 <b>잔고</b>와 <b>원금</b>을 입력하세요. 입출금은 의미 없으므로 받지 않습니다.</div>
+      </div>
+
+      <!-- 입력 필드 -->
+      <div class="sv-form-wrap">
+        <div class="form-group">
+          <label class="form-label">잔고 (<span id="sv-input-cur">KRW</span>)</label>
+          <input type="text" class="input" inputmode="decimal" id="sv-input-balance" placeholder="0">
+          <div class="form-hint" id="sv-balance-krw-hint" style="display:none;">≈ <span id="sv-balance-krw"></span> KRW</div>
+        </div>
+
+        <div class="form-group" id="sv-row-deposit">
+          <label class="form-label">입출금 (이번 달, +입금 / −출금)</label>
+          <input type="text" class="input" inputmode="decimal" id="sv-input-deposit" placeholder="0">
+          <div class="form-hint">0이면 잔고 변동은 평가손익만으로 처리됩니다</div>
+        </div>
+
+        <div class="form-group" id="sv-row-principal" style="display:none;">
+          <label class="form-label">원금 (시작 시점 누적 원금)</label>
+          <input type="text" class="input" inputmode="decimal" id="sv-input-principal" placeholder="0">
+          <div class="form-hint">잔고와 원금의 차이가 시작 시점 평가손익이 됩니다</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">메모 (선택)</label>
+          <input type="text" class="input" id="sv-input-memo" placeholder="">
+        </div>
+      </div>
+
+      <!-- 자동계산 미리보기 -->
+      <div class="bal-preview sv-preview">
+        <div class="pv-row"><span class="pv-label">잔고 (KRW)</span><span class="pv-val" id="sv-pv-balance">0</span></div>
+        <div class="pv-row"><span class="pv-label">입출금 (KRW)</span><span class="pv-val muted" id="sv-pv-deposit">0</span></div>
+        <div class="pv-row"><span class="pv-label">전월 잔고</span><span class="pv-val muted" id="sv-pv-prev-balance">—</span></div>
+        <div class="pv-row"><span class="pv-label">전월 원금</span><span class="pv-val muted" id="sv-pv-prev-principal">—</span></div>
+        <div class="pv-row"><span class="pv-label">새 원금</span><span class="pv-val" id="sv-pv-principal">0</span></div>
+        <div class="pv-row"><span class="pv-label">월수익</span><span class="pv-val" id="sv-pv-mret">0</span></div>
+        <div class="pv-row full"><span class="pv-label">누적수익률</span><span class="pv-val" id="sv-pv-cumret">0%</span></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-danger grow" id="btn-sv-delete" style="display:none;">결산 삭제</button>
+      <button class="btn-s" data-close="ov-savings">취소</button>
+      <button class="btn-p" id="btn-sv-save">저장</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -3934,6 +4198,13 @@ let unsubBgBudgets = null;          // 예산 탭 예산 구독 (v0.4)
 let unsubBgTransactions = null;     // 예산 탭 거래 구독 (v0.4)
 let unsubTxTabBudgets = null;       // 거래내역 탭 예산 구독 (v0.4 A7)
 
+// v0.7-3b — 자산결산 (monthly 컬렉션)
+let monthlyDocs = [];               // 현재 currentMonth의 자산 결산 도큐먼트들
+let monthlyPrevDocs = [];           // 직전 월의 자산 결산 도큐먼트들 (전월 잔고/원금 비교용)
+let unsubMonthly = null;
+let unsubMonthlyPrev = null;
+let editingSavingsKey = null;       // 자산결산 모달이 편집 중인 monthly 도큐먼트 id (없으면 신규)
+
 // 자산 종류 enum (categoriesEnum 기본값)
 const DEFAULT_CATEGORIES_ENUM = {
   current:    ["주식", "코인", "입출금", "CMA", "외화"],
@@ -4020,6 +4291,7 @@ async function loadAll() {
       renderAccounts();
       renderBsBody(); // 재무상태표에도 영향
       renderEventAccountSelect();   // v0.6 적립 계좌 옵션 갱신
+      renderSavings();              // v0.7-3b 자산결산도 갱신 (추적 토글 변경 등)
       // 자산 분류가 바뀌면 도넛도 갱신 (대시보드 활성일 때)
       if (isDashboardVisible()) {
         renderDashAssetsChart();
@@ -4044,6 +4316,10 @@ async function loadAll() {
       // 환율 변경되면 외화 자산 환산값이 바뀌니 도넛도 갱신
       if (isDashboardVisible()) {
         renderDashAssetsChart();
+      }
+      // v0.7-3b — 모달이 열려있으면 미리보기 갱신
+      if (editingSavingsKey && document.getElementById('ov-savings')?.classList.contains('show')) {
+        svUpdatePreview();
       }
     },
     err => { console.error('shared settings subscribe error', err); }
@@ -4098,6 +4374,9 @@ async function loadAll() {
   // 재무상태 탭 — 스냅샷 구독
   subscribeBsSnapshot();
   renderBsHeader();
+
+  // 자산결산 서브탭 — monthly 구독 (v0.7-3b)
+  subscribeMonthly();
 
   // 손익 탭 — 거래 구독
   subscribePlTransactions();
@@ -6881,6 +7160,7 @@ function setMonth(ym) {
   subscribePlTransactions();         // 손익
   subscribeBgBudgets();              // 예산
   subscribeBgTransactions();         // 예산 (사용액)
+  subscribeMonthly();                // v0.7-3b — 자산결산 (현재월 + 전월)
 
   // 즉시 헤더/렌더 갱신 (구독 콜백 도착 전에 화면 일관성 유지)
   renderBsHeader();
@@ -7497,6 +7777,574 @@ function subscribeBsSnapshot() {
     err => { console.error('bs prev snapshot subscribe error', err); }
   );
 }
+
+// ──────────────────────────────────────────────────────
+// v0.7-3b — 자산결산 (monthly 컬렉션) 구독·렌더·모달
+// ──────────────────────────────────────────────────────
+// 카테고리별 ID → 컬러 클래스 매핑
+function svCatClass(cat) {
+  const k = String(cat || '').trim();
+  if (k === '현금')     return 'cat-cash';
+  if (k === '비상금')   return 'cat-emergency';
+  if (k === '트레이딩') return 'cat-trading';
+  if (k === '장기투자') return 'cat-longterm';
+  if (k === '연금')     return 'cat-pension';
+  return 'cat-other';
+}
+
+// 카테고리 순서 — settings의 운용 카테고리 순서 따르되, 기본 5개 우선
+const DEFAULT_ASSET_CATEGORIES = ['현금', '비상금', '트레이딩', '장기투자', '연금'];
+
+function subscribeMonthly() {
+  if (unsubMonthly) { unsubMonthly(); unsubMonthly = null; }
+  if (unsubMonthlyPrev) { unsubMonthlyPrev(); unsubMonthlyPrev = null; }
+  if (!currentUid) return;
+
+  // 현재 월
+  unsubMonthly = onSnapshot(
+    query(pathMonthly(), where('ym', '==', currentMonth)),
+    snap => {
+      monthlyDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderSavings();
+    },
+    err => { console.error('monthly subscribe error', err); showToast('자산결산 로드 실패'); }
+  );
+
+  // 직전 월 (전월 잔고/원금 비교용)
+  const prev = prevYm(currentMonth);
+  unsubMonthlyPrev = onSnapshot(
+    query(pathMonthly(), where('ym', '==', prev)),
+    snap => {
+      monthlyPrevDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderSavings();   // 전월 데이터 변경 시 표시도 갱신
+    },
+    err => { console.error('monthly prev subscribe error', err); }
+  );
+}
+
+// 한 계좌의 현재 월 도큐먼트 찾기
+function findMonthlyDoc(accId, ym) {
+  if (ym === currentMonth) return monthlyDocs.find(d => d.accountId === accId) || null;
+  const prev = prevYm(currentMonth);
+  if (ym === prev) return monthlyPrevDocs.find(d => d.accountId === accId) || null;
+  return null;
+}
+
+// 자산결산 본문 렌더
+function renderSavings() {
+  const $body = document.getElementById('sv-body');
+  if (!$body) return;
+
+  // asOf 표시
+  const $asof = document.getElementById('sv-asof');
+  if ($asof) $asof.textContent = `${currentMonth} 결산`;
+
+  // 추적 자산만 필터 (카드 계좌 제외 = 추적 자산은 카드일 수 없음)
+  const tracked = (accounts || []).filter(a => a.trackPerformance && a.active !== false);
+
+  if (tracked.length === 0) {
+    $body.innerHTML = `
+      <div class="bs-placeholder">
+        추적 자산이 없습니다 · 설정 탭에서 계좌의 <b>운용 추적</b>을 켜세요
+      </div>`;
+    renderSavingsKpi();
+    return;
+  }
+
+  // 카테고리별 그룹핑
+  const byCat = new Map();
+  for (const a of tracked) {
+    const cat = a.assetsCategory || '기타';
+    if (!byCat.has(cat)) byCat.set(cat, []);
+    byCat.get(cat).push(a);
+  }
+
+  // 카테고리 순서 — 기본 5개 우선, 그 외는 뒤에 알파벳 순
+  const orderedCats = [
+    ...DEFAULT_ASSET_CATEGORIES.filter(c => byCat.has(c)),
+    ...[...byCat.keys()].filter(c => !DEFAULT_ASSET_CATEGORIES.includes(c)).sort(),
+  ];
+
+  let html = '';
+  for (const cat of orderedCats) {
+    const accs = byCat.get(cat);
+    // 카테고리 소계
+    let catBalance = 0, catMret = 0;
+    const rows = accs.map(a => {
+      const doc = findMonthlyDoc(a.id, currentMonth);
+      const balKrw = Number(doc?.balanceKrw) || 0;
+      const mret   = Number(doc?.monthlyReturn) || 0;
+      catBalance += balKrw;
+      catMret    += mret;
+      return svBuildRow(a, doc);
+    }).join('');
+
+    const mretCls = catMret > 0 ? 'pos' : (catMret < 0 ? 'neg' : '');
+    html += `
+      <div class="sv-cat">
+        <div class="sv-cat-head">
+          <div class="sv-cat-name">
+            <span class="sv-cat-dot ${svCatClass(cat)}"></span>${escapeHtml(cat)}
+          </div>
+          <div class="sv-cat-sub">
+            소계 <b style="color:var(--text);">${fmtNum(catBalance)}</b>
+            · 월수익 <span class="${mretCls}">${fmtSigned(catMret)}</span>
+          </div>
+        </div>
+        <div class="sv-table">
+          <div class="sv-row-head">
+            <div>계좌</div>
+            <div style="text-align:right;">잔고</div>
+            <div style="text-align:right;">입출금</div>
+            <div style="text-align:right;">원금</div>
+            <div style="text-align:right;">월수익</div>
+            <div style="text-align:right;">누적%</div>
+            <div></div>
+          </div>
+          ${rows || '<div class="sv-empty">아직 결산이 없습니다</div>'}
+        </div>
+      </div>`;
+  }
+
+  $body.innerHTML = html;
+
+  // ⋯ 버튼 이벤트
+  $body.querySelectorAll('[data-sv-edit]').forEach(btn => {
+    btn.addEventListener('click', () => openSavingsModal(btn.dataset.svEdit));
+  });
+
+  renderSavingsKpi();
+}
+
+// 한 행 렌더 (계좌+monthly 도큐먼트)
+function svBuildRow(acc, doc) {
+  const isFx = acc.currency && acc.currency !== 'KRW';
+  const fxBadge = isFx ? `<span class="sv-badge fx">${escapeHtml(acc.currency)}</span>` : '';
+  const isStart = !!doc?.isStart;
+  const startBadge = isStart ? '<span class="sv-badge start">시작</span>' : '';
+  // 결산이 없으면 missing 배지
+  const missing = !doc ? '<span class="sv-badge missing">미입력</span>' : '';
+
+  // 표시값
+  const balNative = doc?.balance != null ? doc.balance : null;
+  const balKrw    = Number(doc?.balanceKrw) || 0;
+  const deposit   = doc?.deposit;
+  const principal = doc?.principal;
+  const mret      = doc?.monthlyReturn;
+  const cumRate   = doc?.cumReturnRate;
+
+  const balCell = doc
+    ? (isFx
+        ? `${fmtNum(balNative)}<div class="sv-cell-fx-sub">≈ ${fmtNum(balKrw)}</div>`
+        : fmtNum(balKrw))
+    : '<span style="color:var(--text3);">—</span>';
+
+  const depCell = isStart
+    ? '<span class="locked">—</span>'
+    : (deposit != null ? fmtNum(deposit) : '<span style="color:var(--text3);">—</span>');
+
+  const prnCell = principal != null
+    ? `<span class="locked">${fmtNum(principal)}</span>`
+    : '<span style="color:var(--text3);">—</span>';
+
+  const mretCls = mret > 0 ? 'pos' : (mret < 0 ? 'neg' : '');
+  const mretCell = mret != null
+    ? `<span class="${mretCls}">${fmtSigned(mret)}</span>`
+    : '<span style="color:var(--text3);">—</span>';
+
+  const cumCls = cumRate > 0 ? 'pos' : (cumRate < 0 ? 'neg' : '');
+  const cumCell = cumRate != null
+    ? `<span class="${cumCls}">${fmtSignedPct(cumRate)}</span>`
+    : '<span style="color:var(--text3);">—</span>';
+
+  return `
+    <div class="sv-row">
+      <div class="sv-acc-name">${escapeHtml(acc.name)} ${fxBadge}${startBadge}${missing}</div>
+      <div class="sv-cell" data-label="잔고">${balCell}</div>
+      <div class="sv-cell muted" data-label="입출금">${depCell}</div>
+      <div class="sv-cell muted" data-label="원금">${prnCell}</div>
+      <div class="sv-cell" data-label="월수익">${mretCell}</div>
+      <div class="sv-cell" data-label="누적%">${cumCell}</div>
+      <div class="sv-act"><button data-sv-edit="${escapeHtml(acc.id)}" title="결산 입력">⋯</button></div>
+    </div>`;
+}
+
+// KPI 3개 갱신 (총평가액 / 월수익 / 누적수익률)
+function renderSavingsKpi() {
+  const tracked = (accounts || []).filter(a => a.trackPerformance && a.active !== false);
+  let total = 0, mret = 0, principalSum = 0, cumReturnSum = 0;
+  let any = false;
+  for (const a of tracked) {
+    const d = findMonthlyDoc(a.id, currentMonth);
+    if (!d) continue;
+    any = true;
+    total        += Number(d.balanceKrw) || 0;
+    mret         += Number(d.monthlyReturn) || 0;
+    principalSum += Number(d.principal) || 0;
+    cumReturnSum += Number(d.cumReturn) || 0;
+  }
+  const cumRate = principalSum > 0 ? cumReturnSum / principalSum : 0;
+
+  const $t = document.getElementById('sv-kpi-total');
+  const $m = document.getElementById('sv-kpi-mret');
+  const $c = document.getElementById('sv-kpi-cumret');
+  const $tSub = document.getElementById('sv-kpi-total-sub');
+  const $mSub = document.getElementById('sv-kpi-mret-sub');
+  const $cSub = document.getElementById('sv-kpi-cumret-sub');
+  if (!$t) return;
+
+  if (!any) {
+    $t.textContent = '—';
+    $m.textContent = '—';
+    $c.textContent = '—';
+    $t.className = 'value muted';
+    $m.className = 'value muted';
+    $c.className = 'value muted';
+    if ($tSub) $tSub.textContent = `${tracked.length}개 추적 자산`;
+    if ($mSub) $mSub.textContent = '결산 없음';
+    if ($cSub) $cSub.textContent = '결산 없음';
+    return;
+  }
+
+  const inputCount = tracked.filter(a => findMonthlyDoc(a.id, currentMonth)).length;
+
+  $t.textContent = fmtNum(total);
+  $t.className = 'value';
+  $m.textContent = fmtSigned(mret);
+  $m.className = 'value ' + (mret > 0 ? 'green' : (mret < 0 ? 'red' : ''));
+  $c.textContent = fmtSignedPct(cumRate);
+  $c.className = 'value ' + (cumRate > 0 ? 'green' : (cumRate < 0 ? 'red' : ''));
+
+  if ($tSub) $tSub.textContent = `${inputCount}/${tracked.length}개 입력`;
+  if ($mSub) $mSub.textContent = `원금 ${fmtNum(principalSum)}`;
+  if ($cSub) $cSub.textContent = `누적수익 ${fmtSigned(cumReturnSum)}`;
+}
+
+// 부호 포함 % (소수 2자리)
+function fmtSignedPct(rate) {
+  const r = Number(rate) || 0;
+  if (r === 0) return '0.00%';
+  const p = (r * 100).toFixed(2);
+  return (r > 0 ? '+' : '') + p + '%';
+}
+
+// ──────────────────────────────────────────────────────
+// 자산결산 결산 입력 모달
+// ──────────────────────────────────────────────────────
+function openSavingsModal(accId) {
+  const acc = accounts.find(a => a.id === accId);
+  if (!acc) { showToast('계좌를 찾을 수 없습니다'); return; }
+  if (!acc.trackPerformance) { showToast('추적 자산만 결산 입력이 가능합니다'); return; }
+
+  const doc = findMonthlyDoc(accId, currentMonth);
+  const prev = findMonthlyDoc(accId, prevYm(currentMonth));
+
+  editingSavingsKey = monthlyKeyFor(currentMonth, accId);
+
+  // 첫 결산 여부 판단
+  // - 마스터 startYm과 현재 월이 같으면 첫 결산
+  // - 또는 현재 월 도큐먼트가 isStart=true로 이미 저장돼 있어도 첫 결산
+  // - 또는 이 계좌의 monthly 도큐먼트가 전혀 없으면 첫 결산
+  const accStartYm = acc.startYm || currentMonth;
+  const isFirst = (currentMonth === accStartYm) || !!doc?.isStart || (!doc && !prev);
+
+  // 헤더
+  document.getElementById('sv-modal-ym').textContent = currentMonth;
+  document.getElementById('sv-modal-accname').textContent = acc.name;
+  document.getElementById('sv-modal-start-badge').style.display = isFirst ? '' : 'none';
+
+  // 통화 표시
+  const isFx = acc.currency && acc.currency !== 'KRW';
+  document.getElementById('sv-input-cur').textContent = acc.currency || 'KRW';
+
+  // 외화 strip 토글
+  const $fxStrip = document.getElementById('sv-fx-strip');
+  if (isFx) {
+    $fxStrip.style.display = '';
+    const cur = acc.currency;
+    const nowRate = Number(sharedSettings?.fxRates?.[cur]) || 0;
+    document.getElementById('sv-fx-cur').textContent = cur;
+    document.getElementById('sv-fx-now').textContent = nowRate ? fmtNum(nowRate) : '0';
+    // 스냅 환율: 이번 달 도큐먼트가 있으면 그 환율, 없으면 전월 환율
+    const snapRate = Number(doc?.fxRate) || Number(prev?.fxRate) || 0;
+    const $snapDisp = document.getElementById('sv-fx-snap-display');
+    if (snapRate && Math.abs(snapRate - nowRate) > 0.001) {
+      $snapDisp.textContent = ` · 스냅 ${fmtNum(snapRate)}`;
+      document.getElementById('sv-fx-keep-wrap').style.display = '';
+      document.getElementById('sv-fx-keep').checked = true;
+    } else {
+      $snapDisp.textContent = '';
+      document.getElementById('sv-fx-keep-wrap').style.display = 'none';
+    }
+  } else {
+    $fxStrip.style.display = 'none';
+  }
+
+  // 첫 결산이면 deposit 숨기고 principal 보이기. 그렇지 않으면 반대.
+  document.getElementById('sv-start-hint').style.display = isFirst ? '' : 'none';
+  document.getElementById('sv-row-deposit').style.display = isFirst ? 'none' : '';
+  document.getElementById('sv-row-principal').style.display = isFirst ? '' : 'none';
+
+  // prefill
+  // - balance: 도큐먼트 있으면 doc.balance, 없으면 전월 carry-forward (참고만, 비추적이 아니라 추적이라 자동 carry는 안 함 → 비워둠)
+  const $bal = document.getElementById('sv-input-balance');
+  $bal.value = doc?.balance != null ? doc.balance : '';
+  // - deposit
+  const $dep = document.getElementById('sv-input-deposit');
+  $dep.value = doc?.deposit != null ? doc.deposit : '';
+  // - principal (첫 결산일 때만 의미)
+  const $prn = document.getElementById('sv-input-principal');
+  $prn.value = doc?.principal != null ? doc.principal : '';
+  // - memo
+  document.getElementById('sv-input-memo').value = doc?.memo || '';
+
+  // 삭제 버튼: 도큐먼트 있을 때만
+  document.getElementById('btn-sv-delete').style.display = doc ? '' : 'none';
+
+  // 미리보기 갱신
+  svUpdatePreview();
+
+  // 열기
+  openOv('ov-savings');
+  setTimeout(() => $bal.focus(), 50);
+}
+
+// 모달 미리보기 — 입력값 + 전월값으로 자동계산 결과 표시
+function svUpdatePreview() {
+  const acc = (() => {
+    if (!editingSavingsKey) return null;
+    const { accId } = parseMonthlyKey(editingSavingsKey);
+    return accounts.find(a => a.id === accId);
+  })();
+  if (!acc) return;
+
+  const isFx = acc.currency && acc.currency !== 'KRW';
+  const cur = acc.currency || 'KRW';
+  const nowRate = Number(sharedSettings?.fxRates?.[cur]) || 0;
+  const prev = findMonthlyDoc(acc.id, prevYm(currentMonth));
+  const doc  = findMonthlyDoc(acc.id, currentMonth);
+
+  // 스냅 환율 유지 여부
+  const keepCheck = document.getElementById('sv-fx-keep');
+  const keepSnap = isFx && keepCheck && document.getElementById('sv-fx-keep-wrap').style.display !== 'none' && keepCheck.checked;
+  const snapRate = Number(doc?.fxRate) || Number(prev?.fxRate) || 0;
+  const useRate = isFx ? (keepSnap && snapRate ? snapRate : nowRate) : 1;
+
+  // 입력값
+  const balN = numUnComma(document.getElementById('sv-input-balance').value);
+  const depN = numUnComma(document.getElementById('sv-input-deposit').value);
+  const prnN = numUnComma(document.getElementById('sv-input-principal').value);
+
+  // 첫 결산 여부
+  const accStartYm = acc.startYm || currentMonth;
+  const isFirst = (currentMonth === accStartYm) || !!doc?.isStart || (!doc && !prev);
+
+  // KRW 환산
+  const balKrw = Math.round(balN * useRate);
+  const depKrw = Math.round(depN * useRate);
+
+  // 자동계산
+  let principal, mret, cumRet, cumRate;
+  if (isFirst) {
+    // 사용자가 입력한 원금 (KRW 단위가 아닌 원자값. 외화면 환산해서 KRW)
+    const prnKrw = Math.round(prnN * useRate);
+    principal = prnKrw;
+    mret      = balKrw - prnKrw;   // 시작 시점 평가손익
+    cumRet    = mret;
+    cumRate   = principal > 0 ? cumRet / principal : 0;
+  } else if (prev) {
+    const prevBalKrw = Number(prev.balanceKrw) || 0;
+    const prevPrn    = Number(prev.principal) || 0;
+    principal = prevPrn + depKrw;
+    mret      = balKrw - prevBalKrw - depKrw;
+    cumRet    = balKrw - principal;
+    cumRate   = principal > 0 ? cumRet / principal : 0;
+  } else {
+    // 전월이 없는데 첫 결산도 아닌 어색한 경우 — 사용자가 startYm 잘못 설정. 첫 결산 모드로 fallback
+    principal = balKrw;
+    mret      = 0;
+    cumRet    = 0;
+    cumRate   = 0;
+  }
+
+  // 외화 환산값 힌트
+  const $hint = document.getElementById('sv-balance-krw-hint');
+  const $hintVal = document.getElementById('sv-balance-krw');
+  if (isFx && balN !== 0) {
+    $hint.style.display = '';
+    $hintVal.textContent = fmtNum(balKrw);
+  } else {
+    $hint.style.display = 'none';
+  }
+
+  // 미리보기
+  document.getElementById('sv-pv-balance').textContent = fmtNum(balKrw);
+  document.getElementById('sv-pv-deposit').textContent = depN ? fmtSigned(depKrw) : '0';
+  document.getElementById('sv-pv-prev-balance').textContent = prev ? fmtNum(Number(prev.balanceKrw) || 0) : '—';
+  document.getElementById('sv-pv-prev-principal').textContent = prev?.principal != null ? fmtNum(Number(prev.principal)) : '—';
+  document.getElementById('sv-pv-principal').textContent = fmtNum(principal);
+  const $mret = document.getElementById('sv-pv-mret');
+  $mret.textContent = fmtSigned(mret);
+  $mret.className = 'pv-val ' + (mret > 0 ? 'green' : (mret < 0 ? 'red' : ''));
+  const $cum = document.getElementById('sv-pv-cumret');
+  $cum.textContent = fmtSignedPct(cumRate);
+  $cum.className = 'pv-val ' + (cumRate > 0 ? 'green' : (cumRate < 0 ? 'red' : ''));
+
+  // 저장 시 쓸 값들을 dataset에 박아둠
+  const $body = document.getElementById('ov-savings');
+  if ($body) {
+    $body.dataset.calcBalanceKrw   = balKrw;
+    $body.dataset.calcDepositKrw   = depKrw;
+    $body.dataset.calcPrincipal    = principal;
+    $body.dataset.calcMret         = mret;
+    $body.dataset.calcCumRet       = cumRet;
+    $body.dataset.calcCumRate      = cumRate;
+    $body.dataset.calcFxRate       = useRate;
+    $body.dataset.calcIsFirst      = isFirst ? '1' : '0';
+  }
+}
+
+// 콤마 제거 후 숫자
+function numUnComma(s) {
+  const n = parseFloat(String(s || '').replace(/,/g, '').trim());
+  return isFinite(n) ? n : 0;
+}
+
+// 저장
+async function saveSavingsEntry() {
+  if (!editingSavingsKey || !currentUid) return;
+  const { ym, accId } = parseMonthlyKey(editingSavingsKey);
+  const acc = accounts.find(a => a.id === accId);
+  if (!acc) { showToast('계좌 정보 없음'); return; }
+
+  const balN = numUnComma(document.getElementById('sv-input-balance').value);
+  if (balN === 0 && !confirm('잔고가 0입니다. 그대로 저장할까요?')) return;
+
+  // 미리보기에서 계산한 값을 dataset에서 회수
+  const $body = document.getElementById('ov-savings');
+  const isFirst   = $body.dataset.calcIsFirst === '1';
+  const useRate   = Number($body.dataset.calcFxRate) || 1;
+  const balKrw    = Number($body.dataset.calcBalanceKrw) || 0;
+  const depKrw    = Number($body.dataset.calcDepositKrw) || 0;
+  const principal = Number($body.dataset.calcPrincipal) || 0;
+  const mret      = Number($body.dataset.calcMret) || 0;
+  const cumRet    = Number($body.dataset.calcCumRet) || 0;
+  const cumRate   = Number($body.dataset.calcCumRate) || 0;
+
+  const depN = numUnComma(document.getElementById('sv-input-deposit').value);
+  const memo = document.getElementById('sv-input-memo').value.trim() || null;
+
+  // asOf — 그 월의 마지막 날 (또는 오늘 if 현재 월)
+  const today = new Date();
+  const todayYm = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  let asOf;
+  if (ym === todayYm) {
+    asOf = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  } else {
+    const [y, m] = ym.split('-').map(Number);
+    const last = new Date(y, m, 0);
+    asOf = `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, '0')}-${String(last.getDate()).padStart(2, '0')}`;
+  }
+
+  const isFx = acc.currency && acc.currency !== 'KRW';
+
+  const data = {
+    ym,
+    accountId: accId,
+    accountName: acc.name,
+    assetsCategory: acc.assetsCategory || null,
+    currency: acc.currency || 'KRW',
+
+    balance:    balN,
+    balanceKrw: balKrw,
+    fxRate:     isFx ? useRate : null,
+
+    // 첫 결산은 deposit 없음
+    deposit:    isFirst ? null : depN,
+    depositKrw: isFirst ? null : depKrw,
+
+    principal,
+    monthlyReturn: mret,
+    cumReturn:     cumRet,
+    cumReturnRate: cumRate,
+
+    isStart: isFirst,
+    memo,
+    asOf,
+    updatedAt: serverTimestamp(),
+  };
+
+  const $btn = document.getElementById('btn-sv-save');
+  $btn.disabled = true;
+  const orig = $btn.textContent;
+  $btn.textContent = '저장 중…';
+
+  try {
+    // 신규면 createdAt 추가
+    const existing = findMonthlyDoc(accId, ym);
+    if (!existing) data.createdAt = serverTimestamp();
+
+    await setDoc(pathMonthlyDoc(ym, accId), data, { merge: true });
+    closeOv('ov-savings');
+    showToast(`${acc.name} ${ym} 결산 저장됨`);
+
+    // TODO v0.7-4: 과거 월 수정이면 recalculateChain 호출
+  } catch (e) {
+    console.error('saveSavingsEntry error', e);
+    showToast('저장 실패: ' + (e.message || e.code));
+  } finally {
+    $btn.disabled = false;
+    $btn.textContent = orig;
+  }
+}
+
+// 삭제
+async function deleteSavingsEntry() {
+  if (!editingSavingsKey || !currentUid) return;
+  const { ym, accId } = parseMonthlyKey(editingSavingsKey);
+  const acc = accounts.find(a => a.id === accId);
+  if (!confirm(`${acc?.name || accId}의 ${ym} 결산을 삭제할까요?\n이후 월의 누적 수익률 계산이 어긋날 수 있습니다.`)) return;
+
+  const $btn = document.getElementById('btn-sv-delete');
+  $btn.disabled = true;
+  try {
+    await deleteDoc(pathMonthlyDoc(ym, accId));
+    closeOv('ov-savings');
+    showToast('결산 삭제됨');
+  } catch (e) {
+    console.error(e);
+    showToast('삭제 실패: ' + (e.message || e.code));
+  } finally {
+    $btn.disabled = false;
+  }
+}
+
+// 이벤트 바인딩
+document.getElementById('sv-input-balance').addEventListener('input', svUpdatePreview);
+document.getElementById('sv-input-deposit').addEventListener('input', svUpdatePreview);
+document.getElementById('sv-input-principal').addEventListener('input', svUpdatePreview);
+document.getElementById('sv-fx-keep')?.addEventListener('change', svUpdatePreview);
+document.getElementById('btn-sv-save').addEventListener('click', saveSavingsEntry);
+document.getElementById('btn-sv-delete').addEventListener('click', deleteSavingsEntry);
+
+// 환율 수정 링크 (모달 안에서)
+document.getElementById('sv-fx-edit-link').addEventListener('click', () => {
+  closeOv('ov-savings');
+  switchTab('settings');
+  const $sec = document.getElementById('sec-fxrates');
+  if ($sec) {
+    $sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    $sec.style.transition = 'box-shadow .2s';
+    $sec.style.boxShadow = '0 0 0 2px var(--accent)';
+    setTimeout(() => $sec.style.boxShadow = '', 1200);
+  }
+});
+
+// "재무상태" 링크 (info bar)
+document.getElementById('sv-goto-balance')?.addEventListener('click', (e) => {
+  e.preventDefault();
+  switchTab('closing', 'balance');
+});
 
 // (v0.5+) 월 통일 — 옛 go{Bs,Pl,Bg}Month 함수와 render{Pl,Bg}Header는 setMonth로 통합되어 제거됨
 
