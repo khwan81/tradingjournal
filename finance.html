@@ -5730,11 +5730,11 @@ document.getElementById('event-account-select').addEventListener('change', async
   if (!currentUid) return;
   const newId = e.target.value || null;
   try {
-    await setDoc(pathSettings(), { eventSavingAccountId: newId }, { merge: true });
+    await setDoc(pathFinanceSettings(), { eventSavingAccountId: newId }, { merge: true });
     showToast(newId ? '적립 계좌 설정됨' : '적립 계좌 해제됨');
   } catch (err) {
     console.error('[event] account save error', err);
-    showToast('저장 실패');
+    showToast('저장 실패: ' + (err.message || err.code || '알 수 없는 오류'));
   }
 });
 
