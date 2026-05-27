@@ -1383,16 +1383,15 @@ body {
 /* ────────────────────────────────────────── */
 
 /* 탭 헤더는 거래내역 탭의 .tx-header와 같은 구조 재사용 */
-.bs-header {
-  display: flex; justify-content: space-between; align-items: center;
-  gap: 10px;
-  margin-bottom: 14px;
-  flex-wrap: wrap;
+/* (v0.7-17 — bs-header / sv-header / dv-header는 서브탭바 우측 액션으로 흡수됨) */
+.bs-asof-line {
+  margin: 0 0 12px 4px;
 }
-.bs-asof {
+.bs-asof,
+.sv-asof,
+.dv-asof {
   font-size: 11px;
   color: var(--text3);
-  margin-left: 8px;
 }
 
 /* v0.7-13 — 빈상태 통일 (.empty-state)
@@ -1421,16 +1420,8 @@ body {
 }
 
 /* ── 자산결산 (v0.7-3b) ── */
-.sv-header {
-  display: flex; justify-content: space-between; align-items: center;
-  gap: 10px;
-  margin-bottom: 14px;
-  flex-wrap: wrap;
-}
-.sv-asof {
-  font-size: 11px;
-  color: var(--text3);
-}
+/* .sv-header는 v0.7-17에서 서브탭바 우측 액션으로 흡수됨 */
+/* .sv-asof는 .bs-asof-line 안에서 .bs-asof와 함께 스타일 정의됨 */
 /* v0.7-13 — .info-note (의미 명확화)
  *   "정보성 안내문" — 아이콘 + 짧은 설명 + 옵션 링크 패턴.
  *   기존 .sv-info를 흡수. 결산/배당/수익률/손익 등 여러 곳에서 사용. */
@@ -1571,16 +1562,8 @@ body {
 /* ─────────────────────────────────────────────────────
    수익률 탭 (v0.7-7) — Modified Dietz
    ───────────────────────────────────────────────────── */
-.rt-period-bar {
-  display: flex; justify-content: space-between; align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 14px;
-  padding: 10px 12px;
-  background: var(--bg2);
-  border: 1px solid var(--border2);
-  border-radius: 10px;
-}
+/* v0.7-17 — .rt-period-bar는 서브탭바와 통합됨 (.subtab-bar.with-action.analysis-bar)
+ *           내부의 .rt-presets, .rt-range만 새 위치에서 사용 */
 .rt-presets { display: flex; gap: 4px; flex-wrap: wrap; }
 .rt-preset {
   background: transparent;
@@ -1601,6 +1584,40 @@ body {
   border-color: var(--accent);
   color: var(--accent);
 }
+
+/* v0.7-17 — 상세 기간 (month range) 토글 */
+.rt-range-toggle-wrap {
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.rt-range-toggle {
+  background: transparent;
+  border: 1px dashed var(--border2);
+  color: var(--text3);
+  font-size: 11px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: var(--font);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.rt-range-toggle:hover {
+  color: var(--text);
+  border-color: rgba(255,255,255,0.18);
+  background: var(--bg3);
+}
+.rt-range-toggle .rt-caret {
+  font-size: 9px;
+  transition: transform .15s;
+}
+.rt-range-toggle[aria-expanded="true"] .rt-caret { transform: rotate(180deg); }
+
 .rt-range {
   display: flex; align-items: center; gap: 6px;
   font-size: 11.5px;
@@ -1618,6 +1635,22 @@ body {
   color-scheme: dark;
 }
 .rt-month-input:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+
+/* v0.7-17 — 분석 탭 서브탭바 (with-action) 모바일에서는 두 줄 */
+@media (max-width: 700px) {
+  .subtab-bar.with-action.analysis-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+  .subtab-bar.with-action.analysis-bar .subtab-list { width: 100%; }
+  .subtab-bar.with-action.analysis-bar .rt-presets {
+    display: flex; gap: 4px;
+  }
+  .subtab-bar.with-action.analysis-bar .rt-presets .rt-preset {
+    flex: 1; padding: 5px 0; text-align: center;
+  }
+}
 
 /* 기간 비교 5카드 */
 .rt-compare {
@@ -1708,9 +1741,7 @@ body {
 
 /* 모바일 */
 @media (max-width: 700px) {
-  .rt-period-bar { flex-direction: column; align-items: stretch; }
-  .rt-presets { justify-content: space-between; }
-  .rt-preset { flex: 1; text-align: center; padding: 6px 4px; }
+  /* .rt-period-bar는 v0.7-17에서 제거됨. 분석 탭 새 구조의 모바일 처리는 위쪽 .subtab-bar.with-action.analysis-bar 분기 참고 */
   .rt-range { justify-content: space-between; }
   .rt-month-input { flex: 1; min-width: 0; }
 
@@ -1745,16 +1776,8 @@ body {
 /* ─────────────────────────────────────────────────────
    배당 탭 (v0.7-8)
    ───────────────────────────────────────────────────── */
-.dv-header {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 14px;
-  gap: 10px;
-}
-.dv-asof {
-  font-size: 13px;
-  color: var(--text2);
-  font-family: var(--font-mono);
-}
+/* .dv-header는 v0.7-17에서 서브탭바 우측 액션으로 흡수됨 */
+/* .dv-asof는 .bs-asof-line 안에서 .bs-asof와 함께 스타일 정의됨 */
 
 /* .dv-card / .dv-card-head / -title / -sub 는 위 .card 시스템(bar 패턴)에 흡수됨 (v0.7-13) */
 .dv-select {
@@ -3486,21 +3509,25 @@ body {
     </div>
   </div>
 
-  <!-- ═══ 결산 탭 (v0.7) — 재무상태 / 자산결산 / 배당 ═══ -->
+  <!-- ═══ 결산 탭 (v0.7-17) — 재무상태 / 자산결산 / 배당 ═══ -->
   <div class="tab-content" id="tab-closing">
-    <div class="subtab-bar" data-subtab-group="closing">
-      <button class="subtab active" data-subtab="balance">재무상태</button>
-      <button class="subtab"        data-subtab="savings">자산결산</button>
-      <button class="subtab"        data-subtab="dividends">배당</button>
+    <!-- 서브탭바 + 우상단 액션 (서브탭에 따라 표시되는 버튼이 바뀜) -->
+    <div class="subtab-bar with-action" data-subtab-group="closing">
+      <div class="subtab-list">
+        <button class="subtab active" data-subtab="balance">재무상태</button>
+        <button class="subtab"        data-subtab="savings">자산결산</button>
+        <button class="subtab"        data-subtab="dividends">배당</button>
+      </div>
+      <div class="subtab-action">
+        <button class="btn-p" id="btn-bs-edit" data-action-for="balance">잔액 입력</button>
+        <button class="btn-s" id="btn-sv-help" data-action-for="savings" title="안내" style="display:none;">?</button>
+        <button class="btn-p" id="btn-dv-add"  data-action-for="dividends" style="display:none;">+ 배당 입력</button>
+      </div>
     </div>
 
     <div class="subtab-content active" id="tab-balance">
-      <div class="bs-header">
-        <div class="bs-asof-wrap">
-          <span class="bs-asof" id="bs-asof"></span>
-        </div>
-        <button class="btn-p" id="btn-bs-edit">잔액 입력</button>
-      </div>
+      <!-- asOf 날짜는 본문 상단에 작은 글씨로 (v0.7-17) -->
+      <div class="bs-asof-line"><span class="bs-asof" id="bs-asof"></span></div>
 
       <div id="bs-body">
         <div class="bs-placeholder">
@@ -3511,12 +3538,8 @@ body {
 
     <!-- 자산결산 서브탭 (v0.7-3b) -->
     <div class="subtab-content" id="tab-savings">
-      <div class="sv-header">
-        <div class="sv-asof-wrap">
-          <span class="sv-asof" id="sv-asof"></span>
-        </div>
-        <button class="btn-s" id="btn-sv-help" title="안내">?</button>
-      </div>
+      <!-- asOf 날짜는 본문 상단에 작은 글씨로 (v0.7-17) -->
+      <div class="bs-asof-line"><span class="sv-asof" id="sv-asof"></span></div>
 
       <!-- KPI 3개 -->
       <div class="kpi-grid">
@@ -3549,12 +3572,8 @@ body {
 
     <!-- 배당 서브탭 (v0.7-8 / v0.7-8b에서 결산 탭으로 이동) -->
     <div class="subtab-content" id="tab-dividends">
-      <div class="dv-header">
-        <div class="dv-asof-wrap">
-          <span class="dv-asof" id="dv-asof"></span>
-        </div>
-        <button class="btn-p" id="btn-dv-add">+ 배당 입력</button>
-      </div>
+      <!-- asOf 날짜는 본문 상단에 작은 글씨로 (v0.7-17) -->
+      <div class="bs-asof-line"><span class="dv-asof" id="dv-asof"></span></div>
 
       <!-- KPI 3 -->
       <div class="kpi-grid">
@@ -3633,24 +3652,32 @@ body {
     </div>
   </div>
 
-  <!-- ═══ 분석 탭 (v0.7) — 손익 / 수익률 / 대시보드 ═══ -->
+  <!-- ═══ 분석 탭 (v0.7-17) — 손익 / 수익률 / 대시보드 ═══ -->
   <div class="tab-content" id="tab-analysis">
-    <div class="subtab-bar" data-subtab-group="analysis">
-      <button class="subtab active" data-subtab="pl">손익</button>
-      <button class="subtab"        data-subtab="returns">수익률</button>
-      <button class="subtab"        data-subtab="dashboard">대시보드</button>
-    </div>
-
-    <!-- 공유 기간 필터 (v0.7-12) — 손익/수익률/대시보드 모두 적용 -->
-    <div class="rt-period-bar" id="analysis-period-bar">
-      <div class="rt-presets" id="rt-presets">
+    <!-- 서브탭바 + 우측에 기간 프리셋 (PC는 한 줄, 모바일은 두 줄) -->
+    <div class="subtab-bar with-action analysis-bar" data-subtab-group="analysis">
+      <div class="subtab-list">
+        <button class="subtab active" data-subtab="pl">손익</button>
+        <button class="subtab"        data-subtab="returns">수익률</button>
+        <button class="subtab"        data-subtab="dashboard">대시보드</button>
+      </div>
+      <!-- 기간 프리셋 칩 — 액션 자리에 통합 -->
+      <div class="subtab-action rt-presets" id="rt-presets">
         <button class="rt-preset"        data-rt-preset="1M">1M</button>
         <button class="rt-preset"        data-rt-preset="3M">3M</button>
         <button class="rt-preset"        data-rt-preset="6M">6M</button>
         <button class="rt-preset"        data-rt-preset="YTD">YTD</button>
         <button class="rt-preset active" data-rt-preset="ALL">ALL</button>
       </div>
-      <div class="rt-range">
+    </div>
+
+    <!-- 상세 기간 (month range) — 기본 숨김, 토글로 펼침 (v0.7-17 A1) -->
+    <div class="rt-range-toggle-wrap">
+      <button type="button" class="rt-range-toggle" id="rt-range-toggle" aria-expanded="false">
+        <span>상세 기간</span>
+        <span class="rt-caret" aria-hidden="true">▾</span>
+      </button>
+      <div class="rt-range" id="rt-range" style="display:none;">
         <input type="month" id="rt-from" class="rt-month-input" aria-label="시작 월">
         <span class="rt-range-sep">→</span>
         <input type="month" id="rt-to"   class="rt-month-input" aria-label="끝 월">
@@ -10316,6 +10343,17 @@ function bindReturnsHandlers() {
   $from?.addEventListener('change', onMonthChange);
   $to?.addEventListener('change', onMonthChange);
 
+  // v0.7-17 — 상세 기간 토글
+  const $toggle = document.getElementById('rt-range-toggle');
+  const $range  = document.getElementById('rt-range');
+  if ($toggle && $range) {
+    $toggle.addEventListener('click', () => {
+      const expanded = $toggle.getAttribute('aria-expanded') === 'true';
+      $toggle.setAttribute('aria-expanded', String(!expanded));
+      $range.style.display = expanded ? 'none' : 'flex';
+    });
+  }
+
   // 안내 링크
   document.getElementById('rt-help-link')?.addEventListener('click', e => {
     e.preventDefault();
@@ -10332,6 +10370,16 @@ function applyAnalysisPeriod() {
   updateReturnsPresetUi();
   if (returnsCurrentRange) {
     setReturnsInputs(returnsCurrentRange.fromYm, returnsCurrentRange.toYm);
+  }
+
+  // v0.7-17 — 커스텀 모드(프리셋 비활성)면 상세 기간 토글 자동 펼침
+  if (returnsActivePreset === '' && returnsCurrentRange) {
+    const $toggle = document.getElementById('rt-range-toggle');
+    const $range  = document.getElementById('rt-range');
+    if ($toggle && $range && $toggle.getAttribute('aria-expanded') !== 'true') {
+      $toggle.setAttribute('aria-expanded', 'true');
+      $range.style.display = 'flex';
+    }
   }
 
   // v0.7-12 2단계 — 기간이 바뀌면 트리맵 drill 상태 리셋 (이전 카테고리가 새 기간에 없을 수 있음)
