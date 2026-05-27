@@ -4053,41 +4053,12 @@ body {
         <button class="btn-p" id="btn-backup-download">📥 백업 다운로드</button>
       </div>
 
-      <!-- v0.7 — 자산결산 통합 마이그레이션 -->
-      <div class="backup-card" id="migration-card">
-        <div class="backup-info">
-          <div class="backup-info-title">🔀 자산결산 통합 (v0.7)</div>
-          <div class="backup-info-desc">
-            기존 <code>snapshots</code> 컬렉션의 월별 자산·부채 잔고를<br>
-            새 <code>monthly</code> / <code>monthly_liab</code> 컬렉션으로 변환합니다.<br>
-            <span id="mig-status">상태 확인 중…</span>
-          </div>
-        </div>
-        <button class="btn-p" id="btn-migration-check">🔍 점검</button>
-        <button class="btn-p" id="btn-migration-run" style="display:none;">▶ 변환 실행</button>
-      </div>
-
-      <!-- v0.7-10 — snapshots 컬렉션 폐기 -->
-      <div class="backup-card" id="snapshots-purge-card">
-        <div class="backup-info">
-          <div class="backup-info-title">🗑️ snapshots 컬렉션 폐기 (v0.7-10)</div>
-          <div class="backup-info-desc">
-            마이그레이션 완료 후 더 이상 사용하지 않는 <code>snapshots</code> 컬렉션을 삭제합니다.<br>
-            <code>monthly</code> / <code>monthly_liab</code>이 SSOT이므로 안전하게 제거 가능합니다.<br>
-            <span class="form-hint">진행 전 [백업 다운로드]를 받으세요.</span><br>
-            <span id="snap-purge-status">상태 확인 중…</span>
-          </div>
-        </div>
-        <button class="btn-p" id="btn-snap-purge-check">🔍 점검</button>
-        <button class="btn-d" id="btn-snap-purge-run" style="display:none;">▶ snapshots 삭제</button>
-      </div>
-
-      <!-- v0.7-5a — 잔고 초기화 도구 (개발/테스트용) -->
+      <!-- 잔고 초기화 도구 -->
       <div class="backup-card" id="reset-card">
         <div class="backup-info">
           <div class="backup-info-title">🧹 자산/부채 잔고 초기화</div>
           <div class="backup-info-desc danger">
-            <code>snapshots</code> · <code>monthly</code> · <code>monthly_liab</code> 컬렉션을 모두 삭제합니다.<br>
+            자산·부채 결산(<code>monthly</code> / <code>monthly_liab</code>) 데이터를 모두 삭제합니다.<br>
             거래내역·계좌 마스터·예산은 보존됩니다. 진행 전 백업을 받으세요.<br>
             <span id="reset-status">—</span>
           </div>
@@ -6638,78 +6609,6 @@ function prevYm(ym) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
-// ──────────────────────────────────────────────────────
-// v0.7 — snapshots ↔ monthly 호환 어댑터
-// ──────────────────────────────────────────────────────
-// 어느 시점이든 "ym의 자산/부채 잔고"를 동일 형식으로 돌려준다.
-// monthly 컬렉션이 비어있으면 snapshots에서 변환해서 반환 (fallback).
-// 마이그레이션 완료 후엔 monthly 우선 응답이 자동으로 채택됨.
-//
-// 반환 형식 (자산):  { [accountId]: { native, krw, fxRate, deposit?, depositKrw?, principal?, monthlyReturn?, cumReturn?, cumReturnRate?, isStart? } }
-// 반환 형식 (부채):  { [liabKey]:   { native?, krw, fxRate?, name, type } }   ← normalizeLiabSnap과 호환
-
-/** snapshots 도큐먼트 데이터를 monthly 형식 자산 객체로 변환 */
-function snapshotToMonthlyAssets(snap) {
-  if (!snap || !snap.assetBalances) return {};
-  const out = {};
-  for (const [accId, v] of Object.entries(snap.assetBalances)) {
-    if (!v || typeof v !== 'object') {
-      // 옛 숫자형 잔재 — krw만 갖춘 형태로 변환
-      out[accId] = { native: null, krw: Number(v) || 0, fxRate: null };
-    } else {
-      out[accId] = {
-        native: v.native ?? null,
-        krw:    Number(v.krw) || 0,
-        fxRate: v.fxRate ?? null,
-      };
-    }
-  }
-  return out;
-}
-
-/** snapshots 도큐먼트 데이터를 monthly_liab 형식 부채 객체로 변환 */
-function snapshotToMonthlyLiabs(snap) {
-  if (!snap || !snap.liabilityBalances) return {};
-  const out = {};
-  for (const [key, raw] of Object.entries(snap.liabilityBalances)) {
-    const norm = normalizeLiabSnap(raw, null, null);
-    if (norm) {
-      // normalizeLiabSnap은 { krw, name, type }만 반환 — 마이그레이션 호환을 위해
-      // native/fxRate를 명시적으로 채워준다 (Firestore는 undefined 거부)
-      out[key] = {
-        ...norm,
-        native: (raw && typeof raw === 'object' && raw.native != null) ? raw.native : null,
-        fxRate: (raw && typeof raw === 'object' && raw.fxRate != null) ? raw.fxRate : null,
-      };
-    }
-  }
-  return out;
-}
-
-/** monthly 도큐먼트 배열을 { [accId]: ... } 객체로 합치기 */
-// ──────────────────────────────────────────────────────
-// 부채 스냅 값 정규화 (v0.1 숫자형 / v0.2 객체형 모두 처리)
-// ──────────────────────────────────────────────────────
-// 반환: { krw, name, type } | null  — fallbackName/Type은 키에 매칭되는 마스터 또는 키 자체
-function normalizeLiabSnap(v, fallbackName, fallbackType) {
-  if (v == null) return null;
-  if (typeof v === 'object') {
-    return {
-      krw:  Number(v.krw) || 0,
-      name: v.name || fallbackName || '',
-      type: v.type || fallbackType || 'current',
-    };
-  }
-  // 숫자형 (v0.1 잔재 또는 마이그레이션 전)
-  const n = Number(v);
-  if (!isFinite(n) || n === 0) return null;
-  return {
-    krw:  n,
-    name: fallbackName || '',
-    type: fallbackType || 'current',
-  };
-}
-
 // 모달 열기/닫기
 function openOv(id) { document.getElementById(id).classList.add('show'); }
 function closeOv(id) { document.getElementById(id).classList.remove('show'); }
@@ -8180,295 +8079,6 @@ async function writeAllToCollection(collRef, items, idField) {
   return count;
 }
 
-// ──────────────────────────────────────────────────────
-// v0.7 — snapshots → monthly / monthly_liab 마이그레이션
-// ──────────────────────────────────────────────────────
-// 점검: snapshots / monthly / monthly_liab 컬렉션 도큐먼트 수를 확인하고
-//      변환 필요 여부를 결정한다. 안내문구를 갱신한다.
-async function migrationCheck() {
-  if (!currentUid) { showToast('로그인이 필요합니다'); return; }
-  const $status = document.getElementById('mig-status');
-  const $btnRun = document.getElementById('btn-migration-run');
-  const $btnChk = document.getElementById('btn-migration-check');
-  $btnChk.disabled = true;
-  $status.textContent = '점검 중…';
-
-  try {
-    const [snapSnap, monthlySnap, monthlyLiabSnap] = await Promise.all([
-      getDocs(pathSnapshots()),
-      getDocs(pathMonthly()),
-      getDocs(pathMonthlyLiab()),
-    ]);
-    const snapN  = snapSnap.size;
-    const monN   = monthlySnap.size;
-    const monLN  = monthlyLiabSnap.size;
-
-    if (snapN === 0 && monN === 0 && monLN === 0) {
-      $status.innerHTML = '✅ 변환할 데이터 없음 — 새로 입력하는 결산부터 신규 컬렉션에 저장됩니다.';
-      $btnRun.style.display = 'none';
-      return;
-    }
-
-    if (snapN === 0 && (monN > 0 || monLN > 0)) {
-      $status.innerHTML = `✅ 이미 변환 완료 — monthly ${monN}건 / monthly_liab ${monLN}건`;
-      $btnRun.style.display = 'none';
-      return;
-    }
-
-    if (snapN > 0 && monN === 0 && monLN === 0) {
-      // 변환 결과 예측: 각 snapshot의 자산/부채 객체 키 수를 합산
-      let predAssets = 0, predLiabs = 0;
-      snapSnap.forEach(d => {
-        const data = d.data() || {};
-        predAssets += Object.keys(data.assetBalances || {}).length;
-        predLiabs  += Object.keys(data.liabilityBalances || {}).length;
-      });
-      $status.innerHTML = `🔄 변환 대상 — snapshots ${snapN}개월<br>→ monthly ${predAssets}건 + monthly_liab ${predLiabs}건 생성 예정`;
-      $btnRun.style.display = '';
-      return;
-    }
-
-    // 양쪽 다 있음 — 충돌 가능
-    $status.innerHTML = `⚠️ snapshots ${snapN}개 + monthly ${monN}건 / monthly_liab ${monLN}건이 함께 존재합니다.<br>먼저 백업을 받으세요. 변환 실행 시 monthly 측을 덮어씁니다.`;
-    $btnRun.style.display = '';
-  } catch (e) {
-    console.error('[migration check]', e);
-    $status.textContent = '❌ 점검 실패: ' + (e.message || e.code);
-  } finally {
-    $btnChk.disabled = false;
-  }
-}
-
-// 실행: snapshots를 monthly / monthly_liab으로 변환
-async function migrationRun() {
-  if (!currentUid) { showToast('로그인이 필요합니다'); return; }
-  const ok = confirm(
-    '⚠️ snapshots를 monthly / monthly_liab으로 변환합니다.\n\n' +
-    '진행 전 [백업 다운로드]를 먼저 수행하셨나요?\n\n' +
-    '[확인]을 누르면 변환을 시작합니다.'
-  );
-  if (!ok) return;
-
-  const $status = document.getElementById('mig-status');
-  const $btnRun = document.getElementById('btn-migration-run');
-  const $btnChk = document.getElementById('btn-migration-check');
-  $btnRun.disabled = true;
-  $btnChk.disabled = true;
-  $status.textContent = '🔄 변환 진행 중…';
-
-  try {
-    const snapSnap = await getDocs(pathSnapshots());
-    if (snapSnap.empty) {
-      $status.innerHTML = '✅ 변환할 snapshots 없음.';
-      $btnRun.style.display = 'none';
-      return;
-    }
-
-    // 변환 결과를 배열로 모은 뒤 writeBatch로 일괄 쓰기
-    const monthlyRows = [];
-    const monthlyLiabRows = [];
-    snapSnap.forEach(d => {
-      const ym = d.id;
-      const data = d.data() || {};
-      const asOf = data.asOf || null;
-
-      const assets = snapshotToMonthlyAssets(data);
-      for (const [accId, v] of Object.entries(assets)) {
-        monthlyRows.push({
-          docId:      monthlyKeyFor(ym, accId),
-          ym,
-          accountId:  accId,
-          balance:    v.native ?? null,
-          balanceKrw: v.krw ?? 0,
-          fxRate:     v.fxRate ?? null,
-          currency:   null,                  // 비추적 자산은 통화 정보 없이도 작동 (krw 위주)
-          // 추적용 필드는 비워둠 — 사용자가 자산결산 화면에서 입력
-          deposit:    null,
-          depositKrw: null,
-          principal:  null,
-          principalNative: null,
-          monthlyReturn: null,
-          cumReturn:     null,
-          cumReturnRate: null,
-          isStart:    false,
-          asOf,
-          migratedFromSnapshot: true,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
-      }
-
-      const liabs = snapshotToMonthlyLiabs(data);
-      for (const [key, v] of Object.entries(liabs)) {
-        monthlyLiabRows.push({
-          docId:      monthlyLiabKeyFor(ym, key),
-          ym,
-          liabKey:    key,
-          name:       v.name ?? '',
-          type:       v.type ?? 'current',
-          balance:    v.native ?? null,
-          balanceKrw: v.krw ?? 0,
-          fxRate:     v.fxRate ?? null,
-          asOf,
-          migratedFromSnapshot: true,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
-      }
-    });
-
-    // writeBatch 500개 단위로 commit
-    // Firestore는 undefined 필드를 거부하므로 안전망: 어떤 필드도 undefined가 가지 않도록 sanitize
-    const sanitize = obj => {
-      const out = {};
-      for (const [k, v] of Object.entries(obj)) {
-        out[k] = v === undefined ? null : v;
-      }
-      return out;
-    };
-
-    let writeCount = 0;
-    let batch = writeBatch(db);
-    let inBatch = 0;
-    const flush = async () => {
-      if (inBatch > 0) {
-        await batch.commit();
-        batch = writeBatch(db);
-        inBatch = 0;
-      }
-    };
-    for (const r of monthlyRows) {
-      const { docId, ...payload } = r;
-      batch.set(pathMonthlyDoc(payload.ym, payload.accountId), sanitize(payload));
-      inBatch++; writeCount++;
-      if (inBatch >= 450) await flush();
-    }
-    for (const r of monthlyLiabRows) {
-      const { docId, ...payload } = r;
-      batch.set(pathMonthlyLiabDoc(payload.ym, payload.liabKey), sanitize(payload));
-      inBatch++; writeCount++;
-      if (inBatch >= 450) await flush();
-    }
-    await flush();
-
-    $status.innerHTML = `✅ 변환 완료 — monthly ${monthlyRows.length}건 / monthly_liab ${monthlyLiabRows.length}건 (총 ${writeCount}건 쓰기)<br>※ snapshots 컬렉션은 호환 레이어를 위해 남겨둡니다. 검증 완료 후 다시 점검 시 삭제 옵션이 표시됩니다.`;
-    $btnRun.style.display = 'none';
-    showToast('자산결산 통합 변환 완료');
-
-    // v0.7-7 — 수익률 캐시 무효화
-    invalidateReturnsCache();
-    if (isReturnsVisible()) renderReturns();
-  } catch (e) {
-    console.error('[migration run]', e);
-    $status.textContent = '❌ 변환 실패: ' + (e.message || e.code);
-  } finally {
-    $btnRun.disabled = false;
-    $btnChk.disabled = false;
-  }
-}
-
-document.getElementById('btn-migration-check').addEventListener('click', migrationCheck);
-document.getElementById('btn-migration-run').addEventListener('click', migrationRun);
-
-// ──────────────────────────────────────────────────────
-// v0.7-10 — snapshots 컬렉션 폐기
-// ──────────────────────────────────────────────────────
-// 마이그레이션 완료 후 사용 안 하는 snapshots를 안전하게 제거.
-// 점검: snapshots / monthly 컬렉션을 보고 안전한지 판단.
-async function snapPurgeCheck() {
-  if (!currentUid) { showToast('로그인이 필요합니다'); return; }
-  const $status = document.getElementById('snap-purge-status');
-  const $btnRun = document.getElementById('btn-snap-purge-run');
-  const $btnChk = document.getElementById('btn-snap-purge-check');
-  $btnChk.disabled = true;
-  $status.textContent = '점검 중…';
-
-  try {
-    const [snapSnap, monthlySnap, monthlyLiabSnap] = await Promise.all([
-      getDocs(pathSnapshots()),
-      getDocs(pathMonthly()),
-      getDocs(pathMonthlyLiab()),
-    ]);
-    const snapN = snapSnap.size;
-    const monN  = monthlySnap.size;
-    const liaN  = monthlyLiabSnap.size;
-
-    if (snapN === 0) {
-      $status.innerHTML = '✅ snapshots가 이미 비어있습니다.';
-      $btnRun.style.display = 'none';
-      return;
-    }
-
-    if (monN === 0 && liaN === 0) {
-      $status.innerHTML =
-        '⚠️ monthly / monthly_liab이 비어있습니다. 먼저 위의 [자산결산 통합] 변환을 실행하세요.';
-      $btnRun.style.display = 'none';
-      return;
-    }
-
-    // snapshots ym set vs monthly ym set 비교 — 모든 snapshot ym이 monthly에 있는지 확인
-    const snapYms = new Set();
-    snapSnap.forEach(d => snapYms.add(d.id));
-    const monthlyYms = new Set();
-    monthlySnap.forEach(d => monthlyYms.add(d.data().ym || ''));
-    monthlyLiabSnap.forEach(d => monthlyYms.add(d.data().ym || ''));
-
-    const missing = [];
-    for (const ym of snapYms) {
-      if (!monthlyYms.has(ym)) missing.push(ym);
-    }
-
-    if (missing.length > 0) {
-      $status.innerHTML =
-        `⚠️ ${missing.length}개월의 snapshots가 monthly에 없습니다 (${missing.slice(0, 3).join(', ')}${missing.length > 3 ? '…' : ''}). ` +
-        `먼저 [자산결산 통합]을 다시 실행하세요.`;
-      $btnRun.style.display = 'none';
-      return;
-    }
-
-    $status.innerHTML =
-      `✅ 안전 — snapshots ${snapN}개월 모두 monthly에 반영되어 있습니다.<br>삭제 시 ${snapN}개 도큐먼트가 영구 제거됩니다.`;
-    $btnRun.style.display = '';
-  } catch (e) {
-    console.error('[snap-purge check]', e);
-    $status.textContent = '❌ 점검 실패: ' + (e.message || e.code);
-  } finally {
-    $btnChk.disabled = false;
-  }
-}
-
-async function snapPurgeRun() {
-  if (!currentUid) { showToast('로그인이 필요합니다'); return; }
-  const ok = confirm(
-    '⚠️ snapshots 컬렉션을 모두 삭제합니다.\n\n' +
-    '진행 전 [백업 다운로드]를 먼저 수행하셨나요?\n\n' +
-    '[확인]을 누르면 삭제를 시작합니다.'
-  );
-  if (!ok) return;
-
-  const $status = document.getElementById('snap-purge-status');
-  const $btnRun = document.getElementById('btn-snap-purge-run');
-  const $btnChk = document.getElementById('btn-snap-purge-check');
-  $btnRun.disabled = true;
-  $btnChk.disabled = true;
-  $status.textContent = '🔄 삭제 중…';
-
-  try {
-    const n = await deleteAllInCollection(pathSnapshots());
-    $status.innerHTML = `✅ snapshots ${n}개 삭제 완료.`;
-    $btnRun.style.display = 'none';
-    showToast(`snapshots 컬렉션 삭제 완료 (${n}건)`);
-  } catch (e) {
-    console.error('[snap-purge run]', e);
-    $status.textContent = '❌ 삭제 실패: ' + (e.message || e.code);
-  } finally {
-    $btnRun.disabled = false;
-    $btnChk.disabled = false;
-  }
-}
-
-document.getElementById('btn-snap-purge-check').addEventListener('click', snapPurgeCheck);
-document.getElementById('btn-snap-purge-run').addEventListener('click', snapPurgeRun);
 
 // ──────────────────────────────────────────────────────
 // v0.7-5a — 자산/부채 잔고 초기화 (snapshots/monthly/monthly_liab 일괄 삭제)
@@ -8478,9 +8088,8 @@ async function resetBalances() {
 
   const ok1 = confirm(
     '⚠️ 자산/부채 잔고 데이터를 모두 삭제합니다.\n\n' +
-    '• snapshots (재무상태 스냅샷)\n' +
-    '• monthly (자산 결산)\n' +
-    '• monthly_liab (부채 결산)\n\n' +
+    '• 자산 결산 (monthly)\n' +
+    '• 부채 결산 (monthly_liab)\n\n' +
     '거래내역·계좌 마스터·예산·반복지출·경조사는 보존됩니다.\n\n' +
     '백업을 먼저 다운로드했나요?'
   );
@@ -8495,11 +8104,12 @@ async function resetBalances() {
 
   try {
     const [delSnap, delMonthly, delMonthlyLiab] = await Promise.all([
-      deleteAllInCollection(pathSnapshots()),
+      deleteAllInCollection(pathSnapshots()),  // 옛 잔재 정리 (있어도 없어도 무해)
       deleteAllInCollection(pathMonthly()),
       deleteAllInCollection(pathMonthlyLiab()),
     ]);
-    $status.innerHTML = `✅ 삭제 완료 — snapshots ${delSnap}건 / monthly ${delMonthly}건 / monthly_liab ${delMonthlyLiab}건`;
+    const totalN = delSnap + delMonthly + delMonthlyLiab;
+    $status.innerHTML = `✅ 삭제 완료 — 총 ${totalN}건 (자산 ${delMonthly} · 부채 ${delMonthlyLiab}${delSnap > 0 ? ` · 옛 스냅 ${delSnap}` : ''})`;
     showToast('잔고 데이터 초기화 완료');
 
     // v0.7-7 — 수익률 캐시 무효화
