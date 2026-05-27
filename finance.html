@@ -3989,7 +3989,7 @@ body {
           <div class="dash-card-title">추적자산 추이</div>
           <div class="dash-card-sub" id="dash-trk-chart-sub">최근 12개월</div>
         </div>
-        <!-- 측정 토글 + 원금 비교선 (v0.7-22) -->
+        <!-- 측정 토글 + 원금 비교선 + 영역 토글 (v0.7-23) -->
         <div class="dash-trk-tools">
           <div class="dash-trk-measure">
             <button type="button" class="seg-btn active" data-trk-m="balance">평가액</button>
@@ -4000,6 +4000,11 @@ body {
           <label class="dash-trk-prin" id="dash-trk-prin-wrap" style="display:none;">
             <input type="checkbox" id="dash-trk-show-prin" checked>
             <span>원금 비교선</span>
+          </label>
+          <!-- 영역 채우기 — 스택 모드일 때만 노출 (다중 카테고리 + 평가액/누적수익) -->
+          <label class="dash-trk-prin" id="dash-trk-fill-wrap" style="display:none;">
+            <input type="checkbox" id="dash-trk-show-fill" checked>
+            <span>영역 채우기</span>
           </label>
         </div>
         <!-- 카테고리 필터 칩 (v0.7-22) — 현황 탭 칩과 독립적으로 동작 -->
@@ -6149,11 +6154,16 @@ async function renderPlBody() {
   const prevFromYm = shiftYm(prevToYm, -(monthSpan - 1));
   const prevTxList = await loadAnalysisTransactions(prevFromYm, prevToYm);
   const prevLabel  = (prevFromYm === prevToYm) ? prevFromYm : `${prevFromYm} ~ ${prevToYm}`;
+  // v0.7-23 — 비교 기간이 통째로 비어 있으면 델타 표시 자체를 생략
+  //           (모든 행이 "신규"로 도배되는 무의미한 출력 방지)
+  const prevEmpty  = !prevTxList || prevTxList.length === 0;
 
   // 안내(있다면) 동적 갱신 — 기간 표시 + 비교 기간
   const $info = $body.parentElement?.querySelector('.sv-info > div');
   if ($info) {
-    const compareInfo = ` · 비교: ${prevLabel}`;
+    const compareInfo = prevEmpty
+      ? ` · 비교: ${prevLabel} (데이터 없음 — 변동 표시 생략)`
+      : ` · 비교: ${prevLabel}`;
     if (fromYm !== toYm) {
       $info.innerHTML = `기간 모드 (<b>${modeLabel}</b>)${compareInfo} · 헤더의 기간 필터로 조정합니다`;
     } else {
@@ -6188,7 +6198,9 @@ async function renderPlBody() {
 
   // delta 빌더 — 절대값 + 변화율
   //   type: 'revenue' (증가=green) | 'expense' (증가=red) | 'net' (양=green/음=red)
+  //   v0.7-23 — 비교 기간 전체가 비어 있으면 ('') 반환해 표시 자체 생략
   const buildDelta = (curVal, prevVal, type) => {
+    if (prevEmpty) return '';
     const delta = curVal - prevVal;
     if (Math.abs(delta) < 1) return '<span class="pl-delta muted">변동 없음</span>';
     let cls;
@@ -13096,6 +13108,7 @@ function svCatColorVar(cat) {
 //           현황 탭 추적자산 카드의 trkFilterCats와 분리되어 양쪽이 서로 영향을 안 줌.
 let dashTrkChart = null;
 let trkShowPrin = true;       // 원금 비교선 표시 (체크박스 상태)
+let trkShowFill = true;       // v0.7-23 — 스택 모드 영역 채우기 (체크박스 상태)
 let trkMeasure  = 'balance';  // 'balance' | 'cumReturn' | 'cumRate'
 let trkChartFilterCats = null;        // null = 전체, Set = 선택된 카테고리
 let trkChartAvailableCats = [];       // 칩 렌더용 (필터 적용 전 가용 카테고리)
@@ -13105,6 +13118,7 @@ async function renderDashTrkChart() {
   const $empty  = document.getElementById('dash-trk-chart-empty');
   const $sub    = document.getElementById('dash-trk-chart-sub');
   const $prinWrap = document.getElementById('dash-trk-prin-wrap');
+  const $fillWrap = document.getElementById('dash-trk-fill-wrap');
   if (!$canvas || !window.Chart) return;
   if (!currentUid) return;
 
@@ -13206,21 +13220,29 @@ async function renderDashTrkChart() {
       }
       if ($sub) $sub.textContent = '데이터 없음';
       if ($prinWrap) $prinWrap.style.display = 'none';
+      if ($fillWrap) $fillWrap.style.display = 'none';
       return;
     }
     $canvas.style.display = '';
     if ($empty) $empty.style.display = 'none';
 
-    // 6) 원금 비교선 토글 노출 — 단일 카테고리 + 평가액 모드
+    // v0.7-23 — 측정 모드별 플래그를 토글 노출보다 먼저 계산
+    const isPct = trkMeasure === 'cumRate';
+    const stacked = !isSingle && !isPct;   // 단일 라인 또는 % 모드는 스택 X
+
+    // 6) 토글 노출 (v0.7-23)
+    //    • 원금 비교선: 단일 카테고리 + 평가액 모드
+    //    • 영역 채우기: 다중(=스택) 모드일 때만 — cumRate는 스택이 아니므로 제외
     if ($prinWrap) {
       $prinWrap.style.display = (isSingle && trkMeasure === 'balance') ? 'inline-flex' : 'none';
+    }
+    if ($fillWrap) {
+      $fillWrap.style.display = stacked ? 'inline-flex' : 'none';
     }
 
     // 7) Chart.js 데이터셋
     const labels = ymList.map(ym => ym.slice(2));
     const datasets = [];
-    const isPct = trkMeasure === 'cumRate';
-    const stacked = !isSingle && !isPct;   // 단일 라인 또는 % 모드는 스택 X
 
     if (isSingle) {
       // 단일 카테고리 — 라인 (변형 C)
@@ -13250,6 +13272,7 @@ async function renderDashTrkChart() {
           data: catSeries.get(cat),
           color,
           mode: isPct ? 'line' : 'stack',
+          fill: trkShowFill,   // v0.7-23 — 영역 채우기 체크박스
         }));
       }
     }
@@ -13291,6 +13314,7 @@ async function renderDashTrkChart() {
     console.error('[dashboard] trk chart error', e);
     if ($sub) $sub.textContent = '차트 로드 실패';
     if ($prinWrap) $prinWrap.style.display = 'none';
+    if ($fillWrap) $fillWrap.style.display = 'none';
   }
 }
 
@@ -13311,6 +13335,14 @@ function initTrkChartControls() {
   if ($prin) {
     $prin.addEventListener('change', () => {
       trkShowPrin = $prin.checked;
+      renderDashTrkChart();
+    });
+  }
+  // v0.7-23 — 영역 채우기 토글
+  const $fill = document.getElementById('dash-trk-show-fill');
+  if ($fill) {
+    $fill.addEventListener('change', () => {
+      trkShowFill = $fill.checked;
       renderDashTrkChart();
     });
   }
@@ -13419,7 +13451,8 @@ function getDashChartTokens() {
 // 공통 dataset 스타일 (라인 모드 / 스택 모드 / 단일 라인)
 //   color: 라인 색
 //   mode: 'line' (단일 또는 다중 라인) | 'stack' (영역 스택) | 'dashed' (점선 비교선)
-function makeDashDataset({ label, data, color, mode = 'line', stackId, hidden }) {
+//   fill: stack 모드에서 영역 채우기 끌 수 있음 (기본 true)
+function makeDashDataset({ label, data, color, mode = 'line', stackId, hidden, fill }) {
   const base = {
     label,
     data,
@@ -13429,14 +13462,17 @@ function makeDashDataset({ label, data, color, mode = 'line', stackId, hidden })
     hidden: !!hidden,
   };
   if (mode === 'stack') {
+    // v0.7-23 — 알파 22(0.13)로 통일 (다른 차트와 동일)
+    // fill 끌 수 있도록 옵션화 — 끄면 라인만 보이는 누적 라인 차트가 됨
+    const fillOn = fill !== false;
     return {
       ...base,
-      backgroundColor: color + 'cc',
-      borderWidth: 1.5,
+      backgroundColor: color + '22',
+      borderWidth: 2,
       pointRadius: 2,
       pointHoverRadius: 5,
       pointBackgroundColor: color,
-      fill: true,
+      fill: fillOn,
       stack: stackId || 'main',
     };
   }
