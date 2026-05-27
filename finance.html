@@ -2415,6 +2415,33 @@ body {
   font-weight: 500;
 }
 
+/* 카테고리별 지출 추이 — 필터 칩바 (v0.7-22) */
+/* 칩 색상 dot은 인라인 style로 지정 (트리맵 팔레트 동적 매핑) */
+.dash-cat-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 14px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.dash-cat-filter:empty { display: none; }
+.dash-cat-filter .fchip {
+  font-size: 11px;
+  padding: 3px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: 0.2px;
+}
+.dash-cat-filter .fchip .chip-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  flex-shrink: 0;
+}
+.dash-cat-filter .fchip[data-cat-exp="__all__"] {
+  font-weight: 500;
+}
+
 .dash-trk-summary {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -3897,23 +3924,11 @@ body {
           <canvas id="dash-networth-chart"></canvas>
         </div>
         <div class="dash-chart-empty" id="dash-networth-empty" style="display:none;">
-          스냅샷이 없습니다 — 재무상태 탭에서 잔액을 입력하세요
+          잔액 데이터가 없습니다 — 결산 탭에서 잔액을 입력하세요
         </div>
       </div>
 
-      <!-- 손익 흐름 6개월 (B4) -->
-      <div class="dash-card">
-        <div class="dash-card-head">
-          <div class="dash-card-title">손익 흐름</div>
-          <div class="dash-card-sub" id="dash-pl-sub">최근 6개월</div>
-        </div>
-        <div class="dash-chart-wrap">
-          <canvas id="dash-pl-chart"></canvas>
-        </div>
-        <div class="dash-chart-empty" id="dash-pl-empty" style="display:none;">
-          거래가 없습니다 — 거래 탭에서 거래를 추가하세요
-        </div>
-      </div>
+      <!-- 손익 흐름 차트는 v0.7-22에서 제거 — 손익 탭의 추세 차트와 동일하므로 중복 -->
 
       <!-- 추적자산 추이 차트 (v0.7-9) — 최근 12개월 총 평가액 -->
       <div class="dash-card">
@@ -3926,6 +3941,24 @@ body {
         </div>
         <div class="dash-chart-empty" id="dash-trk-chart-empty" style="display:none;">
           추적 자산 결산이 없습니다
+        </div>
+      </div>
+
+      <!-- 카테고리별 지출 추이 (v0.7-22) — 분석 기간 + 카테고리 다중 선택 -->
+      <div class="dash-card">
+        <div class="dash-card-head">
+          <div class="dash-card-title">카테고리별 지출 추이</div>
+          <div class="dash-card-sub" id="dash-cat-exp-sub">—</div>
+        </div>
+        <!-- 카테고리 필터 칩 — 데이터에 등장하는 카테고리만 동적 생성 -->
+        <div class="dash-cat-filter" id="dash-cat-exp-filter">
+          <!-- chips inserted dynamically -->
+        </div>
+        <div class="dash-chart-wrap">
+          <canvas id="dash-cat-exp-chart"></canvas>
+        </div>
+        <div class="dash-chart-empty" id="dash-cat-exp-empty" style="display:none;">
+          지출 거래가 없습니다
         </div>
       </div>
 
@@ -3995,7 +4028,7 @@ body {
           <div class="dash-doughnut-legend" id="dash-assets-legend"></div>
         </div>
         <div class="dash-chart-empty" id="dash-assets-empty" style="display:none;">
-          스냅샷이 없거나 자산이 0입니다
+          잔액 데이터가 없거나 자산이 0입니다
         </div>
       </div>
 
@@ -5336,8 +5369,8 @@ function activateSubtab($topPane, subtab) {
   // 서브탭 진입 시 후처리 — 대시보드는 기간형 차트만 (v0.7-11)
   if (subtab === 'dashboard') {
     renderDashNetworthChart();
-    renderDashPlChart();
     renderDashTrkChart();       // v0.7-9 — 추적자산 추이 (기간형)
+    renderDashCatExpenseChart(); // v0.7-22 — 카테고리별 지출 추이
     renderDashExpenseChart();
   }
 
@@ -5589,6 +5622,7 @@ async function loadAll() {
       renderEventsList();           // v0.6 — settings 변경 시 다시 정렬 등
       // 카테고리 마스터 변경 — 트리맵(기간형, 대시보드)과 경조사(시점형, 현황) 둘 다 영향
       if (isDashboardVisible()) {
+        renderDashCatExpenseChart();   // v0.7-22 — 카테고리명 변경 반영
         renderDashExpenseChart();
       }
       if (isStatusVisible()) {
@@ -5749,7 +5783,7 @@ function subscribeTransactions() {
       renderDashKpi();     // v0.5 B2 — 가벼우니 항상
       // 기간형 차트는 대시보드 활성일 때 / 시점형은 현황 탭 활성일 때
       if (isDashboardVisible()) {
-        renderDashPlChart();
+        renderDashCatExpenseChart();   // v0.7-22 — 거래 변경 반영
         renderDashExpenseChart();
       }
       if (isStatusVisible()) {
@@ -8836,8 +8870,8 @@ function setMonth(ym) {
   // 대시보드(기간형) — 활성일 때만 재로드
   if (isDashboardVisible()) {
     renderDashNetworthChart();
-    renderDashPlChart();
     renderDashTrkChart();       // v0.7-9 — 추적자산 추이 (기간형)
+    renderDashCatExpenseChart(); // v0.7-22 — 카테고리별 지출 추이
     renderDashExpenseChart();
   }
   // 현황(시점형) — 활성일 때만 재로드
@@ -10782,8 +10816,8 @@ function applyAnalysisPeriod() {
     renderReturns();
   } else if (activeSub === 'dashboard') {
     renderDashNetworthChart();
-    renderDashPlChart();
     renderDashTrkChart();
+    renderDashCatExpenseChart(); // v0.7-22 — 카테고리별 지출 추이
     renderDashExpenseChart();
   } else if (activeSub === 'pl') {
     renderPlBody();
@@ -12566,164 +12600,6 @@ async function renderDashNetworthChart() {
   }
 }
 
-// ── 손익 6개월 차트 (v0.5 B4) ──
-// 데이터: 최근 6개월 거래 fetch → 월별 매출/비용/순이익 집계
-// 차트: 매출/비용 그룹 막대 + 순이익 라인 (혼합)
-let dashPlChart = null;
-
-async function renderDashPlChart() {
-  const $canvas = document.getElementById('dash-pl-chart');
-  const $empty  = document.getElementById('dash-pl-empty');
-  const $sub    = document.getElementById('dash-pl-sub');
-  if (!$canvas || !window.Chart) return;
-  if (!currentUid) return;
-
-  // v0.7-12 — 분석 탭 공유 기간 적용 (없으면 최근 6개월)
-  const ymList = analysisPeriodYms(6, currentMonth);
-  const N = ymList.length;
-  const fromYm = ymList[0];
-  const toYm   = ymList[ymList.length - 1];
-
-  try {
-    // 거래 일괄 fetch — ym in ymList
-    // Firestore 'in' 쿼리는 최대 30개 값. 그보다 길면 전체 fetch + 클라이언트 필터.
-    let txSnap;
-    if (ymList.length <= 30) {
-      txSnap = await getDocs(
-        query(pathTransactions(), where('ym', 'in', ymList))
-      );
-    } else {
-      txSnap = await getDocs(pathTransactions());
-    }
-
-    // 월별 집계
-    const sums = new Map();
-    for (const ym of ymList) sums.set(ym, { revenue: 0, expense: 0 });
-    txSnap.forEach(d => {
-      const t = d.data();
-      const bucket = sums.get(t.ym);
-      if (!bucket) return;
-      const flow = txFlow(t);
-      const amt = Number(t.amount) || 0;
-      if (flow === 'revenue')                            bucket.revenue += amt;
-      else if (flow === 'fixed' || flow === 'variable') bucket.expense += amt;
-    });
-
-    // 차트 데이터
-    const labels = ymList.map(ym => ym.slice(2));   // "26-05"
-    const revenueData = ymList.map(ym => sums.get(ym).revenue);
-    const expenseData = ymList.map(ym => sums.get(ym).expense);
-    const netData     = ymList.map(ym => sums.get(ym).revenue - sums.get(ym).expense);
-
-    // 모든 값이 0이면 empty
-    const hasData = revenueData.some(v => v > 0) || expenseData.some(v => v > 0);
-    if (!hasData) {
-      $canvas.style.display = 'none';
-      $empty.style.display = '';
-      if ($sub) $sub.textContent = '데이터 없음';
-      if (dashPlChart) { dashPlChart.destroy(); dashPlChart = null; }
-      return;
-    }
-    $canvas.style.display = '';
-    $empty.style.display = 'none';
-    if ($sub) $sub.textContent = `${fromYm} ~ ${toYm}`;
-
-    // 색상 토큰
-    const colorText    = getCssVar('--text2')  || '#9aa5b1';
-    const colorGrid    = getCssVar('--border') || 'rgba(255,255,255,0.08)';
-    const colorRevenue = getCssVar('--green')  || '#34d399';
-    const colorExpense = getCssVar('--red')    || '#ef4444';
-    const colorNet     = getCssVar('--accent') || '#4f8fff';
-
-    const datasets = [
-      {
-        type: 'bar',
-        label: '매출',
-        data: revenueData,
-        backgroundColor: colorRevenue + 'aa',
-        borderColor: colorRevenue,
-        borderWidth: 1,
-        order: 2,
-      },
-      {
-        type: 'bar',
-        label: '비용',
-        data: expenseData,
-        backgroundColor: colorExpense + 'aa',
-        borderColor: colorExpense,
-        borderWidth: 1,
-        order: 2,
-      },
-      {
-        type: 'line',
-        label: '순이익',
-        data: netData,
-        borderColor: colorNet,
-        backgroundColor: colorNet + '20',
-        tension: 0.25,
-        pointRadius: 4,
-        pointHoverRadius: 6,
-        borderWidth: 2.5,
-        order: 1,  // 라인이 막대 위에
-      },
-    ];
-
-    if (dashPlChart) { dashPlChart.destroy(); dashPlChart = null; }
-
-    dashPlChart = new Chart($canvas, {
-      data: { labels, datasets },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
-        scales: {
-          x: {
-            ticks: { color: colorText, font: { size: 11 } },
-            grid:  { color: colorGrid, drawBorder: false },
-          },
-          y: {
-            ticks: {
-              color: colorText, font: { size: 11 },
-              callback: (v) => {
-                const abs = Math.abs(v);
-                if (abs >= 100000000) return (v / 100000000).toFixed(1) + '억';
-                if (abs >= 10000)     return (v / 10000).toFixed(0)   + '만';
-                return v.toLocaleString();
-              },
-            },
-            grid: { color: colorGrid, drawBorder: false },
-          },
-        },
-        plugins: {
-          legend: {
-            labels: { color: colorText, font: { size: 12 }, usePointStyle: true, padding: 14 },
-            position: 'top',
-          },
-          tooltip: {
-            backgroundColor: 'rgba(20,22,28,0.95)',
-            titleColor: '#fff',
-            bodyColor: '#cbd2db',
-            borderColor: colorGrid,
-            borderWidth: 1,
-            padding: 10,
-            callbacks: {
-              label: (ctx) => {
-                const v = ctx.parsed.y;
-                if (v == null) return `${ctx.dataset.label}: —`;
-                const sign = ctx.dataset.label === '비용' ? '−' : (v >= 0 ? '+' : '−');
-                return `${ctx.dataset.label}: ${sign}${fmtAmount(Math.abs(v))}`;
-              },
-            },
-          },
-        },
-      },
-    });
-  } catch (e) {
-    console.error('[dashboard] pl chart error', e);
-    if ($sub) $sub.textContent = '차트 로드 실패';
-  }
-}
-
 // ── 자산 구성 도넛 (v0.5 B5 / v0.7-3b monthly SSOT) ──
 // 데이터: 현재 월 monthlyDocs의 자산 잔액 + accounts 마스터 join
 // 표시: 자산 종류(financeCategory)별 합계로 도넛 + 우측 범례 (유동/비유동 그룹화)
@@ -13315,6 +13191,259 @@ const EXPENSE_TREEMAP_COLORS = {
     '#34d399', '#22c55e', '#10b981', '#06b6d4', '#0ea5e9', '#84cc16',
   ],
 };
+
+// ──────────────────────────────────────────────────────
+// 카테고리별 지출 추이 차트 (v0.7-22)
+// ──────────────────────────────────────────────────────
+// 데이터: 분석 기간 transactions의 fixed/variable 거래
+//         (returnsCurrentRange 있으면 그 기간, 없으면 최근 6개월)
+// 표시: 카테고리별 라인 (최대 N개) — 월별 합계
+// 필터: 카테고리 다중 선택. 선택 안 하면 합계 상위 N개 자동 표시
+//
+// 색상: 트리맵과 같은 EXPENSE_TREEMAP_COLORS 팔레트 재사용 (시각적 일관성)
+//
+// 상태:
+//   • catExpFilter === null  : 전체 (상위 N개 자동)
+//   • catExpFilter = Set([..]) : 선택한 카테고리만
+
+let dashCatExpenseChart = null;
+let catExpFilter = null;           // null = 전체 (상위 자동), Set = 선택 카테고리
+let catExpAvailableCats = [];      // 가장 최근 렌더에서 등장한 카테고리 [{cat, flow, total}]
+const CAT_EXP_TOP_N = 5;           // "전체" 모드일 때 상위 몇 개 카테고리를 라인으로 그릴지
+
+// 카테고리 → 일관된 색상 매핑 (trace의 모든 호출에서 같은 카테고리는 같은 색)
+function buildCatExpColorMap(catsWithFlow) {
+  // catsWithFlow: [{ cat, flow }] — 처음 등장한 순서대로 그 flow의 팔레트에서 순환 할당
+  const map = new Map();
+  const counter = { fixed: 0, variable: 0 };
+  for (const { cat, flow } of catsWithFlow) {
+    if (map.has(cat)) continue;
+    const palette = EXPENSE_TREEMAP_COLORS[flow] || EXPENSE_TREEMAP_COLORS.variable;
+    map.set(cat, palette[counter[flow] % palette.length]);
+    counter[flow] = (counter[flow] || 0) + 1;
+  }
+  return map;
+}
+
+async function renderDashCatExpenseChart() {
+  const $canvas = document.getElementById('dash-cat-exp-chart');
+  const $empty  = document.getElementById('dash-cat-exp-empty');
+  const $sub    = document.getElementById('dash-cat-exp-sub');
+  if (!$canvas || !window.Chart) return;
+  if (!currentUid) return;
+
+  try {
+    // 1) 기간 결정 — 트리맵과 동일한 로직 (분석 캐시 활용)
+    let txData;
+    let modeLabel;
+    let ymList;
+    if (returnsCurrentRange) {
+      const { fromYm, toYm } = returnsCurrentRange;
+      txData = await loadAnalysisTransactions(fromYm, toYm);
+      ymList = buildYmList(fromYm, toYm);
+      modeLabel = (fromYm === toYm) ? fromYm : `${fromYm} ~ ${toYm}`;
+    } else {
+      // 분석 캐시 없음 → 분석 탭 기본 기간(최근 6개월)을 사용해 fetch
+      ymList = analysisPeriodYms(6, currentMonth);
+      const fromYm = ymList[0];
+      const toYm   = ymList[ymList.length - 1];
+      txData = await loadAnalysisTransactions(fromYm, toYm);
+      modeLabel = `${fromYm} ~ ${toYm}`;
+    }
+
+    // 2) 카테고리별 월별 합계 집계 (fixed/variable만)
+    //    catTotals: Map<cat, { flow, monthSums: Map<ym, sum>, total }>
+    const catTotals = new Map();
+    for (const t of (txData || [])) {
+      const flow = txFlow(t);
+      if (flow !== 'fixed' && flow !== 'variable') continue;
+      const cat = t.category || '(분류 없음)';
+      const ym  = t.ym;
+      if (!ymList.includes(ym)) continue;
+      const amt = Number(t.amount) || 0;
+      if (!catTotals.has(cat)) {
+        catTotals.set(cat, { flow, monthSums: new Map(), total: 0 });
+      }
+      const entry = catTotals.get(cat);
+      entry.monthSums.set(ym, (entry.monthSums.get(ym) || 0) + amt);
+      entry.total += amt;
+    }
+
+    // 3) 가용 카테고리 — 총합 큰 순서로 정렬 (트리맵 색상 매핑은 등장 순서로 일관)
+    const cats = Array.from(catTotals.entries())
+      .map(([cat, v]) => ({ cat, flow: v.flow, total: v.total }))
+      .sort((a, b) => b.total - a.total);
+    catExpAvailableCats = cats;
+
+    // 4) 필터 상태 보정 — 가용 목록에 없는 카테고리는 제외
+    if (catExpFilter) {
+      const validCats = new Set(cats.map(c => c.cat));
+      const valid = new Set([...catExpFilter].filter(c => validCats.has(c)));
+      catExpFilter = valid.size === 0 ? null : valid;
+    }
+
+    // 5) 필터 칩 렌더 (색상 매핑 일관성 위해 항상 전체 cats로 빌드)
+    const colorMap = buildCatExpColorMap(cats);
+    renderCatExpFilterChips(cats, colorMap);
+
+    // 6) 데이터 없음 처리
+    if (cats.length === 0) {
+      if (dashCatExpenseChart) { dashCatExpenseChart.destroy(); dashCatExpenseChart = null; }
+      $canvas.style.display = 'none';
+      if ($empty) { $empty.style.display = ''; $empty.textContent = '지출 거래가 없습니다'; }
+      if ($sub) $sub.textContent = `${modeLabel} · 데이터 없음`;
+      return;
+    }
+    $canvas.style.display = '';
+    if ($empty) $empty.style.display = 'none';
+
+    // 7) 그릴 카테고리 결정
+    //    • 필터 있음 → 그것만
+    //    • 필터 없음 → 상위 N개
+    let drawCats;
+    if (catExpFilter) {
+      drawCats = cats.filter(c => catExpFilter.has(c.cat));
+    } else {
+      drawCats = cats.slice(0, CAT_EXP_TOP_N);
+    }
+
+    if (drawCats.length === 0) {
+      if (dashCatExpenseChart) { dashCatExpenseChart.destroy(); dashCatExpenseChart = null; }
+      $canvas.style.display = 'none';
+      if ($empty) { $empty.style.display = ''; $empty.textContent = '선택된 카테고리에 해당하는 거래가 없습니다'; }
+      if ($sub) $sub.textContent = `${modeLabel} · 0/${cats.length}`;
+      return;
+    }
+
+    // 8) 차트 데이터셋 빌드
+    const labels = ymList.map(ym => ym.slice(2));   // "26-05"
+    const datasets = drawCats.map(({ cat }) => {
+      const entry = catTotals.get(cat);
+      const data = ymList.map(ym => entry.monthSums.get(ym) || 0);
+      const color = colorMap.get(cat) || '#9aa5b1';
+      return {
+        label: cat,
+        data,
+        borderColor: color,
+        backgroundColor: color + '22',
+        borderWidth: 2,
+        tension: 0.3,
+        pointRadius: 3,
+        pointHoverRadius: 5,
+        pointBackgroundColor: color,
+      };
+    });
+
+    // 9) Chart.js 옵션 — 토큰
+    if (dashCatExpenseChart) dashCatExpenseChart.destroy();
+
+    const css = getComputedStyle(document.documentElement);
+    const colorText  = (css.getPropertyValue('--text2')  || '').trim() || '#9aa5b1';
+    const colorGrid  = (css.getPropertyValue('--border') || '').trim() || 'rgba(255,255,255,0.08)';
+
+    dashCatExpenseChart = new Chart($canvas.getContext('2d'), {
+      type: 'line',
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },   // 필터 칩이 범례 역할
+          tooltip: {
+            backgroundColor: 'rgba(20,22,28,0.95)',
+            titleColor: '#fff',
+            bodyColor: '#cbd2db',
+            borderColor: colorGrid,
+            borderWidth: 1,
+            padding: 10,
+            callbacks: {
+              label: (ctx) => `${ctx.dataset.label}: ${fmtAmount(ctx.parsed.y || 0)}`,
+            },
+          },
+        },
+        scales: {
+          x: {
+            ticks: { color: colorText, font: { size: 11 } },
+            grid:  { color: colorGrid, drawBorder: false },
+          },
+          y: {
+            beginAtZero: true,
+            ticks: {
+              color: colorText, font: { size: 11 },
+              callback: (v) => {
+                const abs = Math.abs(v);
+                if (abs >= 100000000) return (v / 100000000).toFixed(1) + '억';
+                if (abs >= 10000)     return (v / 10000).toFixed(0)   + '만';
+                return v.toLocaleString();
+              },
+            },
+            grid: { color: colorGrid, drawBorder: false },
+          },
+        },
+      },
+    });
+
+    // 10) 서브 라벨
+    if ($sub) {
+      const totalSum = drawCats.reduce((s, c) => s + c.total, 0);
+      const filterInfo = catExpFilter
+        ? ` · ${drawCats.length}/${cats.length} 카테고리`
+        : (cats.length > CAT_EXP_TOP_N ? ` · 상위 ${CAT_EXP_TOP_N}/${cats.length}` : '');
+      $sub.textContent = `${modeLabel} · ${fmtAmount(totalSum)}${filterInfo}`;
+    }
+  } catch (e) {
+    console.error('[dashboard] cat-expense chart error', e);
+    if ($sub) $sub.textContent = '차트 로드 실패';
+  }
+}
+
+// 필터 칩 렌더 — 트랜시버 (renderDashCatExpenseChart에서 호출)
+function renderCatExpFilterChips(cats, colorMap) {
+  const $filter = document.getElementById('dash-cat-exp-filter');
+  if (!$filter) return;
+  if (!cats || cats.length === 0) {
+    $filter.innerHTML = '';
+    return;
+  }
+
+  // "전체" 활성 = catExpFilter === null
+  const allActive = catExpFilter === null;
+  let html = `<button type="button" class="fchip ${allActive ? 'active' : ''}" data-cat-exp="__all__">전체</button>`;
+
+  for (const { cat } of cats) {
+    const active = catExpFilter ? catExpFilter.has(cat) : false;
+    const color  = colorMap.get(cat) || '#9aa5b1';
+    html += `<button type="button" class="fchip ${active ? 'active' : ''}" data-cat-exp="${escapeHtml(cat)}">
+      <span class="chip-dot" style="background:${color};"></span>${escapeHtml(cat)}
+    </button>`;
+  }
+  $filter.innerHTML = html;
+
+  // 클릭 핸들러
+  $filter.querySelectorAll('[data-cat-exp]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const cat = btn.dataset.catExp;
+      if (cat === '__all__') {
+        catExpFilter = null;
+      } else {
+        if (catExpFilter === null) {
+          // "전체" 상태에서 한 칩 클릭 → 그것만 보기
+          catExpFilter = new Set([cat]);
+        } else {
+          const next = new Set(catExpFilter);
+          if (next.has(cat)) next.delete(cat);
+          else next.add(cat);
+          // 비면 자동으로 "전체"로 복귀
+          if (next.size === 0) catExpFilter = null;
+          else catExpFilter = next;
+        }
+      }
+      // 차트 재렌더 (대시보드 활성일 때만 의미 있음)
+      renderDashCatExpenseChart();
+    });
+  });
+}
 
 async function renderDashExpenseChart() {
   const $canvas = document.getElementById('dash-expense-chart');
