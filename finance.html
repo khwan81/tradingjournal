@@ -9626,10 +9626,11 @@ async function loadAnalysisTransactions(fromYm, toYm) {
 //   • 데이터가 currentMonth보다 미래까지 있어도 toYm은 currentMonth 유지
 // v0.7-12d: 단일월 모드 허용 (fromYm = toYm OK).
 //   손익/트리맵은 단일월에서도 동작. 수익률만 2개월 이상 필요 (그쪽에서 안내).
-// v0.7-12f: YTD/1M/3M/6M는 의미 우선 (데이터 유무 무시).
-//   • YTD = 해당 년도 1월 ~ currentMonth (데이터 없는 달은 0 합산/effectiveFromYm fallback)
-//   • 1M/3M/6M = currentMonth - N개월 ~ currentMonth (이전부터 그렇게 동작)
-//   • ALL은 의미가 "전체 가능 기간"이므로 데이터 첫 달부터 (clamp 유지)
+// v0.7-12i: 1M/3M/6M 의미 정확화 — "N개월치 데이터" (N개의 달).
+//   • 1M = currentMonth 단일월 (1개월치)
+//   • 3M = currentMonth - 2 ~ currentMonth (3개월치)
+//   • 6M = currentMonth - 5 ~ currentMonth (6개월치)
+//   • 이전엔 shiftYm(-N)으로 N+1개월치였음 (off-by-one)
 function presetRange(preset) {
   // toYm = 글로벌 currentMonth (사용자가 보고 있는 시점)
   const toYm = currentMonth;
@@ -9637,9 +9638,9 @@ function presetRange(preset) {
 
   let fromYm;
   switch (preset) {
-    case '1M':  fromYm = shiftYm(toYm, -1);  break;
-    case '3M':  fromYm = shiftYm(toYm, -3);  break;
-    case '6M':  fromYm = shiftYm(toYm, -6);  break;
+    case '1M':  fromYm = toYm;                  break;  // 단일월 = 1개월치
+    case '3M':  fromYm = shiftYm(toYm, -2);     break;  // 3개월치
+    case '6M':  fromYm = shiftYm(toYm, -5);     break;  // 6개월치
     case 'YTD': {
       const [y] = toYm.split('-');
       fromYm = `${y}-01`;
