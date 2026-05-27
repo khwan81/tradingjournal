@@ -3986,6 +3986,10 @@ body {
             <span>원금 비교선</span>
           </label>
         </div>
+        <!-- 카테고리 필터 칩 (v0.7-22) — 현황 탭 칩과 독립적으로 동작 -->
+        <div class="dash-trk-filter" id="dash-trk-chart-filter">
+          <!-- chips inserted dynamically -->
+        </div>
         <div class="dash-chart-wrap">
           <canvas id="dash-trk-chart"></canvas>
         </div>
@@ -13105,15 +13109,20 @@ function svCatColorVar(cat) {
 // ─── 추이 차트 (v0.7-22 — 카테고리별 분해 + 측정 토글) ─────────────
 // 동작:
 //   • 측정: balance (평가액) / cumReturn (누적수익) / cumRate (수익률%)
-//   • 카테고리 필터 (trkFilterCats — 현황 카드와 공유):
+//   • 카테고리 필터 (trkChartFilterCats — 차트 전용, 현황과 분리):
 //       - 단일 선택  → 그 카테고리의 라인 1개 (+ balance 모드일 때 원금 점선)
 //       - 전체/다중  → 카테고리별 스택 영역 (cumRate는 % 합산이 무의미하므로 라인)
 //   • 원금 비교선 토글 → 단일 카테고리 + 평가액 모드일 때만 노출
 //
 // 데이터: monthly 도큐먼트 (balanceKrw / principal / cumReturn / cumReturnRate)
+//
+// v0.7-22 — 카테고리 필터는 차트 전용 상태(trkChartFilterCats)를 가짐.
+//           현황 탭 추적자산 카드의 trkFilterCats와 분리되어 양쪽이 서로 영향을 안 줌.
 let dashTrkChart = null;
 let trkShowPrin = true;       // 원금 비교선 표시 (체크박스 상태)
 let trkMeasure  = 'balance';  // 'balance' | 'cumReturn' | 'cumRate'
+let trkChartFilterCats = null;        // null = 전체, Set = 선택된 카테고리
+let trkChartAvailableCats = [];       // 칩 렌더용 (필터 적용 전 가용 카테고리)
 
 async function renderDashTrkChart() {
   const $canvas = document.getElementById('dash-trk-chart');
@@ -13129,27 +13138,45 @@ async function renderDashTrkChart() {
   const toYm   = ymList[ymList.length - 1];
 
   try {
-    // 1) monthly 전체 fetch → 추적자산만 + 카테고리 필터 적용
+    // 1) monthly 전체 fetch → 추적자산만 + 카테고리별 ym 그룹핑 (필터 적용 전)
     const monthlySnap = await getDocs(pathMonthly());
     // 카테고리 → ym → [docs] 2단계 그룹
-    const catYmDocs = new Map();   // cat → Map<ym, docs[]>
+    const catYmDocsAll = new Map();   // cat → Map<ym, docs[]> (필터 전체)
     monthlySnap.forEach(d => {
       const data = { id: d.id, ...d.data() };
       if (!data.ym || !data.trackPerformance) return;
       const cat = data.assetsCategory || '기타';
-      // v0.7-9c — 카테고리 필터 적용
-      if (trkFilterCats && !trkFilterCats.has(cat)) return;
-      if (!catYmDocs.has(cat)) catYmDocs.set(cat, new Map());
-      const ymMap = catYmDocs.get(cat);
+      if (!catYmDocsAll.has(cat)) catYmDocsAll.set(cat, new Map());
+      const ymMap = catYmDocsAll.get(cat);
       if (!ymMap.has(data.ym)) ymMap.set(data.ym, []);
       ymMap.get(data.ym).push(data);
     });
 
-    // 2) 표시할 카테고리 목록 — 데이터에 등장한 카테고리, 정해진 순서
-    const presentCats = [
-      ...DEFAULT_ASSET_CATEGORIES.filter(c => catYmDocs.has(c)),
-      ...[...catYmDocs.keys()].filter(c => !DEFAULT_ASSET_CATEGORIES.includes(c)).sort(),
+    // 1b) 가용 카테고리 — 데이터에 등장한 모든 카테고리 (정해진 순서 + 기타)
+    //     칩 렌더는 항상 이걸로 함 (필터 선택 후에도 다른 칩이 사라지지 않도록)
+    trkChartAvailableCats = [
+      ...DEFAULT_ASSET_CATEGORIES.filter(c => catYmDocsAll.has(c)),
+      ...[...catYmDocsAll.keys()].filter(c => !DEFAULT_ASSET_CATEGORIES.includes(c)).sort(),
     ];
+
+    // 1c) 필터 상태 보정 — 가용 목록에 없는 카테고리는 제외, 비면 null
+    if (trkChartFilterCats) {
+      const valid = new Set([...trkChartFilterCats].filter(c => trkChartAvailableCats.includes(c)));
+      trkChartFilterCats = valid.size === 0 ? null : valid;
+    }
+
+    // 1d) 칩바 렌더 (트랜시버)
+    renderTrkChartFilterChips();
+
+    // 1e) 필터 적용된 카테고리별 그룹
+    const catYmDocs = new Map();
+    for (const cat of trkChartAvailableCats) {
+      if (trkChartFilterCats && !trkChartFilterCats.has(cat)) continue;
+      catYmDocs.set(cat, catYmDocsAll.get(cat));
+    }
+
+    // 2) 표시할 카테고리 목록 — 필터 적용 후
+    const presentCats = [...catYmDocs.keys()];
     const isSingle = presentCats.length === 1;
     const showPrinLine = isSingle && trkMeasure === 'balance' && trkShowPrin;
 
@@ -13197,7 +13224,7 @@ async function renderDashTrkChart() {
       $canvas.style.display = 'none';
       if ($empty) {
         $empty.style.display = '';
-        $empty.textContent = trkFilterCats
+        $empty.textContent = trkChartFilterCats
           ? '선택된 카테고리에 해당하는 결산이 없습니다'
           : '추적 자산 결산이 없습니다';
       }
@@ -13337,8 +13364,8 @@ async function renderDashTrkChart() {
     // 9) 서브 라벨
     if ($sub) {
       const mLabel = { balance: '평가액', cumReturn: '누적수익', cumRate: '수익률%' }[trkMeasure];
-      const filterInfo = trkFilterCats
-        ? ` · ${trkFilterCats.size}/${trkAvailableCats.length} 카테고리`
+      const filterInfo = trkChartFilterCats
+        ? ` · ${trkChartFilterCats.size}/${trkChartAvailableCats.length} 카테고리`
         : ` · ${presentCats.length}개 카테고리`;
       $sub.textContent = `${fromYm} ~ ${toYm} · ${mLabel}${filterInfo}`;
     }
@@ -13371,6 +13398,55 @@ function initTrkChartControls() {
   }
 }
 initTrkChartControls();
+
+// 차트 전용 카테고리 칩 렌더 (v0.7-22)
+// 현황 탭의 renderTrkFilterChips와 같은 패턴이지만, 자체 상태(trkChartFilterCats)와
+// 자체 data 속성(data-trk-chart-cat)을 사용해 완전히 분리.
+function renderTrkChartFilterChips() {
+  const $filter = document.getElementById('dash-trk-chart-filter');
+  if (!$filter) return;
+  if (trkChartAvailableCats.length === 0) {
+    $filter.innerHTML = '';
+    return;
+  }
+
+  // "전체" 활성 = trkChartFilterCats === null
+  const allActive = trkChartFilterCats === null;
+  let html = `<button type="button" class="fchip ${allActive ? 'active' : ''}" data-trk-chart-cat="__all__">전체</button>`;
+  for (const cat of trkChartAvailableCats) {
+    const active = trkChartFilterCats ? trkChartFilterCats.has(cat) : true;
+    html += `<button type="button" class="fchip ${active ? 'active' : ''}" data-trk-chart-cat="${escapeHtml(cat)}">
+      <span class="chip-dot ${svCatClass(cat)}"></span>${escapeHtml(cat)}
+    </button>`;
+  }
+  $filter.innerHTML = html;
+
+  // 클릭 핸들러 — 요소가 매번 재생성되므로 직접 바인딩
+  $filter.querySelectorAll('[data-trk-chart-cat]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const cat = btn.dataset.trkChartCat;
+      if (cat === '__all__') {
+        trkChartFilterCats = null;
+      } else {
+        if (trkChartFilterCats === null) {
+          // "전체" 상태에서 한 칩 클릭 → 그것만 보기
+          trkChartFilterCats = new Set([cat]);
+        } else {
+          const next = new Set(trkChartFilterCats);
+          if (next.has(cat)) next.delete(cat);
+          else next.add(cat);
+          if (next.size === 0 || next.size === trkChartAvailableCats.length) {
+            trkChartFilterCats = null;
+          } else {
+            trkChartFilterCats = next;
+          }
+        }
+      }
+      // 차트 재렌더 (칩바도 안에서 다시 그려짐)
+      renderDashTrkChart();
+    });
+  });
+}
 
 // ── 지출 트리맵 (v0.5 B6) ──
 // 그룹 모드:
