@@ -11018,11 +11018,15 @@ async function saveSavingsEntry() {
     await setDoc(pathMonthlyDoc(ym, accId), data, { merge: true });
 
     // v0.7-4 — 과거 월 수정이면 그 이후 월들 자동 재계산
-    // 미래 월 도큐먼트가 있는지 빠르게 검사 (이 계좌의 monthly 도큐먼트 중 ym > 저장ym)
-    const hasFutureSnap = await getDocs(
-      query(pathMonthly(), where('accountId', '==', accId), where('ym', '>', ym))
+    // 미래 월 도큐먼트가 있는지 검사 (이 계좌의 monthly 도큐먼트 중 ym > 저장ym)
+    // 인덱스 회피: accountId 단일 필터로 fetch 후 클라이언트에서 ym 필터링
+    const accDocsSnap = await getDocs(
+      query(pathMonthly(), where('accountId', '==', accId))
     );
-    const futureN = hasFutureSnap.size;
+    let futureN = 0;
+    accDocsSnap.forEach(d => {
+      if ((d.data().ym || '') > ym) futureN++;
+    });
 
     closeOv('ov-savings');
     if (futureN > 0) {
@@ -11067,11 +11071,12 @@ async function saveSavingsEntry() {
 async function recalculateChain(accountId, startFromYm) {
   if (!currentUid || !accountId) return 0;
 
-  // 1) 그 계좌의 모든 결산 fetch (ym 오름차순)
+  // 1) 그 계좌의 모든 결산 fetch — 인덱스 회피를 위해 accountId만 필터, 정렬은 클라이언트에서
   const snap = await getDocs(
-    query(pathMonthly(), where('accountId', '==', accountId), orderBy('ym', 'asc'))
+    query(pathMonthly(), where('accountId', '==', accountId))
   );
   const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  all.sort((a, b) => String(a.ym || '').localeCompare(String(b.ym || '')));
   if (all.length === 0) return 0;
   if (all.length === 1) return 0;   // 결산 1개면 체인 만들 게 없음
 
