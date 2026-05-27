@@ -1043,6 +1043,71 @@ body {
   }
 }
 
+/* v0.7-16 — 알림 스택 (도배 방지)
+ *   거래 탭 상단의 알림바 4개를 우선순위 정렬해서 1개씩만 표시 (모바일)
+ *   또는 다 펼쳐서 표시 (PC). 토글로 사용자가 전환 가능.
+ *   각 알림바는 기존 id/class 그대로 — JS 핸들러 호환. */
+.alert-stack {
+  margin-bottom: 12px;
+}
+.alert-stack-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.alert-stack-body .alert-item {
+  margin-bottom: 0;   /* 기존 알림바의 margin-bottom 무력화 — gap으로 통일 */
+}
+
+/* 접힘 상태 — 첫 번째 보이는 알림만 노출 */
+.alert-stack[data-collapsed="true"] .alert-stack-body .alert-item.show ~ .alert-item.show {
+  display: none !important;
+}
+
+/* 토글 버튼 */
+.alert-stack-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 6px;
+  padding: 7px 12px;
+  background: transparent;
+  border: 1px dashed var(--border2);
+  border-radius: 6px;
+  color: var(--text2);
+  font-size: 11.5px;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.alert-stack-toggle:hover {
+  background: var(--bg3);
+  color: var(--text);
+  border-color: rgba(255,255,255,0.18);
+}
+.alert-stack-toggle .ast-dots {
+  display: inline-flex;
+  gap: 3px;
+}
+.alert-stack-toggle .ast-dots .ast-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  display: inline-block;
+}
+.alert-stack-toggle .ast-dot.amber  { background: var(--amber); }
+.alert-stack-toggle .ast-dot.info   { background: var(--accent); }
+.alert-stack-toggle .ast-dot.warn   { background: #fbbf24; }
+.alert-stack-toggle .ast-dot.danger { background: var(--red); }
+.alert-stack-toggle .ast-dot.pink   { background: #ec4899; }
+.alert-stack-toggle .ast-caret {
+  font-size: 10px;
+  transition: transform .15s;
+}
+.alert-stack[data-collapsed="false"] .alert-stack-toggle .ast-caret {
+  transform: rotate(180deg);
+}
+
 /* 반복지출 마스터 리스트 행 */
 .rec-row {
   display: flex; justify-content: space-between; align-items: center;
@@ -3348,40 +3413,57 @@ body {
       </div>
     </div>
 
-    <!-- 미결제 알림바 -->
-    <div class="unpaid-bar" id="unpaid-bar">
-      <div class="ub-left">
-        <span class="ub-icon" aria-hidden="true"></span>
-        <span class="ub-text">미결제 카드 거래 <span class="ub-amt" id="unpaid-amt">0</span></span>
-      </div>
-      <button type="button" class="ub-cta" id="btn-bulk-open">일괄결제 처리</button>
-    </div>
+    <!-- ═══ 알림 스택 (v0.7-16) ═══
+         4개 알림바를 우선순위 정렬해서 1개씩 표시. PC는 펼침 기본 / 모바일은 접힘 기본.
+         각 알림바의 id/class는 유지하여 기존 JS 핸들러 호환. -->
+    <div class="alert-stack" id="alert-stack" data-collapsed="auto">
+      <!-- 정렬은 JS가 .alert-stack-body 안에서 동적으로 reorder -->
+      <div class="alert-stack-body" id="alert-stack-body">
 
-    <!-- 반복지출 알림바 (v0.2-3) -->
-    <div class="recurring-bar" id="recurring-bar">
-      <div class="rb-left">
-        <span class="rb-icon" aria-hidden="true"></span>
-        <span class="rb-text">이번 달 미생성 반복지출 <span class="rb-count" id="recurring-count">0</span>건</span>
-      </div>
-      <button type="button" class="rb-cta" id="btn-recurring-generate">일괄 생성</button>
-    </div>
+        <!-- 미결제 알림바 -->
+        <div class="unpaid-bar alert-item" id="unpaid-bar">
+          <div class="ub-left">
+            <span class="ub-icon" aria-hidden="true"></span>
+            <span class="ub-text">미결제 카드 거래 <span class="ub-amt" id="unpaid-amt">0</span></span>
+          </div>
+          <button type="button" class="ub-cta" id="btn-bulk-open">일괄결제 처리</button>
+        </div>
 
-    <!-- 예산 알림바 (v0.4 A7) -->
-    <div class="budget-bar" id="budget-bar">
-      <div class="bb-left">
-        <span class="bb-icon" aria-hidden="true"></span>
-        <span class="bb-text" id="budget-bar-text">예산 알림</span>
-      </div>
-      <button type="button" class="bb-cta" id="btn-budget-goto">예산 보기</button>
-    </div>
+        <!-- 반복지출 알림바 (v0.2-3) -->
+        <div class="recurring-bar alert-item" id="recurring-bar">
+          <div class="rb-left">
+            <span class="rb-icon" aria-hidden="true"></span>
+            <span class="rb-text">이번 달 미생성 반복지출 <span class="rb-count" id="recurring-count">0</span>건</span>
+          </div>
+          <button type="button" class="rb-cta" id="btn-recurring-generate">일괄 생성</button>
+        </div>
 
-    <!-- 경조사 알림바 (v0.6 / v0.7-15 처리 모드 추가) -->
-    <div class="event-bar" id="event-bar" data-mode="saving">
-      <div class="eb-left">
-        <span class="eb-icon" aria-hidden="true"></span>
-        <span class="eb-text" id="event-bar-text">경조사 적립</span>
+        <!-- 예산 알림바 (v0.4 A7) -->
+        <div class="budget-bar alert-item" id="budget-bar">
+          <div class="bb-left">
+            <span class="bb-icon" aria-hidden="true"></span>
+            <span class="bb-text" id="budget-bar-text">예산 알림</span>
+          </div>
+          <button type="button" class="bb-cta" id="btn-budget-goto">예산 보기</button>
+        </div>
+
+        <!-- 경조사 알림바 (v0.6 / v0.7-15 처리 모드 추가) -->
+        <div class="event-bar alert-item" id="event-bar" data-mode="saving">
+          <div class="eb-left">
+            <span class="eb-icon" aria-hidden="true"></span>
+            <span class="eb-text" id="event-bar-text">경조사 적립</span>
+          </div>
+          <button type="button" class="eb-cta" id="btn-event-add-saving">+ 적립 거래</button>
+        </div>
+
       </div>
-      <button type="button" class="eb-cta" id="btn-event-add-saving">+ 적립 거래</button>
+
+      <!-- 토글 (1개 초과 표시될 때만 표시) -->
+      <button type="button" class="alert-stack-toggle" id="alert-stack-toggle" aria-expanded="false" style="display:none;">
+        <span class="ast-text" id="alert-stack-toggle-text">+ 알림 0건 더보기</span>
+        <span class="ast-dots" id="alert-stack-toggle-dots"></span>
+        <span class="ast-caret" aria-hidden="true">▾</span>
+      </button>
     </div>
 
     <!-- 필터 칩 -->
@@ -5543,6 +5625,7 @@ function renderBudgetBar() {
   // 표시할 알림이 없으면 숨김
   if (over.length === 0 && warn.length === 0 && noBudget.length === 0) {
     $bar.classList.remove('show', 'severe');
+    syncAlertStack();
     return;
   }
 
@@ -5567,6 +5650,7 @@ function renderBudgetBar() {
   document.getElementById('budget-bar-text').innerHTML = parts.join(' · ');
   $bar.classList.add('show');
   $bar.classList.toggle('severe', over.length > 0);
+  syncAlertStack();
 }
 
 // "예산 보기" 버튼 → 계획 탭의 예산 서브탭으로 이동 (v0.7)
@@ -7242,10 +7326,12 @@ function renderRecurringBar() {
   const pending = getRecurringPendingForCurrentMonth();
   if (pending.length === 0) {
     $bar.classList.remove('show');
+    syncAlertStack();
     return;
   }
   document.getElementById('recurring-count').textContent = pending.length;
   $bar.classList.add('show');
+  syncAlertStack();
 }
 
 // ── 일괄 생성 ─────────────────────────────────────────
@@ -8448,6 +8534,7 @@ function renderUnpaidBar() {
     document.getElementById('unpaid-amt').textContent = fmtAmount(total) + '원';
     $bar.classList.add('show');
   }
+  syncAlertStack();
   // 카드 미지급금이 표 본문에도 들어가므로 같이 갱신
   // (단, 본문이 아직 안 그려졌으면 skip)
   if (document.getElementById('bs-body')) renderBsBody();
@@ -8464,7 +8551,7 @@ function renderEventBar() {
   const $text = document.getElementById('event-bar-text');
   const $cta  = document.getElementById('btn-event-add-saving');
 
-  if (!eventsMasters.length) { $bar.classList.remove('show'); return; }
+  if (!eventsMasters.length) { $bar.classList.remove('show'); syncAlertStack(); return; }
 
   const today = currentMonth;
   const [, curM] = today.split('-').map(Number);
@@ -8493,6 +8580,7 @@ function renderEventBar() {
     // 단건일 때만 id를 저장 — 다건은 클릭 시 선택 UI 또는 첫번째 우선
     $bar.dataset.processEventId = pendingProcess.length === 1 ? pendingProcess[0].id : '';
     $bar.classList.add('show');
+    syncAlertStack();
     return;
   }
 
@@ -8505,6 +8593,7 @@ function renderEventBar() {
   if (totalRec <= 0) {
     $bar.classList.remove('show');
     $bar.dataset.mode = 'saving';
+    syncAlertStack();
     return;
   }
 
@@ -8517,6 +8606,7 @@ function renderEventBar() {
   if (shortfall <= 0) {
     $bar.classList.remove('show');
     $bar.dataset.mode = 'saving';
+    syncAlertStack();
     return;
   }
 
@@ -8526,7 +8616,119 @@ function renderEventBar() {
   $bar.dataset.mode = 'saving';
   $bar.dataset.processEventId = '';
   $bar.classList.add('show');
+  syncAlertStack();
 }
+
+// ──────────────────────────────────────────────────────
+// v0.7-16 — 알림 스택 (도배 방지)
+//   각 알림바 렌더 함수가 끝난 후 호출. 우선순위 정렬 + 토글 UI 동기화.
+//   PC(min-width 701px)는 펼침 기본, 모바일은 접힘 기본.
+// ──────────────────────────────────────────────────────
+
+// 우선순위: 숫자 작을수록 위
+//   1. 예산 초과 severe (danger 톤)
+//   2. 경조사 처리 모드 (행사월)
+//   3. 미결제 카드 거래
+//   4. 반복지출 미생성
+//   5. 예산 일반 경고
+//   6. 경조사 적립 모드
+function alertItemPriority($item) {
+  const id = $item.id;
+  if (id === 'budget-bar') {
+    return $item.classList.contains('severe') ? 1 : 5;
+  }
+  if (id === 'event-bar') {
+    return $item.dataset.mode === 'process' ? 2 : 6;
+  }
+  if (id === 'unpaid-bar')    return 3;
+  if (id === 'recurring-bar') return 4;
+  return 99;
+}
+
+// 알림 아이템의 톤(토글 dots에 표시할 색)
+function alertItemTone($item) {
+  const id = $item.id;
+  if (id === 'budget-bar')    return $item.classList.contains('severe') ? 'danger' : 'warn';
+  if (id === 'event-bar')     return 'pink';
+  if (id === 'unpaid-bar')    return 'amber';
+  if (id === 'recurring-bar') return 'info';
+  return 'info';
+}
+
+let _alertStackInitDone = false;
+
+function syncAlertStack() {
+  const $stack = document.getElementById('alert-stack');
+  const $body  = document.getElementById('alert-stack-body');
+  const $toggle = document.getElementById('alert-stack-toggle');
+  if (!$stack || !$body || !$toggle) return;
+
+  // 1) 활성(.show) 알림 모으기 + 우선순위 정렬
+  const $items = Array.from($body.querySelectorAll('.alert-item'));
+  const $active = $items
+    .filter(el => el.classList.contains('show'))
+    .sort((a, b) => alertItemPriority(a) - alertItemPriority(b));
+
+  // 2) DOM 재배치 (정렬 순서대로) — append하면 자동으로 마지막으로 이동
+  $active.forEach(el => $body.appendChild(el));
+  // 비활성도 뒤로 (보이지는 않지만 잔존)
+  $items.filter(el => !el.classList.contains('show')).forEach(el => $body.appendChild(el));
+
+  // 3) 토글 UI 업데이트
+  const total = $active.length;
+  if (total <= 1) {
+    $toggle.style.display = 'none';
+    $stack.dataset.collapsed = 'false';   // 1개 이하면 접힘 의미 없음
+    return;
+  }
+
+  // 4) 초기 1회 — 디바이스에 따라 기본값 결정 (사용자 토글한 적 없으면)
+  if (!_alertStackInitDone) {
+    _alertStackInitDone = true;
+    const isMobile = window.matchMedia('(max-width: 700px)').matches;
+    $stack.dataset.collapsed = isMobile ? 'true' : 'false';
+    $toggle.setAttribute('aria-expanded', String(!isMobile));
+  }
+
+  // 5) 토글 텍스트/dots — 숨겨진 알림들의 톤 표시
+  const hiddenCount = total - 1;
+  const $text = document.getElementById('alert-stack-toggle-text');
+  const $dots = document.getElementById('alert-stack-toggle-dots');
+  const isCollapsed = $stack.dataset.collapsed === 'true';
+  if ($text) {
+    $text.textContent = isCollapsed
+      ? `+ 알림 ${hiddenCount}건 더보기`
+      : '알림 접기';
+  }
+  if ($dots) {
+    if (isCollapsed) {
+      const dotsHtml = $active.slice(1).map(el =>
+        `<span class="ast-dot ${alertItemTone(el)}"></span>`
+      ).join('');
+      $dots.innerHTML = dotsHtml;
+      $dots.style.display = '';
+    } else {
+      $dots.style.display = 'none';
+    }
+  }
+
+  $toggle.style.display = 'flex';
+}
+
+// 토글 핸들러 — 사용자 클릭 시 collapsed 반전
+function bindAlertStackToggle() {
+  const $toggle = document.getElementById('alert-stack-toggle');
+  const $stack  = document.getElementById('alert-stack');
+  if (!$toggle || !$stack) return;
+  $toggle.addEventListener('click', () => {
+    const cur = $stack.dataset.collapsed === 'true';
+    $stack.dataset.collapsed = cur ? 'false' : 'true';
+    $toggle.setAttribute('aria-expanded', String(cur));   // 펼침 = aria true
+    syncAlertStack();   // 텍스트/dots 즉시 갱신
+  });
+}
+// 초기 바인딩 (DOM 로딩 후 자동)
+bindAlertStackToggle();
 
 // 카드별로 미결제 거래 그룹화
 function groupUnpaidByCard() {
