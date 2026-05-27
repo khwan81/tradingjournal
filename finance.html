@@ -3994,13 +3994,21 @@ body {
         </div>
       </div>
 
-      <!-- 카테고리별 지출 추이 (v0.7-22) — 분석 기간 + 카테고리 다중 선택 -->
+      <!-- 카테고리별 지출 추이 (v0.7-22) — 분석 기간 + flow 토글 + 카테고리 다중 선택 -->
       <div class="dash-card">
         <div class="dash-card-head">
           <div class="dash-card-title">카테고리별 지출 추이</div>
           <div class="dash-card-sub" id="dash-cat-exp-sub">—</div>
         </div>
-        <!-- 카테고리 필터 칩 — 데이터에 등장하는 카테고리만 동적 생성 -->
+        <!-- flow 토글 (v0.7-22) — 변동 기본 -->
+        <div class="dash-trk-tools">
+          <div class="dash-trk-measure">
+            <button type="button" class="seg-btn"        data-cat-exp-flow="all">전체</button>
+            <button type="button" class="seg-btn"        data-cat-exp-flow="fixed">고정</button>
+            <button type="button" class="seg-btn active" data-cat-exp-flow="variable">변동</button>
+          </div>
+        </div>
+        <!-- 카테고리 필터 칩 — 선택된 flow 안에서 등장하는 카테고리만 -->
         <div class="dash-cat-filter" id="dash-cat-exp-filter">
           <!-- chips inserted dynamically -->
         </div>
@@ -13396,10 +13404,12 @@ const EXPENSE_TREEMAP_COLORS = {
 // 상태:
 //   • catExpFilter === null  : 전체 (상위 N개 자동)
 //   • catExpFilter = Set([..]) : 선택한 카테고리만
+//   • catExpFlow             : 'all' | 'fixed' | 'variable' (기본 'variable')
 
 let dashCatExpenseChart = null;
 let catExpFilter = null;           // null = 전체 (상위 자동), Set = 선택 카테고리
 let catExpAvailableCats = [];      // 가장 최근 렌더에서 등장한 카테고리 [{cat, flow, total}]
+let catExpFlow = 'variable';       // v0.7-22 — flow 토글 (전체/고정/변동), 변동 기본
 const CAT_EXP_TOP_N = 5;           // "전체" 모드일 때 상위 몇 개 카테고리를 라인으로 그릴지
 
 // 카테고리 → 일관된 색상 매핑 (trace의 모든 호출에서 같은 카테고리는 같은 색)
@@ -13442,12 +13452,14 @@ async function renderDashCatExpenseChart() {
       modeLabel = `${fromYm} ~ ${toYm}`;
     }
 
-    // 2) 카테고리별 월별 합계 집계 (fixed/variable만)
+    // 2) 카테고리별 월별 합계 집계 (flow 토글 적용 — fixed/variable/all)
     //    catTotals: Map<cat, { flow, monthSums: Map<ym, sum>, total }>
     const catTotals = new Map();
     for (const t of (txData || [])) {
       const flow = txFlow(t);
       if (flow !== 'fixed' && flow !== 'variable') continue;
+      // v0.7-22 — flow 토글 적용: 'all'은 모두 통과, 'fixed'/'variable'은 해당 flow만
+      if (catExpFlow !== 'all' && flow !== catExpFlow) continue;
       const cat = t.category || '(분류 없음)';
       const ym  = t.ym;
       if (!ymList.includes(ym)) continue;
@@ -13481,7 +13493,12 @@ async function renderDashCatExpenseChart() {
     if (cats.length === 0) {
       if (dashCatExpenseChart) { dashCatExpenseChart.destroy(); dashCatExpenseChart = null; }
       $canvas.style.display = 'none';
-      if ($empty) { $empty.style.display = ''; $empty.textContent = '지출 거래가 없습니다'; }
+      if ($empty) {
+        $empty.style.display = '';
+        // flow별 안내 메시지
+        const flowLabel = catExpFlow === 'fixed' ? '고정지출' : catExpFlow === 'variable' ? '변동지출' : '지출';
+        $empty.textContent = `${flowLabel} 거래가 없습니다`;
+      }
       if ($sub) $sub.textContent = `${modeLabel} · 데이터 없음`;
       return;
     }
@@ -13578,10 +13595,11 @@ async function renderDashCatExpenseChart() {
     // 10) 서브 라벨
     if ($sub) {
       const totalSum = drawCats.reduce((s, c) => s + c.total, 0);
+      const flowLabel = catExpFlow === 'fixed' ? '고정' : catExpFlow === 'variable' ? '변동' : '전체';
       const filterInfo = catExpFilter
         ? ` · ${drawCats.length}/${cats.length} 카테고리`
         : (cats.length > CAT_EXP_TOP_N ? ` · 상위 ${CAT_EXP_TOP_N}/${cats.length}` : '');
-      $sub.textContent = `${modeLabel} · ${fmtAmount(totalSum)}${filterInfo}`;
+      $sub.textContent = `${modeLabel} · ${flowLabel} · ${fmtAmount(totalSum)}${filterInfo}`;
     }
   } catch (e) {
     console.error('[dashboard] cat-expense chart error', e);
@@ -13635,6 +13653,24 @@ function renderCatExpFilterChips(cats, colorMap) {
     });
   });
 }
+
+// flow 토글 핸들러 (v0.7-22) — 전체/고정/변동
+// flow 변경 시: 카테고리 필터는 자동 리셋 (이전 flow의 카테고리가 다른 flow엔 존재하지 않을 수 있음)
+function initCatExpFlowToggle() {
+  document.querySelectorAll('[data-cat-exp-flow]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const f = btn.dataset.catExpFlow;
+      if (f === catExpFlow) return;
+      catExpFlow = f;
+      catExpFilter = null;   // flow가 바뀌면 카테고리 필터 리셋
+      document.querySelectorAll('[data-cat-exp-flow]').forEach(b => {
+        b.classList.toggle('active', b.dataset.catExpFlow === f);
+      });
+      renderDashCatExpenseChart();
+    });
+  });
+}
+initCatExpFlowToggle();
 
 async function renderDashExpenseChart() {
   const $canvas = document.getElementById('dash-expense-chart');
