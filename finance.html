@@ -78,13 +78,16 @@
   --fs-2xl: 18px;   /* 작은 KPI value */
   --fs-3xl: 20px;   /* 기본 KPI value */
 
-  /* v0.7-13 — 버튼 사이즈 토큰 */
+  /* v0.7-13 — 버튼 사이즈 토큰 (v0.7-19에서 전체 적용) */
   --btn-h-sm: 28px;
   --btn-h-md: 34px;
   --btn-h-lg: 40px;
   --btn-px-sm: 10px;
   --btn-px-md: 14px;
   --btn-px-lg: 18px;
+  --btn-fs-sm: 12px;
+  --btn-fs-md: 13px;
+  --btn-fs-lg: 14px;
 
   /* v0.7-13 — 카드 토큰 */
   --card-bg:      var(--bg2);
@@ -142,10 +145,12 @@ body {
 .login-card p  { font-size: 13px; color: var(--text2); margin-bottom: 28px; }
 .btn-google {
   display: flex; align-items: center; justify-content: center; gap: 10px;
-  width: 100%; padding: 12px;
+  width: 100%;
+  height: var(--btn-h-lg);
+  padding: 0 var(--btn-px-lg);
   background: var(--bg3); border: 1px solid var(--border2);
   border-radius: var(--radius); color: var(--text);
-  font-size: 14px; font-family: var(--font); cursor: pointer;
+  font-size: var(--btn-fs-lg); font-family: var(--font); cursor: pointer;
   transition: background .15s;
 }
 .btn-google:hover { background: var(--bg4); }
@@ -176,8 +181,11 @@ body {
 .btn-logout {
   background: var(--bg3); border: 1px solid var(--border);
   border-radius: var(--radius-sm); color: var(--text2);
-  padding: 5px 10px; font-size: 12px; font-family: var(--font);
+  height: var(--btn-h-sm);
+  padding: 0 var(--btn-px-sm);
+  font-size: var(--btn-fs-sm); font-family: var(--font);
   cursor: pointer; transition: background .15s;
+  display: inline-flex; align-items: center; justify-content: center;
 }
 .btn-logout:hover { background: var(--bg4); color: var(--text); }
 
@@ -269,15 +277,19 @@ body {
   flex-wrap: wrap;
 }
 .subtab {
-  padding: 7px 14px;
+  height: var(--btn-h-md);
+  padding: 0 var(--btn-px-md);
   background: var(--bg2);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text2);
-  font-size: 12.5px; font-weight: 500;
+  font-size: var(--btn-fs-md); font-weight: 500;
   font-family: var(--font);
   cursor: pointer;
   transition: background .15s, color .15s, border-color .15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .subtab:hover { color: var(--text); border-color: rgba(255,255,255,0.14); }
 .subtab.active {
@@ -303,7 +315,11 @@ body {
 
 @media (max-width: 600px) {
   .subtab-bar { gap: 4px; }
-  .subtab { padding: 6px 10px; font-size: 12px; }
+  .subtab {
+    height: var(--btn-h-sm);
+    padding: 0 var(--btn-px-sm);
+    font-size: var(--btn-fs-sm);
+  }
   /* 모바일: 서브탭과 액션을 두 줄로 분리 (가독성) */
   .subtab-bar.with-action .subtab-list { flex: 1; }
 }
@@ -444,17 +460,21 @@ body {
 }
 .section-actions { display: flex; gap: 6px; flex-shrink: 0; }
 
-/* 버튼 */
+/* 버튼 — v0.7-19 토큰 적용 (md = 34px / 13px / 14px padding) */
 .btn-p, .btn-s, .btn-danger {
   background: var(--bg3);
   border: 1px solid var(--border2);
   border-radius: var(--radius-sm);
   color: var(--text);
-  padding: 8px 14px;
-  font-size: 13px;
+  height: var(--btn-h-md);
+  padding: 0 var(--btn-px-md);
+  font-size: var(--btn-fs-md);
   font-family: var(--font);
   cursor: pointer;
   transition: background .15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .btn-p {
   background: var(--accent);
@@ -551,8 +571,9 @@ body {
   background: var(--bg3);
   border: 1px solid var(--border2);
   border-radius: 99px;
-  padding: 6px 12px;
-  font-size: 12px;
+  height: var(--btn-h-sm);
+  padding: 0 var(--btn-px-sm);
+  font-size: var(--btn-fs-sm);
   cursor: pointer;
   transition: background .15s;
   font-family: var(--font);
@@ -620,12 +641,13 @@ body {
 .trash-toggle {
   width: 100%;
   display: flex; align-items: center; gap: 8px;
-  padding: 10px 12px;
+  height: var(--btn-h-md);
+  padding: 0 var(--btn-px-md);
   background: transparent;
   border: 1px solid var(--border);
   border-radius: 6px;
   color: var(--text2);
-  font-size: 12px;
+  font-size: var(--btn-fs-sm);
   cursor: pointer;
   font-family: var(--font);
   transition: background 0.1s, color 0.1s;
@@ -813,11 +835,7 @@ body {
 }
 
 /* ── 거래내역 탭 ── */
-.tx-header {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 14px;
-  gap: 12px;
-}
+/* .tx-header는 v0.7-20에서 제거됨 (새 거래 버튼은 필터 바 우측으로 흡수) */
 
 /* KPI 카드 */
 .kpi-grid {
@@ -870,16 +888,29 @@ body {
   align-self: stretch;
   margin: 0 4px;
 }
+/* v0.7-20 — 필터 바 우측 액션 (margin-left: auto로 자동 분리) */
+.filter-bar .filter-bar-action {
+  margin-left: auto;
+}
+@media (max-width: 600px) {
+  .filter-bar .filter-bar-action {
+    margin-left: 0;
+    width: 100%;
+  }
+}
 .fchip {
   background: var(--bg3);
   border: 1px solid var(--border2);
   border-radius: 99px;
-  padding: 5px 12px;
-  font-size: 12px;
+  height: var(--btn-h-sm);
+  padding: 0 var(--btn-px-sm);
+  font-size: var(--btn-fs-sm);
   color: var(--text2);
   cursor: pointer;
   font-family: var(--font);
   transition: background .15s, color .15s, border-color .15s;
+  display: inline-flex;
+  align-items: center;
 }
 .fchip:hover { background: var(--bg4); color: var(--text); }
 .fchip.active {
@@ -986,13 +1017,17 @@ body {
 .budget-bar .bb-cta,
 .event-bar .eb-cta {
   border-radius: 6px;
-  padding: 6px 12px;
-  font-size: 12px;
+  height: var(--btn-h-sm);
+  padding: 0 var(--btn-px-sm);
+  font-size: var(--btn-fs-sm);
   font-weight: 500;
   font-family: var(--font);
   cursor: pointer;
   white-space: nowrap;
   transition: background .15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .unpaid-bar .ub-cta {
   background: transparent;
@@ -1072,12 +1107,13 @@ body {
   gap: 8px;
   width: 100%;
   margin-top: 6px;
-  padding: 7px 12px;
+  height: var(--btn-h-sm);
+  padding: 0 var(--btn-px-sm);
   background: transparent;
   border: 1px dashed var(--border2);
   border-radius: 6px;
   color: var(--text2);
-  font-size: 11.5px;
+  font-size: var(--btn-fs-sm);
   font-family: var(--font);
   cursor: pointer;
   transition: background .15s, color .15s, border-color .15s;
@@ -1382,7 +1418,6 @@ body {
 /* 재무상태표 탭 + 잔액 입력 모달              */
 /* ────────────────────────────────────────── */
 
-/* 탭 헤더는 거래내역 탭의 .tx-header와 같은 구조 재사용 */
 /* v0.7-17 — bs-header / sv-header / dv-header는 서브탭바 우측 액션으로 흡수됨 */
 /* v0.7-18 — asOf 라인은 시각적으로 제거됨 (id만 보존하여 JS 호환). */
 
@@ -1561,14 +1596,18 @@ body {
   background: transparent;
   border: 1px solid var(--border);
   color: var(--text2);
-  font-size: 11.5px;
-  padding: 5px 10px;
+  font-size: var(--btn-fs-sm);
+  height: var(--btn-h-sm);
+  padding: 0 var(--btn-px-sm);
   border-radius: 6px;
   cursor: pointer;
   font-family: var(--font);
   font-weight: 500;
   letter-spacing: 0.3px;
   transition: all 0.12s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .rt-preset:hover { background: var(--bg3); color: var(--text); }
 .rt-preset.active {
@@ -1618,7 +1657,7 @@ body {
     display: flex; gap: 4px;
   }
   .subtab-bar.with-action.analysis-bar .rt-presets .rt-preset {
-    flex: 1; padding: 5px 0; text-align: center;
+    flex: 1; padding: 0; text-align: center;
   }
 }
 
@@ -3324,8 +3363,8 @@ body {
   .kpi-card .value { grid-area: value; font-size: 18px; text-align: right; white-space: nowrap; }
   .kpi-card .sub   { grid-area: sub;   margin-top: 0; line-height: 1.4; }
 
-  /* 필터 칩 폰트 다운 */
-  .fchip { font-size: 11px; padding: 5px 10px; min-height: 32px; }
+  /* 필터 칩 모바일 — 폰트만 살짝 다운, height는 sm 토큰 유지 (28px) */
+  .fchip { font-size: 11px; }
 }
 </style>
 </head>
@@ -3382,10 +3421,7 @@ body {
 
   <!-- 탭 콘텐츠 -->
   <div class="tab-content active" id="tab-transactions">
-    <div class="tx-header">
-      <div></div>
-      <button class="btn-p" id="btn-add-tx">+ 새 거래</button>
-    </div>
+    <!-- v0.7-20 — tx-header 제거. 새 거래 버튼은 필터 바 우측으로 이동 -->
 
     <!-- KPI 3개 -->
     <div class="kpi-grid">
@@ -3459,7 +3495,7 @@ body {
       </button>
     </div>
 
-    <!-- 필터 칩 -->
+    <!-- 필터 칩 + 새 거래 버튼 (v0.7-20 — tx-header 흡수) -->
     <div class="filter-bar" id="filter-bar">
       <button type="button" class="fchip active" data-filter-all>전체</button>
       <button type="button" class="fchip" data-filter-flow="revenue">수입</button>
@@ -3469,6 +3505,8 @@ body {
       <button type="button" class="fchip" data-filter-pay="unpaid">미결제</button>
       <button type="button" class="fchip" data-filter-pay="card">카드</button>
       <button type="button" class="fchip" data-filter-pay="cash">현금성</button>
+      <!-- 우측 정렬 — margin-left:auto로 자동 분리 -->
+      <button class="btn-p filter-bar-action" id="btn-add-tx">+ 새 거래</button>
     </div>
 
     <div class="tx-table" id="tx-table">
@@ -3749,12 +3787,10 @@ body {
 
     <!-- 배당 서브탭은 결산 탭으로 이동됨 (사용자 피드백: 입력성 데이터는 분석이 아닌 결산에 속함) -->
 
-  <!-- 대시보드 서브탭 (v0.5 B1 + B2 / v0.7 분석 탭 안으로 이동 / v0.7-11 시점형 위젯은 현황 탭으로 분리) -->
+  <!-- 대시보드 서브탭 (v0.5 B1 + B2 / v0.7 분석 탭 안으로 이동 / v0.7-11 시점형 위젯은 현황 탭으로 분리 / v0.7-19 헤더 제거) -->
   <div class="subtab-content" id="tab-dashboard">
-    <div class="dash-header">
-      <div class="dash-title">대시보드</div>
-      <div class="dash-sub" id="dash-asof">—</div>
-    </div>
+    <!-- v0.7-19 — 헤더 라인 제거. id는 JS 호환 위해 hidden span으로 보존 -->
+    <span id="dash-asof" style="display:none;"></span>
 
     <div id="dash-body">
       <!-- 순자산 추이 12개월 (B3) -->
