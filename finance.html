@@ -9601,13 +9601,14 @@ async function loadAnalysisTransactions(fromYm, toYm) {
 //   • 데이터가 currentMonth보다 미래까지 있어도 toYm은 currentMonth 유지
 // v0.7-12d: 단일월 모드 허용 (fromYm = toYm OK).
 //   손익/트리맵은 단일월에서도 동작. 수익률만 2개월 이상 필요 (그쪽에서 안내).
+// v0.7-12f: YTD/1M/3M/6M는 의미 우선 (데이터 유무 무시).
+//   • YTD = 해당 년도 1월 ~ currentMonth (데이터 없는 달은 0 합산/effectiveFromYm fallback)
+//   • 1M/3M/6M = currentMonth - N개월 ~ currentMonth (이전부터 그렇게 동작)
+//   • ALL은 의미가 "전체 가능 기간"이므로 데이터 첫 달부터 (clamp 유지)
 function presetRange(preset) {
-  const allYms = analysisAllYms;
-  if (!allYms || allYms.length === 0) return null;
-
   // toYm = 글로벌 currentMonth (사용자가 보고 있는 시점)
   const toYm = currentMonth;
-  const firstYm = allYms[0];
+  const allYms = analysisAllYms;
 
   let fromYm;
   switch (preset) {
@@ -9617,14 +9618,23 @@ function presetRange(preset) {
     case 'YTD': {
       const [y] = toYm.split('-');
       fromYm = `${y}-01`;
-      // YTD 시작이 캐시 첫달 이전이면 첫달로
-      if (fromYm < firstYm) fromYm = firstYm;
+      // clamp 제거 — YTD는 해당 년도 1월부터가 의미
+      // 데이터 없는 달은 합산 0으로 자연스럽게 처리됨
       break;
     }
     case 'ALL':
-    default:    fromYm = firstYm;
+    default: {
+      // ALL은 "전체 가능 기간" — 데이터 첫 ym부터.
+      // 데이터 없으면 단일월 모드 (toYm = toYm)
+      if (!allYms || allYms.length === 0) {
+        fromYm = toYm;   // 단일월 폴백 — 본문이 빈 합산을 표시
+      } else {
+        fromYm = allYms[0];
+      }
+      break;
+    }
   }
-  // 안전장치: fromYm이 toYm보다 미래면 비활성 (데이터 없는 미래 시점)
+  // 안전장치: fromYm이 toYm보다 미래면 비활성 (toYm 이전 데이터 없는 미래 시점)
   if (fromYm > toYm) return null;
   return { fromYm, toYm };
 }
@@ -10069,13 +10079,24 @@ async function initAnalysisPeriod() {
   await loadAnalysisYms(true);
 
   // 입력 박스 min/max 설정
+  //   • 데이터 범위가 단일 ym이거나 좁으면 사용자가 박스를 직접 변경할 때 답답함
+  //   • 데이터 첫 ym ~ (현재월 + 1년) 범위로 너그럽게
   const $from = document.getElementById('rt-from');
   const $to   = document.getElementById('rt-to');
   if ($from && $to && analysisAllYms?.length > 0) {
-    $from.min = analysisAllYms[0];
-    $from.max = analysisAllYms[analysisAllYms.length - 1];
-    $to.min   = analysisAllYms[0];
-    $to.max   = analysisAllYms[analysisAllYms.length - 1];
+    const dataFirst = analysisAllYms[0];
+    const dataLast  = analysisAllYms[analysisAllYms.length - 1];
+    // max는 현재월과 데이터 마지막 중 더 미래 + 1년 여유
+    const maxAnchor = currentMonth > dataLast ? currentMonth : dataLast;
+    const maxYm = shiftYm(maxAnchor, 12);
+    $from.min = dataFirst;
+    $from.max = maxYm;
+    $to.min   = dataFirst;
+    $to.max   = maxYm;
+  } else if ($from && $to) {
+    // 데이터가 아예 없으면 min/max 해제 (자유 입력)
+    $from.removeAttribute('min'); $from.removeAttribute('max');
+    $to.removeAttribute('min');   $to.removeAttribute('max');
   }
 
   // 초기 범위 세팅 (없을 때만)
