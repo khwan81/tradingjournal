@@ -9443,6 +9443,11 @@ function invalidateReturnsCache() {
 //     • fromYm 이전 결산이 있으면 그 결산의 ym (정상 케이스)
 //     • 없으면 그 계좌의 첫 결산 ym (시나리오 4: 부분 기간 표시)
 //   requestedFromYm: 호출자가 요청한 fromYm (UI에서 effectiveFromYm과 비교용)
+//
+// v0.7-12g: 첫 결산(isStart=true)이 from인 경우 그 도큐먼트 자체도 기간 내 데이터로 포함.
+//   • 시작 잔고 = start.principal (입력 시점의 자산가치)
+//   • depSum, end도 그 ym부터 (start.ym 이상)
+//   • 단일월 결산(isStart, ym=toYm)도 수익률 계산 가능
 function periodReturnAcc(accId, fromYm, toYm) {
   if (!returnsCache) return { gain: 0, base: 0, rate: 0, hasData: false };
   const arr = returnsCache.byAcc.get(accId) || [];
@@ -9465,22 +9470,42 @@ function periodReturnAcc(accId, fromYm, toYm) {
     // 계좌의 첫 결산 (arr는 ym 오름차순 정렬)
     start = arr[0];
   }
-  // start가 end와 같거나 뒤면 계산 불가
-  if (start.ym >= end.ym) return {
+
+  // v0.7-12g: 첫 결산(isStart) 처리
+  //   • startBal = principal (입력 시점의 자산가치)
+  //   • between은 start.ym 이상 (start 자신도 포함)
+  //   • 단일월(start.ym === end.ym)도 계산 가능
+  const startIsAnchor = !!start.isStart;
+  let startBal, betweenLowExclusive;
+  if (startIsAnchor) {
+    startBal = Number(start.principal) || 0;
+    betweenLowExclusive = false;  // start.ym 이상 (자기 자신 포함)
+  } else {
+    startBal = Number(start.balanceKrw) || 0;
+    betweenLowExclusive = true;   // start.ym 초과
+  }
+
+  // start가 end와 같거나 뒤면 계산 불가 (단, isStart는 단일월 허용)
+  if (!startIsAnchor && start.ym >= end.ym) return {
+    gain: 0, base: 0, rate: 0, hasData: false,
+    effectiveFromYm: start.ym, requestedFromYm: fromYm,
+  };
+  // isStart인데 start가 end보다 미래면 비활성 (시점 모순)
+  if (startIsAnchor && start.ym > end.ym) return {
     gain: 0, base: 0, rate: 0, hasData: false,
     effectiveFromYm: start.ym, requestedFromYm: fromYm,
   };
 
-  // between: start.ym 초과 ~ end.ym 이하
+  // between depSum
   let depSum = 0;
   for (const d of arr) {
-    if (d.ym > start.ym && d.ym <= end.ym) {
+    const lowOk = betweenLowExclusive ? (d.ym > start.ym) : (d.ym >= start.ym);
+    if (lowOk && d.ym <= end.ym) {
       depSum += Number(d.depositKrw) || 0;
     }
   }
 
-  const startBal = Number(start.balanceKrw) || 0;
-  const endBal   = Number(end.balanceKrw)   || 0;
+  const endBal = Number(end.balanceKrw) || 0;
   const gain = endBal - startBal - depSum;
   const base = startBal + depSum / 2;
   const rate = base > 0 ? gain / base : 0;
