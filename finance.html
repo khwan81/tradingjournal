@@ -2996,6 +2996,13 @@ body {
 .cat-chip.fixed    { background: var(--amber-bg); color: var(--amber); }
 .cat-chip.variable { background: var(--red-bg);   color: var(--red); }
 .cat-chip.unknown  { background: var(--bg3);      color: var(--text3); }
+/* v0.7-15 — 경조사 처리 거래 표시 (분홍 톤) */
+.cat-chip.process-mark {
+  background: rgba(236, 72, 153, 0.12);
+  color: #ec4899;
+  margin-left: 4px;
+  font-weight: 500;
+}
 
 .tx-row .mobile-meta { display: none; }
 
@@ -13817,11 +13824,20 @@ function renderTransactions() {
       const amtCell = isFx
         ? `${sign}${fmtAmount(t.amount)}<div class="fx-native">${nativeLabel}</div>`
         : `${sign}${fmtAmount(t.amount)}`;
+      // v0.7-15 — 경조사 처리 거래 표시 (실수 삭제 방지)
+      const processEv = t.eventProcessId
+        ? eventsMasters.find(e => e.id === t.eventProcessId)
+        : null;
+      const processBadge = processEv
+        ? `<span class="cat-chip process-mark" title="${escapeHtml(processEv.title)} 처리 거래">🎀 처리</span>`
+        : '';
+
       return `
         <div class="tx-row" data-tx-id="${escapeHtml(t.id)}">
           <div class="col-date">${mm}/${dd}</div>
           <div class="col-cat">
             <span class="cat-chip ${flow}">${escapeHtml(t.category || '미분류')}</span>
+            ${processBadge}
           </div>
           <div class="col-pay">
             <span class="mobile-meta">${mobileDate}</span>${escapeHtml(t.payment || '')}${dot}
@@ -14175,6 +14191,12 @@ document.getElementById('btn-tx-save').addEventListener('click', async () => {
     updatedAt: serverTimestamp(),
   };
 
+  // v0.7-15 — 경조사 처리 모드로 생성되는 거래라면 eventProcessId 박제
+  //   삭제 시 이 필드로 어느 행사를 위한 처리였는지 알고 lastDoneYm을 되돌릴 수 있음
+  if (pendingProcessEventId && !editingTxId) {
+    data.eventProcessId = pendingProcessEventId;
+  }
+
   try {
     if (editingTxId) {
       await updateDoc(pathTransaction(editingTxId), data);
@@ -14184,22 +14206,28 @@ document.getElementById('btn-tx-save').addEventListener('click', async () => {
       await addDoc(pathTransactions(), data);
       showToast('거래가 추가되었습니다');
     }
+
+    // v0.7-15 — closeOv가 처리 마커를 null로 만들기 전에 로컬 캡처
+    //   (closeOv('ov-tx') 안에 안전장치로 pendingProcessEventId = null이 있어서)
+    const processEventIdToFinalize = (pendingProcessEventId && !editingTxId)
+      ? pendingProcessEventId
+      : null;
+
     closeOv('ov-tx');
 
     // v0.7-15 — 경조사 처리 모드로 생성된 거래라면 lastDoneYm 갱신 (사이클 종료)
-    if (pendingProcessEventId && !editingTxId) {
+    if (processEventIdToFinalize) {
       try {
-        await updateDoc(pathEvent(pendingProcessEventId), {
+        await updateDoc(pathEvent(processEventIdToFinalize), {
           lastDoneYm: data.ym,
           updatedAt: serverTimestamp(),
         });
-        const ev = eventsMasters.find(e => e.id === pendingProcessEventId);
+        const ev = eventsMasters.find(e => e.id === processEventIdToFinalize);
         if (ev) showToast(`✓ ${ev.title} 처리 완료 — 다음 사이클 시작`);
       } catch (eProc) {
         console.error('[event-process] lastDoneYm 갱신 실패', eProc);
         showToast('처리 표시 실패 — 거래는 저장됨');
       }
-      pendingProcessEventId = null;
     }
 
     // v0.7-12 2단계 — 거래 변경 시 분석 캐시 무효화 (다음 분석 탭 진입 시 fresh fetch)
@@ -14222,11 +14250,43 @@ document.getElementById('btn-tx-save').addEventListener('click', async () => {
 // 삭제
 document.getElementById('btn-tx-delete').addEventListener('click', async () => {
   if (!editingTxId) return;
-  if (!confirm('이 거래를 삭제하시겠습니까?')) return;
+
+  // v0.7-15 — 이 거래가 경조사 처리 거래인지 확인 (eventProcessId 박혀있음)
+  const tx = transactions.find(t => t.id === editingTxId);
+  const processEventId = tx?.eventProcessId || null;
+  const processEv = processEventId
+    ? eventsMasters.find(e => e.id === processEventId)
+    : null;
+
+  // 확인 다이얼로그 — 처리 거래일 때는 추가 경고
+  let confirmMsg = '이 거래를 삭제하시겠습니까?';
+  if (processEv) {
+    confirmMsg =
+      `이 거래는 "${processEv.title}" 처리 거래입니다.\n\n` +
+      `삭제하면 사이클이 미처리 상태로 돌아가고, 다시 처리해야 합니다.\n\n` +
+      `계속하시겠습니까?`;
+  }
+  if (!confirm(confirmMsg)) return;
+
   try {
     await deleteDoc(pathTransaction(editingTxId));
     closeOv('ov-tx');
-    showToast('거래가 삭제되었습니다');
+
+    // v0.7-15 — 처리 거래였다면 경조사의 lastDoneYm 초기화 (사이클 복귀)
+    if (processEv) {
+      try {
+        await updateDoc(pathEvent(processEventId), {
+          lastDoneYm: null,
+          updatedAt: serverTimestamp(),
+        });
+        showToast(`거래 삭제됨 · ${processEv.title} 처리 해제`);
+      } catch (eRev) {
+        console.error('[event-process] lastDoneYm 초기화 실패', eRev);
+        showToast('거래 삭제됨 · 처리 해제 실패 (경조사 마스터에서 수동 확인)');
+      }
+    } else {
+      showToast('거래가 삭제되었습니다');
+    }
 
     // v0.7-12 2단계 — 거래 변경 시 분석 캐시 무효화
     invalidateAnalysisYms();
