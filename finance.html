@@ -85,6 +85,16 @@
   --btn-px-sm: 10px;
   --btn-px-md: 14px;
   --btn-px-lg: 18px;
+
+  /* v0.7-13 — 카드 토큰 */
+  --card-bg:      var(--bg2);
+  --card-border:  var(--border2);
+  --card-radius:  10px;
+  --card-pad:     16px;
+  --card-gap:     12px;   /* 카드끼리 세로 간격 */
+  --card-bar-bg:  var(--bg3);
+  --card-bar-py:  10px;
+  --card-bar-px:  14px;
 }
 
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500&display=swap');
@@ -305,22 +315,111 @@ body {
 }
 
 /* ── 설정 탭 카드 ── */
+
+/* v0.7-13 — 통합 .card 시스템
+ *   기존 카드 6종을 두 패턴으로 정리:
+ *   ① padded — 카드 안에 그대로 패딩 (section-card / dash-card / bs-col)
+ *   ② bar    — 상단에 bg3 헤더 바 + 본문 (dv-card / sv-cat / rt-section)
+ *   기존 클래스명은 alias로 호환 유지. */
+
+/* 공통 베이스 — 모든 카드에 적용 */
+.card,
+.section-card,
+.dash-card,
+.bs-col,
+.dv-card,
+.sv-cat,
+.rt-section {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  margin-bottom: var(--card-gap);
+}
+
+/* ① padded 패턴 — 카드 안에 직접 패딩 */
+.card.padded,
+.section-card,
+.dash-card,
+.bs-col {
+  padding: var(--card-pad);
+}
 .section-card {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  /* 설정 탭만 padding/radius가 약간 더 큼 (전통 유지) */
   padding: 18px 20px;
+  border-radius: var(--radius-lg);
+  border-color: var(--border);
   margin-bottom: 14px;
 }
-.section-head {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 14px;
-  gap: 12px;
+
+/* ② bar 패턴 — 상단 헤더 바 + 본문, overflow: hidden 필수 */
+.card.has-bar,
+.dv-card,
+.sv-cat,
+.rt-section {
+  overflow: hidden;
+  padding: 0;
 }
-.section-title {
-  font-size: 15px; font-weight: 500;
-  display: flex; align-items: center; gap: 8px;
+
+/* 카드 헤더 통합 (.card-head — alias로 기존 head 클래스 모두 매핑) */
+.card-head,
+.section-head,
+.dash-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
 }
+.section-head { align-items: center; gap: 12px; margin-bottom: 14px; }
+
+/* bar 패턴의 헤더 — 카드 상단 영역에 bg3 띠 */
+.card-bar-head,
+.dv-card-head,
+.sv-cat-head,
+.rt-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--card-bar-py) var(--card-bar-px);
+  background: var(--card-bar-bg);
+  border-bottom: 1px solid var(--border);
+  gap: 10px;
+}
+
+/* 카드 타이틀 통합 */
+.card-title,
+.section-title,
+.dash-card-title,
+.dv-card-title,
+.sv-cat-name,
+.rt-section-head {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dash-card-title { font-size: 14px; }
+.section-title   { font-size: 15px; }
+.dv-card-title   { font-size: 12.5px; font-weight: 600; }
+.sv-cat-name     { font-size: 13px;   font-weight: 600; }
+.rt-section-head { font-size: 12px;   font-weight: 600; }
+
+/* 카드 서브타이틀(우측 meta) 통합 */
+.card-sub,
+.dash-card-sub,
+.dv-card-sub,
+.sv-cat-sub,
+.rt-section-head .rt-section-sub {
+  font-size: 11px;
+  color: var(--text2);
+  font-family: var(--font-mono);
+}
+.dash-card-sub { color: var(--text3); }
+
+/* (.section-card / .section-head / .section-title 본체는 위 통합 .card 시스템에 흡수됨 — v0.7-13) */
 .section-title .hint {
   color: var(--text2); font-weight: 400; font-size: 12px;
 }
@@ -834,9 +933,20 @@ body {
 .recurring-bar .rb-icon,
 .budget-bar .bb-icon,
 .event-bar .eb-icon {
-  font-size: 14px;
+  /* v0.7-13 — 이모지 제거 후 색상 dot으로 통일 */
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
   flex-shrink: 0;
+  font-size: 0;            /* 옛 HTML에 남은 이모지 글리프 숨김 */
+  line-height: 1;
 }
+.unpaid-bar    .ub-icon { background: var(--amber); }
+.recurring-bar .rb-icon { background: var(--accent); }
+.budget-bar    .bb-icon { background: #fbbf24; }
+.budget-bar.severe .bb-icon { background: var(--red); }
+.event-bar     .eb-icon { background: #ec4899; }
 .alert-text,
 .unpaid-bar .ub-text,
 .recurring-bar .rb-text,
@@ -847,7 +957,7 @@ body {
 }
 
 /* 강조 숫자 — 톤별 컬러 */
-.unpaid-bar .ub-icon, .unpaid-bar .ub-amt { color: var(--amber); font-weight: 600; }
+.unpaid-bar .ub-amt    { color: var(--amber); font-weight: 600; }
 .recurring-bar .rb-count { color: var(--accent); font-weight: 600; }
 .budget-bar .bb-strong { color: #fbbf24; font-weight: 600; }
 .budget-bar.severe .bb-strong { color: var(--red); }
@@ -1240,6 +1350,10 @@ body {
   font-size: 11px;
   color: var(--text3);
 }
+/* v0.7-13 — .info-note (의미 명확화)
+ *   "정보성 안내문" — 아이콘 + 짧은 설명 + 옵션 링크 패턴.
+ *   기존 .sv-info를 흡수. 결산/배당/수익률/손익 등 여러 곳에서 사용. */
+.info-note,
 .sv-info {
   display: flex; gap: 8px; align-items: flex-start;
   padding: 9px 12px;
@@ -1251,24 +1365,14 @@ body {
   color: var(--text2);
   line-height: 1.55;
 }
+.info-note .info-icon,
 .sv-info .info-icon { color: var(--accent); font-size: 13px; }
+.info-note a,
 .sv-info a { color: var(--accent); text-decoration: none; }
+.info-note a:hover,
 .sv-info a:hover { text-decoration: underline; }
 
-/* 카테고리 섹션 */
-.sv-cat {
-  background: var(--bg2);
-  border: 1px solid var(--border2);
-  border-radius: 10px;
-  margin-bottom: 12px;
-  overflow: hidden;
-}
-.sv-cat-head {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 10px 14px;
-  background: var(--bg3);
-  border-bottom: 1px solid var(--border);
-}
+/* 카테고리 섹션 — .sv-cat / .sv-cat-head 본체는 위 .card 시스템(bar 패턴)에 흡수됨 (v0.7-13) */
 .sv-cat-name {
   font-size: 13px; font-weight: 600; color: var(--text);
   display: flex; align-items: center; gap: 8px;
@@ -1481,22 +1585,7 @@ body {
 .rt-cmp-gain.muted { color: var(--text3); }
 
 /* 카테고리/계좌 본문 */
-.rt-section {
-  background: var(--bg2);
-  border: 1px solid var(--border2);
-  border-radius: 10px;
-  margin-bottom: 12px;
-  overflow: hidden;
-}
-.rt-section-head {
-  padding: 10px 14px;
-  background: var(--bg3);
-  border-bottom: 1px solid var(--border);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text);
-  display: flex; align-items: center; gap: 8px;
-}
+/* .rt-section / .rt-section-head 본체는 위 .card 시스템(bar 패턴)에 흡수됨 (v0.7-13) */
 .rt-section-head .rt-section-sub {
   margin-left: auto;
   font-size: 11px;
@@ -1586,28 +1675,7 @@ body {
   font-family: var(--font-mono);
 }
 
-.dv-card {
-  background: var(--bg2);
-  border: 1px solid var(--border2);
-  border-radius: 10px;
-  margin-bottom: 12px;
-  overflow: hidden;
-}
-.dv-card-head {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 10px 14px;
-  background: var(--bg3);
-  border-bottom: 1px solid var(--border);
-}
-.dv-card-title {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--text);
-}
-.dv-card-sub {
-  font-size: 11px;
-  color: var(--text2);
-}
+/* .dv-card / .dv-card-head / -title / -sub 는 위 .card 시스템(bar 패턴)에 흡수됨 (v0.7-13) */
 .dv-select {
   background: var(--bg4);
   border: 1px solid var(--border);
@@ -1979,29 +2047,7 @@ body {
 .dash-kpi-sub.amber { color: #fbbf24; }
 
 /* 대시보드 차트 카드 (B3) */
-.dash-card {
-  background: var(--bg2);
-  border: 1px solid var(--border2);
-  border-radius: var(--radius);
-  padding: 16px;
-  margin-bottom: 14px;
-}
-.dash-card-head {
-  display: flex; justify-content: space-between; align-items: baseline;
-  margin-bottom: 12px;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.dash-card-title {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text);
-}
-.dash-card-sub {
-  font-size: 11px;
-  color: var(--text3);
-  font-family: var(--font-mono);
-}
+/* .dash-card / .dash-card-head / -title / -sub 는 위 .card 시스템에 흡수됨 (v0.7-13) */
 .dash-chart-wrap {
   position: relative;
   height: 280px;
@@ -2532,12 +2578,8 @@ body {
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
-.bs-col {
-  background: var(--bg2);
-  border: 1px solid var(--border2);
-  border-radius: 10px;
-  padding: 12px 14px;
-}
+/* .bs-col 본체는 .card 시스템(padded 패턴)에 흡수됨. padding만 BS 전용으로 override (v0.7-13) */
+.bs-col { padding: 12px 14px; }
 .bs-col-head {
   display: flex; justify-content: space-between; align-items: baseline;
   font-size: 13px;
@@ -3272,7 +3314,7 @@ body {
     <!-- 미결제 알림바 -->
     <div class="unpaid-bar" id="unpaid-bar">
       <div class="ub-left">
-        <span class="ub-icon">🔔</span>
+        <span class="ub-icon" aria-hidden="true"></span>
         <span class="ub-text">미결제 카드 거래 <span class="ub-amt" id="unpaid-amt">0</span></span>
       </div>
       <button type="button" class="ub-cta" id="btn-bulk-open">일괄결제 처리</button>
@@ -3281,7 +3323,7 @@ body {
     <!-- 반복지출 알림바 (v0.2-3) -->
     <div class="recurring-bar" id="recurring-bar">
       <div class="rb-left">
-        <span class="rb-icon">🔁</span>
+        <span class="rb-icon" aria-hidden="true"></span>
         <span class="rb-text">이번 달 미생성 반복지출 <span class="rb-count" id="recurring-count">0</span>건</span>
       </div>
       <button type="button" class="rb-cta" id="btn-recurring-generate">일괄 생성</button>
@@ -3290,7 +3332,7 @@ body {
     <!-- 예산 알림바 (v0.4 A7) -->
     <div class="budget-bar" id="budget-bar">
       <div class="bb-left">
-        <span class="bb-icon">📊</span>
+        <span class="bb-icon" aria-hidden="true"></span>
         <span class="bb-text" id="budget-bar-text">예산 알림</span>
       </div>
       <button type="button" class="bb-cta" id="btn-budget-goto">예산 보기</button>
@@ -3299,7 +3341,7 @@ body {
     <!-- 경조사 적립 알림바 (v0.6) -->
     <div class="event-bar" id="event-bar">
       <div class="eb-left">
-        <span class="eb-icon">🎀</span>
+        <span class="eb-icon" aria-hidden="true"></span>
         <span class="eb-text" id="event-bar-text">경조사 적립</span>
       </div>
       <button type="button" class="eb-cta" id="btn-event-add-saving">+ 적립 거래</button>
