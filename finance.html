@@ -8335,6 +8335,21 @@ function setMonth(ym) {
     renderStatusAll();
   }
 
+  // v0.7-12c — 글로벌 월 변경 시 분석 기간 toYm 동기화
+  // 프리셋 모드일 때만 재계산 (커스텀 모드는 사용자 의도라 그대로 둠).
+  if (returnsActivePreset && returnsCurrentRange) {
+    const r = presetRange(returnsActivePreset);
+    if (r) {
+      returnsCurrentRange = { ...r, preset: returnsActivePreset };
+      // 분석 탭 활성 시 즉시 갱신 (캐시 무효화 + 활성 서브탭 재렌더)
+      const $analysisTop = document.getElementById('tab-analysis');
+      if ($analysisTop?.classList.contains('active')) {
+        analysisTxCache = null;   // 기간 바뀌었으니 거래 캐시도 비움
+        applyAnalysisPeriod();
+      }
+    }
+  }
+
   // v0.7-8 — 배당 탭 활성일 때 월 변경 시 재렌더 (KPI/필터/차트는 currentMonth 종속)
   // 월이 바뀌었으니 자동 폴백을 다시 허용 + 필터 셀렉트를 month로 리셋
   dvUserChangedPeriod = false;
@@ -9556,11 +9571,16 @@ async function loadAnalysisTransactions(fromYm, toYm) {
 // ─── 프리셋 → ym 범위 ─────────────────────────
 // v0.7-12: monthly + transactions 합집합 사용 (analysisAllYms).
 //   결산이 없어도 거래만 있는 사용자도 동작.
-// 모든 프리셋의 toYm은 데이터가 있는 가장 최근 ym.
+// v0.7-12c: toYm을 글로벌 currentMonth와 동기화.
+//   • toYm = currentMonth (글로벌 월이 분석 기간의 끝)
+//   • 데이터가 currentMonth보다 미래까지 있어도 toYm은 currentMonth 유지
+//   • 단 currentMonth 자체가 데이터 첫 ym보다 이전이면 ALL은 비활성
 function presetRange(preset) {
   const allYms = analysisAllYms;
   if (!allYms || allYms.length === 0) return null;
-  const toYm = allYms[allYms.length - 1];
+
+  // toYm = 글로벌 currentMonth (사용자가 보고 있는 시점)
+  const toYm = currentMonth;
   const firstYm = allYms[0];
 
   let fromYm;
