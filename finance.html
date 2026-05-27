@@ -2415,9 +2415,10 @@ body {
   font-weight: 500;
 }
 
-/* 카테고리별 지출 추이 — 필터 칩바 (v0.7-22) */
-/* 칩 색상 dot은 인라인 style로 지정 (트리맵 팔레트 동적 매핑) */
-.dash-cat-filter {
+/* 추이 차트 필터 칩바 (v0.7-22 카테고리 + v0.7-23 시리즈) — 공통 스타일 */
+/* 칩 색상 dot은 인라인 style 또는 svCatClass로 지정 */
+.dash-cat-filter,
+.dash-series-filter {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -2425,8 +2426,10 @@ body {
   background: var(--bg);
   border-bottom: 1px solid var(--border);
 }
-.dash-cat-filter:empty { display: none; }
-.dash-cat-filter .fchip {
+.dash-cat-filter:empty,
+.dash-series-filter:empty { display: none; }
+.dash-cat-filter .fchip,
+.dash-series-filter .fchip {
   font-size: 11px;
   padding: 3px 10px;
   display: inline-flex;
@@ -2434,7 +2437,8 @@ body {
   gap: 6px;
   letter-spacing: 0.2px;
 }
-.dash-cat-filter .fchip .chip-dot {
+.dash-cat-filter .fchip .chip-dot,
+.dash-series-filter .fchip .chip-dot {
   width: 7px; height: 7px; border-radius: 50%;
   flex-shrink: 0;
 }
@@ -3951,11 +3955,23 @@ body {
     <span id="dash-asof" style="display:none;"></span>
 
     <div id="dash-body">
-      <!-- 순자산 추이 12개월 (B3) -->
+      <!-- 순자산 추이 12개월 (B3 / v0.7-23 — 시리즈 토글 칩 추가) -->
       <div class="dash-card">
         <div class="dash-card-head">
           <div class="dash-card-title">순자산 추이</div>
           <div class="dash-card-sub" id="dash-networth-sub">최근 12개월</div>
+        </div>
+        <!-- 시리즈 토글 칩바 — 자산/부채/순자산 켜고 끄기 -->
+        <div class="dash-series-filter" id="dash-networth-filter">
+          <button type="button" class="fchip active" data-nw-series="asset">
+            <span class="chip-dot" style="background:#34d399;"></span>자산
+          </button>
+          <button type="button" class="fchip active" data-nw-series="liab">
+            <span class="chip-dot" style="background:#ef4444;"></span>부채
+          </button>
+          <button type="button" class="fchip active" data-nw-series="net">
+            <span class="chip-dot" style="background:#4f8fff;"></span>순자산
+          </button>
         </div>
         <div class="dash-chart-wrap">
           <canvas id="dash-networth-chart"></canvas>
@@ -12475,6 +12491,9 @@ function renderDashKpi() {
 let dashNetworthChart = null;   // Chart.js 인스턴스 (재생성 시 destroy)
 let dashChartsLoaded = false;   // 12개월 데이터 캐시 여부
 
+// v0.7-23 — 순자산 차트 시리즈 토글 상태 (자산/부채/순자산 켜고 끄기)
+let networthSeries = { asset: true, liab: true, net: true };
+
 // CSS 변수에서 색상 가져오기 (다크 테마 일관성)
 function getCssVar(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -12562,45 +12581,15 @@ async function renderDashNetworthChart() {
     if ($sub) $sub.textContent = `${fromYm} ~ ${toYm} (${validCount}개월 데이터)`;
 
     // 5) 색상 토큰 (다크 테마)
-    const colorText  = getCssVar('--text2')  || '#9aa5b1';
-    const colorGrid  = getCssVar('--border') || 'rgba(255,255,255,0.08)';
     const colorAsset = getCssVar('--green')  || '#34d399';
     const colorLiab  = getCssVar('--red')    || '#ef4444';
     const colorNet   = getCssVar('--accent') || '#4f8fff';
 
-    // 6) Chart.js 데이터셋
+    // 6) Chart.js 데이터셋 — 공통 헬퍼 (v0.7-23) + 시리즈 토글
     const datasets = [
-      {
-        label: '자산',
-        data: assetData,
-        borderColor: colorAsset,
-        backgroundColor: colorAsset + '20',
-        tension: 0.25,
-        spanGaps: true,
-        pointRadius: 3,
-        pointHoverRadius: 5,
-      },
-      {
-        label: '부채',
-        data: liabData,
-        borderColor: colorLiab,
-        backgroundColor: colorLiab + '20',
-        tension: 0.25,
-        spanGaps: true,
-        pointRadius: 3,
-        pointHoverRadius: 5,
-      },
-      {
-        label: '순자산',
-        data: netData,
-        borderColor: colorNet,
-        backgroundColor: colorNet + '20',
-        tension: 0.25,
-        spanGaps: true,
-        pointRadius: 4,
-        pointHoverRadius: 6,
-        borderWidth: 2.5,
-      },
+      makeDashDataset({ label: '자산',   data: assetData, color: colorAsset, mode: 'line', hidden: !networthSeries.asset }),
+      makeDashDataset({ label: '부채',   data: liabData,  color: colorLiab,  mode: 'line', hidden: !networthSeries.liab  }),
+      makeDashDataset({ label: '순자산', data: netData,   color: colorNet,   mode: 'line', hidden: !networthSeries.net   }),
     ];
 
     // 7) 기존 차트 destroy 후 재생성
@@ -12613,45 +12602,14 @@ async function renderDashNetworthChart() {
         responsive: true,
         maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
-        scales: {
-          x: {
-            ticks: { color: colorText, font: { size: 11 } },
-            grid:  { color: colorGrid, drawBorder: false },
+        scales: makeDashScales(),
+        plugins: makeDashPlugins({
+          tooltipLabel: (ctx) => {
+            const v = ctx.parsed.y;
+            if (v == null) return `${ctx.dataset.label}: —`;
+            return `${ctx.dataset.label}: ${(v >= 0 ? '+' : '−')}${fmtAmount(Math.abs(v))}`;
           },
-          y: {
-            ticks: {
-              color: colorText, font: { size: 11 },
-              callback: (v) => {
-                const abs = Math.abs(v);
-                if (abs >= 100000000) return (v / 100000000).toFixed(1) + '억';
-                if (abs >= 10000)     return (v / 10000).toFixed(0)   + '만';
-                return v.toLocaleString();
-              },
-            },
-            grid: { color: colorGrid, drawBorder: false },
-          },
-        },
-        plugins: {
-          legend: {
-            labels: { color: colorText, font: { size: 12 }, usePointStyle: true, padding: 14 },
-            position: 'top',
-          },
-          tooltip: {
-            backgroundColor: 'rgba(20,22,28,0.95)',
-            titleColor: '#fff',
-            bodyColor: '#cbd2db',
-            borderColor: colorGrid,
-            borderWidth: 1,
-            padding: 10,
-            callbacks: {
-              label: (ctx) => {
-                const v = ctx.parsed.y;
-                if (v == null) return `${ctx.dataset.label}: —`;
-                return `${ctx.dataset.label}: ${(v >= 0 ? '+' : '−')}${fmtAmount(Math.abs(v))}`;
-              },
-            },
-          },
-        },
+        }),
       },
     });
 
@@ -12661,6 +12619,24 @@ async function renderDashNetworthChart() {
     if ($sub) $sub.textContent = '차트 로드 실패';
   }
 }
+
+// 순자산 차트 시리즈 토글 (v0.7-23)
+function initNetworthSeriesToggle() {
+  document.querySelectorAll('#dash-networth-filter [data-nw-series]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const s = btn.dataset.nwSeries;
+      networthSeries[s] = !networthSeries[s];
+      // 최소 한 개는 유지 — 다 끄면 마지막 누른 걸 다시 켬
+      if (!networthSeries.asset && !networthSeries.liab && !networthSeries.net) {
+        networthSeries[s] = true;
+        return;
+      }
+      btn.classList.toggle('active', networthSeries[s]);
+      renderDashNetworthChart();
+    });
+  });
+}
+initNetworthSeriesToggle();
 
 // ── 자산 구성 도넛 (v0.5 B5 / v0.7-3b monthly SSOT) ──
 // 데이터: 현재 월 monthlyDocs의 자산 잔액 + accounts 마스터 join
@@ -13250,18 +13226,9 @@ async function renderDashTrkChart() {
       // 단일 카테고리 — 라인 (변형 C)
       const cat = presentCats[0];
       const color = svCatColorVar(cat);
-      datasets.push({
-        label: cat,
-        data: catSeries.get(cat),
-        borderColor: color,
-        backgroundColor: color + '22',
-        borderWidth: 2.5,
-        tension: 0.3,
-        pointRadius: 3,
-        pointBackgroundColor: color,
-        spanGaps: true,
-        fill: false,
-      });
+      datasets.push(makeDashDataset({
+        label: cat, data: catSeries.get(cat), color, mode: 'line',
+      }));
       // 원금 점선 — 평가액 모드일 때만
       if (showPrinLine) {
         const ymMap = catYmDocs.get(cat);
@@ -13270,46 +13237,25 @@ async function renderDashTrkChart() {
           if (!docs || docs.length === 0) return null;
           return docs.reduce((s, d) => s + (Number(d.principal) || 0), 0);
         });
-        datasets.push({
-          label: cat + ' 원금',
-          data: prinArr,
-          borderColor: color,
-          backgroundColor: 'transparent',
-          borderWidth: 1.5,
-          borderDash: [5, 4],
-          tension: 0.3,
-          pointRadius: 0,
-          spanGaps: true,
-          fill: false,
-        });
+        datasets.push(makeDashDataset({
+          label: cat + ' 원금', data: prinArr, color, mode: 'dashed',
+        }));
       }
     } else {
       // 다중 카테고리 — 스택 영역 (변형 B), cumRate는 라인
       for (const cat of presentCats) {
         const color = svCatColorVar(cat);
-        datasets.push({
+        datasets.push(makeDashDataset({
           label: cat,
           data: catSeries.get(cat),
-          borderColor: color,
-          backgroundColor: color + (isPct ? '22' : 'cc'),
-          borderWidth: isPct ? 2 : 1.5,
-          tension: 0.3,
-          pointRadius: isPct ? 3 : 2,
-          pointBackgroundColor: color,
-          spanGaps: true,
-          fill: !isPct,
-          stack: isPct ? undefined : 'main',
-        });
+          color,
+          mode: isPct ? 'line' : 'stack',
+        }));
       }
     }
 
-    // 8) Chart 옵션
+    // 8) Chart 옵션 — 공통 헬퍼 (v0.7-23)
     if (dashTrkChart) dashTrkChart.destroy();
-    const css = getComputedStyle(document.documentElement);
-    const colText2  = css.getPropertyValue('--text2').trim()   || '#8b909e';
-    const colText3  = css.getPropertyValue('--text3').trim()   || '#555b6a';
-    const colBorder = 'rgba(255,255,255,0.07)';
-
     dashTrkChart = new Chart($canvas.getContext('2d'), {
       type: 'line',
       data: { labels, datasets },
@@ -13317,47 +13263,19 @@ async function renderDashTrkChart() {
         responsive: true,
         maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: 'rgba(20,22,28,0.95)',
-            titleColor: '#fff',
-            bodyColor: '#cbd2db',
-            borderColor: colBorder,
-            borderWidth: 1,
-            padding: 8,
-            callbacks: {
-              label: (ctx) => {
-                const v = ctx.parsed.y;
-                if (v == null) return `${ctx.dataset.label}: —`;
-                if (isPct) return `${ctx.dataset.label}: ${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(2)}%`;
-                return `${ctx.dataset.label}: ${v >= 0 ? '' : '−'}₩${Math.abs(Math.round(v)).toLocaleString('ko-KR')}`;
-              },
-            }
-          }
-        },
-        scales: {
-          x: {
-            ticks: { color: colText2, font: { size: 10 } },
-            grid: { color: colBorder, drawBorder: false },
+        plugins: makeDashPlugins({
+          tooltipLabel: (ctx) => {
+            const v = ctx.parsed.y;
+            if (v == null) return `${ctx.dataset.label}: —`;
+            if (isPct) return `${ctx.dataset.label}: ${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(2)}%`;
+            return `${ctx.dataset.label}: ${v >= 0 ? '' : '−'}₩${Math.abs(Math.round(v)).toLocaleString('ko-KR')}`;
           },
-          y: {
-            stacked,
-            beginAtZero: trkMeasure !== 'balance',  // 누적수익/수익률은 0선 기준
-            ticks: {
-              color: colText3,
-              font: { size: 10 },
-              callback: v => {
-                if (isPct) return v.toFixed(0) + '%';
-                const abs = Math.abs(v);
-                if (abs >= 1e8) return (v/1e8).toFixed(1) + '억';
-                if (abs >= 1e4) return (v/1e4).toFixed(0) + '만';
-                return v.toLocaleString();
-              },
-            },
-            grid: { color: colBorder, drawBorder: false },
-          }
-        }
+        }),
+        scales: makeDashScales({
+          stacked,
+          isPct,
+          beginAtZero: trkMeasure !== 'balance',
+        }),
       }
     });
 
@@ -13468,6 +13386,128 @@ const EXPENSE_TREEMAP_COLORS = {
 };
 
 // ──────────────────────────────────────────────────────
+// 라인 차트 식별 팔레트 (v0.7-23) — 추이 차트 전용
+// ──────────────────────────────────────────────────────
+// 트리맵은 카테고리 비중 시각화라 같은 톤(그린/시안 또는 블루/퍼플)이 적절하지만,
+// 라인 차트는 라인 간 식별이 핵심이라 톤이 다른 10색이 필요.
+// dark theme에서 가독성이 검증된 톤들로 구성.
+const DASH_LINE_PALETTE = [
+  '#5b8def',   // 블루
+  '#ef6c4d',   // 오렌지
+  '#34d399',   // 그린
+  '#a78bfa',   // 퍼플
+  '#fbbf24',   // 앰버
+  '#f472b6',   // 핑크
+  '#22d3ee',   // 시안
+  '#84cc16',   // 라임
+  '#f87171',   // 레드
+  '#9aa5b1',   // 그레이
+];
+
+// 공통 차트 옵션 토큰 (v0.7-23) — 3개 추이 차트가 일관된 시각 유지
+// 각 차트는 dataset 단위 옵션만 다르고 옵션 객체는 이 헬퍼로 통일.
+function getDashChartTokens() {
+  const css = getComputedStyle(document.documentElement);
+  return {
+    text:   (css.getPropertyValue('--text2').trim()   || '#8b909e'),
+    text3:  (css.getPropertyValue('--text3').trim()   || '#555b6a'),
+    grid:   'rgba(255,255,255,0.07)',
+    tooltipBg: 'rgba(20,22,28,0.95)',
+  };
+}
+
+// 공통 dataset 스타일 (라인 모드 / 스택 모드 / 단일 라인)
+//   color: 라인 색
+//   mode: 'line' (단일 또는 다중 라인) | 'stack' (영역 스택) | 'dashed' (점선 비교선)
+function makeDashDataset({ label, data, color, mode = 'line', stackId, hidden }) {
+  const base = {
+    label,
+    data,
+    borderColor: color,
+    tension: 0.3,
+    spanGaps: true,
+    hidden: !!hidden,
+  };
+  if (mode === 'stack') {
+    return {
+      ...base,
+      backgroundColor: color + 'cc',
+      borderWidth: 1.5,
+      pointRadius: 2,
+      pointHoverRadius: 5,
+      pointBackgroundColor: color,
+      fill: true,
+      stack: stackId || 'main',
+    };
+  }
+  if (mode === 'dashed') {
+    return {
+      ...base,
+      backgroundColor: 'transparent',
+      borderWidth: 1.5,
+      borderDash: [5, 4],
+      pointRadius: 0,
+      pointHoverRadius: 0,
+      fill: false,
+    };
+  }
+  // line (단일 또는 다중)
+  return {
+    ...base,
+    backgroundColor: color + '22',
+    borderWidth: 2.5,
+    pointRadius: 2,
+    pointHoverRadius: 5,
+    pointBackgroundColor: color,
+    fill: false,
+  };
+}
+
+// 공통 axis 옵션 (KRW 또는 %)
+function makeDashScales({ stacked = false, isPct = false, beginAtZero = false } = {}) {
+  const t = getDashChartTokens();
+  return {
+    x: {
+      ticks: { color: t.text, font: { size: 10 } },
+      grid:  { color: t.grid, drawBorder: false },
+    },
+    y: {
+      stacked,
+      beginAtZero,
+      ticks: {
+        color: t.text3,
+        font: { size: 10 },
+        callback: (v) => {
+          if (isPct) return v.toFixed(0) + '%';
+          const abs = Math.abs(v);
+          if (abs >= 1e8) return (v / 1e8).toFixed(1) + '억';
+          if (abs >= 1e4) return (v / 1e4).toFixed(0) + '만';
+          return v.toLocaleString();
+        },
+      },
+      grid: { color: t.grid, drawBorder: false },
+    },
+  };
+}
+
+// 공통 plugins 옵션 (legend는 항상 끔 — 칩이 범례 역할)
+function makeDashPlugins({ tooltipLabel } = {}) {
+  const t = getDashChartTokens();
+  return {
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: t.tooltipBg,
+      titleColor: '#fff',
+      bodyColor: '#cbd2db',
+      borderColor: t.grid,
+      borderWidth: 1,
+      padding: 8,
+      callbacks: tooltipLabel ? { label: tooltipLabel } : undefined,
+    },
+  };
+}
+
+// ──────────────────────────────────────────────────────
 // 카테고리별 지출 추이 차트 (v0.7-22)
 // ──────────────────────────────────────────────────────
 // 데이터: 분석 기간 transactions의 fixed/variable 거래
@@ -13489,15 +13529,15 @@ let catExpFlow = 'variable';       // v0.7-22 — flow 토글 (전체/고정/변
 const CAT_EXP_TOP_N = 5;           // "전체" 모드일 때 상위 몇 개 카테고리를 라인으로 그릴지
 
 // 카테고리 → 일관된 색상 매핑 (trace의 모든 호출에서 같은 카테고리는 같은 색)
-function buildCatExpColorMap(catsWithFlow) {
-  // catsWithFlow: [{ cat, flow }] — 처음 등장한 순서대로 그 flow의 팔레트에서 순환 할당
+// v0.7-23 — 라인 식별을 위해 DASH_LINE_PALETTE 사용 (트리맵과 분리)
+//           트리맵은 같은 톤(비중 시각화), 라인은 다른 톤(식별)이 목적
+function buildCatExpColorMap(cats) {
   const map = new Map();
-  const counter = { fixed: 0, variable: 0 };
-  for (const { cat, flow } of catsWithFlow) {
+  let i = 0;
+  for (const { cat } of cats) {
     if (map.has(cat)) continue;
-    const palette = EXPENSE_TREEMAP_COLORS[flow] || EXPENSE_TREEMAP_COLORS.variable;
-    map.set(cat, palette[counter[flow] % palette.length]);
-    counter[flow] = (counter[flow] || 0) + 1;
+    map.set(cat, DASH_LINE_PALETTE[i % DASH_LINE_PALETTE.length]);
+    i++;
   }
   return map;
 }
@@ -13605,25 +13645,11 @@ async function renderDashCatExpenseChart() {
       const entry = catTotals.get(cat);
       const data = ymList.map(ym => entry.monthSums.get(ym) || 0);
       const color = colorMap.get(cat) || '#9aa5b1';
-      return {
-        label: cat,
-        data,
-        borderColor: color,
-        backgroundColor: color + '22',
-        borderWidth: 2,
-        tension: 0.3,
-        pointRadius: 3,
-        pointHoverRadius: 5,
-        pointBackgroundColor: color,
-      };
+      return makeDashDataset({ label: cat, data, color, mode: 'line' });
     });
 
-    // 9) Chart.js 옵션 — 토큰
+    // 9) Chart.js 옵션 — 공통 헬퍼 사용 (v0.7-23)
     if (dashCatExpenseChart) dashCatExpenseChart.destroy();
-
-    const css = getComputedStyle(document.documentElement);
-    const colorText  = (css.getPropertyValue('--text2')  || '').trim() || '#9aa5b1';
-    const colorGrid  = (css.getPropertyValue('--border') || '').trim() || 'rgba(255,255,255,0.08)';
 
     dashCatExpenseChart = new Chart($canvas.getContext('2d'), {
       type: 'line',
@@ -13632,39 +13658,10 @@ async function renderDashCatExpenseChart() {
         responsive: true,
         maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
-        plugins: {
-          legend: { display: false },   // 필터 칩이 범례 역할
-          tooltip: {
-            backgroundColor: 'rgba(20,22,28,0.95)',
-            titleColor: '#fff',
-            bodyColor: '#cbd2db',
-            borderColor: colorGrid,
-            borderWidth: 1,
-            padding: 10,
-            callbacks: {
-              label: (ctx) => `${ctx.dataset.label}: ${fmtAmount(ctx.parsed.y || 0)}`,
-            },
-          },
-        },
-        scales: {
-          x: {
-            ticks: { color: colorText, font: { size: 11 } },
-            grid:  { color: colorGrid, drawBorder: false },
-          },
-          y: {
-            beginAtZero: true,
-            ticks: {
-              color: colorText, font: { size: 11 },
-              callback: (v) => {
-                const abs = Math.abs(v);
-                if (abs >= 100000000) return (v / 100000000).toFixed(1) + '억';
-                if (abs >= 10000)     return (v / 10000).toFixed(0)   + '만';
-                return v.toLocaleString();
-              },
-            },
-            grid: { color: colorGrid, drawBorder: false },
-          },
-        },
+        plugins: makeDashPlugins({
+          tooltipLabel: (ctx) => `${ctx.dataset.label}: ${fmtAmount(ctx.parsed.y || 0)}`,
+        }),
+        scales: makeDashScales({ beginAtZero: true }),
       },
     });
 
