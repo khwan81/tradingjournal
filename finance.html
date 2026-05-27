@@ -805,6 +805,100 @@ body {
 .restore-progress-step.active { color: var(--accent); border-color: var(--accent); }
 .restore-progress-step.done { color: var(--green); }
 
+/* 전체 초기화 모달 (v0.7-21) */
+.modal-reset { max-width: 540px; }
+.reset-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text2);
+  margin: 14px 0 8px;
+  letter-spacing: 0.02em;
+}
+.reset-section-title:first-child { margin-top: 4px; }
+.reset-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.reset-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.reset-option:hover { border-color: var(--border2); }
+.reset-option:has(.reset-check:checked) {
+  border-color: rgba(239, 68, 68, 0.45);
+  background: rgba(239, 68, 68, 0.06);
+}
+.reset-check {
+  margin-top: 2px;
+  width: 16px; height: 16px;
+  accent-color: var(--red, #ef4444);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.reset-option-body { flex: 1; min-width: 0; }
+.reset-option-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.reset-option-desc {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 2px;
+  line-height: 1.45;
+}
+.reset-count {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text3);
+  font-weight: 400;
+}
+.reset-count.has-data { color: var(--accent); }
+.reset-quick-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+.reset-confirm-block {
+  margin-top: 14px;
+  padding: 12px;
+  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid rgba(239, 68, 68, 0.28);
+  border-radius: 8px;
+}
+.reset-confirm-label {
+  font-size: 12px;
+  color: #fca5a5;
+  margin-bottom: 8px;
+}
+.reset-confirm-input {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: var(--font-mono);
+}
+.reset-confirm-input:focus {
+  outline: none;
+  border-color: var(--red, #ef4444);
+}
+
 /* 자산 종류 삭제 모달 (v0.3-2) */
 .atd-account-list {
   background: var(--bg2);
@@ -4169,17 +4263,18 @@ body {
         <button class="btn-p" id="btn-backup-download">📥 백업 다운로드</button>
       </div>
 
-      <!-- 잔고 초기화 도구 -->
+      <!-- 전체 초기화 도구 (v0.7-21) -->
       <div class="backup-card" id="reset-card">
         <div class="backup-info">
-          <div class="backup-info-title">🧹 자산/부채 잔고 초기화</div>
+          <div class="backup-info-title">🧹 전체 초기화</div>
           <div class="backup-info-desc danger">
-            자산·부채 결산(<code>monthly</code> / <code>monthly_liab</code>) 데이터를 모두 삭제합니다.<br>
-            거래·계좌 마스터·예산은 보존됩니다. 진행 전 백업을 받으세요.<br>
+            삭제할 데이터를 선택해서 초기화합니다.<br>
+            거래·결산·마스터·설정 중 원하는 항목만 골라서 삭제할 수 있습니다.<br>
+            진행 전 반드시 백업을 받으세요.<br>
             <span id="reset-status">—</span>
           </div>
         </div>
-        <button class="btn-danger" id="btn-reset-balances">전체 초기화</button>
+        <button class="btn-danger" id="btn-reset-open">전체 초기화</button>
       </div>
 
       <div class="backup-card backup-card-restore">
@@ -4278,6 +4373,133 @@ body {
     <div class="modal-foot">
       <button class="btn" data-close="ov-restore" id="restore-cancel">취소</button>
       <button class="btn-danger" id="restore-execute" disabled>복원 실행</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 모달: 전체 초기화 (v0.7-21) ── -->
+<div class="ov" id="ov-reset">
+  <div class="modal modal-reset">
+    <div class="modal-head">
+      <h3>🧹 전체 초기화</h3>
+      <button class="modal-close" data-close="ov-reset">×</button>
+    </div>
+    <div class="modal-body">
+      <!-- 단계 1: 항목 선택 -->
+      <div id="reset-step-select">
+        <div class="restore-warn" style="margin-bottom:14px;">
+          ⚠️ 삭제된 데이터는 <strong>복구할 수 없습니다</strong>.<br>
+          진행 전 반드시 백업을 받으세요.
+        </div>
+
+        <div class="reset-section-title">📊 거래·결산 데이터</div>
+        <div class="reset-options">
+          <label class="reset-option">
+            <input type="checkbox" class="reset-check" data-key="transactions">
+            <div class="reset-option-body">
+              <div class="reset-option-title">거래내역 <span class="reset-count" id="rsc-transactions">…</span></div>
+              <div class="reset-option-desc">모든 수입/지출 거래</div>
+            </div>
+          </label>
+          <label class="reset-option">
+            <input type="checkbox" class="reset-check" data-key="monthly">
+            <div class="reset-option-body">
+              <div class="reset-option-title">자산 결산 <span class="reset-count" id="rsc-monthly">…</span></div>
+              <div class="reset-option-desc">월별 자산 잔고/원금 (monthly · 옛 snapshots 포함)</div>
+            </div>
+          </label>
+          <label class="reset-option">
+            <input type="checkbox" class="reset-check" data-key="monthlyLiab">
+            <div class="reset-option-body">
+              <div class="reset-option-title">부채 결산 <span class="reset-count" id="rsc-monthlyLiab">…</span></div>
+              <div class="reset-option-desc">월별 부채 잔액 (monthly_liab)</div>
+            </div>
+          </label>
+          <label class="reset-option">
+            <input type="checkbox" class="reset-check" data-key="dividends">
+            <div class="reset-option-body">
+              <div class="reset-option-title">배당 <span class="reset-count" id="rsc-dividends">…</span></div>
+              <div class="reset-option-desc">배당 수령 기록</div>
+            </div>
+          </label>
+        </div>
+
+        <div class="reset-section-title">📅 계획 데이터</div>
+        <div class="reset-options">
+          <label class="reset-option">
+            <input type="checkbox" class="reset-check" data-key="budgets">
+            <div class="reset-option-body">
+              <div class="reset-option-title">예산 <span class="reset-count" id="rsc-budgets">…</span></div>
+              <div class="reset-option-desc">월별 카테고리 예산</div>
+            </div>
+          </label>
+          <label class="reset-option">
+            <input type="checkbox" class="reset-check" data-key="recurring">
+            <div class="reset-option-body">
+              <div class="reset-option-title">반복지출 <span class="reset-count" id="rsc-recurring">…</span></div>
+              <div class="reset-option-desc">반복지출 템플릿</div>
+            </div>
+          </label>
+          <label class="reset-option">
+            <input type="checkbox" class="reset-check" data-key="events">
+            <div class="reset-option-body">
+              <div class="reset-option-title">경조사 <span class="reset-count" id="rsc-events">…</span></div>
+              <div class="reset-option-desc">경조사 일정/기록</div>
+            </div>
+          </label>
+        </div>
+
+        <div class="reset-section-title">🏦 마스터 데이터</div>
+        <div class="reset-options">
+          <label class="reset-option">
+            <input type="checkbox" class="reset-check" data-key="accounts">
+            <div class="reset-option-body">
+              <div class="reset-option-title">계좌 마스터 <span class="reset-count" id="rsc-accounts">…</span></div>
+              <div class="reset-option-desc">모든 계좌 항목 (휴지통 포함, 자산 종류 enum은 보존)</div>
+            </div>
+          </label>
+          <label class="reset-option">
+            <input type="checkbox" class="reset-check" data-key="liabilities">
+            <div class="reset-option-body">
+              <div class="reset-option-title">부채 마스터 <span class="reset-count" id="rsc-liabilities">…</span></div>
+              <div class="reset-option-desc">모든 부채 항목 (휴지통 포함)</div>
+            </div>
+          </label>
+          <label class="reset-option">
+            <input type="checkbox" class="reset-check" data-key="settings">
+            <div class="reset-option-body">
+              <div class="reset-option-title">기타 설정</div>
+              <div class="reset-option-desc">카테고리·결제수단·환율 등 (financeSettings 전체 초기화)</div>
+            </div>
+          </label>
+        </div>
+
+        <!-- 빠른 선택 -->
+        <div class="reset-quick-row">
+          <button type="button" class="btn-s" id="btn-reset-select-all">전체 선택</button>
+          <button type="button" class="btn-s" id="btn-reset-select-none">전체 해제</button>
+        </div>
+
+        <!-- 확인 입력 -->
+        <div class="reset-confirm-block" id="reset-confirm-block" style="display:none;">
+          <div class="reset-confirm-label">
+            확인을 위해 <strong>초기화</strong>를 입력하세요
+          </div>
+          <input type="text" id="reset-confirm-input" class="reset-confirm-input" placeholder="초기화" autocomplete="off">
+        </div>
+      </div>
+
+      <!-- 단계 2: 진행 표시 -->
+      <div id="reset-step-progress" style="display:none;">
+        <div class="restore-progress">
+          <div class="restore-progress-step" id="reset-ps-1">⏳ 데이터 삭제 중…</div>
+          <div class="restore-progress-step" id="reset-ps-2">⏳ 마무리…</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" data-close="ov-reset" id="reset-cancel">취소</button>
+      <button class="btn-danger" id="reset-execute" disabled>초기화 실행</button>
     </div>
   </div>
 </div>
@@ -8274,49 +8496,236 @@ async function writeAllToCollection(collRef, items, idField) {
 
 
 // ──────────────────────────────────────────────────────
-// v0.7-5a — 자산/부채 잔고 초기화 (snapshots/monthly/monthly_liab 일괄 삭제)
+// v0.7-21 — 전체 초기화 (선택형)
 // ──────────────────────────────────────────────────────
-async function resetBalances() {
+// 사용자가 체크박스로 선택한 항목만 삭제. 모든 데이터를 완전히 지울 수도 있고,
+// 일부만 지울 수도 있다.
+//
+// 삭제 가능 항목:
+//   • transactions  — 거래내역
+//   • monthly       — 자산 결산 (옛 snapshots 잔재도 함께)
+//   • monthlyLiab   — 부채 결산
+//   • dividends     — 배당
+//   • budgets       — 예산
+//   • recurring     — 반복지출
+//   • events        — 경조사
+//   • accounts      — 계좌 마스터 (items 컬렉션 전체. categoriesEnum 등 settings는 보존)
+//   • liabilities   — 부채 마스터 + 휴지통 (financeSettings의 liabilities/liabilitiesDeleted 필드만 삭제)
+//   • settings      — financeSettings 도큐먼트 전체 삭제 (카테고리·결제수단·환율 등)
+// ──────────────────────────────────────────────────────
+
+// 카운트 캐시 (모달 오픈 시 채워짐)
+let resetCounts = {};
+
+async function openResetModal() {
   if (!currentUid) { showToast('로그인이 필요합니다'); return; }
 
-  const ok1 = confirm(
-    '⚠️ 자산/부채 잔고 데이터를 모두 삭제합니다.\n\n' +
-    '• 자산 결산 (monthly)\n' +
-    '• 부채 결산 (monthly_liab)\n\n' +
-    '거래·계좌 마스터·예산·반복지출·경조사는 보존됩니다.\n\n' +
-    '백업을 먼저 다운로드했나요?'
-  );
-  if (!ok1) return;
-  const ok2 = confirm('정말 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.');
-  if (!ok2) return;
+  // 단계 초기화
+  document.getElementById('reset-step-select').style.display = '';
+  document.getElementById('reset-step-progress').style.display = 'none';
+  document.getElementById('reset-confirm-block').style.display = 'none';
+  document.getElementById('reset-confirm-input').value = '';
+  document.getElementById('reset-execute').disabled = true;
+  document.getElementById('reset-cancel').disabled = false;
+  document.querySelectorAll('.reset-check').forEach(cb => { cb.checked = false; });
 
-  const $btn = document.getElementById('btn-reset-balances');
-  const $status = document.getElementById('reset-status');
-  $btn.disabled = true;
-  $status.textContent = '삭제 중…';
+  // 카운트 placeholder
+  ['transactions','monthly','monthlyLiab','dividends','budgets','recurring','events','accounts','liabilities']
+    .forEach(k => {
+      const el = document.getElementById('rsc-' + k);
+      if (el) { el.textContent = '…'; el.classList.remove('has-data'); }
+    });
 
+  openOv('ov-reset');
+
+  // 백그라운드에서 카운트 페치
   try {
-    const [delSnap, delMonthly, delMonthlyLiab] = await Promise.all([
-      deleteAllInCollection(pathSnapshots()),  // 옛 잔재 정리 (있어도 없어도 무해)
-      deleteAllInCollection(pathMonthly()),
-      deleteAllInCollection(pathMonthlyLiab()),
+    const [
+      txSnap, monthlySnap, snapSnap, monthlyLiabSnap, divSnap,
+      budgetsSnap, recurringSnap, eventsSnap, accountsSnap
+    ] = await Promise.all([
+      getDocs(pathTransactions()),
+      getDocs(pathMonthly()),
+      getDocs(pathSnapshots()),
+      getDocs(pathMonthlyLiab()),
+      getDocs(pathDividends()),
+      getDocs(pathBudgets()),
+      getDocs(pathRecurring()),
+      getDocs(pathEvents()),
+      getDocs(pathAccountsItems()),
     ]);
-    const totalN = delSnap + delMonthly + delMonthlyLiab;
-    $status.innerHTML = `✅ 삭제 완료 — 총 ${totalN}건 (자산 ${delMonthly} · 부채 ${delMonthlyLiab}${delSnap > 0 ? ` · 옛 스냅 ${delSnap}` : ''})`;
-    showToast('잔고 데이터 초기화 완료');
 
-    // v0.7-7 — 수익률 캐시 무효화
-    invalidateReturnsCache();
-    if (isReturnsVisible()) renderReturns();
+    // 부채 마스터/휴지통 카운트는 현재 메모리상의 settings에서 — 별도 fetch 불필요
+    const liabActive = Array.isArray(settings?.liabilities) ? settings.liabilities.length : 0;
+    const liabTrash  = Array.isArray(settings?.liabilitiesDeleted) ? settings.liabilitiesDeleted.length : 0;
+    const liabTotal  = liabActive + liabTrash;
+
+    resetCounts = {
+      transactions: txSnap.size,
+      monthly:      monthlySnap.size + snapSnap.size,  // 옛 snapshots도 monthly 카운트에 포함
+      monthlyLiab:  monthlyLiabSnap.size,
+      dividends:    divSnap.size,
+      budgets:      budgetsSnap.size,
+      recurring:    recurringSnap.size,
+      events:       eventsSnap.size,
+      accounts:     accountsSnap.size,
+      liabilities:  liabTotal,
+      _snapshots:   snapSnap.size,  // 내부용 — monthly에 합쳐서 표시
+    };
+
+    // 카운트 UI 갱신
+    for (const k of Object.keys(resetCounts)) {
+      if (k.startsWith('_')) continue;
+      const el = document.getElementById('rsc-' + k);
+      if (!el) continue;
+      const n = resetCounts[k];
+      el.textContent = `· ${n}건`;
+      if (n > 0) el.classList.add('has-data');
+    }
   } catch (e) {
-    console.error('[reset balances]', e);
-    $status.textContent = '❌ 초기화 실패: ' + (e.message || e.code);
-  } finally {
-    $btn.disabled = false;
+    console.error('[reset] count fetch', e);
+    showToast('카운트 조회 실패: ' + (e.message || e.code));
   }
 }
 
-document.getElementById('btn-reset-balances').addEventListener('click', resetBalances);
+function getSelectedResetKeys() {
+  return Array.from(document.querySelectorAll('.reset-check'))
+    .filter(cb => cb.checked)
+    .map(cb => cb.dataset.key);
+}
+
+// 체크박스 변경 → 확인 입력 영역 표시/숨김 + 실행 버튼 활성화 조건 갱신
+function updateResetUiState() {
+  const selected = getSelectedResetKeys();
+  const $confirmBlock = document.getElementById('reset-confirm-block');
+  const $confirmInput = document.getElementById('reset-confirm-input');
+  const $exec = document.getElementById('reset-execute');
+
+  if (selected.length === 0) {
+    $confirmBlock.style.display = 'none';
+    $confirmInput.value = '';
+    $exec.disabled = true;
+    return;
+  }
+  $confirmBlock.style.display = '';
+  $exec.disabled = $confirmInput.value.trim() !== '초기화';
+}
+
+// 진행 단계 표시 헬퍼
+function setResetStep(idx, state, customText) {
+  const el = document.getElementById('reset-ps-' + idx);
+  if (!el) return;
+  el.classList.remove('active', 'done');
+  if (state === 'active') el.classList.add('active');
+  if (state === 'done')   el.classList.add('done');
+  if (customText) el.textContent = customText;
+}
+
+// 실제 삭제 실행
+async function executeReset() {
+  if (!currentUid) { showToast('로그인이 필요합니다'); return; }
+  const selected = getSelectedResetKeys();
+  if (selected.length === 0) { showToast('삭제할 항목을 선택하세요'); return; }
+  if (document.getElementById('reset-confirm-input').value.trim() !== '초기화') {
+    showToast('확인 문구가 일치하지 않습니다');
+    return;
+  }
+
+  const $exec   = document.getElementById('reset-execute');
+  const $cancel = document.getElementById('reset-cancel');
+  $exec.disabled = true;
+  $cancel.disabled = true;
+
+  // 진행 화면으로 전환
+  document.getElementById('reset-step-select').style.display = 'none';
+  document.getElementById('reset-step-progress').style.display = '';
+
+  // 구독자 정지 — 삭제 도중 onSnapshot 콜백이 발화해 렌더 에러를 내는 것 방지.
+  // 곧 페이지를 새로고침하므로 UI 상태가 잠시 비어 보일 수 있다 (의도된 동작).
+  try { unsubscribeAll(); } catch (_) { /* ignore */ }
+
+  try {
+    setResetStep(1, 'active');
+    const results = [];   // 진행 로그 ([라벨, 건수])
+
+    // 컬렉션 삭제 작업 매핑
+    // (전체 초기화 시 병렬 처리 가능하지만, 진행 가시성을 위해 순차로 처리)
+    const collectionTasks = [
+      { key: 'transactions', label: '거래내역',   ref: pathTransactions() },
+      { key: 'monthly',      label: '자산 결산',  ref: pathMonthly() },
+      { key: 'monthlyLiab',  label: '부채 결산',  ref: pathMonthlyLiab() },
+      { key: 'dividends',    label: '배당',       ref: pathDividends() },
+      { key: 'budgets',      label: '예산',       ref: pathBudgets() },
+      { key: 'recurring',    label: '반복지출',   ref: pathRecurring() },
+      { key: 'events',       label: '경조사',     ref: pathEvents() },
+      { key: 'accounts',     label: '계좌 마스터', ref: pathAccountsItems() },
+    ];
+
+    for (const t of collectionTasks) {
+      if (!selected.includes(t.key)) continue;
+      const n = await deleteAllInCollection(t.ref);
+      results.push([t.label, n]);
+    }
+
+    // 자산 결산을 선택하면 옛 snapshots 잔재도 함께 정리
+    if (selected.includes('monthly')) {
+      const n = await deleteAllInCollection(pathSnapshots());
+      if (n > 0) results.push(['옛 스냅', n]);
+    }
+
+    // 부채 마스터 + 휴지통 → financeSettings의 두 필드만 삭제 (도큐먼트는 보존)
+    // settings 전체 삭제도 같이 선택했다면 어차피 도큐먼트가 사라지므로 스킵
+    if (selected.includes('liabilities') && !selected.includes('settings')) {
+      const curSettings = settings || {};
+      // eslint-disable-next-line no-unused-vars
+      const { liabilities: _omitL, liabilitiesDeleted: _omitD, ...rest } = curSettings;
+      await setDoc(pathFinanceSettings(), rest, { merge: false });
+      const liabN = resetCounts.liabilities || 0;
+      results.push(['부채 마스터', liabN]);
+    }
+
+    // financeSettings 도큐먼트 전체 삭제 (카테고리·결제수단·환율 등)
+    if (selected.includes('settings')) {
+      await deleteDoc(pathFinanceSettings());
+      results.push(['기타 설정', 1]);
+    }
+
+    const totalDeleted = results.reduce((a, [, n]) => a + n, 0);
+    const summary = results.length
+      ? results.map(([l, n]) => `${l} ${n}`).join(' · ')
+      : '삭제된 항목 없음';
+    setResetStep(1, 'done', `✓ 삭제 완료 (총 ${totalDeleted}건) — ${summary}`);
+
+    // 마무리 — 페이지 새로고침으로 모든 구독 상태 깨끗이 정리
+    setResetStep(2, 'active', '⏳ 새로고침 준비 중…');
+    await new Promise(r => setTimeout(r, 600));
+    setResetStep(2, 'done', '✓ 완료 — 3초 후 새로고침됩니다');
+
+    showToast('초기화 완료 — 페이지를 새로고침합니다');
+    setTimeout(() => { window.location.reload(); }, 3000);
+  } catch (e) {
+    console.error('[reset] 실행 오류', e);
+    showToast('초기화 실패: ' + (e.message || e.code || '알 수 없는 오류'));
+    $cancel.disabled = false;
+    setResetStep(1, '', '⚠️ 중단됨 — 콘솔(F12)에서 오류 확인 후 다시 시도하세요');
+  }
+}
+
+// 이벤트 바인딩
+document.getElementById('btn-reset-open').addEventListener('click', openResetModal);
+document.querySelectorAll('.reset-check').forEach(cb => {
+  cb.addEventListener('change', updateResetUiState);
+});
+document.getElementById('reset-confirm-input').addEventListener('input', updateResetUiState);
+document.getElementById('btn-reset-select-all').addEventListener('click', () => {
+  document.querySelectorAll('.reset-check').forEach(cb => { cb.checked = true; });
+  updateResetUiState();
+});
+document.getElementById('btn-reset-select-none').addEventListener('click', () => {
+  document.querySelectorAll('.reset-check').forEach(cb => { cb.checked = false; });
+  updateResetUiState();
+});
+document.getElementById('reset-execute').addEventListener('click', executeReset);
 
 // ── 메인: 복원 실행 ──
 async function executeRestore() {
