@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>가계부</title>
+<title>Finance</title>
 
 <!-- PWA -->
 <link rel="manifest" href="/tradingjournal/manifest-finance.json">
@@ -11,11 +11,11 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="가계부">
+<meta name="apple-mobile-web-app-title" content="Finance">
 <link rel="apple-touch-icon" href="/tradingjournal/icons/icon-finance-192.png">
 <link rel="icon" type="image/png" sizes="192x192" href="/tradingjournal/icons/icon-finance-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="/tradingjournal/icons/icon-finance-512.png">
-<meta name="description" content="개인 가계부 — 수입/지출 기록, 손익, 재무상태">
+<meta name="description" content="Finance — 수입/지출 기록, 손익, 재무상태">
 <meta name="robots" content="noindex">
 
 <!-- Firebase SDK v10 -->
@@ -67,6 +67,24 @@
   --radius-lg: 14px;
   --font:      'DM Sans', 'Noto Sans KR', sans-serif;
   --font-mono: 'DM Mono', 'Fira Mono', monospace;
+
+  /* v0.7-13 — 폰트 사이즈 토큰 (앞으로 신규 컴포넌트는 토큰 사용) */
+  --fs-2xs: 10px;   /* 보조 메타 (날짜, asOf, 캡션) */
+  --fs-xs:  11px;   /* sub 텍스트, 라벨, 캡션 */
+  --fs-sm:  12px;   /* 보조 본문, 알림바, 버튼 sm */
+  --fs-md:  13px;   /* 본문 기본, 버튼 md */
+  --fs-lg:  14px;   /* 카드 타이틀, 입력 폰트 */
+  --fs-xl:  16px;   /* 페이지 헤더, 모달 헤더 */
+  --fs-2xl: 18px;   /* 작은 KPI value */
+  --fs-3xl: 20px;   /* 기본 KPI value */
+
+  /* v0.7-13 — 버튼 사이즈 토큰 */
+  --btn-h-sm: 28px;
+  --btn-h-md: 34px;
+  --btn-h-lg: 40px;
+  --btn-px-sm: 10px;
+  --btn-px-md: 14px;
+  --btn-px-lg: 18px;
 }
 
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500&display=swap');
@@ -705,6 +723,8 @@ body {
 .kpi-card .value {
   font-size: 20px; font-weight: 500;
   font-family: var(--font-mono);
+  color: var(--text);
+  line-height: 1.2;
 }
 .kpi-card .value.green { color: var(--green); }
 .kpi-card .value.red   { color: var(--red); }
@@ -712,6 +732,16 @@ body {
 .kpi-card .sub {
   font-size: 11px; color: var(--text3); margin-top: 4px;
 }
+/* MoM (전월 대비) — bs-kpi의 부가 라인 흡수 */
+.kpi-card .bs-mom {
+  font-size: 11px;
+  margin-top: 4px;
+  font-weight: 500;
+  font-family: var(--font-mono);
+}
+.kpi-card .bs-mom.green { color: var(--green); }
+.kpi-card .bs-mom.red   { color: var(--red); }
+.kpi-card .bs-mom.muted { color: var(--text3); font-weight: 400; }
 
 /* 필터 바 */
 .filter-bar {
@@ -743,176 +773,148 @@ body {
   color: var(--text);
 }
 
-/* 미결제 알림바 */
-.unpaid-bar {
+/* ── 알림바 (.alert-bar) — v0.7-13 통일
+ *    기존 unpaid-bar / recurring-bar / budget-bar / event-bar 4종을
+ *    .alert-bar + data-tone 모디파이어로 통합.
+ *    각 알림바의 기존 HTML 클래스 (unpaid-bar, ub-cta 등) 은
+ *    HTML 호환을 위해 별도 alias로 함께 매핑.
+ */
+.alert-bar,
+.unpaid-bar, .recurring-bar, .budget-bar, .event-bar {
   display: none;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  background: rgba(139, 144, 158, 0.08);
+  border: 1px solid rgba(139, 144, 158, 0.28);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: var(--text);
+}
+.alert-bar.show,
+.unpaid-bar.show, .recurring-bar.show, .budget-bar.show, .event-bar.show {
+  display: flex;
+}
+
+/* tone — 톤별 배경/보더 */
+.alert-bar[data-tone="amber"], .unpaid-bar {
   background: rgba(251, 191, 36, 0.10);
-  border: 1px solid rgba(251, 191, 36, 0.32);
-  border-radius: 8px;
-  padding: 10px 12px;
-  margin-bottom: 12px;
-  font-size: 13px;
-  color: var(--text);
+  border-color: rgba(251, 191, 36, 0.32);
 }
-.unpaid-bar.show { display: flex; }
-.unpaid-bar .ub-left {
-  display: flex; align-items: center; gap: 8px;
-  min-width: 0;
-}
-.unpaid-bar .ub-icon { color: var(--amber); font-size: 14px; }
-.unpaid-bar .ub-text { color: var(--text2); }
-.unpaid-bar .ub-amt { color: var(--amber); font-weight: 700; }
-.unpaid-bar .ub-cta {
-  background: var(--amber);
-  color: #1a1300;
-  border: 0;
-  border-radius: 6px;
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  font-family: var(--font);
-  white-space: nowrap;
-}
-.unpaid-bar .ub-cta:hover { filter: brightness(1.08); }
-@media (max-width: 640px) {
-  .unpaid-bar { flex-direction: column; align-items: stretch; gap: 8px; }
-  .unpaid-bar .ub-cta { width: 100%; }
-}
-
-/* 반복지출 알림바 (v0.2-3) — 파란색 톤 */
-.recurring-bar {
-  display: none;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+.alert-bar[data-tone="info"], .recurring-bar {
   background: rgba(79, 143, 255, 0.10);
-  border: 1px solid rgba(79, 143, 255, 0.32);
-  border-radius: 8px;
-  padding: 10px 12px;
-  margin-bottom: 12px;
-  font-size: 13px;
-  color: var(--text);
+  border-color: rgba(79, 143, 255, 0.32);
 }
-.recurring-bar.show { display: flex; }
-.recurring-bar .rb-left {
-  display: flex; align-items: center; gap: 8px;
-  min-width: 0;
-}
-.recurring-bar .rb-icon { font-size: 14px; }
-.recurring-bar .rb-text { color: var(--text2); }
-.recurring-bar .rb-count { color: var(--accent); font-weight: 700; }
-.recurring-bar .rb-cta {
-  background: var(--accent);
-  color: #fff;
-  border: 0;
-  border-radius: 6px;
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  font-family: var(--font);
-  white-space: nowrap;
-}
-.recurring-bar .rb-cta:hover { filter: brightness(1.08); }
-.recurring-bar .rb-cta:disabled { opacity: 0.5; cursor: not-allowed; }
-@media (max-width: 640px) {
-  .recurring-bar { flex-direction: column; align-items: stretch; gap: 8px; }
-  .recurring-bar .rb-cta { width: 100%; }
-}
-
-/* 예산 알림바 (v0.4 A7) */
-.budget-bar {
-  display: none;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+.alert-bar[data-tone="warn"], .budget-bar {
   background: rgba(245, 158, 11, 0.08);
-  border: 1px solid rgba(245, 158, 11, 0.32);
-  border-radius: 8px;
-  padding: 10px 12px;
-  margin-bottom: 12px;
-  font-size: 13px;
-  color: var(--text);
+  border-color: rgba(245, 158, 11, 0.32);
 }
-.budget-bar.show { display: flex; }
-.budget-bar.severe {
+.alert-bar[data-tone="danger"], .budget-bar.severe {
   background: rgba(239, 68, 68, 0.08);
   border-color: rgba(239, 68, 68, 0.36);
 }
-.budget-bar .bb-left {
-  display: flex; align-items: center; gap: 8px;
-  min-width: 0; flex: 1;
-}
-.budget-bar .bb-icon { font-size: 14px; }
-.budget-bar .bb-text {
-  color: var(--text2);
-  overflow: hidden; text-overflow: ellipsis;
-}
-.budget-bar .bb-strong { color: #fbbf24; font-weight: 600; }
-.budget-bar.severe .bb-strong { color: var(--red); }
-.budget-bar .bb-cta {
-  background: transparent;
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  font-family: var(--font);
-  white-space: nowrap;
-}
-.budget-bar .bb-cta:hover { background: rgba(255,255,255,0.04); }
-@media (max-width: 640px) {
-  .budget-bar { flex-direction: column; align-items: stretch; gap: 8px; }
-  .budget-bar .bb-cta { width: 100%; }
+.alert-bar[data-tone="pink"], .event-bar {
+  background: rgba(236, 72, 153, 0.08);
+  border-color: rgba(236, 72, 153, 0.32);
 }
 
-/* 경조사 적립 알림바 (v0.6) */
-.event-bar {
-  display: none;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  background: rgba(236, 72, 153, 0.08);
-  border: 1px solid rgba(236, 72, 153, 0.32);
-  border-radius: 8px;
-  padding: 10px 12px;
-  margin-bottom: 12px;
-  font-size: 13px;
-  color: var(--text);
-}
-.event-bar.show { display: flex; }
+/* 좌측 (아이콘 + 텍스트) */
+.alert-left,
+.unpaid-bar .ub-left,
+.recurring-bar .rb-left,
+.budget-bar .bb-left,
 .event-bar .eb-left {
   display: flex; align-items: center; gap: 8px;
   min-width: 0; flex: 1;
 }
-.event-bar .eb-icon { font-size: 14px; }
+.alert-icon,
+.unpaid-bar .ub-icon,
+.recurring-bar .rb-icon,
+.budget-bar .bb-icon,
+.event-bar .eb-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.alert-text,
+.unpaid-bar .ub-text,
+.recurring-bar .rb-text,
+.budget-bar .bb-text,
 .event-bar .eb-text {
   color: var(--text2);
   overflow: hidden; text-overflow: ellipsis;
 }
+
+/* 강조 숫자 — 톤별 컬러 */
+.unpaid-bar .ub-icon, .unpaid-bar .ub-amt { color: var(--amber); font-weight: 600; }
+.recurring-bar .rb-count { color: var(--accent); font-weight: 600; }
+.budget-bar .bb-strong { color: #fbbf24; font-weight: 600; }
+.budget-bar.severe .bb-strong { color: var(--red); }
 .event-bar .eb-strong { color: #ec4899; font-weight: 600; }
+
+/* CTA 버튼 — 톤별 outline 통일 (시각 무게 일관) */
+.alert-cta,
+.unpaid-bar .ub-cta,
+.recurring-bar .rb-cta,
+.budget-bar .bb-cta,
 .event-bar .eb-cta {
-  background: var(--accent);
-  color: #fff;
-  border: 0;
   border-radius: 6px;
   padding: 6px 12px;
   font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
+  font-weight: 500;
   font-family: var(--font);
+  cursor: pointer;
   white-space: nowrap;
+  transition: background .15s;
 }
-.event-bar .eb-cta:hover { filter: brightness(1.08); }
+.unpaid-bar .ub-cta {
+  background: transparent;
+  color: var(--amber);
+  border: 1px solid rgba(251, 191, 36, 0.45);
+}
+.unpaid-bar .ub-cta:hover { background: rgba(251, 191, 36, 0.10); }
+.recurring-bar .rb-cta {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid rgba(79, 143, 255, 0.45);
+}
+.recurring-bar .rb-cta:hover { background: rgba(79, 143, 255, 0.10); }
+.recurring-bar .rb-cta:disabled { opacity: 0.5; cursor: not-allowed; }
+.budget-bar .bb-cta {
+  background: transparent;
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+}
+.budget-bar .bb-cta:hover { background: rgba(245, 158, 11, 0.10); }
+.budget-bar.severe .bb-cta {
+  color: var(--red);
+  border-color: rgba(239, 68, 68, 0.45);
+}
+.budget-bar.severe .bb-cta:hover { background: rgba(239, 68, 68, 0.08); }
+.event-bar .eb-cta {
+  background: transparent;
+  color: #ec4899;
+  border: 1px solid rgba(236, 72, 153, 0.45);
+}
+.event-bar .eb-cta:hover { background: rgba(236, 72, 153, 0.10); }
+
+/* 모바일 — 세로 스택 */
 @media (max-width: 640px) {
-  .event-bar { flex-direction: column; align-items: stretch; gap: 8px; }
-  .event-bar .eb-cta { width: 100%; }
+  .alert-bar,
+  .unpaid-bar, .recurring-bar, .budget-bar, .event-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .alert-cta,
+  .unpaid-bar .ub-cta,
+  .recurring-bar .rb-cta,
+  .budget-bar .bb-cta,
+  .event-bar .eb-cta {
+    width: 100%;
+    text-align: center;
+  }
 }
 
 /* 반복지출 마스터 리스트 행 */
@@ -1202,8 +1204,14 @@ body {
   margin-left: 8px;
 }
 
-/* placeholder (저장된 스냅샷 없을 때) */
-.bs-placeholder {
+/* v0.7-13 — 빈상태 통일 (.empty-state)
+ *   기존 bs/pl/bg/dash-placeholder + dv/sv-empty 클래스명을 모두 흡수.
+ *   HTML 호환을 위해 기존 클래스명도 그대로 동작. */
+.empty-state,
+.bs-placeholder,
+.pl-placeholder,
+.bg-placeholder,
+.dash-placeholder {
   background: var(--bg2);
   border: 1px solid var(--border2);
   border-radius: 10px;
@@ -1211,6 +1219,14 @@ body {
   text-align: center;
   color: var(--text2);
   font-size: 13px;
+  line-height: 1.7;
+}
+.empty-state .hint,
+.pl-placeholder .hint,
+.bg-placeholder .hint,
+.dash-placeholder .hint {
+  font-size: 11px;
+  color: var(--text3);
 }
 
 /* ── 자산결산 (v0.7-3b) ── */
@@ -1768,20 +1784,7 @@ body {
 }
 
 /* ── 손익 탭 (v0.3-4) ── */
-.pl-placeholder {
-  background: var(--bg2);
-  border: 1px solid var(--border2);
-  border-radius: 10px;
-  padding: 32px 16px;
-  text-align: center;
-  color: var(--text2);
-  font-size: 13px;
-  line-height: 1.7;
-}
-.pl-placeholder .hint {
-  font-size: 11px;
-  color: var(--text3);
-}
+/* .pl-placeholder는 .empty-state로 통합 (v0.7-13) */
 
 /* 손익 카테고리별 상세 (A3) */
 .pl-table {
@@ -1909,20 +1912,7 @@ body {
   margin-bottom: 14px;
   flex-wrap: wrap;
 }
-.bg-placeholder {
-  background: var(--bg2);
-  border: 1px solid var(--border2);
-  border-radius: 10px;
-  padding: 32px 16px;
-  text-align: center;
-  color: var(--text2);
-  font-size: 13px;
-  line-height: 1.7;
-}
-.bg-placeholder .hint {
-  font-size: 11px;
-  color: var(--text3);
-}
+/* .bg-placeholder는 .empty-state로 통합 (v0.7-13) */
 
 /* ── 대시보드 탭 (v0.5) ── */
 .dash-header {
@@ -1942,19 +1932,9 @@ body {
   font-family: var(--font-mono);
 }
 .dash-placeholder {
-  background: var(--bg2);
-  border: 1px solid var(--border2);
-  border-radius: 10px;
-  padding: 32px 16px;
-  text-align: center;
-  color: var(--text2);
-  font-size: 13px;
-  line-height: 1.7;
+  font-family: inherit;
 }
-.dash-placeholder .hint {
-  font-size: 11px;
-  color: var(--text3);
-}
+/* (.dash-placeholder는 .empty-state로 통합 — v0.7-13) */
 
 /* 대시보드 KPI 그리드 (B2) */
 .dash-kpi-grid {
@@ -2534,48 +2514,7 @@ body {
   text-align: right;
 }
 
-/* BS KPI */
-.bs-kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-bottom: 14px;
-}
-.bs-kpi-card {
-  background: var(--bg2);
-  border: 1px solid var(--border2);
-  border-radius: 10px;
-  padding: 12px 14px;
-}
-.bs-kpi-card .label {
-  font-size: 11px;
-  color: var(--text3);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 6px;
-}
-.bs-kpi-card .value {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text);
-  line-height: 1.2;
-}
-.bs-kpi-card .value.green { color: var(--green); }
-.bs-kpi-card .value.red   { color: var(--red); }
-.bs-kpi-card .value.muted { color: var(--text2); }
-.bs-kpi-card .sub {
-  font-size: 11px;
-  color: var(--text3);
-  margin-top: 4px;
-}
-.bs-kpi-card .bs-mom {
-  font-size: 11px;
-  margin-top: 4px;
-  font-weight: 600;
-}
-.bs-kpi-card .bs-mom.green { color: var(--green); }
-.bs-kpi-card .bs-mom.red   { color: var(--red); }
-.bs-kpi-card .bs-mom.muted { color: var(--text3); font-weight: 400; }
+/* (kpi-grid / kpi-card는 .kpi-grid / .kpi-card로 통합됨 — v0.7-13) */
 
 .bs-delta {
   font-size: 11px;
@@ -2681,7 +2620,6 @@ body {
 }
 
 @media (max-width: 760px) {
-  .bs-kpi-grid { grid-template-columns: 1fr; }
   .bs-cols { grid-template-columns: 1fr; }
 }
 
@@ -3262,7 +3200,7 @@ body {
 <!-- Login Screen -->
 <div id="login-screen">
   <div class="login-card">
-    <h1>💰 가계부</h1>
+    <h1>💰 Finance</h1>
     <p>수입·지출·재무상태 한눈에</p>
     <button class="btn-google" id="btn-google-login">
       <svg viewBox="0 0 24 24">
@@ -3280,7 +3218,7 @@ body {
 <div id="app">
   <!-- 헤더 -->
   <div class="top-header">
-    <h1>💰 가계부</h1>
+    <h1>💰 Finance</h1>
     <div class="user-info">
       <span id="user-email"></span>
       <button class="btn-logout" id="btn-logout">로그아웃</button>
@@ -3297,7 +3235,7 @@ body {
 
   <!-- 탭바 (v0.7 — 5탑탭 + 서브탭) -->
   <div class="tab-bar" role="tablist">
-    <button class="tab active" data-tab="transactions" role="tab">거래내역</button>
+    <button class="tab active" data-tab="transactions" role="tab">거래</button>
     <button class="tab"        data-tab="closing"      role="tab">결산</button>
     <button class="tab"        data-tab="status"       role="tab">현황</button>
     <button class="tab"        data-tab="analysis"     role="tab">분석</button>
@@ -3420,18 +3358,18 @@ body {
       </div>
 
       <!-- KPI 3개 -->
-      <div class="bs-kpi-grid">
-        <div class="bs-kpi-card">
+      <div class="kpi-grid">
+        <div class="kpi-card">
           <div class="label">총 평가액</div>
           <div class="value" id="sv-kpi-total">—</div>
           <div class="sub" id="sv-kpi-total-sub">—</div>
         </div>
-        <div class="bs-kpi-card">
+        <div class="kpi-card">
           <div class="label">월수익</div>
           <div class="value" id="sv-kpi-mret">—</div>
           <div class="sub" id="sv-kpi-mret-sub">—</div>
         </div>
-        <div class="bs-kpi-card">
+        <div class="kpi-card">
           <div class="label">누적수익률</div>
           <div class="value" id="sv-kpi-cumret">—</div>
           <div class="sub" id="sv-kpi-cumret-sub">—</div>
@@ -3458,18 +3396,18 @@ body {
       </div>
 
       <!-- KPI 3 -->
-      <div class="bs-kpi-grid">
-        <div class="bs-kpi-card">
+      <div class="kpi-grid">
+        <div class="kpi-card">
           <div class="label">이번달</div>
           <div class="value" id="dv-kpi-month">—</div>
           <div class="sub"   id="dv-kpi-month-sub">—</div>
         </div>
-        <div class="bs-kpi-card">
+        <div class="kpi-card">
           <div class="label">올해 누적</div>
           <div class="value" id="dv-kpi-ytd">—</div>
           <div class="sub"   id="dv-kpi-ytd-sub">—</div>
         </div>
-        <div class="bs-kpi-card">
+        <div class="kpi-card">
           <div class="label">전체 누적</div>
           <div class="value" id="dv-kpi-all">—</div>
           <div class="sub"   id="dv-kpi-all-sub">—</div>
@@ -3588,18 +3526,18 @@ body {
     <div class="subtab-content" id="tab-returns">
 
       <!-- KPI 3 -->
-      <div class="bs-kpi-grid">
-        <div class="bs-kpi-card">
+      <div class="kpi-grid">
+        <div class="kpi-card">
           <div class="label">기간 수익률</div>
           <div class="value" id="rt-kpi-rate">—</div>
           <div class="sub"   id="rt-kpi-rate-sub">—</div>
         </div>
-        <div class="bs-kpi-card">
+        <div class="kpi-card">
           <div class="label">기간 수익금</div>
           <div class="value" id="rt-kpi-gain">—</div>
           <div class="sub"   id="rt-kpi-gain-sub">—</div>
         </div>
-        <div class="bs-kpi-card">
+        <div class="kpi-card">
           <div class="label">가중원금</div>
           <div class="value" id="rt-kpi-base">—</div>
           <div class="sub"   id="rt-kpi-base-sub">—</div>
@@ -3691,7 +3629,7 @@ body {
           <canvas id="dash-pl-chart"></canvas>
         </div>
         <div class="dash-chart-empty" id="dash-pl-empty" style="display:none;">
-          거래가 없습니다 — 거래내역 탭에서 거래를 추가하세요
+          거래가 없습니다 — 거래 탭에서 거래를 추가하세요
         </div>
       </div>
 
@@ -4059,7 +3997,7 @@ body {
           <div class="backup-info-title">🧹 자산/부채 잔고 초기화</div>
           <div class="backup-info-desc danger">
             자산·부채 결산(<code>monthly</code> / <code>monthly_liab</code>) 데이터를 모두 삭제합니다.<br>
-            거래내역·계좌 마스터·예산은 보존됩니다. 진행 전 백업을 받으세요.<br>
+            거래·계좌 마스터·예산은 보존됩니다. 진행 전 백업을 받으세요.<br>
             <span id="reset-status">—</span>
           </div>
         </div>
@@ -4197,7 +4135,7 @@ body {
           </div>
         </div>
 
-        <div class="form-section-title">가계부 분류</div>
+        <div class="form-section-title">Finance 분류</div>
 
         <div class="form-group">
           <label class="form-label">유동/비유동</label>
@@ -4942,6 +4880,12 @@ function switchTab(name, subtab) {
   document.querySelectorAll('.tab-content').forEach(c =>
     c.classList.toggle('active', c.id === `tab-${name}`)
   );
+
+  // v0.7-13 — 설정 탭은 월 컨텍스트가 의미 없으므로 글로벌 월바 숨김
+  const $gmBar = document.querySelector('.global-month-bar');
+  if ($gmBar) {
+    $gmBar.style.display = (name === 'settings') ? 'none' : '';
+  }
 
   // 2) 활성화된 톱탭 내부의 서브탭 처리 — activateSubtab이 dashboard 진입 시 차트 재렌더도 같이 처리함
   const $topPane = document.getElementById(`tab-${name}`);
@@ -8090,7 +8034,7 @@ async function resetBalances() {
     '⚠️ 자산/부채 잔고 데이터를 모두 삭제합니다.\n\n' +
     '• 자산 결산 (monthly)\n' +
     '• 부채 결산 (monthly_liab)\n\n' +
-    '거래내역·계좌 마스터·예산·반복지출·경조사는 보존됩니다.\n\n' +
+    '거래·계좌 마스터·예산·반복지출·경조사는 보존됩니다.\n\n' +
     '백업을 먼저 다운로드했나요?'
   );
   if (!ok1) return;
@@ -8741,20 +8685,20 @@ function renderBsBody() {
 
   // HTML 빌드
   $body.innerHTML = `
-    <div class="bs-kpi-grid">
-      <div class="bs-kpi-card">
+    <div class="kpi-grid">
+      <div class="kpi-card">
         <div class="label">순자산</div>
         <div class="value ${net > 0 ? 'green' : net < 0 ? 'red' : 'muted'}">${fmtSigned(net)}</div>
         ${renderKpiMom(dNet, prevTotals?.net, 'asset')}
         <div class="sub">조정 ${fmtSigned(netAdj)} <span style="color:var(--text3);">(자산 - 유동부채)</span></div>
       </div>
-      <div class="bs-kpi-card">
+      <div class="kpi-card">
         <div class="label">자산총계</div>
         <div class="value">${fmtNum(totalAssets)}</div>
         ${renderKpiMom(dAssets, prevTotals?.totalAssets, 'asset')}
         <div class="sub">유동 ${fmtNum(curAssets)} · 비유동 ${fmtNum(nonAssets)}</div>
       </div>
-      <div class="bs-kpi-card">
+      <div class="kpi-card">
         <div class="label">부채비율</div>
         <div class="value ${debtRatio > 100 ? 'red' : debtRatio > 50 ? 'muted' : 'green'}">${debtRatio.toFixed(1)}%</div>
         ${renderKpiRatioMom(debtRatio, prevTotals)}
