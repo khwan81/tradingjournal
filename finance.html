@@ -2083,6 +2083,17 @@ body {
   .dash-chart-wrap { height: 220px; }
 }
 
+/* v0.7-12L — 분석 탭 미니차트 (손익 추세 / 월별 수익률) */
+.pl-trend-wrap {
+  position: relative;
+  height: 200px;
+  width: 100%;
+  padding: 8px 12px 12px;
+}
+@media (max-width: 700px) {
+  .pl-trend-wrap { height: 180px; }
+}
+
 /* 자산 구성 도넛 (B5) — 차트 + 범례 가로 배치 */
 .dash-doughnut-wrap {
   display: grid;
@@ -3631,6 +3642,18 @@ body {
         <span class="info-icon">ⓘ</span>
         <div>—</div>
       </div>
+
+      <!-- v0.7-12L — 손익 추세 미니차트 (단일월에는 숨김) -->
+      <div id="pl-trend-card" class="dash-card" style="margin-bottom: 14px; display: none;">
+        <div class="dash-card-head">
+          <div class="dash-card-title">손익 추세</div>
+          <div class="dash-card-sub" id="pl-trend-sub">—</div>
+        </div>
+        <div class="pl-trend-wrap">
+          <canvas id="pl-trend-chart"></canvas>
+        </div>
+      </div>
+
       <!-- 카테고리별 상세 (A3) -->
       <div id="pl-body">
         <div class="pl-placeholder">
@@ -3687,6 +3710,17 @@ body {
           <div class="rt-cmp-label">ALL</div>
           <div class="rt-cmp-rate">—</div>
           <div class="rt-cmp-gain">—</div>
+        </div>
+      </div>
+
+      <!-- v0.7-12L — 월별 수익률 라인 차트 (단일월에는 숨김) -->
+      <div id="rt-trend-card" class="dash-card" style="margin: 14px 0; display: none;">
+        <div class="dash-card-head">
+          <div class="dash-card-title">월별 수익률</div>
+          <div class="dash-card-sub" id="rt-trend-sub">—</div>
+        </div>
+        <div class="pl-trend-wrap">
+          <canvas id="rt-trend-chart"></canvas>
         </div>
       </div>
 
@@ -4111,6 +4145,21 @@ body {
         <button class="btn-p" id="btn-migration-run" style="display:none;">▶ 변환 실행</button>
       </div>
 
+      <!-- v0.7-10 — snapshots 컬렉션 폐기 -->
+      <div class="backup-card" id="snapshots-purge-card">
+        <div class="backup-info">
+          <div class="backup-info-title">🗑️ snapshots 컬렉션 폐기 (v0.7-10)</div>
+          <div class="backup-info-desc">
+            마이그레이션 완료 후 더 이상 사용하지 않는 <code>snapshots</code> 컬렉션을 삭제합니다.<br>
+            <code>monthly</code> / <code>monthly_liab</code>이 SSOT이므로 안전하게 제거 가능합니다.<br>
+            <span class="form-hint">진행 전 [백업 다운로드]를 받으세요.</span><br>
+            <span id="snap-purge-status">상태 확인 중…</span>
+          </div>
+        </div>
+        <button class="btn-p" id="btn-snap-purge-check">🔍 점검</button>
+        <button class="btn-d" id="btn-snap-purge-run" style="display:none;">▶ snapshots 삭제</button>
+      </div>
+
       <!-- v0.7-5a — 잔고 초기화 도구 (개발/테스트용) -->
       <div class="backup-card" id="reset-card">
         <div class="backup-info">
@@ -4181,6 +4230,12 @@ body {
           <div class="restore-count"><div class="rc-n" id="rc-rec">—</div><div class="rc-l">반복지출</div></div>
           <div class="restore-count"><div class="rc-n" id="rc-acc">—</div><div class="rc-l">계좌</div></div>
           <div class="restore-count"><div class="rc-n" id="rc-liab">—</div><div class="rc-l">부채</div></div>
+          <!-- v0.7-10 추가 -->
+          <div class="restore-count"><div class="rc-n" id="rc-monthly">—</div><div class="rc-l">자산결산</div></div>
+          <div class="restore-count"><div class="rc-n" id="rc-monthlyLiab">—</div><div class="rc-l">부채결산</div></div>
+          <div class="restore-count"><div class="rc-n" id="rc-dividends">—</div><div class="rc-l">배당</div></div>
+          <div class="restore-count"><div class="rc-n" id="rc-events">—</div><div class="rc-l">경조사</div></div>
+          <div class="restore-count"><div class="rc-n" id="rc-budgets">—</div><div class="rc-l">예산</div></div>
         </div>
 
         <div class="restore-warn" id="restore-uid-warn" style="display:none;">
@@ -5812,6 +5867,115 @@ async function renderPlBody() {
       </div>
     </div>
   `;
+
+  // v0.7-12L — 손익 추세 미니차트 (단일월에선 숨김)
+  renderPlTrendChart(txList, fromYm, toYm);
+}
+
+// v0.7-12L — 손익 추세 미니차트
+//   • 데이터: 이미 renderPlBody가 fetch한 txList를 월별 그룹핑
+//   • 막대: 매출(초록), 비용(빨강) / 라인: 순이익(파랑)
+//   • 단일월(fromYm===toYm)이면 차트 카드 숨김
+let plTrendChart = null;
+
+function renderPlTrendChart(txList, fromYm, toYm) {
+  const $card = document.getElementById('pl-trend-card');
+  const $canvas = document.getElementById('pl-trend-chart');
+  const $sub    = document.getElementById('pl-trend-sub');
+  if (!$card || !$canvas || !window.Chart) return;
+
+  // 단일월이면 차트 의미 없음 — 카드 숨김
+  if (fromYm === toYm) {
+    $card.style.display = 'none';
+    if (plTrendChart) { plTrendChart.destroy(); plTrendChart = null; }
+    return;
+  }
+  $card.style.display = '';
+
+  // ym 리스트 생성
+  const ymList = [];
+  let cur = fromYm;
+  let guard = 0;
+  while (cur <= toYm && guard < 120) {
+    ymList.push(cur);
+    cur = shiftYm(cur, 1);
+    guard++;
+  }
+
+  // 월별 집계
+  const sums = new Map();
+  for (const ym of ymList) sums.set(ym, { revenue: 0, expense: 0 });
+  for (const t of (txList || [])) {
+    const bucket = sums.get(t.ym);
+    if (!bucket) continue;
+    const flow = txFlow(t);
+    const amt = Number(t.amount) || 0;
+    if (flow === 'revenue')                            bucket.revenue += amt;
+    else if (flow === 'fixed' || flow === 'variable') bucket.expense += amt;
+  }
+
+  const labels = ymList.map(ym => ym.slice(2));  // "26-05"
+  const revData = ymList.map(ym => sums.get(ym).revenue);
+  const expData = ymList.map(ym => sums.get(ym).expense);
+  const netData = ymList.map(ym => sums.get(ym).revenue - sums.get(ym).expense);
+
+  if (plTrendChart) plTrendChart.destroy();
+
+  const css = getComputedStyle(document.documentElement);
+  const colorText    = (css.getPropertyValue('--text2')  || '').trim() || '#9aa5b1';
+  const colorGrid    = (css.getPropertyValue('--border') || '').trim() || 'rgba(255,255,255,0.08)';
+  const colorRevenue = (css.getPropertyValue('--green')  || '').trim() || '#34d399';
+  const colorExpense = (css.getPropertyValue('--red')    || '').trim() || '#ef4444';
+  const colorNet     = (css.getPropertyValue('--accent') || '').trim() || '#4f8fff';
+
+  plTrendChart = new Chart($canvas.getContext('2d'), {
+    data: {
+      labels,
+      datasets: [
+        { type: 'bar', label: '매출',  data: revData, backgroundColor: colorRevenue + 'aa', borderColor: colorRevenue, borderWidth: 1, order: 2 },
+        { type: 'bar', label: '비용',  data: expData, backgroundColor: colorExpense + 'aa', borderColor: colorExpense, borderWidth: 1, order: 2 },
+        { type: 'line', label: '순이익', data: netData, borderColor: colorNet, backgroundColor: colorNet + '22',
+          borderWidth: 2, tension: 0.3, pointRadius: 3, pointBackgroundColor: colorNet, fill: false, order: 1 },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, position: 'top', align: 'end',
+          labels: { color: colorText, font: { size: 10 }, boxWidth: 10, padding: 8 } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const v = ctx.parsed.y;
+              const sign = v >= 0 ? '+' : '−';
+              return `${ctx.dataset.label}: ${sign}${fmtAmount(Math.abs(v))}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: colorText, font: { size: 10 } }, grid: { color: colorGrid, drawBorder: false } },
+        y: {
+          ticks: {
+            color: colorText, font: { size: 10 },
+            callback: v => v >= 1e8 ? (v/1e8).toFixed(1)+'억' :
+                           v >= 1e6 ? (v/1e6).toFixed(1)+'M' :
+                           v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v,
+          },
+          grid: { color: colorGrid, drawBorder: false },
+        }
+      }
+    }
+  });
+
+  if ($sub) {
+    const totalRev = revData.reduce((s, v) => s + v, 0);
+    const totalExp = expData.reduce((s, v) => s + v, 0);
+    const totalNet = totalRev - totalExp;
+    const sign = totalNet >= 0 ? '+' : '−';
+    $sub.textContent = `${ymList.length}개월 · 순이익 ${sign}${fmtAmount(Math.abs(totalNet))}`;
+  }
 }
 
 function unsubscribeAll() {
@@ -7735,18 +7899,25 @@ document.getElementById('btn-event-delete').addEventListener('click', async () =
 });
 
 // ──────────────────────────────────────────────────────
-// 데이터 백업 (v0.2-2)
+// 데이터 백업 (v0.2-2 / v0.7-10에서 v3 스키마로 확장)
 // ──────────────────────────────────────────────────────
-// 백업 범위:
-//   - users/{uid}/config/accounts (문서)     → sharedConfigAccounts
-//   - users/{uid}/config/accounts/items/*    → sharedAccountsItems[]
-//   - users/{uid}/finance/config (문서)      → financeSettings
-//   - users/{uid}/finance/config/snapshots/* → snapshots[]
-//   - users/{uid}/finance/config/transactions/* → transactions[]
-//   - users/{uid}/finance/config/recurring/* → recurring[]   (v0.2-3)
+// 백업 범위 (v3):
+//   v2에서 이어진:
+//     - users/{uid}/config/accounts (문서)         → sharedConfigAccounts
+//     - users/{uid}/config/accounts/items/*        → sharedAccountsItems[]
+//     - users/{uid}/finance/config (문서)          → financeSettings
+//     - users/{uid}/finance/config/snapshots/*     → snapshots[] (v0.6 호환)
+//     - users/{uid}/finance/config/transactions/*  → transactions[]
+//     - users/{uid}/finance/config/recurring/*     → recurring[]
+//   v0.7-10 추가:
+//     - users/{uid}/finance/config/monthly/*       → monthly[] (자산결산 SSOT)
+//     - users/{uid}/finance/config/monthly_liab/*  → monthlyLiab[] (부채결산)
+//     - users/{uid}/finance/config/dividends/*     → dividends[] (배당)
+//     - users/{uid}/finance/config/events/*        → events[] (경조사)
+//     - users/{uid}/finance/config/budgets/*       → budgets[] (예산)
 //
 // Firestore Timestamp는 JSON.stringify로 변환 시 {seconds, nanoseconds} 형태가 됨.
-// 복원(v0.3)에서 다시 Timestamp로 복원할 수 있도록 그대로 유지.
+// 복원에서 다시 Timestamp로 복원할 수 있도록 그대로 유지.
 async function downloadBackup() {
   if (!currentUid) { showToast('로그인이 필요합니다'); return; }
 
@@ -7756,7 +7927,7 @@ async function downloadBackup() {
   $btn.textContent = '⏳ 백업 중…';
 
   try {
-    // 병렬 페치 (6개)
+    // 병렬 페치 (11개 — v0.7-10에서 5종 추가)
     const [
       sharedDocSnap,
       sharedItemsSnap,
@@ -7764,6 +7935,11 @@ async function downloadBackup() {
       snapshotsSnap,
       transactionsSnap,
       recurringSnap,
+      monthlySnap,
+      monthlyLiabSnap,
+      dividendsSnap,
+      eventsSnap,
+      budgetsSnap,
     ] = await Promise.all([
       getDoc(pathAccountsSettings()),
       getDocs(pathAccountsItems()),
@@ -7771,6 +7947,11 @@ async function downloadBackup() {
       getDocs(pathSnapshots()),
       getDocs(pathTransactions()),
       getDocs(pathRecurring()),
+      getDocs(pathMonthly()),
+      getDocs(pathMonthlyLiab()),
+      getDocs(pathDividends()),
+      getDocs(pathEvents()),
+      getDocs(pathBudgets()),
     ]);
 
     const sharedAccountsItems = [];
@@ -7785,9 +7966,26 @@ async function downloadBackup() {
     const recurring = [];
     recurringSnap.forEach(d => recurring.push({ id: d.id, ...d.data() }));
 
+    // v0.7-10 — 새 컬렉션 5종
+    // monthly/monthly_liab는 docId가 `${ym}__${accId}` 형태이므로 docId를 보존
+    const monthly = [];
+    monthlySnap.forEach(d => monthly.push({ docId: d.id, ...d.data() }));
+
+    const monthlyLiab = [];
+    monthlyLiabSnap.forEach(d => monthlyLiab.push({ docId: d.id, ...d.data() }));
+
+    const dividends = [];
+    dividendsSnap.forEach(d => dividends.push({ id: d.id, ...d.data() }));
+
+    const events = [];
+    eventsSnap.forEach(d => events.push({ id: d.id, ...d.data() }));
+
+    const budgets = [];
+    budgetsSnap.forEach(d => budgets.push({ ym: d.id, ...d.data() }));
+
     const payload = {
-      schemaVersion: 2,
-      appVersion: 'v0.2-3',
+      schemaVersion: 3,
+      appVersion: 'v0.7-10',
       exportedAt: new Date().toISOString(),
       uid: currentUid,
       data: {
@@ -7797,6 +7995,12 @@ async function downloadBackup() {
         snapshots,
         transactions,
         recurring,
+        // v0.7-10 추가
+        monthly,
+        monthlyLiab,
+        dividends,
+        events,
+        budgets,
       },
     };
 
@@ -7829,7 +8033,10 @@ async function downloadBackup() {
 
     // 결과 토스트
     const sizeKb = (blob.size / 1024).toFixed(1);
-    showToast(`백업 완료 — 거래 ${transactions.length}건, 스냅 ${snapshots.length}개, 반복지출 ${recurring.length}건 (${sizeKb} KB)`);
+    showToast(
+      `백업 완료 — 거래 ${transactions.length} · 결산 ${monthly.length} · 부채 ${monthlyLiab.length} · ` +
+      `배당 ${dividends.length} · 경조사 ${events.length} · 예산 ${budgets.length} · 반복 ${recurring.length} (${sizeKb} KB)`
+    );
     console.log('[backup] 완료', { filename, size: blob.size, payload });
 
     // 마지막 백업 시각 기록 (v0.3-1) — financeSettings에 머지 저장.
@@ -7916,22 +8123,31 @@ function reviveTimestamps(_key, value) {
   return value;
 }
 
-// 백업 페이로드 구조 검증
+// 백업 페이로드 구조 검증 (v0.7-10에서 v2 + v3 호환)
 function validateBackupPayload(p) {
   if (!p || typeof p !== 'object') return '유효하지 않은 JSON 구조입니다';
-  if (p.schemaVersion !== 2) return `지원하지 않는 스키마 버전입니다 (v${p.schemaVersion}). 이 앱은 v2만 지원합니다`;
+  if (p.schemaVersion !== 2 && p.schemaVersion !== 3) {
+    return `지원하지 않는 스키마 버전입니다 (v${p.schemaVersion}). 이 앱은 v2/v3만 지원합니다`;
+  }
   if (!p.data || typeof p.data !== 'object') return 'data 필드가 없습니다';
 
   const d = p.data;
-  // 6개 필드 존재 확인 (값은 null/배열/객체 허용)
-  const requiredKeys = ['sharedConfigAccounts', 'sharedAccountsItems', 'financeSettings', 'snapshots', 'transactions', 'recurring'];
-  for (const k of requiredKeys) {
+  // v2 공통 필드 6종
+  const v2Keys = ['sharedConfigAccounts', 'sharedAccountsItems', 'financeSettings', 'snapshots', 'transactions', 'recurring'];
+  for (const k of v2Keys) {
     if (!(k in d)) return `data.${k} 필드가 없습니다`;
   }
   if (!Array.isArray(d.sharedAccountsItems)) return 'sharedAccountsItems는 배열이어야 합니다';
   if (!Array.isArray(d.snapshots))            return 'snapshots는 배열이어야 합니다';
   if (!Array.isArray(d.transactions))         return 'transactions는 배열이어야 합니다';
   if (!Array.isArray(d.recurring))            return 'recurring은 배열이어야 합니다';
+
+  // v3 추가 필드: 있으면 배열, 없거나 누락은 빈 배열로 간주 (호환)
+  if (p.schemaVersion === 3) {
+    for (const k of ['monthly', 'monthlyLiab', 'dividends', 'events', 'budgets']) {
+      if (k in d && !Array.isArray(d[k])) return `${k}는 배열이어야 합니다`;
+    }
+  }
   return null;
 }
 
@@ -8010,6 +8226,12 @@ function fillRestorePreview() {
   document.getElementById('rc-acc').textContent  = d.sharedAccountsItems.length;
   const liabCount = Array.isArray(d.financeSettings?.liabilities) ? d.financeSettings.liabilities.length : 0;
   document.getElementById('rc-liab').textContent = liabCount;
+  // v0.7-10 — 새 컬렉션 5종 (v2 백업이면 다 0)
+  document.getElementById('rc-monthly').textContent      = (d.monthly || []).length;
+  document.getElementById('rc-monthlyLiab').textContent  = (d.monthlyLiab || []).length;
+  document.getElementById('rc-dividends').textContent    = (d.dividends || []).length;
+  document.getElementById('rc-events').textContent       = (d.events || []).length;
+  document.getElementById('rc-budgets').textContent      = (d.budgets || []).length;
 
   // confirm 입력 초기화 + 실행 버튼 비활성화
   document.getElementById('restore-confirm-input').value = '';
@@ -8284,6 +8506,106 @@ document.getElementById('btn-migration-check').addEventListener('click', migrati
 document.getElementById('btn-migration-run').addEventListener('click', migrationRun);
 
 // ──────────────────────────────────────────────────────
+// v0.7-10 — snapshots 컬렉션 폐기
+// ──────────────────────────────────────────────────────
+// 마이그레이션 완료 후 사용 안 하는 snapshots를 안전하게 제거.
+// 점검: snapshots / monthly 컬렉션을 보고 안전한지 판단.
+async function snapPurgeCheck() {
+  if (!currentUid) { showToast('로그인이 필요합니다'); return; }
+  const $status = document.getElementById('snap-purge-status');
+  const $btnRun = document.getElementById('btn-snap-purge-run');
+  const $btnChk = document.getElementById('btn-snap-purge-check');
+  $btnChk.disabled = true;
+  $status.textContent = '점검 중…';
+
+  try {
+    const [snapSnap, monthlySnap, monthlyLiabSnap] = await Promise.all([
+      getDocs(pathSnapshots()),
+      getDocs(pathMonthly()),
+      getDocs(pathMonthlyLiab()),
+    ]);
+    const snapN = snapSnap.size;
+    const monN  = monthlySnap.size;
+    const liaN  = monthlyLiabSnap.size;
+
+    if (snapN === 0) {
+      $status.innerHTML = '✅ snapshots가 이미 비어있습니다.';
+      $btnRun.style.display = 'none';
+      return;
+    }
+
+    if (monN === 0 && liaN === 0) {
+      $status.innerHTML =
+        '⚠️ monthly / monthly_liab이 비어있습니다. 먼저 위의 [자산결산 통합] 변환을 실행하세요.';
+      $btnRun.style.display = 'none';
+      return;
+    }
+
+    // snapshots ym set vs monthly ym set 비교 — 모든 snapshot ym이 monthly에 있는지 확인
+    const snapYms = new Set();
+    snapSnap.forEach(d => snapYms.add(d.id));
+    const monthlyYms = new Set();
+    monthlySnap.forEach(d => monthlyYms.add(d.data().ym || ''));
+    monthlyLiabSnap.forEach(d => monthlyYms.add(d.data().ym || ''));
+
+    const missing = [];
+    for (const ym of snapYms) {
+      if (!monthlyYms.has(ym)) missing.push(ym);
+    }
+
+    if (missing.length > 0) {
+      $status.innerHTML =
+        `⚠️ ${missing.length}개월의 snapshots가 monthly에 없습니다 (${missing.slice(0, 3).join(', ')}${missing.length > 3 ? '…' : ''}). ` +
+        `먼저 [자산결산 통합]을 다시 실행하세요.`;
+      $btnRun.style.display = 'none';
+      return;
+    }
+
+    $status.innerHTML =
+      `✅ 안전 — snapshots ${snapN}개월 모두 monthly에 반영되어 있습니다.<br>삭제 시 ${snapN}개 도큐먼트가 영구 제거됩니다.`;
+    $btnRun.style.display = '';
+  } catch (e) {
+    console.error('[snap-purge check]', e);
+    $status.textContent = '❌ 점검 실패: ' + (e.message || e.code);
+  } finally {
+    $btnChk.disabled = false;
+  }
+}
+
+async function snapPurgeRun() {
+  if (!currentUid) { showToast('로그인이 필요합니다'); return; }
+  const ok = confirm(
+    '⚠️ snapshots 컬렉션을 모두 삭제합니다.\n\n' +
+    '진행 전 [백업 다운로드]를 먼저 수행하셨나요?\n\n' +
+    '[확인]을 누르면 삭제를 시작합니다.'
+  );
+  if (!ok) return;
+
+  const $status = document.getElementById('snap-purge-status');
+  const $btnRun = document.getElementById('btn-snap-purge-run');
+  const $btnChk = document.getElementById('btn-snap-purge-check');
+  $btnRun.disabled = true;
+  $btnChk.disabled = true;
+  $status.textContent = '🔄 삭제 중…';
+
+  try {
+    const n = await deleteAllInCollection(pathSnapshots());
+    $status.innerHTML = `✅ snapshots ${n}개 삭제 완료.`;
+    $btnRun.style.display = 'none';
+    showToast(`snapshots 컬렉션 삭제 완료 (${n}건)`);
+  } catch (e) {
+    console.error('[snap-purge run]', e);
+    $status.textContent = '❌ 삭제 실패: ' + (e.message || e.code);
+  } finally {
+    $btnRun.disabled = false;
+    $btnChk.disabled = false;
+  }
+}
+
+document.getElementById('btn-snap-purge-check').addEventListener('click', snapPurgeCheck);
+document.getElementById('btn-snap-purge-run').addEventListener('click', snapPurgeRun);
+
+// ──────────────────────────────────────────────────────
 // v0.7-5a — 자산/부채 잔고 초기화 (snapshots/monthly/monthly_liab 일괄 삭제)
 // ──────────────────────────────────────────────────────
 async function resetBalances() {
@@ -8349,11 +8671,18 @@ async function executeRestore() {
   try {
     // 1. 기존 데이터 삭제
     setRestoreStep(1, 'active');
-    const delTx   = await deleteAllInCollection(pathTransactions());
-    const delSnap = await deleteAllInCollection(pathSnapshots());
-    const delRec  = await deleteAllInCollection(pathRecurring());
-    const delAcc  = await deleteAllInCollection(pathAccountsItems());
-    setRestoreStep(1, 'done', `✓ 기존 데이터 삭제 (${delTx + delSnap + delRec + delAcc}건)`);
+    const delTx       = await deleteAllInCollection(pathTransactions());
+    const delSnap     = await deleteAllInCollection(pathSnapshots());
+    const delRec      = await deleteAllInCollection(pathRecurring());
+    const delAcc      = await deleteAllInCollection(pathAccountsItems());
+    // v0.7-10 — 새 컬렉션 5종 삭제
+    const delMonthly  = await deleteAllInCollection(pathMonthly());
+    const delLiab     = await deleteAllInCollection(pathMonthlyLiab());
+    const delDiv      = await deleteAllInCollection(pathDividends());
+    const delEvents   = await deleteAllInCollection(pathEvents());
+    const delBudgets  = await deleteAllInCollection(pathBudgets());
+    const totalDel = delTx + delSnap + delRec + delAcc + delMonthly + delLiab + delDiv + delEvents + delBudgets;
+    setRestoreStep(1, 'done', `✓ 기존 데이터 삭제 (${totalDel}건)`);
 
     // 2. 새 데이터 쓰기
     setRestoreStep(2, 'active');
@@ -8367,12 +8696,20 @@ async function executeRestore() {
     if (d.financeSettings && typeof d.financeSettings === 'object') {
       await setDoc(pathFinanceSettings(), d.financeSettings);
     }
-    // 2c. 컬렉션들
+    // 2c. 컬렉션들 (v2 공통)
     const wAcc  = await writeAllToCollection(pathAccountsItems(), d.sharedAccountsItems, 'id');
     const wSnap = await writeAllToCollection(pathSnapshots(),     d.snapshots,           'ym');
     const wTx   = await writeAllToCollection(pathTransactions(),  d.transactions,        'id');
     const wRec  = await writeAllToCollection(pathRecurring(),     d.recurring,           'id');
-    setRestoreStep(2, 'done', `✓ 데이터 복원 (거래 ${wTx} · 스냅 ${wSnap} · 반복 ${wRec} · 계좌 ${wAcc})`);
+    // v0.7-10 — 새 컬렉션 5종 (v2 백업이면 빈 배열이라 0건)
+    const wMonthly  = await writeAllToCollection(pathMonthly(),     d.monthly     || [], 'docId');
+    const wLiab     = await writeAllToCollection(pathMonthlyLiab(), d.monthlyLiab || [], 'docId');
+    const wDiv      = await writeAllToCollection(pathDividends(),   d.dividends   || [], 'id');
+    const wEvents   = await writeAllToCollection(pathEvents(),      d.events      || [], 'id');
+    const wBudgets  = await writeAllToCollection(pathBudgets(),     d.budgets     || [], 'ym');
+    setRestoreStep(2, 'done',
+      `✓ 데이터 복원 (거래 ${wTx} · 결산 ${wMonthly} · 부채 ${wLiab} · 배당 ${wDiv} · 경조사 ${wEvents} · 예산 ${wBudgets} · 반복 ${wRec})`
+    );
 
     // 3. 마무리 — 페이지 새로고침으로 모든 구독 상태 깨끗이 정리
     setRestoreStep(3, 'active', '⏳ 새로고침 준비 중…');
@@ -9841,8 +10178,119 @@ async function renderReturns() {
   // 비교 5카드
   renderReturnsCompareCards();
 
+  // v0.7-12L — 월별 수익률 라인 차트
+  renderReturnsTrendChart(returnsCurrentRange.fromYm, returnsCurrentRange.toYm);
+
   // 본문 (카테고리별 + 계좌별)
   renderReturnsBody();
+}
+
+// v0.7-12L — 월별 수익률 라인 차트
+//   • 각 월별로 그 월 1개월 Modified Dietz (prevYm(ym) ~ ym) 가중수익률
+//   • 첫 달은 isStart가 있으면 계산됨, 없으면 null (spanGaps로 연결)
+//   • 단일월이면 차트 카드 숨김 (점 1개라 의미 약함)
+let returnsTrendChart = null;
+
+function renderReturnsTrendChart(fromYm, toYm) {
+  const $card = document.getElementById('rt-trend-card');
+  const $canvas = document.getElementById('rt-trend-chart');
+  const $sub    = document.getElementById('rt-trend-sub');
+  if (!$card || !$canvas || !window.Chart) return;
+
+  // 단일월이면 차트 카드 숨김
+  if (fromYm === toYm) {
+    $card.style.display = 'none';
+    if (returnsTrendChart) { returnsTrendChart.destroy(); returnsTrendChart = null; }
+    return;
+  }
+  $card.style.display = '';
+
+  // ym 리스트
+  const ymList = [];
+  let cur = fromYm;
+  let guard = 0;
+  while (cur <= toYm && guard < 120) {
+    ymList.push(cur);
+    cur = shiftYm(cur, 1);
+    guard++;
+  }
+
+  // 각 월의 1개월 수익률 계산
+  const rates = ymList.map(ym => {
+    const agg = periodReturnAggregate(prevYm(ym), ym);
+    return agg.hasData ? agg.rate * 100 : null;   // %
+  });
+
+  const labels = ymList.map(ym => ym.slice(2));
+
+  if (returnsTrendChart) returnsTrendChart.destroy();
+
+  const css = getComputedStyle(document.documentElement);
+  const colorText  = (css.getPropertyValue('--text2')  || '').trim() || '#9aa5b1';
+  const colorGrid  = (css.getPropertyValue('--border') || '').trim() || 'rgba(255,255,255,0.08)';
+  const colorAccent = (css.getPropertyValue('--accent') || '').trim() || '#4f8fff';
+  const colorGreen  = (css.getPropertyValue('--green')  || '').trim() || '#34d399';
+  const colorRed    = (css.getPropertyValue('--red')    || '').trim() || '#ef4444';
+
+  returnsTrendChart = new Chart($canvas.getContext('2d'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: '월 수익률',
+        data: rates,
+        borderColor: colorAccent,
+        backgroundColor: colorAccent + '22',
+        borderWidth: 2,
+        tension: 0.3,
+        fill: true,
+        spanGaps: true,
+        pointRadius: 4,
+        // 점 색상: 양수=초록, 음수=빨강, null/0=accent
+        pointBackgroundColor: ctx => {
+          const v = ctx.parsed?.y;
+          if (v == null) return colorAccent;
+          return v > 0 ? colorGreen : (v < 0 ? colorRed : colorAccent);
+        },
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const v = ctx.parsed.y;
+              if (v == null) return '데이터 없음';
+              const sign = v > 0 ? '+' : (v < 0 ? '−' : '');
+              return `수익률: ${sign}${Math.abs(v).toFixed(2)}%`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: colorText, font: { size: 10 } }, grid: { color: colorGrid, drawBorder: false } },
+        y: {
+          ticks: {
+            color: colorText, font: { size: 10 },
+            callback: v => (v > 0 ? '+' : '') + v.toFixed(1) + '%',
+          },
+          grid: { color: colorGrid, drawBorder: false },
+        }
+      }
+    }
+  });
+
+  if ($sub) {
+    const validRates = rates.filter(v => v != null);
+    const avgRate = validRates.length > 0
+      ? validRates.reduce((s, v) => s + v, 0) / validRates.length
+      : 0;
+    const sign = avgRate > 0 ? '+' : (avgRate < 0 ? '−' : '');
+    $sub.textContent = `${ymList.length}개월 · 월평균 ${sign}${Math.abs(avgRate).toFixed(2)}%`;
+  }
 }
 
 function resetReturnsKpis() {
