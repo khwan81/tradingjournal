@@ -5027,11 +5027,6 @@ function showToast(msg) {
 }
 
 // ── 화면 전환 헬퍼 ──
-function showLoading() {
-  $loading.style.display = 'flex';
-  $login.style.display   = 'none';
-  $app.style.display     = 'none';
-}
 function showLogin() {
   $loading.style.display = 'none';
   $login.style.display   = 'flex';
@@ -5478,10 +5473,19 @@ function monthsBetween(fromYm, toYm) {
   return (ty - fy) * 12 + (tm - fm) + 1;
 }
 
-// 이번 달이 해당 경조사 적립 기간 안인지 — 매년은 항상 활성
-function isEventActiveInMonth(ev, ym) {
-  if (!ev) return false;
-  return true;
+// v0.7-12opt — ymList 빌더 (분석 탭/차트들 공통)
+//   fromYm..toYm까지 월별 ym 문자열 배열 반환. 최대 120개월 안전망.
+function buildYmList(fromYm, toYm) {
+  const list = [];
+  if (!fromYm || !toYm || fromYm > toYm) return list;
+  let cur = fromYm;
+  let guard = 0;
+  while (cur <= toYm && guard < 120) {
+    list.push(cur);
+    cur = shiftYm(cur, 1);
+    guard++;
+  }
+  return list;
 }
 
 function subscribeTransactions() {
@@ -5727,11 +5731,7 @@ async function renderPlBody() {
 
   // v0.7-12k — 직전 동일 기간 fetch (MoM/QoQ 비교)
   // 단일월이면 전월, N개월이면 직전 N개월
-  const monthSpan = (() => {
-    let n = 0, cur = fromYm;
-    while (cur <= toYm) { n++; cur = shiftYm(cur, 1); if (n > 120) break; }
-    return n;
-  })();
+  const monthSpan  = monthsBetween(fromYm, toYm);
   const prevToYm   = shiftYm(fromYm, -1);
   const prevFromYm = shiftYm(prevToYm, -(monthSpan - 1));
   const prevTxList = await loadAnalysisTransactions(prevFromYm, prevToYm);
@@ -5893,14 +5893,7 @@ function renderPlTrendChart(txList, fromYm, toYm) {
   $card.style.display = '';
 
   // ym 리스트 생성
-  const ymList = [];
-  let cur = fromYm;
-  let guard = 0;
-  while (cur <= toYm && guard < 120) {
-    ymList.push(cur);
-    cur = shiftYm(cur, 1);
-    guard++;
-  }
+  const ymList = buildYmList(fromYm, toYm);
 
   // 월별 집계
   const sums = new Map();
@@ -6784,44 +6777,6 @@ function snapshotToMonthlyLiabs(snap) {
 }
 
 /** monthly 도큐먼트 배열을 { [accId]: ... } 객체로 합치기 */
-function monthlyDocsToAssets(docs) {
-  const out = {};
-  for (const d of docs) {
-    const accId = d.accountId || parseMonthlyKey(d.id).accId;
-    if (!accId) continue;
-    out[accId] = {
-      native:        d.balance ?? null,
-      krw:           Number(d.balanceKrw) || 0,
-      fxRate:        d.fxRate ?? null,
-      deposit:       d.deposit ?? null,
-      depositKrw:    d.depositKrw ?? null,
-      principal:     d.principal ?? null,
-      monthlyReturn: d.monthlyReturn ?? null,
-      cumReturn:     d.cumReturn ?? null,
-      cumReturnRate: d.cumReturnRate ?? null,
-      isStart:       !!d.isStart,
-    };
-  }
-  return out;
-}
-
-/** monthly_liab 도큐먼트 배열을 { [liabKey]: ... } 객체로 합치기 */
-function monthlyLiabDocsToLiabs(docs) {
-  const out = {};
-  for (const d of docs) {
-    const key = d.liabKey || parseMonthlyKey(d.id).accId;
-    if (!key) continue;
-    out[key] = {
-      native: d.balance ?? null,
-      krw:    Number(d.balanceKrw) || 0,
-      fxRate: d.fxRate ?? null,
-      name:   d.name || key,
-      type:   d.type || 'current',
-    };
-  }
-  return out;
-}
-
 // ──────────────────────────────────────────────────────
 // 부채 스냅 값 정규화 (v0.1 숫자형 / v0.2 객체형 모두 처리)
 // ──────────────────────────────────────────────────────
@@ -9343,10 +9298,6 @@ function computeTotals(monDocs, monLiabDocs) {
 }
 
 // 호환: 옛 이름의 인수 없는 호출 = 전월 집계
-function computePrevTotals() {
-  return computeTotals(monthlyPrevDocs, monthlyLiabPrevDocs);
-}
-
 // KPI용 MoM (절대값 + 퍼센트)
 // type: 'asset' (증가=초록), 'liab'은 호출자가 부호 뒤집어 전달
 function renderKpiMom(delta, base, type) {
@@ -10002,14 +9953,7 @@ async function loadAnalysisTransactions(fromYm, toYm) {
 
   try {
     // ymList 생성
-    const ymList = [];
-    let cur = fromYm;
-    let guard = 0;
-    while (cur <= toYm && guard < 120) {
-      ymList.push(cur);
-      cur = shiftYm(cur, 1);
-      guard++;
-    }
+    const ymList = buildYmList(fromYm, toYm);
 
     let snap;
     if (ymList.length === 1) {
@@ -10097,16 +10041,7 @@ function shiftYm(ym, n) {
 //   결과: [fromYm, ..., toYm] (월 단위 순차)
 function analysisPeriodYms(fallbackN = 12, fallbackAnchor = null) {
   if (returnsCurrentRange) {
-    const { fromYm, toYm } = returnsCurrentRange;
-    const out = [];
-    let cur = fromYm;
-    let guard = 0;
-    while (cur <= toYm && guard < 120) {   // 최대 10년치 안전망
-      out.push(cur);
-      cur = shiftYm(cur, 1);
-      guard++;
-    }
-    return out;
+    return buildYmList(returnsCurrentRange.fromYm, returnsCurrentRange.toYm);
   }
   // fallback: 기존 동작 유지 (최근 N개월)
   return recentYmList(fallbackN, fallbackAnchor || currentMonth);
@@ -10206,14 +10141,7 @@ function renderReturnsTrendChart(fromYm, toYm) {
   $card.style.display = '';
 
   // ym 리스트
-  const ymList = [];
-  let cur = fromYm;
-  let guard = 0;
-  while (cur <= toYm && guard < 120) {
-    ymList.push(cur);
-    cur = shiftYm(cur, 1);
-    guard++;
-  }
+  const ymList = buildYmList(fromYm, toYm);
 
   // 각 월의 1개월 수익률 계산
   const rates = ymList.map(ym => {
@@ -13530,21 +13458,6 @@ function getEventCycleStart(ev, ym) {
 // 경조사의 ym 말 시점 목표 누적 잔액 (KRW) — 사이클 진도 × 금액
 // 행사 월: lastDoneYm=ym이면 0 (인출 후), 아니면 amount (인출 직전)
 // 그 외: 11개월 사이클(행사 직후~다음 행사 직전) 진도 × 금액
-function eventTargetBalance(ev, ym) {
-  if (!ev) return 0;
-  const amount = Number(ev.amount) || 0;
-  if (amount <= 0) return 0;
-  const [, cm] = ym.split('-').map(Number);
-  const recurM = parseInt(ev.recurMonth, 10);
-  if (recurM === cm) {
-    return ev.lastDoneYm === ym ? 0 : amount;
-  }
-  const cycleStart = getEventCycleStart(ev, ym);
-  if (!cycleStart) return 0;
-  const elapsed = monthsBetween(cycleStart, ym);
-  return Math.round(amount * Math.min(1, elapsed / 11));
-}
-
 // 이번 달 권장 적립액 (KRW) — amount/11 (11개월 사이클). 행사 월에는 0 (인출만).
 function eventThisMonthRecommend(ev, ym) {
   if (!ev) return 0;
