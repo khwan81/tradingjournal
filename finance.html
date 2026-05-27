@@ -287,9 +287,25 @@ body {
 }
 .subtab-content { display: none; }
 .subtab-content.active { display: block; }
+
+/* v0.7-14 — 서브탭바 + 우측 액션 버튼 통합 변형 */
+.subtab-bar.with-action {
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.subtab-bar.with-action .subtab-list {
+  display: flex; gap: 6px; flex-wrap: wrap;
+}
+.subtab-bar.with-action .subtab-action {
+  display: flex; gap: 6px; flex-shrink: 0;
+}
+
 @media (max-width: 600px) {
   .subtab-bar { gap: 4px; }
   .subtab { padding: 6px 10px; font-size: 12px; }
+  /* 모바일: 서브탭과 액션을 두 줄로 분리 (가독성) */
+  .subtab-bar.with-action .subtab-list { flex: 1; }
 }
 
 /* 빈 상태 (placeholder) */
@@ -676,7 +692,7 @@ body {
   padding: 1px 5px;
   border-radius: 3px;
 }
-.backup-card .btn-p, .backup-card .btn-d { flex-shrink: 0; }
+.backup-card .btn-p, .backup-card .btn-danger { flex-shrink: 0; }
 
 /* 마지막 백업 시각 (v0.3-1) */
 .backup-last {
@@ -698,7 +714,7 @@ body {
 
 @media (max-width: 480px) {
   .backup-card { flex-direction: column; align-items: stretch; }
-  .backup-card .btn-p, .backup-card .btn-d { width: 100%; }
+  .backup-card .btn-p, .backup-card .btn-danger { width: 100%; }
 }
 
 /* 복원 모달 (v0.3-1) */
@@ -1974,12 +1990,7 @@ body {
 .pl-row.empty .pl-name { color: var(--text3); font-style: italic; }
 
 /* ── 예산 탭 (v0.4) ── */
-.bg-header {
-  display: flex; justify-content: space-between; align-items: center;
-  gap: 10px;
-  margin-bottom: 14px;
-  flex-wrap: wrap;
-}
+/* .bg-header는 v0.7-14에서 서브탭바 우측 액션으로 흡수됨 */
 /* .bg-placeholder는 .empty-state로 통합 (v0.7-13) */
 
 /* ── 대시보드 탭 (v0.5) ── */
@@ -2511,6 +2522,25 @@ body {
 .bg-budget { color: var(--text3); }
 .bg-empty   { color: var(--text3); font-style: italic; font-size: 11px; }
 .bg-no-budget { color: #fbbf24; font-size: 11px; margin-left: 4px; }
+
+/* v0.7-14 — 예산 미설정/없음 행에 점선 leader (시인성)
+ *   예산 있는 행(진행률바 있음)은 영향 없음. data-leader="1" 행에만 적용. */
+.bg-row[data-leader="1"] .bg-row-head {
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+.bg-row[data-leader="1"] .bg-row-head::before {
+  content: '';
+  order: 2;
+  flex: 1;
+  align-self: end;
+  margin-bottom: 5px;
+  border-bottom: 1px dotted rgba(255, 255, 255, 0.10);
+  min-width: 20px;
+}
+.bg-row[data-leader="1"] .bg-cat { flex: 0 0 auto; order: 1; overflow: visible; }
+.bg-row[data-leader="1"] .bg-amt { order: 3; }
 
 .bg-pct {
   font-weight: 500;
@@ -3794,23 +3824,54 @@ body {
   </div>
   <!-- /tab-status -->
 
-  <!-- ═══ 계획 탭 (v0.7) — 예산 (경조사는 추후 이동) ═══ -->
+  <!-- ═══ 계획 탭 (v0.7-14) — 예산 / 경조사 / 반복지출 ═══ -->
   <div class="tab-content" id="tab-planning">
-    <div class="subtab-bar" data-subtab-group="planning">
-      <button class="subtab active" data-subtab="budget">예산</button>
+    <!-- 서브탭바 + 우상단 액션 (서브탭에 따라 표시되는 버튼이 바뀜) -->
+    <div class="subtab-bar with-action" data-subtab-group="planning">
+      <div class="subtab-list">
+        <button class="subtab active" data-subtab="budget">예산</button>
+        <button class="subtab"        data-subtab="events">경조사</button>
+        <button class="subtab"        data-subtab="recurring">반복지출</button>
+      </div>
+      <div class="subtab-action">
+        <!-- 예산 활성 시 -->
+        <button class="btn-s" id="btn-bg-copy-prev" data-action-for="budget">📋 전월 복사</button>
+        <!-- 경조사 활성 시 -->
+        <button class="btn-s" id="btn-add-event"     data-action-for="events"    style="display:none;">+ 경조사 추가</button>
+        <!-- 반복지출 활성 시 -->
+        <button class="btn-s" id="btn-add-recurring" data-action-for="recurring" style="display:none;">+ 반복지출 추가</button>
+      </div>
     </div>
 
     <!-- 예산 서브탭 (v0.4) -->
     <div class="subtab-content active" id="tab-budget">
-      <div class="bg-header">
-        <div></div>
-        <button class="btn-s" id="btn-bg-copy-prev">📋 전월 복사</button>
-      </div>
-
       <div id="bg-body">
         <div class="bg-placeholder">
           예산 데이터 로딩 중…
         </div>
+      </div>
+    </div>
+
+    <!-- 경조사 서브탭 (v0.7-14 — 설정 탭에서 이동) -->
+    <div class="subtab-content" id="tab-events">
+      <!-- 적립 계좌 설정 -->
+      <div class="event-account-bar">
+        <span class="event-account-label">적립 계좌</span>
+        <select class="select" id="event-account-select">
+          <option value="">미지정</option>
+        </select>
+        <span class="event-account-hint" id="event-account-hint">행사 시점까지 모아둘 계좌를 선택하세요</span>
+      </div>
+
+      <div id="events-list">
+        <div class="chip-empty" style="text-align:center; padding:24px 0;">로딩 중…</div>
+      </div>
+    </div>
+
+    <!-- 반복지출 서브탭 (v0.7-14 — 설정 탭에서 이동) -->
+    <div class="subtab-content" id="tab-recurring">
+      <div id="recurring-list">
+        <div class="chip-empty" style="text-align:center; padding:24px 0;">로딩 중…</div>
       </div>
     </div>
   </div>
@@ -3971,47 +4032,7 @@ body {
       </div>
     </div>
 
-    <!-- ───────── 반복지출 마스터 (v0.2-3) ───────── -->
-    <div class="section-card">
-      <div class="section-head">
-        <div>
-          <div class="section-title">🔁 반복지출</div>
-          <div class="section-sub">매월 자동 생성할 거래</div>
-        </div>
-        <div class="section-actions">
-          <button class="btn-s" id="btn-add-recurring">+ 반복지출 추가</button>
-        </div>
-      </div>
-      <div id="recurring-list">
-        <div class="chip-empty" style="text-align:center; padding:24px 0;">로딩 중…</div>
-      </div>
-    </div>
-
-    <!-- ───────── 경조사 (v0.6) ───────── -->
-    <div class="section-card">
-      <div class="section-head">
-        <div>
-          <div class="section-title">🎀 경조사</div>
-          <div class="section-sub">결혼식·돌잔치 등 비정기 행사 계획 및 적립</div>
-        </div>
-        <div class="section-actions">
-          <button class="btn-s" id="btn-add-event">+ 경조사 추가</button>
-        </div>
-      </div>
-
-      <!-- 적립 계좌 설정 -->
-      <div class="event-account-bar">
-        <span class="event-account-label">적립 계좌</span>
-        <select class="select" id="event-account-select">
-          <option value="">미지정</option>
-        </select>
-        <span class="event-account-hint" id="event-account-hint">행사 시점까지 모아둘 계좌를 선택하세요</span>
-      </div>
-
-      <div id="events-list">
-        <div class="chip-empty" style="text-align:center; padding:24px 0;">로딩 중…</div>
-      </div>
-    </div>
+    <!-- (v0.7-14 — 반복지출/경조사는 계획 탭으로 이동) -->
 
     <!-- ───────── 데이터 관리 (v0.2-2 / v0.3-1) ───────── -->
     <div class="section-card">
@@ -4043,7 +4064,7 @@ body {
             <span id="reset-status">—</span>
           </div>
         </div>
-        <button class="btn-d" id="btn-reset-balances">전체 초기화</button>
+        <button class="btn-danger" id="btn-reset-balances">전체 초기화</button>
       </div>
 
       <div class="backup-card backup-card-restore">
@@ -4054,7 +4075,7 @@ body {
             복원 전에 반드시 백업 다운로드를 먼저 수행하세요.
           </div>
         </div>
-        <button class="btn-d" id="btn-restore-open">📤 복원하기</button>
+        <button class="btn-danger" id="btn-restore-open">📤 복원하기</button>
         <input type="file" id="restore-file-input" accept=".json,application/json" style="display:none;">
       </div>
       <div class="form-hint" style="margin-top:10px;">
@@ -4141,7 +4162,7 @@ body {
     </div>
     <div class="modal-foot">
       <button class="btn" data-close="ov-restore" id="restore-cancel">취소</button>
-      <button class="btn-d" id="restore-execute" disabled>복원 실행</button>
+      <button class="btn-danger" id="restore-execute" disabled>복원 실행</button>
     </div>
   </div>
 </div>
@@ -4959,12 +4980,21 @@ function switchTab(name, subtab) {
 // 단일 톱탭 영역 내에서 서브탭 활성화
 function activateSubtab($topPane, subtab) {
   if (!$topPane || !subtab) return;
-  $topPane.querySelectorAll(':scope > .subtab-bar .subtab').forEach(b =>
+  $topPane.querySelectorAll(':scope > .subtab-bar .subtab, :scope > .subtab-bar .subtab-list .subtab').forEach(b =>
     b.classList.toggle('active', b.dataset.subtab === subtab)
   );
   $topPane.querySelectorAll(':scope > .subtab-content').forEach(c =>
     c.classList.toggle('active', c.id === `tab-${subtab}`)
   );
+
+  // v0.7-14 — 서브탭바 우측 액션 버튼 토글 (data-action-for 매칭)
+  //   서브탭바 안에 .subtab-action 컨테이너가 있으면 해당 서브탭용 버튼만 표시
+  const $action = $topPane.querySelector(':scope > .subtab-bar .subtab-action');
+  if ($action) {
+    $action.querySelectorAll('[data-action-for]').forEach(btn => {
+      btn.style.display = (btn.dataset.actionFor === subtab) ? '' : 'none';
+    });
+  }
 
   // 서브탭 진입 시 후처리 — 대시보드는 기간형 차트만 (v0.7-11)
   if (subtab === 'dashboard') {
@@ -11250,8 +11280,11 @@ function renderBgBody() {
         ? `<div class="bg-bar"><div class="bg-bar-fill ${barCls}" style="width:${barWidth}%"></div></div>`
         : '';
 
+      // v0.7-14 — 예산 없는 행(진행률바 없음)에는 점선 leader 적용
+      const leaderAttr = (budget > 0) ? '' : ' data-leader="1"';
+
       return `
-        <div class="bg-row" data-edit-bg="${escapeHtml(flow)}::${escapeHtml(cat)}">
+        <div class="bg-row" data-edit-bg="${escapeHtml(flow)}::${escapeHtml(cat)}"${leaderAttr}>
           <div class="bg-row-head">
             <span class="bg-cat">${escapeHtml(cat)}</span>
             <span class="bg-amt">${amtRight}${pctRight ? ' · ' + pctRight : ''}</span>
