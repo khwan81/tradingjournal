@@ -1377,6 +1377,20 @@ body {
 .sv-badge.fx    { background: rgba(139,144,158,0.18); color: var(--text2); }
 .sv-badge.missing { background: rgba(248,113,113,0.15); color: var(--red); }
 
+/* v0.7-12e — 수익률 부분 기간 배지 (계좌 첫 결산이 분석 기간 시작보다 늦을 때) */
+.rt-partial-badge {
+  font-size: 9.5px;
+  padding: 1.5px 6px;
+  border-radius: 9px;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  vertical-align: middle;
+  margin-left: 4px;
+  background: rgba(251, 191, 36, 0.12);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.25);
+}
+
 /* 빈 카테고리 */
 .sv-empty {
   padding: 18px;
@@ -9423,28 +9437,39 @@ function invalidateReturnsCache() {
 }
 
 // ─── 핵심: 한 계좌의 Modified Dietz 기간수익률 ─────────────
-// 반환: { gain, base, rate, hasData }
+// 반환: { gain, base, rate, hasData, effectiveFromYm, requestedFromYm }
 //   hasData=false: 해당 기간 데이터가 없거나 계산 불가
+//   effectiveFromYm: 실제로 시작점으로 잡은 ym
+//     • fromYm 이전 결산이 있으면 그 결산의 ym (정상 케이스)
+//     • 없으면 그 계좌의 첫 결산 ym (시나리오 4: 부분 기간 표시)
+//   requestedFromYm: 호출자가 요청한 fromYm (UI에서 effectiveFromYm과 비교용)
 function periodReturnAcc(accId, fromYm, toYm) {
   if (!returnsCache) return { gain: 0, base: 0, rate: 0, hasData: false };
   const arr = returnsCache.byAcc.get(accId) || [];
   if (arr.length === 0) return { gain: 0, base: 0, rate: 0, hasData: false };
 
   // toYm 결산이 없으면 계산 불가 (끝점 없음)
-  // toYm 이전의 가장 가까운 도큐먼트도 시작점이 될 수 없음 — 기간 명확해야 함
   const end = arr.find(d => d.ym === toYm);
   if (!end) return { gain: 0, base: 0, rate: 0, hasData: false };
 
   // fromYm 결산 시도. 없으면 fromYm 이전(또는 같은)의 마지막 결산을 시작점으로.
-  // 이건 "fromYm 시점의 자산가치"를 가장 가깝게 추정하는 fallback.
-  // 단, 그 결산이 end보다 같거나 뒤면 계산 불가.
+  // 그것도 없으면 (계좌가 fromYm 이후 시작됨) — 계좌의 첫 결산을 시작점으로 (v0.7-12e 시나리오 4).
   let startIdx = -1;
   for (let i = arr.length - 1; i >= 0; i--) {
     if (arr[i].ym <= fromYm) { startIdx = i; break; }
   }
-  if (startIdx === -1) return { gain: 0, base: 0, rate: 0, hasData: false };
-  const start = arr[startIdx];
-  if (start.ym >= end.ym) return { gain: 0, base: 0, rate: 0, hasData: false };
+  let start;
+  if (startIdx >= 0) {
+    start = arr[startIdx];
+  } else {
+    // 계좌의 첫 결산 (arr는 ym 오름차순 정렬)
+    start = arr[0];
+  }
+  // start가 end와 같거나 뒤면 계산 불가
+  if (start.ym >= end.ym) return {
+    gain: 0, base: 0, rate: 0, hasData: false,
+    effectiveFromYm: start.ym, requestedFromYm: fromYm,
+  };
 
   // between: start.ym 초과 ~ end.ym 이하
   let depSum = 0;
@@ -9460,7 +9485,7 @@ function periodReturnAcc(accId, fromYm, toYm) {
   const base = startBal + depSum / 2;
   const rate = base > 0 ? gain / base : 0;
 
-  return { gain, base, rate, hasData: true };
+  return { gain, base, rate, hasData: true, effectiveFromYm: start.ym, requestedFromYm: fromYm };
 }
 
 // 여러 계좌 합산 (가중수익률)
@@ -9574,7 +9599,8 @@ async function loadAnalysisTransactions(fromYm, toYm) {
 // v0.7-12c: toYm을 글로벌 currentMonth와 동기화.
 //   • toYm = currentMonth (글로벌 월이 분석 기간의 끝)
 //   • 데이터가 currentMonth보다 미래까지 있어도 toYm은 currentMonth 유지
-//   • 단 currentMonth 자체가 데이터 첫 ym보다 이전이면 ALL은 비활성
+// v0.7-12d: 단일월 모드 허용 (fromYm = toYm OK).
+//   손익/트리맵은 단일월에서도 동작. 수익률만 2개월 이상 필요 (그쪽에서 안내).
 function presetRange(preset) {
   const allYms = analysisAllYms;
   if (!allYms || allYms.length === 0) return null;
@@ -9593,15 +9619,13 @@ function presetRange(preset) {
       fromYm = `${y}-01`;
       // YTD 시작이 캐시 첫달 이전이면 첫달로
       if (fromYm < firstYm) fromYm = firstYm;
-      // YTD 시작이 toYm과 같으면 (1월에 보는 경우) 직전 12월
-      if (fromYm >= toYm) fromYm = shiftYm(toYm, -1);
       break;
     }
     case 'ALL':
     default:    fromYm = firstYm;
   }
-  // 안전장치: fromYm이 toYm 이상이면 비활성
-  if (fromYm >= toYm) return null;
+  // 안전장치: fromYm이 toYm보다 미래면 비활성 (데이터 없는 미래 시점)
+  if (fromYm > toYm) return null;
   return { fromYm, toYm };
 }
 
@@ -9853,11 +9877,16 @@ function renderReturnsBody() {
     const rowsHtml = items.map(({ id, meta }) => {
       const r = periodReturnAcc(id, fromYm, toYm);
       if (!r.hasData) {
+        // toYm 결산이 없으면 안내 (계산 불가의 가장 흔한 원인)
+        const noEndHint = r.effectiveFromYm
+          ? `<span class="rt-partial-badge">${toYm} 결산 필요</span>`
+          : '';
         return `
           <div class="rt-row">
             <div class="rt-name">
               ${escapeHtml(meta.name)}
               ${meta.isInactive ? '<span class="sv-badge missing">비활성</span>' : ''}
+              ${noEndHint}
             </div>
             <div class="rt-cell muted" data-label="원금"><span>—</span></div>
             <div class="rt-cell muted" data-label="수익">—</div>
@@ -9870,11 +9899,16 @@ function renderReturnsBody() {
       // 기여도: 전체 base 대비 이 계좌 gain의 비중 (전체 수익률 대비 %p)
       // 여기서는 단순히 base 비중으로 표시
       const baseShare = catAgg.base > 0 ? (r.base / catAgg.base) : 0;
+      // v0.7-12e — effective !== requested 면 부분 기간 안내
+      const partialHint = (r.effectiveFromYm && r.effectiveFromYm > r.requestedFromYm)
+        ? `<span class="rt-partial-badge">${r.effectiveFromYm}부터</span>`
+        : '';
       return `
         <div class="rt-row">
           <div class="rt-name">
             ${escapeHtml(meta.name)}
             ${meta.isInactive ? '<span class="sv-badge missing">비활성</span>' : ''}
+            ${partialHint}
           </div>
           <div class="rt-cell" data-label="원금">${fmtNum(Math.round(r.base))}</div>
           <div class="rt-cell ${gainCls}" data-label="수익">${fmtSigned(r.gain)}</div>
@@ -9954,7 +9988,12 @@ function bindReturnsHandlers() {
         returnsCurrentRange = { ...r, preset };
         applyAnalysisPeriod();
       } else {
-        showToast('해당 기간 데이터 없음');
+        // 데이터가 없거나 (캐시 비어있음) 글로벌 월이 데이터 첫 ym보다 이전
+        if (!analysisAllYms || analysisAllYms.length === 0) {
+          showToast('거래나 결산 데이터가 없습니다');
+        } else {
+          showToast(`데이터 첫 ym(${analysisAllYms[0]})이 현재월(${currentMonth})보다 미래입니다`);
+        }
       }
     });
   });
