@@ -3258,11 +3258,12 @@ body {
     </div>
   </div>
 
-  <!-- ═══ 결산 탭 (v0.7) — 재무상태 / 자산결산 ═══ -->
+  <!-- ═══ 결산 탭 (v0.7) — 재무상태 / 자산결산 / 배당 ═══ -->
   <div class="tab-content" id="tab-closing">
     <div class="subtab-bar" data-subtab-group="closing">
       <button class="subtab active" data-subtab="balance">재무상태</button>
       <button class="subtab"        data-subtab="savings">자산결산</button>
+      <button class="subtab"        data-subtab="dividends">배당</button>
     </div>
 
     <div class="subtab-content active" id="tab-balance">
@@ -3317,6 +3318,91 @@ body {
         <div>비추적 자산(입출금/CMA 등)은 <a href="#" id="sv-goto-balance">재무상태</a> 서브탭에서 입력합니다.</div>
       </div>
     </div>
+
+    <!-- 배당 서브탭 (v0.7-8 / v0.7-8b에서 결산 탭으로 이동) -->
+    <div class="subtab-content" id="tab-dividends">
+      <div class="dv-header">
+        <div class="dv-asof-wrap">
+          <span class="dv-asof" id="dv-asof"></span>
+        </div>
+        <button class="btn-p" id="btn-dv-add">+ 배당 입력</button>
+      </div>
+
+      <!-- KPI 3 -->
+      <div class="bs-kpi-grid">
+        <div class="bs-kpi-card">
+          <div class="label">이번달</div>
+          <div class="value" id="dv-kpi-month">—</div>
+          <div class="sub"   id="dv-kpi-month-sub">—</div>
+        </div>
+        <div class="bs-kpi-card">
+          <div class="label">올해 누적</div>
+          <div class="value" id="dv-kpi-ytd">—</div>
+          <div class="sub"   id="dv-kpi-ytd-sub">—</div>
+        </div>
+        <div class="bs-kpi-card">
+          <div class="label">전체 누적</div>
+          <div class="value" id="dv-kpi-all">—</div>
+          <div class="sub"   id="dv-kpi-all-sub">—</div>
+        </div>
+      </div>
+
+      <!-- 월별 합계 차트 -->
+      <div class="dv-card">
+        <div class="dv-card-head">
+          <div class="dv-card-title">월별 배당</div>
+          <div class="dv-card-sub" id="dv-chart-sub">최근 12개월</div>
+        </div>
+        <div class="dv-chart-wrap">
+          <canvas id="dv-chart"></canvas>
+          <div class="dv-chart-empty" id="dv-chart-empty" style="display:none;">데이터 없음</div>
+        </div>
+      </div>
+
+      <!-- 종목별 / 계좌별 누적 (2단 컬럼) -->
+      <div class="dv-summary-grid">
+        <div class="dv-card">
+          <div class="dv-card-head">
+            <div class="dv-card-title">종목별 누적</div>
+            <div class="dv-card-sub" id="dv-symbol-sub">—</div>
+          </div>
+          <div id="dv-symbol-body">
+            <div class="dv-empty">데이터 없음</div>
+          </div>
+        </div>
+        <div class="dv-card">
+          <div class="dv-card-head">
+            <div class="dv-card-title">계좌별 누적</div>
+            <div class="dv-card-sub" id="dv-account-sub">—</div>
+          </div>
+          <div id="dv-account-body">
+            <div class="dv-empty">데이터 없음</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 전체 내역 -->
+      <div class="dv-card">
+        <div class="dv-card-head">
+          <div class="dv-card-title">전체 내역</div>
+          <div class="dv-card-sub">
+            <select id="dv-filter-period" class="dv-select">
+              <option value="all">전체</option>
+              <option value="ytd">올해</option>
+              <option value="month" selected>이번달</option>
+            </select>
+          </div>
+        </div>
+        <div id="dv-list-body">
+          <div class="dv-empty">배당 기록이 없습니다 — 우상단 "+ 배당 입력" 버튼으로 시작</div>
+        </div>
+      </div>
+
+      <div class="sv-info">
+        <span class="info-icon">ⓘ</span>
+        <div>배당 재투자는 다음 결산의 잔고에 자연 반영됩니다 · 별도 분개는 하지 않습니다.</div>
+      </div>
+    </div>
   </div>
 
   <!-- ═══ 분석 탭 (v0.7) — 손익 / 수익률 / 대시보드 ═══ -->
@@ -3324,7 +3410,6 @@ body {
     <div class="subtab-bar" data-subtab-group="analysis">
       <button class="subtab active" data-subtab="pl">손익</button>
       <button class="subtab"        data-subtab="returns">수익률</button>
-      <button class="subtab"        data-subtab="dividends">배당</button>
       <button class="subtab"        data-subtab="dashboard">대시보드</button>
     </div>
 
@@ -3415,90 +3500,7 @@ body {
       </div>
     </div>
 
-    <!-- 배당 서브탭 (v0.7-8) -->
-    <div class="subtab-content" id="tab-dividends">
-      <div class="dv-header">
-        <div class="dv-asof-wrap">
-          <span class="dv-asof" id="dv-asof"></span>
-        </div>
-        <button class="btn-p" id="btn-dv-add">+ 배당 입력</button>
-      </div>
-
-      <!-- KPI 3 -->
-      <div class="bs-kpi-grid">
-        <div class="bs-kpi-card">
-          <div class="label">이번달</div>
-          <div class="value" id="dv-kpi-month">—</div>
-          <div class="sub"   id="dv-kpi-month-sub">—</div>
-        </div>
-        <div class="bs-kpi-card">
-          <div class="label">올해 누적</div>
-          <div class="value" id="dv-kpi-ytd">—</div>
-          <div class="sub"   id="dv-kpi-ytd-sub">—</div>
-        </div>
-        <div class="bs-kpi-card">
-          <div class="label">전체 누적</div>
-          <div class="value" id="dv-kpi-all">—</div>
-          <div class="sub"   id="dv-kpi-all-sub">—</div>
-        </div>
-      </div>
-
-      <!-- 월별 합계 차트 -->
-      <div class="dv-card">
-        <div class="dv-card-head">
-          <div class="dv-card-title">월별 배당</div>
-          <div class="dv-card-sub" id="dv-chart-sub">최근 12개월</div>
-        </div>
-        <div class="dv-chart-wrap">
-          <canvas id="dv-chart"></canvas>
-          <div class="dv-chart-empty" id="dv-chart-empty" style="display:none;">데이터 없음</div>
-        </div>
-      </div>
-
-      <!-- 종목별 / 계좌별 누적 (2단 컬럼) -->
-      <div class="dv-summary-grid">
-        <div class="dv-card">
-          <div class="dv-card-head">
-            <div class="dv-card-title">종목별 누적</div>
-            <div class="dv-card-sub" id="dv-symbol-sub">—</div>
-          </div>
-          <div id="dv-symbol-body">
-            <div class="dv-empty">데이터 없음</div>
-          </div>
-        </div>
-        <div class="dv-card">
-          <div class="dv-card-head">
-            <div class="dv-card-title">계좌별 누적</div>
-            <div class="dv-card-sub" id="dv-account-sub">—</div>
-          </div>
-          <div id="dv-account-body">
-            <div class="dv-empty">데이터 없음</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 전체 내역 -->
-      <div class="dv-card">
-        <div class="dv-card-head">
-          <div class="dv-card-title">전체 내역</div>
-          <div class="dv-card-sub">
-            <select id="dv-filter-period" class="dv-select">
-              <option value="all">전체</option>
-              <option value="ytd">올해</option>
-              <option value="month" selected>이번달</option>
-            </select>
-          </div>
-        </div>
-        <div id="dv-list-body">
-          <div class="dv-empty">배당 기록이 없습니다 — 우상단 "+ 배당 입력" 버튼으로 시작</div>
-        </div>
-      </div>
-
-      <div class="sv-info">
-        <span class="info-icon">ⓘ</span>
-        <div>배당 재투자는 다음 결산의 잔고에 자연 반영됩니다 · 별도 분개는 하지 않습니다.</div>
-      </div>
-    </div>
+    <!-- 배당 서브탭은 결산 탭으로 이동됨 (사용자 피드백: 입력성 데이터는 분석이 아닌 결산에 속함) -->
 
   <!-- 대시보드 서브탭 (v0.5 B1 + B2 / v0.7 분석 탭 안으로 이동) -->
   <div class="subtab-content" id="tab-dashboard">
@@ -3610,7 +3612,7 @@ body {
   </div>
   <!-- /tab-analysis -->
 
-  <!-- ═══ 계획 탭 (v0.7) — 예산 (경조사·배당은 추후 이동) ═══ -->
+  <!-- ═══ 계획 탭 (v0.7) — 예산 (경조사는 추후 이동) ═══ -->
   <div class="tab-content" id="tab-planning">
     <div class="subtab-bar" data-subtab-group="planning">
       <button class="subtab active" data-subtab="budget">예산</button>
@@ -9621,7 +9623,8 @@ function subscribeDividends() {
 }
 
 function isDividendsVisible() {
-  const $top = document.getElementById('tab-analysis');
+  // v0.7-8b — 배당 서브탭이 결산 탭 하위로 이동됨
+  const $top = document.getElementById('tab-closing');
   if (!$top || !$top.classList.contains('active')) return false;
   const $sub = document.getElementById('tab-dividends');
   return !!$sub?.classList.contains('active');
