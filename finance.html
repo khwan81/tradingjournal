@@ -3557,8 +3557,28 @@ body {
       <button class="subtab"        data-subtab="dashboard">대시보드</button>
     </div>
 
-    <!-- 손익 서브탭 (v0.3-4) -->
+    <!-- 공유 기간 필터 (v0.7-12) — 손익/수익률/대시보드 모두 적용 -->
+    <div class="rt-period-bar" id="analysis-period-bar">
+      <div class="rt-presets" id="rt-presets">
+        <button class="rt-preset"        data-rt-preset="1M">1M</button>
+        <button class="rt-preset"        data-rt-preset="3M">3M</button>
+        <button class="rt-preset"        data-rt-preset="6M">6M</button>
+        <button class="rt-preset"        data-rt-preset="YTD">YTD</button>
+        <button class="rt-preset active" data-rt-preset="ALL">ALL</button>
+      </div>
+      <div class="rt-range">
+        <input type="month" id="rt-from" class="rt-month-input" aria-label="시작 월">
+        <span class="rt-range-sep">→</span>
+        <input type="month" id="rt-to"   class="rt-month-input" aria-label="끝 월">
+      </div>
+    </div>
+
+    <!-- 손익 서브탭 (v0.3-4 / v0.7-12 기간 모드) -->
     <div class="subtab-content active" id="tab-pl">
+      <div class="sv-info" style="margin-bottom: 12px;">
+        <span class="info-icon">ⓘ</span>
+        <div>—</div>
+      </div>
       <!-- 카테고리별 상세 (A3) -->
       <div id="pl-body">
         <div class="pl-placeholder">
@@ -3567,23 +3587,8 @@ body {
       </div>
     </div>
 
-    <!-- 수익률 서브탭 (v0.7-7) — Modified Dietz -->
+    <!-- 수익률 서브탭 (v0.7-7) — Modified Dietz / v0.7-12에서 기간 선택기는 공유로 이동 -->
     <div class="subtab-content" id="tab-returns">
-      <!-- 기간 선택기 -->
-      <div class="rt-period-bar">
-        <div class="rt-presets" id="rt-presets">
-          <button class="rt-preset"        data-rt-preset="1M">1M</button>
-          <button class="rt-preset"        data-rt-preset="3M">3M</button>
-          <button class="rt-preset"        data-rt-preset="6M">6M</button>
-          <button class="rt-preset"        data-rt-preset="YTD">YTD</button>
-          <button class="rt-preset active" data-rt-preset="ALL">ALL</button>
-        </div>
-        <div class="rt-range">
-          <input type="month" id="rt-from" class="rt-month-input" aria-label="시작 월">
-          <span class="rt-range-sep">→</span>
-          <input type="month" id="rt-to"   class="rt-month-input" aria-label="끝 월">
-        </div>
-      </div>
 
       <!-- KPI 3 -->
       <div class="bs-kpi-grid">
@@ -4962,6 +4967,12 @@ function switchTab(name, subtab) {
   if (name === 'status') {
     renderStatusAll();
   }
+
+  // v0.7-12 — 분석 톱탭 진입 시 공유 기간 필터 초기화 + 핸들러 바인딩
+  if (name === 'analysis') {
+    bindReturnsHandlers();
+    initAnalysisPeriod();
+  }
 }
 
 // 단일 톱탭 영역 내에서 서브탭 활성화
@@ -5583,12 +5594,42 @@ document.getElementById('btn-event-add-saving').addEventListener('click', () => 
 // 손익 본문 렌더 (A3) — 카테고리별 상세 표
 // 매출/고정비/변동비 각 그룹에 그 달에 등장한 카테고리만 집계해서 나열.
 // settings.categories 마스터 순서를 따라 일관된 순서로 표시.
-function renderPlBody() {
+async function renderPlBody() {
   const $body = document.getElementById('pl-body');
   if (!$body) return;
 
-  if (plTransactions.length === 0) {
-    $body.innerHTML = `<div class="pl-placeholder">${currentMonth} 거래 없음</div>`;
+  // v0.7-12 2단계 — 기간 모드 적용
+  // 분석 탭 활성 + returnsCurrentRange 가 있으면 그 기간의 거래 합산
+  // 없으면 fallback: 글로벌 월의 plTransactions 사용 (옛 동작)
+  let txList;
+  let modeLabel;
+  let fromYm, toYm;
+
+  if (returnsCurrentRange) {
+    fromYm = returnsCurrentRange.fromYm;
+    toYm   = returnsCurrentRange.toYm;
+    $body.innerHTML = '<div class="pl-placeholder">손익 데이터 로딩 중…</div>';
+    txList = await loadAnalysisTransactions(fromYm, toYm);
+    modeLabel = (fromYm === toYm) ? fromYm : `${fromYm} ~ ${toYm}`;
+  } else {
+    // fallback — 글로벌 월
+    fromYm = toYm = currentMonth;
+    txList = plTransactions;
+    modeLabel = currentMonth;
+  }
+
+  // 안내(있다면) 동적 갱신 — "글로벌 월 (...) 단일 기준" 문구를 기간 표시로 교체
+  const $info = $body.parentElement?.querySelector('.sv-info > div');
+  if ($info) {
+    if (fromYm !== toYm) {
+      $info.innerHTML = `기간 모드 (<b>${modeLabel}</b>) · 헤더의 기간 필터로 조정합니다`;
+    } else {
+      $info.innerHTML = `단일월 (<b>${modeLabel}</b>) · 헤더의 기간 필터로 조정합니다`;
+    }
+  }
+
+  if (!txList || txList.length === 0) {
+    $body.innerHTML = `<div class="pl-placeholder">${modeLabel} 거래 없음</div>`;
     return;
   }
 
@@ -5596,7 +5637,7 @@ function renderPlBody() {
   const sums = { revenue: new Map(), fixed: new Map(), variable: new Map() };
   let totalRevenue = 0, totalFixed = 0, totalVariable = 0;
 
-  for (const t of plTransactions) {
+  for (const t of txList) {
     const flow = txFlow(t);
     const amt = Number(t.amount) || 0;
     if (!sums[flow]) continue;     // 알 수 없는 flow 무시
@@ -7139,6 +7180,11 @@ async function generateRecurringForCurrentMonth() {
 
     await batch.commit();
     showToast(`반복지출 ${pending.length}건 생성 완료`);
+
+    // v0.7-12 2단계 — 거래 변경 시 분석 캐시 무효화
+    invalidateAnalysisYms();
+    const $analysisTop = document.getElementById('tab-analysis');
+    if ($analysisTop?.classList.contains('active')) applyAnalysisPeriod();
   } catch (e) {
     console.error('[recurring generate] error', e);
     showToast('생성 실패: ' + (e.message || e.code));
@@ -9357,6 +9403,8 @@ async function loadReturnsCache(force = false) {
 
 function invalidateReturnsCache() {
   returnsCache = null;
+  // v0.7-12 — 분석 탭 공유 ym 캐시도 같이 무효화
+  analysisAllYms = null;
 }
 
 // ─── 핵심: 한 계좌의 Modified Dietz 기간수익률 ─────────────
@@ -9420,18 +9468,98 @@ function periodReturnAggregate(fromYm, toYm, accIds = null) {
   return { gain: gainSum, base: baseSum, rate, hasData: nAcc > 0, nAcc };
 }
 
+// ─── 분석 탭 공유 ym 범위 (v0.7-12) ─────────────────
+// monthly + transactions 양쪽의 ym 합집합을 사용해야 결산 없이 거래만 있는 사용자도
+// 1M/3M/ALL 범위가 동작함. 캐시는 분석 탭 진입 시 갱신, 데이터 변경 시 invalidate.
+let analysisAllYms = null;   // null이면 미초기화. 빈 배열이면 데이터 없음.
+
+async function loadAnalysisYms(force = false) {
+  if (!force && analysisAllYms !== null) return analysisAllYms;
+  if (!currentUid) return [];
+
+  try {
+    // monthly 캐시 + 거래 ym 합집합
+    await loadReturnsCache(force);   // monthly 전체 fetch (returnsCache 채움)
+    const ymSet = new Set();
+    if (returnsCache?.allYms) for (const ym of returnsCache.allYms) ymSet.add(ym);
+
+    // 거래 ym 수집 — 가벼운 fetch (필드 1개만 — 단, Firestore에서 specific field만 가져오기는 안 됨)
+    const txSnap = await getDocs(pathTransactions());
+    txSnap.forEach(d => {
+      const ym = d.data().ym;
+      if (ym) ymSet.add(ym);
+    });
+
+    analysisAllYms = [...ymSet].sort();
+    return analysisAllYms;
+  } catch (e) {
+    console.error('loadAnalysisYms error', e);
+    return analysisAllYms || [];
+  }
+}
+
+function invalidateAnalysisYms() {
+  analysisAllYms = null;
+  invalidateReturnsCache();
+  // v0.7-12 2단계 — 거래 캐시도 같이 무효화
+  analysisTxCache = null;
+}
+
+// ─── 분석 탭 거래 캐시 (v0.7-12 2단계) ─────────
+// 손익 탭 + 지출 트리맵이 공통으로 사용.
+// 캐시 키 = `${fromYm}~${toYm}`. 키가 다르면 다시 fetch.
+let analysisTxCache = null;   // { key, txList }
+
+async function loadAnalysisTransactions(fromYm, toYm) {
+  if (!currentUid) return [];
+  const key = `${fromYm}~${toYm}`;
+  if (analysisTxCache?.key === key) return analysisTxCache.txList;
+
+  try {
+    // ymList 생성
+    const ymList = [];
+    let cur = fromYm;
+    let guard = 0;
+    while (cur <= toYm && guard < 120) {
+      ymList.push(cur);
+      cur = shiftYm(cur, 1);
+      guard++;
+    }
+
+    let snap;
+    if (ymList.length === 1) {
+      // 단일 월 — 효율적인 ==
+      snap = await getDocs(query(pathTransactions(), where('ym', '==', ymList[0])));
+    } else if (ymList.length <= 30) {
+      // Firestore 'in' 최대 30개
+      snap = await getDocs(query(pathTransactions(), where('ym', 'in', ymList)));
+    } else {
+      // 30개월 초과 — 전체 fetch
+      snap = await getDocs(pathTransactions());
+    }
+
+    const ymSet = new Set(ymList);
+    const txList = [];
+    snap.forEach(d => {
+      const t = { id: d.id, ...d.data() };
+      if (ymSet.has(t.ym)) txList.push(t);
+    });
+
+    analysisTxCache = { key, txList };
+    return txList;
+  } catch (e) {
+    console.error('loadAnalysisTransactions error', e);
+    return [];
+  }
+}
+
 // ─── 프리셋 → ym 범위 ─────────────────────────
-// 모든 프리셋의 toYm은 마지막으로 결산 데이터가 있는 ym (= cache.allYms 마지막)
-// fromYm은:
-//   1M  → toYm - 1개월
-//   3M  → toYm - 3개월
-//   6M  → toYm - 6개월
-//   YTD → 올해 첫 달 또는 cache 시작 (둘 중 늦은 것)
-//   ALL → cache 가장 빠른 ym
-// 데이터가 그 범위에 없으면 cache 안에서 가능한 최근접으로 맞춤.
+// v0.7-12: monthly + transactions 합집합 사용 (analysisAllYms).
+//   결산이 없어도 거래만 있는 사용자도 동작.
+// 모든 프리셋의 toYm은 데이터가 있는 가장 최근 ym.
 function presetRange(preset) {
-  if (!returnsCache || returnsCache.allYms.length === 0) return null;
-  const allYms = returnsCache.allYms;
+  const allYms = analysisAllYms;
+  if (!allYms || allYms.length === 0) return null;
   const toYm = allYms[allYms.length - 1];
   const firstYm = allYms[0];
 
@@ -9462,6 +9590,26 @@ function shiftYm(ym, n) {
   const [y, m] = ym.split('-').map(Number);
   const d = new Date(y, m - 1 + n, 1);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+// v0.7-12 — 분석 탭 공유 기간의 ym 리스트 생성
+//   대시보드 차트들이 사용. returnsCurrentRange가 없으면 fallback (최근 N개월).
+//   결과: [fromYm, ..., toYm] (월 단위 순차)
+function analysisPeriodYms(fallbackN = 12, fallbackAnchor = null) {
+  if (returnsCurrentRange) {
+    const { fromYm, toYm } = returnsCurrentRange;
+    const out = [];
+    let cur = fromYm;
+    let guard = 0;
+    while (cur <= toYm && guard < 120) {   // 최대 10년치 안전망
+      out.push(cur);
+      cur = shiftYm(cur, 1);
+      guard++;
+    }
+    return out;
+  }
+  // fallback: 기존 동작 유지 (최근 N개월)
+  return recentYmList(fallbackN, fallbackAnchor || currentMonth);
 }
 
 // ─── 렌더 ────────────────────────────────────
@@ -9769,6 +9917,8 @@ function isReturnsVisible() {
 }
 
 // ─── 이벤트 바인딩 (한 번만) ──────────────────
+// v0.7-12: 기간 필터가 분석 탭 공유로 승격됨.
+// 필터 변경 시 활성 서브탭에 맞게 재렌더.
 let returnsBound = false;
 function bindReturnsHandlers() {
   if (returnsBound) return;
@@ -9782,14 +9932,14 @@ function bindReturnsHandlers() {
       const r = presetRange(preset);
       if (r) {
         returnsCurrentRange = { ...r, preset };
-        renderReturns();
+        applyAnalysisPeriod();
       } else {
         showToast('해당 기간 데이터 없음');
       }
     });
   });
 
-  // 비교 5카드 클릭
+  // 비교 5카드 클릭 — 수익률 탭에만 있는 카드, 분석 탭 공유 필터로 적용
   document.querySelectorAll('.rt-cmp-card').forEach($c => {
     $c.addEventListener('click', () => {
       const preset = $c.dataset.rtCmp;
@@ -9797,7 +9947,7 @@ function bindReturnsHandlers() {
       const r = presetRange(preset);
       if (r) {
         returnsCurrentRange = { ...r, preset };
-        renderReturns();
+        applyAnalysisPeriod();
       }
     });
   });
@@ -9811,7 +9961,7 @@ function bindReturnsHandlers() {
     if (f >= t) { showToast('시작 월은 끝 월보다 빨라야 합니다'); return; }
     returnsActivePreset = '';   // 프리셋 해제
     returnsCurrentRange = { fromYm: f, toYm: t, preset: '' };
-    renderReturns();
+    applyAnalysisPeriod();
   };
   $from?.addEventListener('change', onMonthChange);
   $to?.addEventListener('change', onMonthChange);
@@ -9821,6 +9971,73 @@ function bindReturnsHandlers() {
     e.preventDefault();
     showToast('Modified Dietz: gain = end − start − Σdep, base = start + Σdep/2, rate = gain / base');
   });
+}
+
+// v0.7-12 — 분석 탭 기간 필터 변경 시 활성 서브탭에 적용
+//   • 수익률 탭 활성 → renderReturns()
+//   • 대시보드 활성 → 기간형 차트 4개 재렌더
+//   • 손익 탭 활성 → renderPlBody() (v0.7-12 2단계 — 기간 모드 적용)
+function applyAnalysisPeriod() {
+  // 프리셋 UI 동기화
+  updateReturnsPresetUi();
+  if (returnsCurrentRange) {
+    setReturnsInputs(returnsCurrentRange.fromYm, returnsCurrentRange.toYm);
+  }
+
+  // v0.7-12 2단계 — 기간이 바뀌면 트리맵 drill 상태 리셋 (이전 카테고리가 새 기간에 없을 수 있음)
+  dashExpenseDrillCategory = null;
+
+  // 활성 서브탭에 따라 분기
+  const $analysisTop = document.getElementById('tab-analysis');
+  if (!$analysisTop?.classList.contains('active')) return;
+
+  const activeSub = $analysisTop.querySelector('.subtab.active')?.dataset.subtab;
+  if (activeSub === 'returns') {
+    renderReturns();
+  } else if (activeSub === 'dashboard') {
+    renderDashNetworthChart();
+    renderDashPlChart();
+    renderDashTrkChart();
+    renderDashExpenseChart();
+  } else if (activeSub === 'pl') {
+    renderPlBody();
+  }
+}
+
+// v0.7-12 — 분석 탭 진입 시 ym 캐시 로드 + 초기 필터 세팅
+async function initAnalysisPeriod() {
+  // 매번 fresh — 거래/결산 변경 가능성 고려
+  await loadAnalysisYms(true);
+
+  // 입력 박스 min/max 설정
+  const $from = document.getElementById('rt-from');
+  const $to   = document.getElementById('rt-to');
+  if ($from && $to && analysisAllYms?.length > 0) {
+    $from.min = analysisAllYms[0];
+    $from.max = analysisAllYms[analysisAllYms.length - 1];
+    $to.min   = analysisAllYms[0];
+    $to.max   = analysisAllYms[analysisAllYms.length - 1];
+  }
+
+  // 초기 범위 세팅 (없을 때만)
+  if (!returnsCurrentRange) {
+    const r = presetRange(returnsActivePreset || 'ALL');
+    if (r) returnsCurrentRange = { ...r, preset: returnsActivePreset || 'ALL' };
+  } else {
+    // 캐시 갱신 후 기존 프리셋 범위가 여전히 유효한지 확인
+    if (returnsActivePreset) {
+      const r = presetRange(returnsActivePreset);
+      if (r) returnsCurrentRange = { ...r, preset: returnsActivePreset };
+    }
+  }
+
+  updateReturnsPresetUi();
+  if (returnsCurrentRange) {
+    setReturnsInputs(returnsCurrentRange.fromYm, returnsCurrentRange.toYm);
+  }
+
+  // 캐시 로딩 후 활성 서브탭 갱신 — 캐시 로드 중에 그려진 차트는 stale일 수 있음
+  applyAnalysisPeriod();
 }
 
 // ══════════════════════════════════════════════════════
@@ -11382,8 +11599,8 @@ async function renderDashNetworthChart() {
   if (!$canvas || !window.Chart) return;
   if (!currentUid) return;
 
-  // 1) 최근 12개월 ym 배열
-  const ymList = recentYmList(12, currentMonth);
+  // 1) ym 배열 — v0.7-12: 분석 탭 공유 기간 적용 (없으면 최근 12개월)
+  const ymList = analysisPeriodYms(12, currentMonth);
   const fromYm = ymList[0];
   const toYm   = ymList[ymList.length - 1];
 
@@ -11556,17 +11773,23 @@ async function renderDashPlChart() {
   if (!$canvas || !window.Chart) return;
   if (!currentUid) return;
 
-  const N = 6;
-  const ymList = recentYmList(N, currentMonth);
+  // v0.7-12 — 분석 탭 공유 기간 적용 (없으면 최근 6개월)
+  const ymList = analysisPeriodYms(6, currentMonth);
+  const N = ymList.length;
   const fromYm = ymList[0];
   const toYm   = ymList[ymList.length - 1];
 
   try {
-    // 6개월 거래 일괄 fetch — ym in [fromYm, toYm]
-    // Firestore 'in' 쿼리는 10개까지 OK, 6개는 안전
-    const txSnap = await getDocs(
-      query(pathTransactions(), where('ym', 'in', ymList))
-    );
+    // 거래 일괄 fetch — ym in ymList
+    // Firestore 'in' 쿼리는 최대 30개 값. 그보다 길면 전체 fetch + 클라이언트 필터.
+    let txSnap;
+    if (ymList.length <= 30) {
+      txSnap = await getDocs(
+        query(pathTransactions(), where('ym', 'in', ymList))
+      );
+    } else {
+      txSnap = await getDocs(pathTransactions());
+    }
 
     // 월별 집계
     const sums = new Map();
@@ -12150,7 +12373,8 @@ async function renderDashTrkChart() {
   if (!$canvas || !window.Chart) return;
   if (!currentUid) return;
 
-  const ymList = recentYmList(12, currentMonth);
+  // v0.7-12 — 분석 탭 공유 기간 적용 (없으면 최근 12개월)
+  const ymList = analysisPeriodYms(12, currentMonth);
 
   try {
     const monthlySnap = await getDocs(pathMonthly());
@@ -12255,10 +12479,12 @@ async function renderDashTrkChart() {
     });
 
     if ($sub) {
+      const fromYm = ymList[0];
+      const toYm = ymList[ymList.length - 1];
       const filterInfo = trkFilterCats
         ? ` · ${trkFilterCats.size}/${trkAvailableCats.length} 카테고리`
         : '';
-      $sub.textContent = `최근 12개월 · ${validCount}개월 입력${filterInfo}`;
+      $sub.textContent = `${fromYm} ~ ${toYm} · ${validCount}개월 입력${filterInfo}`;
     }
   } catch (e) {
     console.error('[dashboard] trk chart error', e);
@@ -12285,7 +12511,7 @@ const EXPENSE_TREEMAP_COLORS = {
   ],
 };
 
-function renderDashExpenseChart() {
+async function renderDashExpenseChart() {
   const $canvas = document.getElementById('dash-expense-chart');
   const $empty  = document.getElementById('dash-expense-empty');
   const $sub    = document.getElementById('dash-expense-sub');
@@ -12295,12 +12521,26 @@ function renderDashExpenseChart() {
   if (!currentUid) return;
 
   try {
+    // v0.7-12 2단계 — 기간 모드 적용
+    //   • returnsCurrentRange 있으면 그 기간의 거래 (분석 캐시 사용)
+    //   • 없으면 현재월의 거래내역 탭 구독(transactions) 사용 (fallback)
+    let txData;
+    let modeLabel;
+    if (returnsCurrentRange) {
+      const { fromYm, toYm } = returnsCurrentRange;
+      txData = await loadAnalysisTransactions(fromYm, toYm);
+      modeLabel = (fromYm === toYm) ? fromYm : `${fromYm} ~ ${toYm}`;
+    } else {
+      txData = transactions;
+      modeLabel = currentMonth;
+    }
+
     // 1) 카테고리 색상 인덱스 빌드 (drill-down 시에도 색상 일관성 유지)
-    //    전체 데이터를 한 번 훑어서 카테고리별 색상 결정
+    //    데이터를 한 번 훑어서 카테고리별 색상 결정
     const categoryColor = new Map();
     const flowCatCounter = { fixed: 0, variable: 0 };
     const allCatsSeen = new Set();
-    for (const t of transactions) {
+    for (const t of txData) {
       const flow = txFlow(t);
       if (flow !== 'fixed' && flow !== 'variable') continue;
       const cat = t.category || '(분류 없음)';
@@ -12318,7 +12558,7 @@ function renderDashExpenseChart() {
     if (!isDrill) {
       // 전체 모드: category → memo 2단계, 메모별 합산
       const buckets = new Map();
-      for (const t of transactions) {
+      for (const t of txData) {
         const flow = txFlow(t);
         if (flow !== 'fixed' && flow !== 'variable') continue;
         const amt = Number(t.amount) || 0;
@@ -12339,7 +12579,7 @@ function renderDashExpenseChart() {
       // — 같은 메모 여러 번이어도 합치지 않고 각각 슬라이스로 표시
       const cat = dashExpenseDrillCategory;
       const items = [];
-      for (const t of transactions) {
+      for (const t of txData) {
         const flow = txFlow(t);
         if (flow !== 'fixed' && flow !== 'variable') continue;
         const tCat = t.category || '(분류 없음)';
@@ -12367,8 +12607,8 @@ function renderDashExpenseChart() {
       $empty.style.display = '';
       $empty.textContent = isDrill
         ? `이 카테고리에 거래가 없습니다`
-        : `이번 달 비용 거래가 없습니다`;
-      if ($sub) $sub.textContent = `${currentMonth}`;
+        : `${modeLabel} 비용 거래가 없습니다`;
+      if ($sub) $sub.textContent = `${modeLabel}`;
       if (dashExpenseChart) { dashExpenseChart.destroy(); dashExpenseChart = null; }
       return;
     }
@@ -12490,8 +12730,8 @@ function renderDashExpenseChart() {
 
     if ($sub) {
       $sub.textContent = isDrill
-        ? `${currentMonth} · ${dashExpenseDrillCategory} ${fmtAmount(total)} (${tree.length}건)`
-        : `${currentMonth} · 총 ${fmtAmount(total)}`;
+        ? `${modeLabel} · ${dashExpenseDrillCategory} ${fmtAmount(total)} (${tree.length}건)`
+        : `${modeLabel} · 총 ${fmtAmount(total)}`;
     }
   } catch (e) {
     console.error('[dashboard] expense treemap error', e);
@@ -13793,6 +14033,12 @@ document.getElementById('btn-tx-save').addEventListener('click', async () => {
     }
     closeOv('ov-tx');
 
+    // v0.7-12 2단계 — 거래 변경 시 분석 캐시 무효화 (다음 분석 탭 진입 시 fresh fetch)
+    invalidateAnalysisYms();
+    // 분석 탭 활성 중이면 즉시 갱신
+    const $analysisTop = document.getElementById('tab-analysis');
+    if ($analysisTop?.classList.contains('active')) applyAnalysisPeriod();
+
     // 저장한 거래의 ym이 현재 월과 다르면 그쪽으로 이동
     if (data.ym !== currentMonth) {
       setMonth(data.ym);
@@ -13812,6 +14058,11 @@ document.getElementById('btn-tx-delete').addEventListener('click', async () => {
     await deleteDoc(pathTransaction(editingTxId));
     closeOv('ov-tx');
     showToast('거래가 삭제되었습니다');
+
+    // v0.7-12 2단계 — 거래 변경 시 분석 캐시 무효화
+    invalidateAnalysisYms();
+    const $analysisTop = document.getElementById('tab-analysis');
+    if ($analysisTop?.classList.contains('active')) applyAnalysisPeriod();
   } catch (e) {
     console.error(e);
     showToast('삭제 실패: ' + (e.message || e.code));
