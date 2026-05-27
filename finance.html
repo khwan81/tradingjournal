@@ -2122,6 +2122,116 @@ body {
   font-size: 11px;
 }
 
+/* 카드 헤더 링크 (v0.7-9) — "자세히" 같은 라우팅 링크 */
+.dash-card-link {
+  font-size: 11px;
+  color: var(--accent);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.dash-card-link:hover { text-decoration: underline; }
+
+/* ─────────────────────────────────────────────────────
+   대시보드 추적자산 카드 (v0.7-9)
+   ───────────────────────────────────────────────────── */
+.dash-trk-body {
+  padding: 14px;
+}
+.dash-trk-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.dash-trk-stat {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.dash-trk-stat-label {
+  font-size: 10.5px;
+  color: var(--text3);
+  letter-spacing: 0.3px;
+  margin-bottom: 4px;
+}
+.dash-trk-stat-value {
+  font-size: 14px;
+  font-weight: 500;
+  font-family: var(--font-mono);
+  color: var(--text);
+  line-height: 1.2;
+}
+.dash-trk-stat-value.green { color: var(--green); }
+.dash-trk-stat-value.red   { color: var(--red); }
+.dash-trk-stat-value.muted { color: var(--text3); }
+.dash-trk-stat-sub {
+  font-size: 10px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  margin-top: 2px;
+}
+
+/* 카테고리별 미니바 (소계 표시) */
+.dash-trk-cats {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dash-trk-cat-row {
+  display: grid;
+  grid-template-columns: 1fr 1.8fr 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px;
+  font-size: 11.5px;
+}
+.dash-trk-cat-name {
+  display: flex; align-items: center; gap: 6px;
+  color: var(--text);
+}
+.dash-trk-cat-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  flex-shrink: 0;
+}
+.dash-trk-cat-dot.cat-cash      { background: var(--acat-cash); }
+.dash-trk-cat-dot.cat-emergency { background: var(--acat-emergency); }
+.dash-trk-cat-dot.cat-trading   { background: var(--acat-trading); }
+.dash-trk-cat-dot.cat-longterm  { background: var(--acat-longterm); }
+.dash-trk-cat-dot.cat-pension   { background: var(--acat-pension); }
+.dash-trk-cat-dot.cat-other     { background: var(--text3); }
+.dash-trk-cat-bar {
+  position: relative;
+  height: 6px;
+  background: var(--bg);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.dash-trk-cat-bar-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: 3px;
+  transition: width 0.2s ease;
+}
+.dash-trk-cat-amount {
+  font-family: var(--font-mono);
+  text-align: right;
+  color: var(--text2);
+  font-size: 11px;
+}
+
+/* 모바일 */
+@media (max-width: 700px) {
+  .dash-trk-summary { grid-template-columns: 1fr 1fr; }
+  .dash-trk-cat-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 10px;
+  }
+  .dash-trk-cat-name { grid-column: 1; }
+  .dash-trk-cat-amount { grid-column: 2; }
+  .dash-trk-cat-bar { grid-column: 1 / -1; }
+}
+
 /* 대시보드 경조사 카드 (v0.6 C2) */
 #dash-events-body {
   display: flex; flex-direction: column;
@@ -3579,6 +3689,36 @@ body {
         </div>
       </div>
 
+      <!-- 추적자산 KPI (v0.7-9) — 자산결산 요약 인라인 -->
+      <div class="dash-card">
+        <div class="dash-card-head">
+          <div class="dash-card-title">추적자산</div>
+          <div class="dash-card-head-right">
+            <div class="dash-card-sub" id="dash-trk-sub">—</div>
+            <a href="#" class="dash-card-link" id="dash-trk-goto">자세히</a>
+          </div>
+        </div>
+        <div class="dash-trk-body" id="dash-trk-body">
+          <div class="dash-chart-empty" id="dash-trk-empty">
+            추적 자산 결산이 없습니다 — 결산 탭의 <a href="#" id="dash-trk-link">자산결산</a>에서 입력하세요
+          </div>
+        </div>
+      </div>
+
+      <!-- 추적자산 추이 차트 (v0.7-9) — 최근 12개월 총 평가액 -->
+      <div class="dash-card">
+        <div class="dash-card-head">
+          <div class="dash-card-title">추적자산 추이</div>
+          <div class="dash-card-sub" id="dash-trk-chart-sub">최근 12개월</div>
+        </div>
+        <div class="dash-chart-wrap">
+          <canvas id="dash-trk-chart"></canvas>
+        </div>
+        <div class="dash-chart-empty" id="dash-trk-chart-empty" style="display:none;">
+          추적 자산 결산이 없습니다
+        </div>
+      </div>
+
       <!-- 지출 트리맵 (v0.5 B6) — 카테고리 → 메모 2단계 + drill-down -->
       <div class="dash-card">
         <div class="dash-card-head">
@@ -4786,6 +4926,8 @@ function activateSubtab($topPane, subtab) {
     renderDashNetworthChart();
     renderDashPlChart();
     renderDashAssetsChart();
+    renderDashTrkCard();        // v0.7-9 — 추적자산 카드
+    renderDashTrkChart();       // v0.7-9 — 추적자산 추이
     renderDashExpenseChart();
     renderDashEventsCard();
   }
@@ -8061,6 +8203,8 @@ function setMonth(ym) {
     renderDashNetworthChart();
     renderDashPlChart();
     renderDashAssetsChart();
+    renderDashTrkCard();        // v0.7-9
+    renderDashTrkChart();       // v0.7-9
     renderDashExpenseChart();
     renderDashEventsCard();   // v0.6
   }
@@ -8788,6 +8932,8 @@ function subscribeMonthly() {
       if (isDashboardVisible()) {
         renderDashNetworthChart();
         renderDashAssetsChart();
+        renderDashTrkCard();      // v0.7-9
+        renderDashTrkChart();     // v0.7-9
       }
     },
     err => { console.error('monthly subscribe error', err); showToast('자산결산 로드 실패'); }
@@ -10658,6 +10804,12 @@ document.getElementById('sv-goto-balance')?.addEventListener('click', (e) => {
   switchTab('closing', 'balance');
 });
 
+// v0.7-9 — 대시보드 추적자산 카드 헤더 "자세히" 링크
+document.getElementById('dash-trk-goto')?.addEventListener('click', (e) => {
+  e.preventDefault();
+  switchTab('closing', 'savings');
+});
+
 // (v0.5+) 월 통일 — 옛 go{Bs,Pl,Bg}Month 함수와 render{Pl,Bg}Header는 setMonth로 통합되어 제거됨
 
 // 예산 본문 렌더 (v0.4 A3)
@@ -11665,6 +11817,249 @@ function renderDashAssetsChart() {
     if ($sub) $sub.textContent = `${currentMonth} · 총 ${fmtAmount(Math.round(totalKrw))}`;
   } catch (e) {
     console.error('[dashboard] assets chart error', e);
+    if ($sub) $sub.textContent = '차트 로드 실패';
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// 대시보드 추적자산 카드 (v0.7-9)
+// ══════════════════════════════════════════════════════
+// 데이터 소스: 이미 구독 중인 monthlyDocs (현재월) + monthlyPrevDocs (전월).
+//   별도 fetch 없음. 추이 차트만 monthly 전체 fetch (대시보드 추이 패턴과 동일).
+//
+// 표시:
+//   • 4 stat: 총 평가액 / 누적 원금 / 누적 수익(부호+%) / 이번달 수익
+//   • 카테고리별 미니바: 현금/비상금/트레이딩/장기투자/연금 — 잔고 + 점유율
+//   • 자세히 링크 → 결산 → 자산결산 탭
+
+function renderDashTrkCard() {
+  const $body  = document.getElementById('dash-trk-body');
+  const $empty = document.getElementById('dash-trk-empty');
+  const $sub   = document.getElementById('dash-trk-sub');
+  if (!$body) return;
+
+  // monthlyDocs 중 추적 자산만 (박제 trackPerformance=true).
+  // 마스터에서 비활성된 계좌도 그 월 결산이 있으면 포함 (시점성).
+  const trkDocs = (monthlyDocs || []).filter(d => d.trackPerformance);
+
+  if (trkDocs.length === 0) {
+    // 빈 상태 — 안내만 표시
+    $body.innerHTML = `
+      <div class="dash-chart-empty">
+        ${currentMonth} 추적 자산 결산이 없습니다 — 결산 탭의 <a href="#" data-trk-goto>자산결산</a>에서 입력하세요
+      </div>`;
+    $body.querySelector('[data-trk-goto]')?.addEventListener('click', e => {
+      e.preventDefault();
+      switchTab('closing', 'savings');
+    });
+    if ($sub) $sub.textContent = `${currentMonth} · 결산 없음`;
+    return;
+  }
+
+  // 합산
+  let totalKrw = 0, principalSum = 0, cumReturnSum = 0, mretSum = 0;
+  for (const d of trkDocs) {
+    totalKrw     += Number(d.balanceKrw) || 0;
+    principalSum += Number(d.principal) || 0;
+    cumReturnSum += Number(d.cumReturn) || 0;
+    mretSum      += Number(d.monthlyReturn) || 0;
+  }
+  const cumRate = principalSum > 0 ? cumReturnSum / principalSum : 0;
+
+  // 카테고리별 합산 (현재월 잔고 기준)
+  const byCat = new Map();
+  for (const d of trkDocs) {
+    const cat = d.assetsCategory || '기타';
+    const cur = byCat.get(cat) || { sum: 0, count: 0 };
+    cur.sum   += Number(d.balanceKrw) || 0;
+    cur.count += 1;
+    byCat.set(cat, cur);
+  }
+  const orderedCats = [
+    ...DEFAULT_ASSET_CATEGORIES.filter(c => byCat.has(c)),
+    ...[...byCat.keys()].filter(c => !DEFAULT_ASSET_CATEGORIES.includes(c)).sort(),
+  ];
+  const maxSum = Math.max(...[...byCat.values()].map(v => v.sum), 1);
+
+  const cumRateCls = cumRate > 0 ? 'green' : (cumRate < 0 ? 'red' : 'muted');
+  const cumSumCls  = cumReturnSum > 0 ? 'green' : (cumReturnSum < 0 ? 'red' : 'muted');
+  const mretCls    = mretSum > 0 ? 'green' : (mretSum < 0 ? 'red' : 'muted');
+
+  let html = `
+    <div class="dash-trk-summary">
+      <div class="dash-trk-stat">
+        <div class="dash-trk-stat-label">총 평가액</div>
+        <div class="dash-trk-stat-value">${fmtNum(totalKrw)}</div>
+        <div class="dash-trk-stat-sub">${trkDocs.length}개 계좌</div>
+      </div>
+      <div class="dash-trk-stat">
+        <div class="dash-trk-stat-label">누적 원금</div>
+        <div class="dash-trk-stat-value">${fmtNum(principalSum)}</div>
+        <div class="dash-trk-stat-sub">${currentMonth} 기준</div>
+      </div>
+      <div class="dash-trk-stat">
+        <div class="dash-trk-stat-label">누적 수익률</div>
+        <div class="dash-trk-stat-value ${cumRateCls}">${fmtSignedPct(cumRate)}</div>
+        <div class="dash-trk-stat-sub ${cumSumCls}">${fmtSigned(cumReturnSum)}</div>
+      </div>
+      <div class="dash-trk-stat">
+        <div class="dash-trk-stat-label">이번달 수익</div>
+        <div class="dash-trk-stat-value ${mretCls}">${fmtSigned(mretSum)}</div>
+        <div class="dash-trk-stat-sub">${currentMonth}</div>
+      </div>
+    </div>
+
+    <div class="dash-trk-cats">`;
+
+  for (const cat of orderedCats) {
+    const v = byCat.get(cat);
+    const pct = totalKrw > 0 ? (v.sum / totalKrw) * 100 : 0;
+    const widthPct = (v.sum / maxSum) * 100;
+    const catColorVar = svCatColorVar(cat);
+    html += `
+      <div class="dash-trk-cat-row">
+        <div class="dash-trk-cat-name">
+          <span class="dash-trk-cat-dot ${svCatClass(cat)}"></span>
+          ${escapeHtml(cat)}
+          <span style="font-size:10px;color:var(--text3);">(${v.count})</span>
+        </div>
+        <div class="dash-trk-cat-bar">
+          <div class="dash-trk-cat-bar-fill" style="width:${widthPct.toFixed(1)}%;background:${catColorVar};opacity:0.7;"></div>
+        </div>
+        <div class="dash-trk-cat-amount">
+          ${fmtNum(v.sum)} <span style="color:var(--text3);">(${pct.toFixed(1)}%)</span>
+        </div>
+      </div>`;
+  }
+
+  html += `</div>`;
+  $body.innerHTML = html;
+
+  if ($sub) $sub.textContent = `${currentMonth}`;
+}
+
+// 카테고리 → CSS 변수 색상 (바 채우기용)
+function svCatColorVar(cat) {
+  const css = getComputedStyle(document.documentElement);
+  switch (String(cat || '').trim()) {
+    case '현금':     return css.getPropertyValue('--acat-cash').trim()      || '#60a5fa';
+    case '비상금':   return css.getPropertyValue('--acat-emergency').trim() || '#a78bfa';
+    case '트레이딩': return css.getPropertyValue('--acat-trading').trim()   || '#f472b6';
+    case '장기투자': return css.getPropertyValue('--acat-longterm').trim()  || '#34d399';
+    case '연금':     return css.getPropertyValue('--acat-pension').trim()   || '#fbbf24';
+    default:         return css.getPropertyValue('--text3').trim()          || '#555b6a';
+  }
+}
+
+// ─── 추이 차트 (12개월 총 평가액) ─────────────
+let dashTrkChart = null;
+
+async function renderDashTrkChart() {
+  const $canvas = document.getElementById('dash-trk-chart');
+  const $empty  = document.getElementById('dash-trk-chart-empty');
+  const $sub    = document.getElementById('dash-trk-chart-sub');
+  if (!$canvas || !window.Chart) return;
+  if (!currentUid) return;
+
+  const ymList = recentYmList(12, currentMonth);
+
+  try {
+    const monthlySnap = await getDocs(pathMonthly());
+    const monByYm = new Map();   // ym → 추적자산 도큐먼트 배열
+    monthlySnap.forEach(d => {
+      const data = { id: d.id, ...d.data() };
+      if (!data.ym || !data.trackPerformance) return;
+      if (!monByYm.has(data.ym)) monByYm.set(data.ym, []);
+      monByYm.get(data.ym).push(data);
+    });
+
+    const labels = ymList.map(ym => ym.slice(2));
+    const totalData = [];
+    let validCount = 0;
+    for (const ym of ymList) {
+      const docs = monByYm.get(ym) || [];
+      if (docs.length === 0) {
+        totalData.push(null);
+      } else {
+        const sum = docs.reduce((s, d) => s + (Number(d.balanceKrw) || 0), 0);
+        totalData.push(sum);
+        validCount++;
+      }
+    }
+
+    if (validCount === 0) {
+      if (dashTrkChart) { dashTrkChart.destroy(); dashTrkChart = null; }
+      $canvas.style.display = 'none';
+      if ($empty) $empty.style.display = '';
+      if ($sub) $sub.textContent = '데이터 없음';
+      return;
+    }
+
+    $canvas.style.display = '';
+    if ($empty) $empty.style.display = 'none';
+
+    if (dashTrkChart) dashTrkChart.destroy();
+
+    const ctx = $canvas.getContext('2d');
+    const css = getComputedStyle(document.documentElement);
+    const colAccent = css.getPropertyValue('--accent').trim()  || '#4f8fff';
+    const colText2  = css.getPropertyValue('--text2').trim()   || '#8b909e';
+    const colText3  = css.getPropertyValue('--text3').trim()   || '#555b6a';
+    const colBorder = 'rgba(255,255,255,0.07)';
+
+    dashTrkChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: '추적자산 총 평가액',
+          data: totalData,
+          borderColor: colAccent,
+          backgroundColor: colAccent + '22',
+          borderWidth: 2,
+          tension: 0.3,
+          fill: true,
+          pointRadius: 3,
+          pointBackgroundColor: colAccent,
+          spanGaps: true,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => '₩' + (ctx.parsed.y || 0).toLocaleString('ko-KR'),
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: { color: colText2, font: { size: 10 } },
+            grid: { color: colBorder, drawBorder: false },
+          },
+          y: {
+            beginAtZero: false,
+            ticks: {
+              color: colText3,
+              font: { size: 10 },
+              callback: v => v >= 1e8 ? (v/1e8).toFixed(1)+'억' :
+                             v >= 1e6 ? (v/1e6).toFixed(1)+'M' :
+                             v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v,
+            },
+            grid: { color: colBorder, drawBorder: false },
+          }
+        }
+      }
+    });
+
+    if ($sub) {
+      $sub.textContent = `최근 12개월 · ${validCount}개월 입력`;
+    }
+  } catch (e) {
+    console.error('[dashboard] trk chart error', e);
     if ($sub) $sub.textContent = '차트 로드 실패';
   }
 }
