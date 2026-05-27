@@ -2137,6 +2137,39 @@ body {
 .dash-trk-body {
   padding: 14px;
 }
+
+/* 카테고리 필터 칩바 (v0.7-9c) */
+.dash-trk-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 14px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.dash-trk-filter:empty { display: none; }
+.dash-trk-filter .fchip {
+  font-size: 11px;
+  padding: 3px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: 0.2px;
+}
+.dash-trk-filter .fchip .chip-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  flex-shrink: 0;
+}
+.dash-trk-filter .fchip .chip-dot.cat-cash      { background: var(--acat-cash); }
+.dash-trk-filter .fchip .chip-dot.cat-emergency { background: var(--acat-emergency); }
+.dash-trk-filter .fchip .chip-dot.cat-trading   { background: var(--acat-trading); }
+.dash-trk-filter .fchip .chip-dot.cat-longterm  { background: var(--acat-longterm); }
+.dash-trk-filter .fchip .chip-dot.cat-pension   { background: var(--acat-pension); }
+.dash-trk-filter .fchip .chip-dot.cat-other     { background: var(--text3); }
+.dash-trk-filter .fchip[data-trk-cat="__all__"] {
+  font-weight: 500;
+}
+
 .dash-trk-summary {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -3697,6 +3730,10 @@ body {
             <div class="dash-card-sub" id="dash-trk-sub">—</div>
             <a href="#" class="dash-card-link" id="dash-trk-goto">자세히</a>
           </div>
+        </div>
+        <!-- 카테고리 필터 칩 (v0.7-9c) — KPI/카테고리바/추이 차트 모두에 적용 -->
+        <div class="dash-trk-filter" id="dash-trk-filter">
+          <!-- chips inserted dynamically -->
         </div>
         <div class="dash-trk-body" id="dash-trk-body">
           <div class="dash-chart-empty" id="dash-trk-empty">
@@ -11828,22 +11865,32 @@ function renderDashAssetsChart() {
 //   별도 fetch 없음. 추이 차트만 monthly 전체 fetch (대시보드 추이 패턴과 동일).
 //
 // 표시:
-//   • 4 stat: 총 평가액 / 누적 원금 / 누적 수익(부호+%) / 이번달 수익
+//   • 4 stat: 총 평가액 / 누적 원금 / 누적 수익률 / 누적 수익(sub에 이번달 수익)
 //   • 카테고리별 미니바: 현금/비상금/트레이딩/장기투자/연금 — 잔고 + 점유율
 //   • 자세히 링크 → 결산 → 자산결산 탭
+//
+// v0.7-9c — 카테고리 필터 (다중 선택 칩):
+//   • 데이터에 등장하는 카테고리만 칩으로 표시 + "전체"
+//   • 선택 카테고리만 KPI/카테고리바/추이 차트에 합산
+//   • 세션 동안 유지, 페이지 리로드 시 "전체"로 리셋
+
+// 필터 상태: null이면 "전체" (모든 카테고리). Set이면 선택된 카테고리 집합.
+let trkFilterCats = null;
+// 카드가 한 번 그려진 이후 가용 카테고리 목록 (칩 렌더에 사용)
+let trkAvailableCats = [];
 
 function renderDashTrkCard() {
-  const $body  = document.getElementById('dash-trk-body');
-  const $empty = document.getElementById('dash-trk-empty');
-  const $sub   = document.getElementById('dash-trk-sub');
+  const $body   = document.getElementById('dash-trk-body');
+  const $filter = document.getElementById('dash-trk-filter');
+  const $sub    = document.getElementById('dash-trk-sub');
   if (!$body) return;
 
   // monthlyDocs 중 추적 자산만 (박제 trackPerformance=true).
   // 마스터에서 비활성된 계좌도 그 월 결산이 있으면 포함 (시점성).
-  const trkDocs = (monthlyDocs || []).filter(d => d.trackPerformance);
+  const trkDocsAll = (monthlyDocs || []).filter(d => d.trackPerformance);
 
-  if (trkDocs.length === 0) {
-    // 빈 상태 — 안내만 표시
+  if (trkDocsAll.length === 0) {
+    // 빈 상태 — 안내만 표시, 필터도 비움
     $body.innerHTML = `
       <div class="dash-chart-empty">
         ${currentMonth} 추적 자산 결산이 없습니다 — 결산 탭의 <a href="#" data-trk-goto>자산결산</a>에서 입력하세요
@@ -11852,7 +11899,39 @@ function renderDashTrkCard() {
       e.preventDefault();
       switchTab('closing', 'savings');
     });
+    if ($filter) $filter.innerHTML = '';
+    trkAvailableCats = [];
     if ($sub) $sub.textContent = `${currentMonth} · 결산 없음`;
+    return;
+  }
+
+  // 데이터에 등장하는 카테고리 목록 (정해진 순서 + 기타)
+  const presentCats = new Set();
+  for (const d of trkDocsAll) presentCats.add(d.assetsCategory || '기타');
+  trkAvailableCats = [
+    ...DEFAULT_ASSET_CATEGORIES.filter(c => presentCats.has(c)),
+    ...[...presentCats].filter(c => !DEFAULT_ASSET_CATEGORIES.includes(c)).sort(),
+  ];
+
+  // 필터 상태 보정 — 데이터에 없는 카테고리는 제거, 비면 null(전체)로
+  if (trkFilterCats) {
+    const valid = new Set([...trkFilterCats].filter(c => trkAvailableCats.includes(c)));
+    trkFilterCats = valid.size === 0 ? null : valid;
+  }
+
+  // 칩바 렌더
+  renderTrkFilterChips();
+
+  // 필터 적용
+  const trkDocs = trkFilterCats
+    ? trkDocsAll.filter(d => trkFilterCats.has(d.assetsCategory || '기타'))
+    : trkDocsAll;
+
+  if (trkDocs.length === 0) {
+    // 필터로 모두 걸러진 케이스 (보정으로 일반적이지 않지만 안전망)
+    $body.innerHTML = `
+      <div class="dash-chart-empty">선택된 카테고리에 해당하는 결산이 없습니다</div>`;
+    if ($sub) $sub.textContent = `${currentMonth}`;
     return;
   }
 
@@ -11866,7 +11945,7 @@ function renderDashTrkCard() {
   }
   const cumRate = principalSum > 0 ? cumReturnSum / principalSum : 0;
 
-  // 카테고리별 합산 (현재월 잔고 기준)
+  // 카테고리별 합산 (필터 적용된 docs 기준)
   const byCat = new Map();
   for (const d of trkDocs) {
     const cat = d.assetsCategory || '기타';
@@ -11900,12 +11979,12 @@ function renderDashTrkCard() {
       <div class="dash-trk-stat">
         <div class="dash-trk-stat-label">누적 수익률</div>
         <div class="dash-trk-stat-value ${cumRateCls}">${fmtSignedPct(cumRate)}</div>
-        <div class="dash-trk-stat-sub ${cumSumCls}">${fmtSigned(cumReturnSum)}</div>
+        <div class="dash-trk-stat-sub">${currentMonth} 기준</div>
       </div>
       <div class="dash-trk-stat">
-        <div class="dash-trk-stat-label">이번달 수익</div>
-        <div class="dash-trk-stat-value ${mretCls}">${fmtSigned(mretSum)}</div>
-        <div class="dash-trk-stat-sub">${currentMonth}</div>
+        <div class="dash-trk-stat-label">누적 수익</div>
+        <div class="dash-trk-stat-value ${cumSumCls}">${fmtSigned(cumReturnSum)}</div>
+        <div class="dash-trk-stat-sub ${mretCls}">이번달 ${fmtSigned(mretSum)}</div>
       </div>
     </div>
 
@@ -11935,7 +12014,68 @@ function renderDashTrkCard() {
   html += `</div>`;
   $body.innerHTML = html;
 
-  if ($sub) $sub.textContent = `${currentMonth}`;
+  // 필터 sub 표기 — "전체" 또는 선택된 카테고리 수
+  if ($sub) {
+    if (trkFilterCats) {
+      const n = trkFilterCats.size;
+      const total = trkAvailableCats.length;
+      $sub.textContent = `${currentMonth} · ${n}/${total} 카테고리`;
+    } else {
+      $sub.textContent = `${currentMonth}`;
+    }
+  }
+}
+
+// 필터 칩 렌더 (트랜시버 — 데이터 변화에 맞춰 매번 재구성)
+function renderTrkFilterChips() {
+  const $filter = document.getElementById('dash-trk-filter');
+  if (!$filter) return;
+  if (trkAvailableCats.length === 0) {
+    $filter.innerHTML = '';
+    return;
+  }
+
+  // "전체" 활성 = trkFilterCats === null
+  const allActive = trkFilterCats === null;
+  let html = `<button type="button" class="fchip ${allActive ? 'active' : ''}" data-trk-cat="__all__">전체</button>`;
+
+  for (const cat of trkAvailableCats) {
+    const active = trkFilterCats ? trkFilterCats.has(cat) : true;
+    html += `<button type="button" class="fchip ${active ? 'active' : ''}" data-trk-cat="${escapeHtml(cat)}">
+      <span class="chip-dot ${svCatClass(cat)}"></span>${escapeHtml(cat)}
+    </button>`;
+  }
+  $filter.innerHTML = html;
+
+  // 클릭 핸들러 — 위임 대신 직접 바인딩 (요소가 매번 재생성됨)
+  $filter.querySelectorAll('[data-trk-cat]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const cat = btn.dataset.trkCat;
+      if (cat === '__all__') {
+        trkFilterCats = null;
+      } else {
+        // 현재 상태에서 토글
+        if (trkFilterCats === null) {
+          // "전체" 상태에서 한 칩 클릭 → 그 카테고리 하나만 선택 vs 그것만 제외
+          // UX: 한 칩 클릭 = "이것만 보기" 가 직관적
+          trkFilterCats = new Set([cat]);
+        } else {
+          const next = new Set(trkFilterCats);
+          if (next.has(cat)) next.delete(cat);
+          else next.add(cat);
+          // 비면 자동으로 "전체"로
+          if (next.size === 0 || next.size === trkAvailableCats.length) {
+            trkFilterCats = null;
+          } else {
+            trkFilterCats = next;
+          }
+        }
+      }
+      // 카드 + 추이 차트 모두 재렌더 (대시보드 활성일 때)
+      renderDashTrkCard();
+      renderDashTrkChart();
+    });
+  });
 }
 
 // 카테고리 → CSS 변수 색상 (바 채우기용)
@@ -11965,10 +12105,15 @@ async function renderDashTrkChart() {
 
   try {
     const monthlySnap = await getDocs(pathMonthly());
-    const monByYm = new Map();   // ym → 추적자산 도큐먼트 배열
+    const monByYm = new Map();   // ym → 추적자산 도큐먼트 배열 (필터 적용 후)
     monthlySnap.forEach(d => {
       const data = { id: d.id, ...d.data() };
       if (!data.ym || !data.trackPerformance) return;
+      // v0.7-9c — 카테고리 필터 적용
+      if (trkFilterCats) {
+        const cat = data.assetsCategory || '기타';
+        if (!trkFilterCats.has(cat)) return;
+      }
       if (!monByYm.has(data.ym)) monByYm.set(data.ym, []);
       monByYm.get(data.ym).push(data);
     });
@@ -11990,7 +12135,12 @@ async function renderDashTrkChart() {
     if (validCount === 0) {
       if (dashTrkChart) { dashTrkChart.destroy(); dashTrkChart = null; }
       $canvas.style.display = 'none';
-      if ($empty) $empty.style.display = '';
+      if ($empty) {
+        $empty.style.display = '';
+        $empty.textContent = trkFilterCats
+          ? '선택된 카테고리에 해당하는 결산이 없습니다'
+          : '추적 자산 결산이 없습니다';
+      }
       if ($sub) $sub.textContent = '데이터 없음';
       return;
     }
@@ -12056,7 +12206,10 @@ async function renderDashTrkChart() {
     });
 
     if ($sub) {
-      $sub.textContent = `최근 12개월 · ${validCount}개월 입력`;
+      const filterInfo = trkFilterCats
+        ? ` · ${trkFilterCats.size}/${trkAvailableCats.length} 카테고리`
+        : '';
+      $sub.textContent = `최근 12개월 · ${validCount}개월 입력${filterInfo}`;
     }
   } catch (e) {
     console.error('[dashboard] trk chart error', e);
