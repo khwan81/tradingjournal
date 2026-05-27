@@ -1596,6 +1596,217 @@ body {
   .rt-row.rt-row-cat .rt-name { grid-column: 1 / -1; }
 }
 
+/* ─────────────────────────────────────────────────────
+   배당 탭 (v0.7-8)
+   ───────────────────────────────────────────────────── */
+.dv-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 14px;
+  gap: 10px;
+}
+.dv-asof {
+  font-size: 13px;
+  color: var(--text2);
+  font-family: var(--font-mono);
+}
+
+.dv-card {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.dv-card-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 14px;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+}
+.dv-card-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+.dv-card-sub {
+  font-size: 11px;
+  color: var(--text2);
+}
+.dv-select {
+  background: var(--bg4);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-family: var(--font);
+  color-scheme: dark;
+  cursor: pointer;
+}
+.dv-select:focus { outline: 1px solid var(--accent); }
+
+.dv-empty {
+  padding: 24px 14px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text3);
+}
+
+/* 차트 */
+.dv-chart-wrap {
+  position: relative;
+  padding: 14px;
+  height: 220px;
+}
+.dv-chart-empty {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text3);
+  font-size: 12px;
+}
+
+/* 종목별 / 계좌별 summary grid */
+.dv-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+@media (max-width: 700px) {
+  .dv-summary-grid { grid-template-columns: 1fr; gap: 0; }
+}
+
+/* summary 행 */
+.dv-sum-row {
+  display: grid;
+  grid-template-columns: 1.5fr 0.8fr 1fr;
+  align-items: center;
+  padding: 8px 14px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.dv-sum-row:last-child { border-bottom: none; }
+.dv-sum-row .dv-sum-name {
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dv-sum-row .dv-sum-count {
+  font-size: 10.5px;
+  color: var(--text3);
+  text-align: right;
+  font-family: var(--font-mono);
+}
+.dv-sum-row .dv-sum-amount {
+  font-family: var(--font-mono);
+  text-align: right;
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* 전체 내역 행 */
+.dv-list-row-head, .dv-list-row {
+  display: grid;
+  grid-template-columns: 90px 1.4fr 1.6fr 1fr 32px;
+  align-items: center;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.dv-list-row-head {
+  background: var(--bg2);
+  color: var(--text3);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.dv-list-row { font-size: 12.5px; }
+.dv-list-row:last-child { border-bottom: none; }
+.dv-list-row .dv-list-date {
+  color: var(--text2);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+.dv-list-row .dv-list-acc {
+  color: var(--text2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dv-list-row .dv-list-sym {
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dv-list-row .dv-list-amt {
+  font-family: var(--font-mono);
+  text-align: right;
+  color: var(--text);
+  font-weight: 500;
+}
+.dv-list-row .dv-list-amt .fx-sub {
+  display: block;
+  font-size: 10px;
+  color: var(--text3);
+  font-weight: 400;
+  margin-top: 1px;
+}
+.dv-list-row .dv-list-act {
+  display: flex; justify-content: flex-end;
+}
+.dv-list-row .dv-list-act button {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text2);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 4px;
+  line-height: 1;
+}
+.dv-list-row .dv-list-act button:hover { background: var(--bg3); color: var(--text); }
+
+/* 모바일 — 카드형 */
+@media (max-width: 700px) {
+  .dv-list-row-head { display: none; }
+  .dv-list-row {
+    grid-template-columns: 1fr auto;
+    gap: 4px 10px;
+    padding: 12px 14px;
+  }
+  .dv-list-row .dv-list-date {
+    grid-column: 1;
+    font-size: 10.5px;
+  }
+  .dv-list-row .dv-list-sym {
+    grid-column: 1;
+    font-weight: 500;
+  }
+  .dv-list-row .dv-list-acc {
+    grid-column: 1;
+    font-size: 10.5px;
+  }
+  .dv-list-row .dv-list-amt {
+    grid-column: 2; grid-row: 1 / span 3;
+    align-self: center;
+  }
+  .dv-list-row .dv-list-act {
+    grid-column: 2; grid-row: 4;
+  }
+}
+
+/* 모달 */
+.modal-dividend {
+  max-width: 480px;
+}
+.form-hint-inline {
+  font-size: 10.5px;
+  color: var(--text3);
+  font-weight: 400;
+  margin-left: 4px;
+}
+
 /* ── 손익 탭 (v0.3-4) ── */
 .pl-header {
   display: flex; justify-content: space-between; align-items: center;
@@ -3113,6 +3324,7 @@ body {
     <div class="subtab-bar" data-subtab-group="analysis">
       <button class="subtab active" data-subtab="pl">손익</button>
       <button class="subtab"        data-subtab="returns">수익률</button>
+      <button class="subtab"        data-subtab="dividends">배당</button>
       <button class="subtab"        data-subtab="dashboard">대시보드</button>
     </div>
 
@@ -3200,6 +3412,91 @@ body {
       <div class="sv-info">
         <span class="info-icon">ⓘ</span>
         <div>Modified Dietz 방식 — 기간 내 입출금을 절반 가중한 평균원금 대비 수익률. <a href="#" id="rt-help-link">자세히</a></div>
+      </div>
+    </div>
+
+    <!-- 배당 서브탭 (v0.7-8) -->
+    <div class="subtab-content" id="tab-dividends">
+      <div class="dv-header">
+        <div class="dv-asof-wrap">
+          <span class="dv-asof" id="dv-asof"></span>
+        </div>
+        <button class="btn-p" id="btn-dv-add">+ 배당 입력</button>
+      </div>
+
+      <!-- KPI 3 -->
+      <div class="bs-kpi-grid">
+        <div class="bs-kpi-card">
+          <div class="label">이번달</div>
+          <div class="value" id="dv-kpi-month">—</div>
+          <div class="sub"   id="dv-kpi-month-sub">—</div>
+        </div>
+        <div class="bs-kpi-card">
+          <div class="label">올해 누적</div>
+          <div class="value" id="dv-kpi-ytd">—</div>
+          <div class="sub"   id="dv-kpi-ytd-sub">—</div>
+        </div>
+        <div class="bs-kpi-card">
+          <div class="label">전체 누적</div>
+          <div class="value" id="dv-kpi-all">—</div>
+          <div class="sub"   id="dv-kpi-all-sub">—</div>
+        </div>
+      </div>
+
+      <!-- 월별 합계 차트 -->
+      <div class="dv-card">
+        <div class="dv-card-head">
+          <div class="dv-card-title">월별 배당</div>
+          <div class="dv-card-sub" id="dv-chart-sub">최근 12개월</div>
+        </div>
+        <div class="dv-chart-wrap">
+          <canvas id="dv-chart"></canvas>
+          <div class="dv-chart-empty" id="dv-chart-empty" style="display:none;">데이터 없음</div>
+        </div>
+      </div>
+
+      <!-- 종목별 / 계좌별 누적 (2단 컬럼) -->
+      <div class="dv-summary-grid">
+        <div class="dv-card">
+          <div class="dv-card-head">
+            <div class="dv-card-title">종목별 누적</div>
+            <div class="dv-card-sub" id="dv-symbol-sub">—</div>
+          </div>
+          <div id="dv-symbol-body">
+            <div class="dv-empty">데이터 없음</div>
+          </div>
+        </div>
+        <div class="dv-card">
+          <div class="dv-card-head">
+            <div class="dv-card-title">계좌별 누적</div>
+            <div class="dv-card-sub" id="dv-account-sub">—</div>
+          </div>
+          <div id="dv-account-body">
+            <div class="dv-empty">데이터 없음</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 전체 내역 -->
+      <div class="dv-card">
+        <div class="dv-card-head">
+          <div class="dv-card-title">전체 내역</div>
+          <div class="dv-card-sub">
+            <select id="dv-filter-period" class="dv-select">
+              <option value="all">전체</option>
+              <option value="ytd">올해</option>
+              <option value="month" selected>이번달</option>
+            </select>
+          </div>
+        </div>
+        <div id="dv-list-body">
+          <div class="dv-empty">배당 기록이 없습니다 — 우상단 "+ 배당 입력" 버튼으로 시작</div>
+        </div>
+      </div>
+
+      <div class="sv-info">
+        <span class="info-icon">ⓘ</span>
+        <div>배당 재투자는 다음 결산의 잔고에 자연 반영됩니다 · 별도 분개는 하지 않습니다.</div>
       </div>
     </div>
 
@@ -4321,6 +4618,64 @@ body {
   </div>
 </div>
 
+<!-- 배당 입력/편집 모달 (v0.7-8) -->
+<div class="ov" id="ov-dividend">
+  <div class="modal modal-dividend">
+    <div class="modal-head">
+      <div class="modal-title">
+        <span id="dv-modal-title">배당 입력</span>
+      </div>
+      <button class="modal-close" data-close="ov-dividend">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>날짜</label>
+          <input type="date" class="input" id="dv-input-date">
+        </div>
+        <div class="form-group">
+          <label>계좌</label>
+          <select class="input" id="dv-input-account">
+            <option value="">— 계좌 선택 —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>종목</label>
+          <input type="text" class="input" id="dv-input-symbol" placeholder="예: TIGER 미국S&P500" list="dv-symbol-suggest">
+          <datalist id="dv-symbol-suggest"></datalist>
+        </div>
+        <div class="form-group">
+          <label>금액 <span class="form-hint-inline" id="dv-amount-unit">(KRW)</span></label>
+          <input type="text" class="input" inputmode="decimal" id="dv-input-amount" placeholder="0">
+          <div class="form-hint" id="dv-amount-krw-hint" style="display:none;">≈ <span id="dv-amount-krw"></span> KRW</div>
+        </div>
+        <div class="form-group full">
+          <label>메모 (선택)</label>
+          <input type="text" class="input" id="dv-input-memo" placeholder="">
+        </div>
+      </div>
+
+      <div class="pv-grid" id="dv-fx-info" style="display:none;">
+        <div class="pv-row"><span class="pv-label">통화</span><span class="pv-val" id="dv-pv-currency">—</span></div>
+        <div class="pv-row"><span class="pv-label">환율 스냅</span><span class="pv-val" id="dv-pv-fxrate">—</span></div>
+        <div class="pv-row"><span class="pv-label">현재 환율</span><span class="pv-val muted" id="dv-pv-fxrate-now">—</span></div>
+        <div class="pv-row" id="dv-fx-keep-row" style="display:none;">
+          <label class="pv-label" style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+            <input type="checkbox" id="dv-fx-keep" checked>
+            스냅 환율 유지
+          </label>
+          <span class="pv-val muted" id="dv-fx-keep-hint">—</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-danger grow" id="btn-dv-delete" style="display:none;">삭제</button>
+      <button class="btn-s" data-close="ov-dividend">취소</button>
+      <button class="btn-p" id="btn-dv-save">저장</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -4437,6 +4792,12 @@ function activateSubtab($topPane, subtab) {
   if (subtab === 'returns') {
     bindReturnsHandlers();
     renderReturns();
+  }
+
+  // v0.7-8 — 배당 서브탭 진입 시 렌더
+  if (subtab === 'dividends') {
+    bindDividendsHandlers();
+    renderDividends();
   }
 }
 
@@ -4683,6 +5044,9 @@ async function loadAll() {
   // 자산결산 서브탭 — monthly 구독 (v0.7-3b)
   subscribeMonthly();
   subscribeMonthlyLiab();   // v0.7-5c — 부채 결산도 구독
+
+  // 배당 서브탭 — 구독 (v0.7-8)
+  subscribeDividends();
 
   // 손익 탭 — 거래 구독
   subscribePlTransactions();
@@ -5103,6 +5467,11 @@ function unsubscribeAll() {
   if (unsubBgTransactions) { unsubBgTransactions(); unsubBgTransactions = null; } // v0.4
   if (unsubTxTabBudgets) { unsubTxTabBudgets(); unsubTxTabBudgets = null; }       // v0.4 A7
   if (unsubEvents) { unsubEvents(); unsubEvents = null; }                         // v0.6
+  if (unsubMonthly) { unsubMonthly(); unsubMonthly = null; }                      // v0.7-3b
+  if (unsubMonthlyPrev) { unsubMonthlyPrev(); unsubMonthlyPrev = null; }          // v0.7-3b
+  if (unsubMonthlyLiab) { unsubMonthlyLiab(); unsubMonthlyLiab = null; }          // v0.7-5c
+  if (unsubMonthlyLiabPrev) { unsubMonthlyLiabPrev(); unsubMonthlyLiabPrev = null; } // v0.7-5c
+  if (unsubDividends) { unsubDividends(); unsubDividends = null; }                // v0.7-8
   accounts = [];
   settings = null;
   sharedSettings = null;
@@ -5116,6 +5485,11 @@ function unsubscribeAll() {
   bgBudgets = [];        // v0.4
   bgTransactions = [];   // v0.4
   txTabBudgets = [];     // v0.4 A7
+  monthlyDocs = [];                    // v0.7-3b
+  monthlyPrevDocs = [];                // v0.7-3b
+  monthlyLiabDocs = [];                // v0.7-5c
+  monthlyLiabPrevDocs = [];            // v0.7-5c
+  dividends = [];                      // v0.7-8
   renderUnpaidBar();
 }
 
@@ -7688,6 +8062,13 @@ function setMonth(ym) {
     renderDashExpenseChart();
     renderDashEventsCard();   // v0.6
   }
+
+  // v0.7-8 — 배당 탭 활성일 때 월 변경 시 재렌더 (KPI/필터/차트는 currentMonth 종속)
+  // 월이 바뀌었으니 자동 폴백을 다시 허용 + 필터 셀렉트를 month로 리셋
+  dvUserChangedPeriod = false;
+  const $dvSel = document.getElementById('dv-filter-period');
+  if ($dvSel) $dvSel.value = 'month';
+  if (isDividendsVisible()) renderDividends();
 }
 function shiftMonth(delta) {
   const [y, m] = currentMonth.split('-').map(Number);
@@ -9206,6 +9587,593 @@ function bindReturnsHandlers() {
   document.getElementById('rt-help-link')?.addEventListener('click', e => {
     e.preventDefault();
     showToast('Modified Dietz: gain = end − start − Σdep, base = start + Σdep/2, rate = gain / base');
+  });
+}
+
+// ══════════════════════════════════════════════════════
+// 배당 탭 (v0.7-8)
+// ══════════════════════════════════════════════════════
+//
+// 데이터: finance/config/dividends/{divId}
+//   { id, date(YYYY-MM-DD), ym(YYYY-MM), accountId, accountName,
+//     currency, symbol, amount, fxRate, amountKrw, memo,
+//     createdAt, updatedAt }
+//
+// 자동 분개 안 함 — 결산 잔고에 사용자가 자연 반영시킴.
+// 진입 시 onSnapshot으로 실시간 구독.
+
+let dividends = [];
+let unsubDividends = null;
+let dividendsChart = null;
+let editingDividendId = null;
+
+function subscribeDividends() {
+  if (unsubDividends) { unsubDividends(); unsubDividends = null; }
+  if (!currentUid) return;
+  unsubDividends = onSnapshot(
+    query(pathDividends(), orderBy('date', 'desc')),
+    snap => {
+      dividends = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (isDividendsVisible()) renderDividends();
+    },
+    err => { console.error('dividends subscribe error', err); showToast('배당 로드 실패'); }
+  );
+}
+
+function isDividendsVisible() {
+  const $top = document.getElementById('tab-analysis');
+  if (!$top || !$top.classList.contains('active')) return false;
+  const $sub = document.getElementById('tab-dividends');
+  return !!$sub?.classList.contains('active');
+}
+
+// ─── 렌더 ────────────────────────────────────
+function renderDividends() {
+  renderDividendsAsOf();
+  renderDividendsKpi();
+  renderDividendsChart();
+  renderDividendsSymbolBreakdown();
+  renderDividendsAccountBreakdown();
+  renderDividendsList();
+}
+
+function renderDividendsAsOf() {
+  const $asof = document.getElementById('dv-asof');
+  if (!$asof) return;
+  const total = dividends.length;
+  $asof.textContent = total > 0 ? `${total}건 기록됨` : '배당 기록 없음';
+}
+
+function renderDividendsKpi() {
+  const $m = document.getElementById('dv-kpi-month');
+  const $y = document.getElementById('dv-kpi-ytd');
+  const $a = document.getElementById('dv-kpi-all');
+  const $mSub = document.getElementById('dv-kpi-month-sub');
+  const $ySub = document.getElementById('dv-kpi-ytd-sub');
+  const $aSub = document.getElementById('dv-kpi-all-sub');
+  if (!$m) return;
+
+  if (dividends.length === 0) {
+    [$m, $y, $a].forEach(el => { el.textContent = '—'; el.className = 'value muted'; });
+    if ($mSub) $mSub.textContent = `${currentMonth}`;
+    if ($ySub) $ySub.textContent = '—';
+    if ($aSub) $aSub.textContent = '0건';
+    return;
+  }
+
+  const thisYear = currentMonth.slice(0, 4);
+  let monthSum = 0, monthN = 0;
+  let ytdSum = 0, ytdN = 0;
+  let allSum = 0;
+  for (const d of dividends) {
+    const krw = Number(d.amountKrw) || 0;
+    allSum += krw;
+    if (d.ym === currentMonth) { monthSum += krw; monthN++; }
+    if (d.ym && d.ym.startsWith(thisYear)) { ytdSum += krw; ytdN++; }
+  }
+
+  $m.textContent = fmtNum(monthSum);
+  $m.className = 'value' + (monthSum > 0 ? ' green' : '');
+  $y.textContent = fmtNum(ytdSum);
+  $y.className = 'value' + (ytdSum > 0 ? ' green' : '');
+  $a.textContent = fmtNum(allSum);
+  $a.className = 'value';
+
+  if ($mSub) $mSub.textContent = `${currentMonth} · ${monthN}건`;
+  if ($ySub) $ySub.textContent = `${thisYear} · ${ytdN}건`;
+  if ($aSub) $aSub.textContent = `${dividends.length}건`;
+}
+
+// 월별 합계 차트
+function renderDividendsChart() {
+  const $canvas = document.getElementById('dv-chart');
+  const $empty  = document.getElementById('dv-chart-empty');
+  if (!$canvas || !window.Chart) return;
+
+  if (dividends.length === 0) {
+    if (dividendsChart) { dividendsChart.destroy(); dividendsChart = null; }
+    $canvas.style.display = 'none';
+    if ($empty) $empty.style.display = '';
+    return;
+  }
+
+  // 최근 12개월 ym
+  const ymList = recentYmList(12, currentMonth);
+  const labels = ymList.map(ym => ym.slice(2));   // "26-05"
+
+  // ym → KRW 합
+  const byYm = new Map();
+  for (const d of dividends) {
+    const ym = d.ym;
+    if (!ym) continue;
+    byYm.set(ym, (byYm.get(ym) || 0) + (Number(d.amountKrw) || 0));
+  }
+  const data = ymList.map(ym => byYm.get(ym) || 0);
+
+  if (data.every(v => v === 0)) {
+    if (dividendsChart) { dividendsChart.destroy(); dividendsChart = null; }
+    $canvas.style.display = 'none';
+    if ($empty) { $empty.style.display = ''; $empty.textContent = '최근 12개월 배당 없음'; }
+    return;
+  }
+
+  $canvas.style.display = '';
+  if ($empty) $empty.style.display = 'none';
+
+  if (dividendsChart) dividendsChart.destroy();
+
+  const ctx = $canvas.getContext('2d');
+  const css = getComputedStyle(document.documentElement);
+  const colAccent = css.getPropertyValue('--accent').trim() || '#4f8fff';
+  const colText2  = css.getPropertyValue('--text2').trim()  || '#8b909e';
+  const colText3  = css.getPropertyValue('--text3').trim()  || '#555b6a';
+  const colBorder = 'rgba(255,255,255,0.07)';
+
+  dividendsChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: '배당',
+        data,
+        backgroundColor: colAccent + '55',
+        borderColor: colAccent,
+        borderWidth: 1.5,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => '₩' + (ctx.parsed.y || 0).toLocaleString('ko-KR'),
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: colText2, font: { size: 10 } },
+          grid: { color: colBorder, drawBorder: false },
+        },
+        y: {
+          beginAtZero: true,
+          ticks: {
+            color: colText3,
+            font: { size: 10 },
+            callback: v => v >= 1e6 ? (v/1e6).toFixed(1)+'M' :
+                           v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v,
+          },
+          grid: { color: colBorder, drawBorder: false },
+        }
+      }
+    }
+  });
+}
+
+// 종목별 누적
+function renderDividendsSymbolBreakdown() {
+  const $body = document.getElementById('dv-symbol-body');
+  const $sub  = document.getElementById('dv-symbol-sub');
+  if (!$body) return;
+
+  if (dividends.length === 0) {
+    $body.innerHTML = '<div class="dv-empty">데이터 없음</div>';
+    if ($sub) $sub.textContent = '—';
+    return;
+  }
+
+  // symbol → { sum, count }
+  const bySym = new Map();
+  for (const d of dividends) {
+    const sym = d.symbol || '(미지정)';
+    const krw = Number(d.amountKrw) || 0;
+    const cur = bySym.get(sym) || { sum: 0, count: 0 };
+    cur.sum   += krw;
+    cur.count += 1;
+    bySym.set(sym, cur);
+  }
+  const rows = [...bySym.entries()]
+    .sort((a, b) => b[1].sum - a[1].sum)
+    .slice(0, 10);
+
+  $body.innerHTML = rows.map(([sym, v]) => `
+    <div class="dv-sum-row">
+      <div class="dv-sum-name" title="${escapeHtml(sym)}">${escapeHtml(sym)}</div>
+      <div class="dv-sum-count">${v.count}건</div>
+      <div class="dv-sum-amount">${fmtNum(v.sum)}</div>
+    </div>
+  `).join('');
+
+  if ($sub) $sub.textContent = `${bySym.size}종목${bySym.size > 10 ? ' · 상위 10' : ''}`;
+}
+
+// 계좌별 누적
+function renderDividendsAccountBreakdown() {
+  const $body = document.getElementById('dv-account-body');
+  const $sub  = document.getElementById('dv-account-sub');
+  if (!$body) return;
+
+  if (dividends.length === 0) {
+    $body.innerHTML = '<div class="dv-empty">데이터 없음</div>';
+    if ($sub) $sub.textContent = '—';
+    return;
+  }
+
+  const aMap = new Map((accounts || []).map(a => [a.id, a]));
+  const byAcc = new Map();
+  for (const d of dividends) {
+    const id = d.accountId;
+    // 마스터에 있으면 라이브 이름, 없으면 박제 이름
+    const name = aMap.get(id)?.name || d.accountName || '(이름 없음)';
+    const krw = Number(d.amountKrw) || 0;
+    const cur = byAcc.get(id) || { name, sum: 0, count: 0, isInactive: !aMap.get(id) };
+    cur.sum   += krw;
+    cur.count += 1;
+    byAcc.set(id, cur);
+  }
+  const rows = [...byAcc.values()].sort((a, b) => b.sum - a.sum);
+
+  $body.innerHTML = rows.map(v => `
+    <div class="dv-sum-row">
+      <div class="dv-sum-name" title="${escapeHtml(v.name)}">
+        ${escapeHtml(v.name)}
+        ${v.isInactive ? '<span class="sv-badge missing" style="margin-left:4px;">비활성</span>' : ''}
+      </div>
+      <div class="dv-sum-count">${v.count}건</div>
+      <div class="dv-sum-amount">${fmtNum(v.sum)}</div>
+    </div>
+  `).join('');
+
+  if ($sub) $sub.textContent = `${byAcc.size}계좌`;
+}
+
+// 전체 내역 (period 필터)
+function renderDividendsList() {
+  const $body = document.getElementById('dv-list-body');
+  const $sel  = document.getElementById('dv-filter-period');
+  if (!$body) return;
+
+  let period = $sel?.value || 'month';
+
+  // v0.7-8 — 'month' 선택인데 이번달 데이터 0건이면 자동 폴백 (UX 개선)
+  // 단, 사용자가 명시적으로 선택을 바꾼 후엔 폴백 안 함
+  if (period === 'month' && !dvUserChangedPeriod) {
+    const monthN = dividends.filter(d => d.ym === currentMonth).length;
+    if (monthN === 0) {
+      const ytdN = dividends.filter(d => d.ym?.startsWith(currentMonth.slice(0,4))).length;
+      if (ytdN > 0) {
+        period = 'ytd';
+        if ($sel) $sel.value = 'ytd';
+      } else if (dividends.length > 0) {
+        period = 'all';
+        if ($sel) $sel.value = 'all';
+      }
+    }
+  }
+
+  let list = dividends.slice();   // 이미 date desc
+  if (period === 'month') {
+    list = list.filter(d => d.ym === currentMonth);
+  } else if (period === 'ytd') {
+    const y = currentMonth.slice(0, 4);
+    list = list.filter(d => d.ym && d.ym.startsWith(y));
+  }
+  // 'all'은 필터링 안 함
+
+  if (list.length === 0) {
+    const msg = period === 'month' ? `${currentMonth} 배당 없음`
+              : period === 'ytd'   ? `${currentMonth.slice(0,4)} 배당 없음`
+                                   : '배당 기록이 없습니다 — 우상단 "+ 배당 입력" 버튼으로 시작';
+    $body.innerHTML = `<div class="dv-empty">${msg}</div>`;
+    return;
+  }
+
+  const aMap = new Map((accounts || []).map(a => [a.id, a]));
+
+  let html = `
+    <div class="dv-list-row-head">
+      <div>날짜</div>
+      <div>계좌</div>
+      <div>종목</div>
+      <div style="text-align:right;">금액</div>
+      <div></div>
+    </div>`;
+
+  for (const d of list) {
+    const accName = aMap.get(d.accountId)?.name || d.accountName || '(이름 없음)';
+    const isFx = d.currency && d.currency !== 'KRW';
+    const amtHtml = isFx
+      ? `${fmtNum(d.amount)} ${escapeHtml(d.currency)}<span class="fx-sub">≈ ${fmtNum(d.amountKrw)} KRW</span>`
+      : fmtNum(d.amountKrw);
+
+    html += `
+      <div class="dv-list-row">
+        <div class="dv-list-date">${escapeHtml(d.date)}</div>
+        <div class="dv-list-acc" title="${escapeHtml(accName)}">${escapeHtml(accName)}</div>
+        <div class="dv-list-sym" title="${escapeHtml(d.symbol || '')}">${escapeHtml(d.symbol || '—')}</div>
+        <div class="dv-list-amt">${amtHtml}</div>
+        <div class="dv-list-act">
+          <button data-dv-edit="${d.id}" title="편집">⋯</button>
+        </div>
+      </div>`;
+  }
+  $body.innerHTML = html;
+
+  // 편집 클릭
+  $body.querySelectorAll('[data-dv-edit]').forEach(btn => {
+    btn.addEventListener('click', () => openDividendModal(btn.dataset.dvEdit));
+  });
+}
+
+// 사용자가 명시적으로 필터를 바꾸면 자동 폴백 비활성화
+let dvUserChangedPeriod = false;
+
+// ─── 모달 ────────────────────────────────────
+function openDividendModal(divId) {
+  editingDividendId = divId || null;
+
+  // 계좌 select 빌드 (자산결산 추적 + 활성)
+  const $accSel = document.getElementById('dv-input-account');
+  const tracked = (accounts || []).filter(a => a.trackPerformance && a.active !== false);
+  let optsHtml = '<option value="">— 계좌 선택 —</option>';
+  for (const a of tracked) {
+    optsHtml += `<option value="${escapeHtml(a.id)}">${escapeHtml(a.name)}${a.currency && a.currency !== 'KRW' ? ' (' + escapeHtml(a.currency) + ')' : ''}</option>`;
+  }
+  $accSel.innerHTML = optsHtml;
+
+  // 종목 자동완성
+  const $datalist = document.getElementById('dv-symbol-suggest');
+  if ($datalist) {
+    const syms = [...new Set(dividends.map(d => d.symbol).filter(Boolean))].sort();
+    $datalist.innerHTML = syms.map(s => `<option value="${escapeHtml(s)}">`).join('');
+  }
+
+  // 입력 초기화
+  const $date  = document.getElementById('dv-input-date');
+  const $sym   = document.getElementById('dv-input-symbol');
+  const $amt   = document.getElementById('dv-input-amount');
+  const $memo  = document.getElementById('dv-input-memo');
+  const $title = document.getElementById('dv-modal-title');
+  const $del   = document.getElementById('btn-dv-delete');
+
+  if (divId) {
+    const d = dividends.find(x => x.id === divId);
+    if (!d) { showToast('배당 기록을 찾을 수 없습니다'); return; }
+    $title.textContent = '배당 편집';
+    $date.value = d.date || '';
+    $accSel.value = d.accountId || '';
+    $sym.value  = d.symbol || '';
+    $amt.value  = d.amount != null ? d.amount : '';
+    $memo.value = d.memo || '';
+    $del.style.display = '';
+  } else {
+    $title.textContent = '배당 입력';
+    // 기본 날짜 = 이번달 1일 (사용자가 선택)
+    const today = new Date();
+    $date.value = today.toISOString().slice(0, 10);
+    $accSel.value = '';
+    $sym.value  = '';
+    $amt.value  = '';
+    $memo.value = '';
+    $del.style.display = 'none';
+  }
+
+  dvUpdatePreview();
+  openOv('ov-dividend');
+}
+
+// 통화 / 환율 UI 갱신
+function dvUpdatePreview() {
+  const $accSel = document.getElementById('dv-input-account');
+  const $amt    = document.getElementById('dv-input-amount');
+  const accId = $accSel?.value;
+  const acc = (accounts || []).find(a => a.id === accId);
+  const isFx = acc && acc.currency && acc.currency !== 'KRW';
+
+  const $unit = document.getElementById('dv-amount-unit');
+  const $hint = document.getElementById('dv-amount-krw-hint');
+  const $krw  = document.getElementById('dv-amount-krw');
+  const $fxInfo = document.getElementById('dv-fx-info');
+  const $pvCur  = document.getElementById('dv-pv-currency');
+  const $pvRate = document.getElementById('dv-pv-fxrate');
+  const $pvRateNow = document.getElementById('dv-pv-fxrate-now');
+  const $fxKeepRow = document.getElementById('dv-fx-keep-row');
+  const $fxKeepHint = document.getElementById('dv-fx-keep-hint');
+
+  if (!isFx) {
+    if ($unit) $unit.textContent = '(KRW)';
+    if ($hint) $hint.style.display = 'none';
+    if ($fxInfo) $fxInfo.style.display = 'none';
+    return;
+  }
+
+  const cur = acc.currency;
+  const fxRates = sharedSettings?.fxRates || {};
+  const currentRate = Number(fxRates[cur]) || 0;
+
+  // 편집 모드면 기존 스냅 환율 확인
+  let snapRate = currentRate;
+  let isEditing = false;
+  if (editingDividendId) {
+    const d = dividends.find(x => x.id === editingDividendId);
+    if (d && d.fxRate) {
+      snapRate = Number(d.fxRate);
+      isEditing = true;
+    }
+  }
+
+  // 사용할 환율: 편집모드 + keep 체크 ON이면 스냅, 아니면 현재
+  const $fxKeep = document.getElementById('dv-fx-keep');
+  const keepOn = $fxKeep?.checked && isEditing && snapRate !== currentRate;
+  const useRate = keepOn ? snapRate : currentRate;
+
+  if ($unit) $unit.textContent = `(${cur})`;
+  const amtN = Number(numUnComma($amt?.value)) || 0;
+  const krw = Math.round(amtN * useRate);
+  if ($hint) {
+    $hint.style.display = '';
+    if ($krw) $krw.textContent = fmtNum(krw);
+  }
+
+  if ($fxInfo) $fxInfo.style.display = '';
+  if ($pvCur)     $pvCur.textContent = cur;
+  if ($pvRate)    $pvRate.textContent = useRate ? fmtNum(useRate) : '—';
+  if ($pvRateNow) $pvRateNow.textContent = currentRate ? `현재 ${fmtNum(currentRate)}` : '—';
+
+  // 편집모드 + 스냅 ≠ 현재 일 때만 keep 토글 노출
+  if ($fxKeepRow) {
+    if (isEditing && snapRate !== currentRate) {
+      $fxKeepRow.style.display = '';
+      if ($fxKeepHint) $fxKeepHint.textContent = keepOn ? `스냅 ${fmtNum(snapRate)} 사용` : `현재 ${fmtNum(currentRate)} 사용`;
+    } else {
+      $fxKeepRow.style.display = 'none';
+    }
+  }
+}
+
+async function saveDividend() {
+  if (!currentUid) { showToast('로그인이 필요합니다'); return; }
+
+  const date = document.getElementById('dv-input-date').value;
+  const accId = document.getElementById('dv-input-account').value;
+  const symbol = document.getElementById('dv-input-symbol').value.trim();
+  const amtRaw = document.getElementById('dv-input-amount').value;
+  const memo = document.getElementById('dv-input-memo').value.trim();
+
+  if (!date)   { showToast('날짜를 선택하세요'); return; }
+  if (!accId)  { showToast('계좌를 선택하세요'); return; }
+  if (!symbol) { showToast('종목을 입력하세요'); return; }
+  const amt = Number(numUnComma(amtRaw));
+  if (!amt || amt <= 0) { showToast('금액을 입력하세요'); return; }
+
+  const acc = (accounts || []).find(a => a.id === accId);
+  if (!acc) { showToast('계좌를 찾을 수 없습니다'); return; }
+  const cur = acc.currency || 'KRW';
+  const isFx = cur !== 'KRW';
+
+  // 환율 결정 (모달과 동일 로직)
+  let useRate = 1;
+  if (isFx) {
+    const fxRates = sharedSettings?.fxRates || {};
+    const currentRate = Number(fxRates[cur]) || 0;
+    let snapRate = currentRate;
+    let isEditing = false;
+    if (editingDividendId) {
+      const d = dividends.find(x => x.id === editingDividendId);
+      if (d && d.fxRate) { snapRate = Number(d.fxRate); isEditing = true; }
+    }
+    const $fxKeep = document.getElementById('dv-fx-keep');
+    const keepOn = $fxKeep?.checked && isEditing && snapRate !== currentRate;
+    useRate = keepOn ? snapRate : currentRate;
+    if (!useRate) { showToast(`${cur} 환율이 설정되지 않았습니다 — 설정 탭에서 입력하세요`); return; }
+  }
+
+  const amtKrw = isFx ? Math.round(amt * useRate) : Math.round(amt);
+  const ym = date.slice(0, 7);
+
+  const data = {
+    date,
+    ym,
+    accountId: accId,
+    accountName: acc.name,           // 박제
+    currency: cur,
+    symbol,
+    amount: amt,
+    fxRate: isFx ? useRate : null,
+    amountKrw: amtKrw,
+    memo: memo || null,
+    updatedAt: serverTimestamp(),
+  };
+
+  const $btn = document.getElementById('btn-dv-save');
+  $btn.disabled = true;
+  const orig = $btn.textContent;
+  $btn.textContent = '저장 중…';
+
+  try {
+    if (editingDividendId) {
+      await setDoc(pathDividend(editingDividendId), data, { merge: true });
+      showToast(`배당 ${date} ${symbol} 수정됨`);
+    } else {
+      const newId = genId('div');
+      data.createdAt = serverTimestamp();
+      await setDoc(pathDividend(newId), data);
+      showToast(`배당 ${date} ${symbol} 저장됨`);
+    }
+    closeOv('ov-dividend');
+  } catch (e) {
+    console.error('saveDividend error', e);
+    showToast('저장 실패: ' + (e.message || e.code));
+  } finally {
+    $btn.disabled = false;
+    $btn.textContent = orig;
+  }
+}
+
+async function deleteDividend() {
+  if (!editingDividendId || !currentUid) return;
+  const d = dividends.find(x => x.id === editingDividendId);
+  if (!d) return;
+  if (!confirm(`${d.date} ${d.symbol} 배당 기록을 삭제할까요?`)) return;
+
+  const $btn = document.getElementById('btn-dv-delete');
+  $btn.disabled = true;
+  try {
+    await deleteDoc(pathDividend(editingDividendId));
+    closeOv('ov-dividend');
+    showToast('배당 기록 삭제됨');
+  } catch (e) {
+    console.error('deleteDividend error', e);
+    showToast('삭제 실패: ' + (e.message || e.code));
+  } finally {
+    $btn.disabled = false;
+  }
+}
+
+// ─── 이벤트 바인딩 (한 번만) ──────────────────
+let dividendsBound = false;
+function bindDividendsHandlers() {
+  if (dividendsBound) return;
+  dividendsBound = true;
+
+  document.getElementById('btn-dv-add')?.addEventListener('click', () => openDividendModal(null));
+  document.getElementById('btn-dv-save')?.addEventListener('click', saveDividend);
+  document.getElementById('btn-dv-delete')?.addEventListener('click', deleteDividend);
+
+  // 미리보기 갱신
+  ['dv-input-account', 'dv-input-amount'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', dvUpdatePreview);
+    document.getElementById(id)?.addEventListener('change', dvUpdatePreview);
+  });
+  document.getElementById('dv-fx-keep')?.addEventListener('change', dvUpdatePreview);
+
+  // 기간 필터
+  document.getElementById('dv-filter-period')?.addEventListener('change', () => {
+    dvUserChangedPeriod = true;
+    renderDividendsList();
   });
 }
 
