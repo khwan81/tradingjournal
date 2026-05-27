@@ -265,23 +265,6 @@ body {
 }
 
 /* 빈 상태 (placeholder) */
-.empty-state {
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  padding: 60px 20px;
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  color: var(--text3);
-  font-size: 13px;
-  text-align: center;
-}
-.empty-state .icon {
-  font-size: 32px;
-  margin-bottom: 12px;
-  opacity: 0.5;
-}
-
 /* 토스트 */
 .toast {
   position: fixed;
@@ -1047,25 +1030,7 @@ body {
 .event-row .actions button:hover { background: var(--bg3); color: var(--text); }
 .event-row.done { opacity: 0.55; }
 
-/* 경조사 모달 — 라디오 + 미리보기 */
-.radio-label {
-  display: flex; align-items: center; gap: 8px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  background: var(--bg2);
-  transition: all 0.15s;
-  font-size: 13px;
-  color: var(--text2);
-}
-.radio-label:has(input:checked) {
-  border-color: var(--accent);
-  background: rgba(79, 143, 255, 0.08);
-  color: var(--text);
-}
-.radio-label input { margin: 0; }
-
+/* 경조사 모달 — 미리보기 */
 .event-modal-preview {
   background: var(--bg2);
   border: 1px solid var(--border);
@@ -1539,10 +1504,6 @@ body {
 }
 .rt-row { font-size: 12.5px; }
 .rt-row:last-child { border-bottom: none; }
-.rt-row.rt-row-cat {
-  background: rgba(79,143,255,0.04);
-  font-weight: 600;
-}
 .rt-row .rt-name { color: var(--text); display: flex; align-items: center; gap: 6px; }
 .rt-row .rt-cell { font-family: var(--font-mono); text-align: right; color: var(--text); }
 .rt-row .rt-cell.muted { color: var(--text3); }
@@ -1593,7 +1554,6 @@ body {
     color: var(--text3);
     font-family: var(--font);
   }
-  .rt-row.rt-row-cat .rt-name { grid-column: 1 / -1; }
 }
 
 /* ─────────────────────────────────────────────────────
@@ -1808,12 +1768,6 @@ body {
 }
 
 /* ── 손익 탭 (v0.3-4) ── */
-.pl-header {
-  display: flex; justify-content: space-between; align-items: center;
-  gap: 10px;
-  margin-bottom: 14px;
-  flex-wrap: wrap;
-}
 .pl-placeholder {
   background: var(--bg2);
   border: 1px solid var(--border2);
@@ -2871,11 +2825,6 @@ body {
   margin-top: 2px;
   padding-right: 2px;
 }
-.bal-row .bal-krw .bal-krw-snap {
-  display: inline-block;
-  color: var(--amber);
-  margin-top: 1px;
-}
 .bal-row.fx { row-gap: 0; }
 .bal-row.auto-badge .bal-name::after {
   content: '자동';
@@ -2921,30 +2870,6 @@ body {
 @media (max-width: 640px) {
   .bal-preview { grid-template-columns: 1fr; }
   .bal-row input.bal-input { width: 110px; }
-}
-
-.month-nav {
-  display: flex; align-items: center; gap: 8px;
-  background: var(--bg2);
-  border: 1px solid var(--border2);
-  border-radius: 8px;
-  padding: 6px 8px;
-}
-.month-nav button {
-  background: transparent; border: none;
-  color: var(--text2);
-  font-size: 16px;
-  cursor: pointer;
-  padding: 2px 8px;
-  font-family: var(--font);
-  border-radius: 4px;
-}
-.month-nav button:hover { background: var(--bg3); color: var(--text); }
-.month-nav button:disabled { opacity: 0.3; cursor: not-allowed; }
-.month-nav .ym {
-  font-size: 15px; font-weight: 500;
-  font-family: var(--font-mono);
-  min-width: 80px; text-align: center;
 }
 
 .tx-table {
@@ -3030,9 +2955,6 @@ body {
   display: inline-block;
   margin-left: 2px;
   flex-shrink: 0;
-}
-.pay-meta {
-  color: var(--text3); font-size: 10px; margin-left: 4px;
 }
 
 /* 거래 모달 paid 토글 */
@@ -5165,8 +5087,6 @@ let transactions = []; // 현재 월의 거래
 let recurringMasters = []; // 반복지출 마스터 (전체)
 let eventsMasters = []; // 경조사 마스터 (v0.6+)
 let currentMonth = currentYm(); // YYYY-MM 형식 (글로벌 — 모든 탭 공유, v0.5+)
-let bsSnapshot = null;          // 현재 currentMonth의 스냅샷 (없으면 null)
-let bsPrevSnapshot = null;      // 직전 달 스냅샷 (없으면 null)
 let plTransactions = [];        // 손익 탭에서 보고 있는 월의 거래
 let bgBudgets = [];             // 예산 탭에서 보고 있는 월의 예산 도큐먼트들
 let bgTransactions = [];        // 예산 탭의 같은 월 거래 (실제 사용액 계산)
@@ -5178,8 +5098,6 @@ let unsubAccounts = null;
 let unsubSharedSettings = null;
 let unsubSettings = null;
 let unsubTransactions = null;
-let unsubBsSnapshot = null;
-let unsubBsPrevSnapshot = null;
 let unsubRecurring = null;
 let unsubEvents = null;          // v0.6+ 경조사
 let unsubPlTransactions = null;     // 손익 탭 거래 구독
@@ -5226,7 +5144,6 @@ const pathAccount = id => doc(db, `users/${currentUid}/config/accounts/items/${i
 const pathTransactions = () => collection(db, `users/${currentUid}/finance/config/transactions`);
 const pathTransaction = id => doc(db, `users/${currentUid}/finance/config/transactions/${id}`);
 const pathSnapshots = () => collection(db, `users/${currentUid}/finance/config/snapshots`);
-const pathSnapshot = ym => doc(db, `users/${currentUid}/finance/config/snapshots/${ym}`);
 const pathRecurring = () => collection(db, `users/${currentUid}/finance/config/recurring`);
 const pathRecurringItem = id => doc(db, `users/${currentUid}/finance/config/recurring/${id}`);
 const pathEvents = () => collection(db, `users/${currentUid}/finance/config/events`);   // v0.6
@@ -5369,13 +5286,10 @@ async function loadAll() {
   // 거래내역 탭 — 예산 알림바용 (v0.4 A7)
   subscribeTxTabBudgets();
 
-  // 재무상태 탭 — 스냅샷 구독
-  subscribeBsSnapshot();
-  renderBsHeader();
-
-  // 자산결산 서브탭 — monthly 구독 (v0.7-3b)
+  // 자산결산 서브탭 — monthly 구독 (v0.7-3b, SSOT)
   subscribeMonthly();
   subscribeMonthlyLiab();   // v0.7-5c — 부채 결산도 구독
+  renderBsHeader();
 
   // 배당 서브탭 — 구독 (v0.7-8)
   subscribeDividends();
@@ -5977,8 +5891,6 @@ function unsubscribeAll() {
   if (unsubSettings) { unsubSettings(); unsubSettings = null; }
   if (unsubTransactions) { unsubTransactions(); unsubTransactions = null; }
   if (unsubUnpaid) { unsubUnpaid(); unsubUnpaid = null; }
-  if (unsubBsSnapshot) { unsubBsSnapshot(); unsubBsSnapshot = null; }
-  if (unsubBsPrevSnapshot) { unsubBsPrevSnapshot(); unsubBsPrevSnapshot = null; }
   if (unsubRecurring) { unsubRecurring(); unsubRecurring = null; }
   if (unsubPlTransactions) { unsubPlTransactions(); unsubPlTransactions = null; }  // A2
   if (unsubBgBudgets) { unsubBgBudgets(); unsubBgBudgets = null; }                 // v0.4
@@ -5997,8 +5909,6 @@ function unsubscribeAll() {
   recurringMasters = [];
   eventsMasters = [];    // v0.6
   allUnpaidTxs = [];
-  bsSnapshot = null;
-  bsPrevSnapshot = null;
   plTransactions = [];   // A2
   bgBudgets = [];        // v0.4
   bgTransactions = [];   // v0.4
@@ -8697,11 +8607,10 @@ function setMonth(ym) {
   // 모든 탭 데이터 재구독 (글로벌 월 변경)
   subscribeTransactions();           // 거래내역
   subscribeTxTabBudgets();           // 거래내역 알림바 + 대시보드 KPI
-  subscribeBsSnapshot();             // 재무상태
   subscribePlTransactions();         // 손익
   subscribeBgBudgets();              // 예산
   subscribeBgTransactions();         // 예산 (사용액)
-  subscribeMonthly();                // v0.7-3b — 자산결산 (현재월 + 전월)
+  subscribeMonthly();                // v0.7-3b — 자산결산 (현재월 + 전월). 재무상태(BS)도 이 구독 콜백에서 렌더
   subscribeMonthlyLiab();            // v0.7-5c — 부채 결산
 
   // 즉시 헤더/렌더 갱신 (구독 콜백 도착 전에 화면 일관성 유지)
@@ -9389,41 +9298,6 @@ function fmtSigned(n) {
   if (!n) return '0';
   const sign = n > 0 ? '+' : '-';
   return sign + fmtNum(Math.abs(n));
-}
-
-function subscribeBsSnapshot() {
-  if (unsubBsSnapshot) { unsubBsSnapshot(); unsubBsSnapshot = null; }
-  if (unsubBsPrevSnapshot) { unsubBsPrevSnapshot(); unsubBsPrevSnapshot = null; }
-  if (!currentUid) return;
-
-  // 현재 달
-  unsubBsSnapshot = onSnapshot(pathSnapshot(currentMonth),
-    snap => {
-      bsSnapshot = snap.exists() ? snap.data() : null;
-      renderBsHeader();
-      renderDashKpi();   // v0.5 B2 — 가벼우니 항상
-      // 기간형 차트: 대시보드 활성 / 시점형 차트: 현황 활성
-      if (isDashboardVisible()) {
-        renderDashNetworthChart();
-      }
-      if (isStatusVisible()) {
-        renderDashAssetsChart();
-        renderDashEventsCard();   // v0.6 D1 — 적립 계좌 잔액 변동
-      }
-    },
-    err => { console.error('bs snapshot subscribe error', err); }
-  );
-
-  // 이전 달 (MoM 비교용)
-  const prev = prevYm(currentMonth);
-  unsubBsPrevSnapshot = onSnapshot(pathSnapshot(prev),
-    snap => {
-      bsPrevSnapshot = snap.exists() ? snap.data() : null;
-      renderBsHeader();
-      renderDashKpi();   // v0.5 B2
-    },
-    err => { console.error('bs prev snapshot subscribe error', err); }
-  );
 }
 
 // ──────────────────────────────────────────────────────
@@ -12008,14 +11882,14 @@ function renderDashHeader() {
 
 // (v0.5 B3에서 renderDashBody 제거 — 차트 카드를 덮어쓰던 placeholder 함수였음)
 
-// ── 대시보드 KPI (v0.5 B2) ──
+// ── 대시보드 KPI (v0.5 B2 / v0.7-3b monthly SSOT) ──
 // 데이터 소스:
-//   • 순자산/부채비율 → 재무상태 탭의 bsSnapshot (현재월 기본). 전월은 bsPrevSnapshot.
+//   • 순자산/부채비율 → monthlyDocs + monthlyLiabDocs (현재월). 전월은 monthlyPrevDocs + monthlyLiabPrevDocs
 //   • 이번달 순이익  → 거래내역 탭의 transactions (currentMonth)
 //   • 예산 소진율    → txTabBudgets + transactions (currentMonth, 비용만)
 // 모든 데이터가 이미 다른 탭에서 구독 중이라 추가 구독 없음.
 function renderDashKpi() {
-  // ── 1) 순자산 + 부채비율 (재무상태 스냅에서) ──
+  // ── 1) 순자산 + 부채비율 (monthly 결산에서) ──
   const $nw    = document.getElementById('dash-kpi-networth');
   const $nwSub = document.getElementById('dash-kpi-networth-sub');
   const $debt    = document.getElementById('dash-kpi-debt');
@@ -12479,8 +12353,8 @@ async function renderDashPlChart() {
   }
 }
 
-// ── 자산 구성 도넛 (v0.5 B5) ──
-// 데이터: 현재 월 bsSnapshot의 자산 잔액 + accounts 마스터 join
+// ── 자산 구성 도넛 (v0.5 B5 / v0.7-3b monthly SSOT) ──
+// 데이터: 현재 월 monthlyDocs의 자산 잔액 + accounts 마스터 join
 // 표시: 자산 종류(financeCategory)별 합계로 도넛 + 우측 범례 (유동/비유동 그룹화)
 let dashAssetsChart = null;
 
@@ -13710,7 +13584,7 @@ function buildBalanceRows() {
   const rows = [];
 
   // 자산: accounts 마스터 active=true만
-  // v0.7-5c — bsSnapshot 대신 monthly 컬렉션에서 prefill. 추적 자산은 잠금 + 자산결산 라우팅
+  // v0.7-5c — monthly 컬렉션에서 prefill. 추적 자산은 잠금 + 자산결산 라우팅
   for (const a of accounts) {
     if (a.active === false) continue;
     const tier = a.financeType === 'nonCurrent' ? 'noncurrent' : 'current';
@@ -14697,59 +14571,51 @@ onAuthStateChanged(auth, async user => {
       get settings()       { return settings; },
       get accounts()       { return accounts; },
       get sharedSettings() { return sharedSettings; },
-      get bsSnapshot()     { return bsSnapshot; },
-      get bsPrevSnapshot() { return bsPrevSnapshot; },
       get currentMonth()   { return currentMonth; },
       get transactions()   { return transactions; },
       get recurringMasters() { return recurringMasters; },
+      get monthlyDocs()      { return monthlyDocs; },
+      get monthlyLiabDocs()  { return monthlyLiabDocs; },
 
-      // 부채 진단: 마스터 + 휴지통 + 현재 월 스냅 + 키 매칭
+      // 부채 진단: 마스터 + 휴지통 + 현재 월 결산 + 키 매칭
       liab() {
         const list = settings?.liabilities || [];
         const trash = settings?.liabilitiesDeleted || [];
-        const snap = bsSnapshot?.liabilityBalances || {};
         console.log('%c부채 마스터 (활성)', 'color:#34d399; font-weight:bold');
         console.table(list.map(l => ({ id: l.id, name: l.name, type: l.type, note: l.note })));
         console.log('%c부채 휴지통', 'color:#fbbf24; font-weight:bold');
         console.table(trash.map(l => ({ id: l.id, name: l.name, type: l.type, deletedAt: l.deletedAt })));
-        console.log('%c현재 월 스냅 (' + currentMonth + ')', 'color:#4f8fff; font-weight:bold');
-        // 키별로 마스터/휴지통 매칭 + 값 형태 확인
-        const rows = Object.entries(snap).map(([k, v]) => {
-          const id = k.startsWith('liab:') ? k.slice(5) : k;
-          const inMaster = list.find(l => l.id === id);
-          const inTrash  = trash.find(l => l.id === id);
-          const isObj    = typeof v === 'object' && v !== null;
+        console.log('%c현재 월 monthly_liab (' + currentMonth + ')', 'color:#4f8fff; font-weight:bold');
+        const rows = (monthlyLiabDocs || []).map(d => {
+          const inMaster = list.find(l => l.id === d.liabKey);
+          const inTrash  = trash.find(l => l.id === d.liabKey);
           return {
-            key: k,
+            liabKey: d.liabKey,
             매칭: inMaster ? '마스터' : inTrash ? '휴지통' : '고아',
             마스터이름: inMaster?.name || inTrash?.name || '(없음)',
-            값타입: isObj ? 'object' : typeof v,
-            스냅name: isObj ? (v.name || '(빈값)') : '-',
-            스냅type: isObj ? (v.type || '(빈값)') : '-',
-            krw: isObj ? v.krw : v,
+            결산name: d.name || '(빈값)',
+            결산type: d.type || '(빈값)',
+            balanceKrw: d.balanceKrw,
           };
         });
         console.table(rows);
         console.log('migratedAt:', settings?.liabilitiesMigratedAt || '(미설정)');
-        return { list, trash, snap };
+        return { list, trash, monthlyLiabDocs };
       },
 
-      // 모든 스냅샷 둘러보기
-      async allSnaps() {
-        const snaps = await getDocs(pathSnapshots());
+      // 모든 월의 monthly_liab 둘러보기
+      async allLiabs() {
+        const snaps = await getDocs(pathMonthlyLiab());
         const rows = [];
         snaps.forEach(d => {
-          const lb = d.data().liabilityBalances || {};
-          for (const [k, v] of Object.entries(lb)) {
-            const isObj = typeof v === 'object' && v !== null;
-            rows.push({
-              ym: d.id,
-              key: k,
-              type: isObj ? 'object' : typeof v,
-              name: isObj ? (v.name || '(빈값)') : '-',
-              krw: isObj ? v.krw : v,
-            });
-          }
+          const v = d.data();
+          rows.push({
+            ym: v.ym,
+            liabKey: v.liabKey,
+            name: v.name,
+            type: v.type,
+            balanceKrw: v.balanceKrw,
+          });
         });
         console.table(rows);
         return rows;
@@ -14812,7 +14678,7 @@ onAuthStateChanged(auth, async user => {
         return { okCount, badCount, rows };
       },
     };
-    console.log('%c[debug] window.debug 활성화. 사용: debug.liab() / debug.allSnaps() / debug.resetMigration() / debug.checkTimestamps()',
+    console.log('%c[debug] window.debug 활성화. 사용: debug.liab() / debug.allLiabs() / debug.resetMigration() / debug.checkTimestamps()',
       'color:#8b909e; font-style:italic');
   } else {
     unsubscribeAll();
