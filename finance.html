@@ -1377,20 +1377,6 @@ body {
 .sv-badge.fx    { background: rgba(139,144,158,0.18); color: var(--text2); }
 .sv-badge.missing { background: rgba(248,113,113,0.15); color: var(--red); }
 
-/* v0.7-12e — 수익률 부분 기간 배지 (계좌 첫 결산이 분석 기간 시작보다 늦을 때) */
-.rt-partial-badge {
-  font-size: 9.5px;
-  padding: 1.5px 6px;
-  border-radius: 9px;
-  font-family: var(--font-mono);
-  font-weight: 500;
-  vertical-align: middle;
-  margin-left: 4px;
-  background: rgba(251, 191, 36, 0.12);
-  color: #fbbf24;
-  border: 1px solid rgba(251, 191, 36, 0.25);
-}
-
 /* 빈 카테고리 */
 .sv-empty {
   padding: 18px;
@@ -3619,7 +3605,7 @@ body {
         <div class="bs-kpi-card">
           <div class="label">가중원금</div>
           <div class="value" id="rt-kpi-base">—</div>
-          <div class="sub"   id="rt-kpi-base-sub">Modified Dietz</div>
+          <div class="sub"   id="rt-kpi-base-sub">—</div>
         </div>
       </div>
 
@@ -9913,16 +9899,11 @@ function renderReturnsBody() {
     const rowsHtml = items.map(({ id, meta }) => {
       const r = periodReturnAcc(id, fromYm, toYm);
       if (!r.hasData) {
-        // toYm 결산이 없으면 안내 (계산 불가의 가장 흔한 원인)
-        const noEndHint = r.effectiveFromYm
-          ? `<span class="rt-partial-badge">${toYm} 결산 필요</span>`
-          : '';
         return `
           <div class="rt-row">
             <div class="rt-name">
               ${escapeHtml(meta.name)}
               ${meta.isInactive ? '<span class="sv-badge missing">비활성</span>' : ''}
-              ${noEndHint}
             </div>
             <div class="rt-cell muted" data-label="원금"><span>—</span></div>
             <div class="rt-cell muted" data-label="수익">—</div>
@@ -9935,16 +9916,11 @@ function renderReturnsBody() {
       // 기여도: 전체 base 대비 이 계좌 gain의 비중 (전체 수익률 대비 %p)
       // 여기서는 단순히 base 비중으로 표시
       const baseShare = catAgg.base > 0 ? (r.base / catAgg.base) : 0;
-      // v0.7-12e — effective !== requested 면 부분 기간 안내
-      const partialHint = (r.effectiveFromYm && r.effectiveFromYm > r.requestedFromYm)
-        ? `<span class="rt-partial-badge">${r.effectiveFromYm}부터</span>`
-        : '';
       return `
         <div class="rt-row">
           <div class="rt-name">
             ${escapeHtml(meta.name)}
             ${meta.isInactive ? '<span class="sv-badge missing">비활성</span>' : ''}
-            ${partialHint}
           </div>
           <div class="rt-cell" data-label="원금">${fmtNum(Math.round(r.base))}</div>
           <div class="rt-cell ${gainCls}" data-label="수익">${fmtSigned(r.gain)}</div>
