@@ -3368,8 +3368,8 @@ body {
       <button type="button" class="bb-cta" id="btn-budget-goto">예산 보기</button>
     </div>
 
-    <!-- 경조사 적립 알림바 (v0.6) -->
-    <div class="event-bar" id="event-bar">
+    <!-- 경조사 알림바 (v0.6 / v0.7-15 처리 모드 추가) -->
+    <div class="event-bar" id="event-bar" data-mode="saving">
       <div class="eb-left">
         <span class="eb-icon" aria-hidden="true"></span>
         <span class="eb-text" id="event-bar-text">경조사 적립</span>
@@ -5073,6 +5073,7 @@ let sharedSettings = null; // config/accounts 도큐먼트 (categoriesEnum + fxR
 let transactions = []; // 현재 월의 거래
 let recurringMasters = []; // 반복지출 마스터 (전체)
 let eventsMasters = []; // 경조사 마스터 (v0.6+)
+let pendingProcessEventId = null;   // v0.7-15 — 거래 저장 시 lastDoneYm을 갱신할 경조사 id
 let currentMonth = currentYm(); // YYYY-MM 형식 (글로벌 — 모든 탭 공유, v0.5+)
 let plTransactions = [];        // 손익 탭에서 보고 있는 월의 거래
 let bgBudgets = [];             // 예산 탭에서 보고 있는 월의 예산 도큐먼트들
@@ -5566,17 +5567,28 @@ document.getElementById('btn-budget-goto').addEventListener('click', () => {
   switchTab('planning', 'budget');
 });
 
-// "+ 적립 거래" 버튼 (v0.6 경조사 알림바) — 거래 모달 열고 경조사 카테고리 + 적립 계좌 + 권장 금액 prefill
+// 경조사 알림바 CTA — 모드에 따라 분기 (v0.7-15)
+//   data-mode="saving"   → 적립 거래 prefill (기존)
+//   data-mode="process"  → 처리 거래 prefill (행사 지출 + lastDoneYm 갱신 마커)
 document.getElementById('btn-event-add-saving').addEventListener('click', () => {
   if (!settings) return;
-  openTxModal(null);
+  const $bar = document.getElementById('event-bar');
+  const mode = $bar?.dataset.mode || 'saving';
 
-  // 모달이 열린 후 prefill
+  if (mode === 'process') {
+    openProcessEventModal();
+    return;
+  }
+
+  // ── 기존: 적립 모드 ──
+  openTxModal(null);
+  pendingProcessEventId = null;   // 적립 모드에선 마커 해제
+
   // 1) 카테고리 = '경조사'
   const $cat = document.getElementById('tx-category');
   if ($cat && [...$cat.options].some(o => o.value === '경조사')) {
     $cat.value = '경조사';
-    $cat.dispatchEvent(new Event('change'));   // flow 자동 결정
+    $cat.dispatchEvent(new Event('change'));
   }
 
   // 2) 계좌 = 적립 계좌
@@ -5602,6 +5614,55 @@ document.getElementById('btn-event-add-saving').addEventListener('click', () => 
   // 4) 메모 prefill
   document.getElementById('tx-memo').value = `${today} 경조사 적립`;
 });
+
+// 경조사 행사월 "처리" 모달 열기 (v0.7-15)
+//   - 단건이면 바로 거래 모달 prefill
+//   - 다건이면 어떤 행사를 처리할지 토스트로 알리고 첫번째부터 (단순화)
+//   prefill 후 사용자가 금액·날짜를 수정 가능. 저장 시 lastDoneYm 자동 갱신.
+function openProcessEventModal() {
+  const today = currentMonth;
+  const [, curM] = today.split('-').map(Number);
+  const pending = eventsMasters.filter(ev =>
+    parseInt(ev.recurMonth, 10) === curM && ev.lastDoneYm !== today
+  );
+  if (!pending.length) {
+    showToast('처리할 행사가 없습니다');
+    return;
+  }
+
+  // 다건일 경우: 가장 오래 미처리(혹은 첫 번째)부터 — UI는 단순화
+  const ev = pending[0];
+  if (pending.length > 1) {
+    showToast(`처리 대기 ${pending.length}건 — "${ev.title}"부터 처리합니다`);
+  }
+
+  openTxModal(null);
+  pendingProcessEventId = ev.id;
+
+  // prefill — 카테고리 = 경조사
+  const $cat = document.getElementById('tx-category');
+  if ($cat && [...$cat.options].some(o => o.value === '경조사')) {
+    $cat.value = '경조사';
+    $cat.dispatchEvent(new Event('change'));
+  }
+
+  // prefill — 계좌 = 적립 계좌 (적립을 인출하는 의미)
+  const savingAccId = settings?.eventSavingAccountId;
+  const $acc = document.getElementById('tx-account');
+  if (savingAccId && $acc) {
+    $acc.value = savingAccId;
+    $acc.dispatchEvent(new Event('change'));
+  }
+
+  // prefill — 금액 = 행사 목표액 (사용자가 수정 가능)
+  const targetAmount = Number(ev.amount) || 0;
+  if (targetAmount > 0) {
+    document.getElementById('tx-amount').value = fmtAmount(targetAmount);
+  }
+
+  // prefill — 메모
+  document.getElementById('tx-memo').value = `${ev.title} 처리`;
+}
 
 // 손익 본문 렌더 (A3) — 카테고리별 상세 표
 // 매출/고정비/변동비 각 그룹에 그 달에 등장한 카테고리만 집계해서 나열.
@@ -6627,13 +6688,22 @@ function prevYm(ym) {
 
 // 모달 열기/닫기
 function openOv(id) { document.getElementById(id).classList.add('show'); }
-function closeOv(id) { document.getElementById(id).classList.remove('show'); }
+function closeOv(id) {
+  document.getElementById(id).classList.remove('show');
+  // v0.7-15 — 거래 모달이 닫히면 경조사 처리 마커도 해제 (저장 핸들러에서 이미 사용했으면 null)
+  if (id === 'ov-tx') pendingProcessEventId = null;
+}
 document.querySelectorAll('[data-close]').forEach(el => {
   el.addEventListener('click', () => closeOv(el.dataset.close));
 });
 // 오버레이 바깥 클릭으로 닫기
 document.querySelectorAll('.ov').forEach(ov => {
-  ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('show'); });
+  ov.addEventListener('click', e => {
+    if (e.target === ov) {
+      ov.classList.remove('show');
+      if (ov.id === 'ov-tx') pendingProcessEventId = null;   // v0.7-15
+    }
+  });
 });
 
 // ──────────────────────────────────────────────────────
@@ -7510,19 +7580,13 @@ function renderEventsList() {
 
     let badge;
     if (isDoneThisMonth)      badge = '<span class="badge done">이번 달 처리됨</span>';
-    else if (isInRecurMonth)  badge = '<span class="badge upcoming">이번 달 인출</span>';
+    else if (isInRecurMonth)  badge = '<span class="badge upcoming">이번 달 처리 대기</span>';
     else                      badge = '<span class="badge yearly">매년</span>';
 
     const targetText = `매년 ${ev.recurMonth}월`;
     const periodText = `${ev.startYm || '—'}부터 매년`;
 
-    // 행사 월 도래 시 처리/해제 토글 노출
-    const yearlyDoneBtn = isInRecurMonth && !isDoneThisMonth
-      ? `<button data-event-yearly-done="${ev.id}" title="이번 달 인출 완료">✓ 이번 달 처리</button>`
-      : '';
-    const yearlyUndoBtn = isInRecurMonth && isDoneThisMonth
-      ? `<button data-event-yearly-undo="${ev.id}" title="처리 해제">↩ 해제</button>`
-      : '';
+    // v0.7-15 — 처리 액션은 거래 탭 알림바로 통일. 여기는 마스터 관리만.
 
     return `
       <div class="event-row ${isDoneThisMonth ? 'done' : ''}">
@@ -7542,7 +7606,6 @@ function renderEventsList() {
           </div>
         </div>
         <div class="actions">
-          ${yearlyDoneBtn}${yearlyUndoBtn}
           <button data-event-edit="${ev.id}">편집</button>
         </div>
       </div>`;
@@ -7552,12 +7615,7 @@ function renderEventsList() {
   $list.querySelectorAll('[data-event-edit]').forEach(el => {
     el.addEventListener('click', () => openEventModal(el.dataset.eventEdit));
   });
-  $list.querySelectorAll('[data-event-yearly-done]').forEach(el => {
-    el.addEventListener('click', () => setEventYearlyDone(el.dataset.eventYearlyDone, true));
-  });
-  $list.querySelectorAll('[data-event-yearly-undo]').forEach(el => {
-    el.addEventListener('click', () => setEventYearlyDone(el.dataset.eventYearlyUndo, false));
-  });
+  // v0.7-15 — data-event-yearly-done/undo 옛 핸들러 제거 (처리는 거래 탭 알림바로 통일)
 }
 
 function openEventModal(id = null) {
@@ -8396,31 +8454,70 @@ function renderEventBar() {
   const $bar = document.getElementById('event-bar');
   if (!$bar) return;
 
+  const $text = document.getElementById('event-bar-text');
+  const $cta  = document.getElementById('btn-event-add-saving');
+
+  if (!eventsMasters.length) { $bar.classList.remove('show'); return; }
+
   const today = currentMonth;
   const [, curM] = today.split('-').map(Number);
 
-  // 이번 달이 행사 월인 경조사가 있으면 알림바 숨김 (대시보드 카드에서 처리)
-  // 그 외엔 적립이 부족하면 표시
-  if (!eventsMasters.length) { $bar.classList.remove('show'); return; }
+  // v0.7-15 — 행사월 처리 모드
+  //   이번 달이 행사월이고 아직 처리 안 된(lastDoneYm != today) 경조사가 있으면
+  //   알림바를 "처리 모드"로 전환: 메시지/CTA 변경 + data-mode="process".
+  const pendingProcess = eventsMasters.filter(ev =>
+    parseInt(ev.recurMonth, 10) === curM && ev.lastDoneYm !== today
+  );
 
+  if (pendingProcess.length > 0) {
+    // 처리 모드 — 다건이면 합계 표시, 단건이면 행사명 표시
+    let strong, body;
+    if (pendingProcess.length === 1) {
+      const ev = pendingProcess[0];
+      strong = escapeHtml(ev.title);
+      body   = `이번 달 행사 — <span class="eb-strong">${strong}</span> 처리할 시기`;
+    } else {
+      strong = `${pendingProcess.length}건`;
+      body   = `이번 달 행사 <span class="eb-strong">${strong}</span> 처리할 시기`;
+    }
+    $text.innerHTML = body;
+    $cta.textContent = '처리하기';
+    $bar.dataset.mode = 'process';
+    // 단건일 때만 id를 저장 — 다건은 클릭 시 선택 UI 또는 첫번째 우선
+    $bar.dataset.processEventId = pendingProcess.length === 1 ? pendingProcess[0].id : '';
+    $bar.classList.add('show');
+    return;
+  }
+
+  // ── 기존 적립 모드 ──
   // 이번 달 권장 적립 합
   let totalRec = 0;
   for (const ev of eventsMasters) {
     totalRec += eventThisMonthRecommend(ev, today);
   }
-  if (totalRec <= 0) { $bar.classList.remove('show'); return; }
+  if (totalRec <= 0) {
+    $bar.classList.remove('show');
+    $bar.dataset.mode = 'saving';
+    return;
+  }
 
-  // 이번 달 '경조사' 카테고리 거래 합 (변동지출/고정지출 어디든)
+  // 이번 달 '경조사' 카테고리 거래 합
   const totalSaved = transactions
     .filter(t => t.category === '경조사')
     .reduce((s, t) => s + (Number(t.amount) || 0), 0);
 
   const shortfall = totalRec - totalSaved;
-  if (shortfall <= 0) { $bar.classList.remove('show'); return; }
+  if (shortfall <= 0) {
+    $bar.classList.remove('show');
+    $bar.dataset.mode = 'saving';
+    return;
+  }
 
-  // 표시
-  const $text = document.getElementById('event-bar-text');
+  // 표시 — 적립 모드
   $text.innerHTML = `이번 달 경조사 적립 <span class="eb-strong">${fmtAmount(shortfall)}원 부족</span> (권장 ${fmtAmount(totalRec)} · 적립 ${fmtAmount(totalSaved)})`;
+  $cta.textContent = '+ 적립 거래';
+  $bar.dataset.mode = 'saving';
+  $bar.dataset.processEventId = '';
   $bar.classList.add('show');
 }
 
@@ -12833,33 +12930,38 @@ function renderDashEventsCard() {
   // 이번 달 발생 행사 (E1용)
   const thisMonthEvents = eventsMasters.filter(ev => parseInt(ev.recurMonth, 10) === curMonth);
 
-  // E1 — 이번 달 행사 카드
+  // E1 — 이번 달 행사 카드 (v0.7-15: 처리 액션은 거래 탭 알림바에서, 여기는 상태 표시만)
   let e1Html = '';
   if (thisMonthEvents.length > 0) {
     const rows = thisMonthEvents.map(ev => {
       const amount = Number(ev.amount) || 0;
       const isProcessed = ev.lastDoneYm === today;
-      const actionBtn = isProcessed
-        ? `<button class="btn-s" data-event-undo-yearly="${escapeHtml(ev.id)}">↩ 해제</button>`
-        : `<button class="btn-s btn-event-process" data-event-do-yearly="${escapeHtml(ev.id)}">✓ 처리 완료</button>`;
+      const statusBadge = isProcessed
+        ? '<span class="badge done" style="margin-left:6px;">처리됨</span>'
+        : '<span class="badge" style="margin-left:6px;background:rgba(236,72,153,0.15);color:#ec4899;">처리 대기</span>';
 
       return `
         <div class="dash-event-thismonth-row ${isProcessed ? 'processed' : ''}">
           <div class="dash-event-thismonth-info">
             <span class="dash-event-thismonth-title">${escapeHtml(ev.title)}</span>
-            ${isProcessed ? '<span class="badge done" style="margin-left:6px;">처리됨</span>' : ''}
+            ${statusBadge}
           </div>
           <div class="dash-event-thismonth-right">
             <span class="dash-event-thismonth-amount">${fmtAmount(amount)}원</span>
-            ${actionBtn}
           </div>
         </div>`;
     }).join('');
+
+    const pendingCount = thisMonthEvents.filter(ev => ev.lastDoneYm !== today).length;
+    const hint = pendingCount > 0
+      ? `<div style="font-size:11px;color:var(--text3);margin-top:8px;">처리 대기 ${pendingCount}건 — <a href="#" data-goto-tx-tab style="color:var(--accent);text-decoration:none;">거래 탭</a>의 경조사 알림바에서 처리하세요</div>`
+      : '';
 
     e1Html = `
       <div class="dash-event-summary-card highlight">
         <div class="dash-event-summary-title">🎉 이번 달 행사 (${thisMonthEvents.length}건)</div>
         <div class="dash-event-thismonth-list">${rows}</div>
+        ${hint}
       </div>`;
   }
 
@@ -12918,12 +13020,12 @@ function renderDashEventsCard() {
     <div class="dash-event-progress-section-title">개별 진도</div>
     ${rowsHtml}`;
 
-  // 이벤트 위임 — 처리/해제 버튼
-  $body.querySelectorAll('[data-event-do-yearly]').forEach(el => {
-    el.addEventListener('click', () => setEventYearlyDone(el.dataset.eventDoYearly, true));
-  });
-  $body.querySelectorAll('[data-event-undo-yearly]').forEach(el => {
-    el.addEventListener('click', () => setEventYearlyDone(el.dataset.eventUndoYearly, false));
+  // v0.7-15 — 처리는 거래 탭 알림바에서. 여기는 거래 탭으로 라우팅만 제공.
+  $body.querySelectorAll('[data-goto-tx-tab]').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      switchTab('transactions');
+    });
   });
 
   if ($sub) $sub.textContent = `${today} · ${eventsMasters.length}건 활성`;
@@ -13782,6 +13884,9 @@ function openTxModal(id = null) {
     return;
   }
 
+  // v0.7-15 — 진입 시 처리 마커 기본 해제 (경조사 처리 흐름에서만 호출자가 다시 설정)
+  pendingProcessEventId = null;
+
   editingTxId = id;
   const isEdit = !!id;
   document.getElementById('tx-modal-title').textContent = isEdit ? '거래 편집' : '새 거래';
@@ -14080,6 +14185,22 @@ document.getElementById('btn-tx-save').addEventListener('click', async () => {
       showToast('거래가 추가되었습니다');
     }
     closeOv('ov-tx');
+
+    // v0.7-15 — 경조사 처리 모드로 생성된 거래라면 lastDoneYm 갱신 (사이클 종료)
+    if (pendingProcessEventId && !editingTxId) {
+      try {
+        await updateDoc(pathEvent(pendingProcessEventId), {
+          lastDoneYm: data.ym,
+          updatedAt: serverTimestamp(),
+        });
+        const ev = eventsMasters.find(e => e.id === pendingProcessEventId);
+        if (ev) showToast(`✓ ${ev.title} 처리 완료 — 다음 사이클 시작`);
+      } catch (eProc) {
+        console.error('[event-process] lastDoneYm 갱신 실패', eProc);
+        showToast('처리 표시 실패 — 거래는 저장됨');
+      }
+      pendingProcessEventId = null;
+    }
 
     // v0.7-12 2단계 — 거래 변경 시 분석 캐시 무효화 (다음 분석 탭 진입 시 fresh fetch)
     invalidateAnalysisYms();
