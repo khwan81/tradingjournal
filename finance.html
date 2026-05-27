@@ -3314,6 +3314,7 @@ body {
   <div class="tab-bar" role="tablist">
     <button class="tab active" data-tab="transactions" role="tab">거래내역</button>
     <button class="tab"        data-tab="closing"      role="tab">결산</button>
+    <button class="tab"        data-tab="status"       role="tab">현황</button>
     <button class="tab"        data-tab="analysis"     role="tab">분석</button>
     <button class="tab"        data-tab="planning"     role="tab">계획</button>
     <button class="tab"        data-tab="settings"     role="tab">설정</button>
@@ -3645,35 +3646,11 @@ body {
 
     <!-- 배당 서브탭은 결산 탭으로 이동됨 (사용자 피드백: 입력성 데이터는 분석이 아닌 결산에 속함) -->
 
-  <!-- 대시보드 서브탭 (v0.5 B1 + B2 / v0.7 분석 탭 안으로 이동) -->
+  <!-- 대시보드 서브탭 (v0.5 B1 + B2 / v0.7 분석 탭 안으로 이동 / v0.7-11 시점형 위젯은 현황 탭으로 분리) -->
   <div class="subtab-content" id="tab-dashboard">
     <div class="dash-header">
       <div class="dash-title">대시보드</div>
       <div class="dash-sub" id="dash-asof">—</div>
-    </div>
-
-    <!-- 4 KPI (B2) -->
-    <div class="dash-kpi-grid">
-      <div class="dash-kpi-card">
-        <div class="dash-kpi-label">순자산</div>
-        <div class="dash-kpi-value" id="dash-kpi-networth">—</div>
-        <div class="dash-kpi-sub"   id="dash-kpi-networth-sub">—</div>
-      </div>
-      <div class="dash-kpi-card">
-        <div class="dash-kpi-label">이번달 순이익</div>
-        <div class="dash-kpi-value" id="dash-kpi-net">—</div>
-        <div class="dash-kpi-sub"   id="dash-kpi-net-sub">—</div>
-      </div>
-      <div class="dash-kpi-card">
-        <div class="dash-kpi-label">부채비율</div>
-        <div class="dash-kpi-value" id="dash-kpi-debt">—</div>
-        <div class="dash-kpi-sub"   id="dash-kpi-debt-sub">—</div>
-      </div>
-      <div class="dash-kpi-card">
-        <div class="dash-kpi-label">예산 소진율</div>
-        <div class="dash-kpi-value" id="dash-kpi-budget">—</div>
-        <div class="dash-kpi-sub"   id="dash-kpi-budget-sub">—</div>
-      </div>
     </div>
 
     <div id="dash-body">
@@ -3702,43 +3679,6 @@ body {
         </div>
         <div class="dash-chart-empty" id="dash-pl-empty" style="display:none;">
           거래가 없습니다 — 거래내역 탭에서 거래를 추가하세요
-        </div>
-      </div>
-
-      <!-- 자산 구성 도넛 (B5) -->
-      <div class="dash-card">
-        <div class="dash-card-head">
-          <div class="dash-card-title">자산 구성</div>
-          <div class="dash-card-sub" id="dash-assets-sub">—</div>
-        </div>
-        <div class="dash-doughnut-wrap">
-          <div class="dash-doughnut-chart">
-            <canvas id="dash-assets-chart"></canvas>
-          </div>
-          <div class="dash-doughnut-legend" id="dash-assets-legend"></div>
-        </div>
-        <div class="dash-chart-empty" id="dash-assets-empty" style="display:none;">
-          스냅샷이 없거나 자산이 0입니다
-        </div>
-      </div>
-
-      <!-- 추적자산 KPI (v0.7-9) — 자산결산 요약 인라인 -->
-      <div class="dash-card">
-        <div class="dash-card-head">
-          <div class="dash-card-title">추적자산</div>
-          <div class="dash-card-head-right">
-            <div class="dash-card-sub" id="dash-trk-sub">—</div>
-            <a href="#" class="dash-card-link" id="dash-trk-goto">자세히</a>
-          </div>
-        </div>
-        <!-- 카테고리 필터 칩 (v0.7-9c) — KPI/카테고리바/추이 차트 모두에 적용 -->
-        <div class="dash-trk-filter" id="dash-trk-filter">
-          <!-- chips inserted dynamically -->
-        </div>
-        <div class="dash-trk-body" id="dash-trk-body">
-          <div class="dash-chart-empty" id="dash-trk-empty">
-            추적 자산 결산이 없습니다 — 결산 탭의 <a href="#" id="dash-trk-link">자산결산</a>에서 입력하세요
-          </div>
         </div>
       </div>
 
@@ -3772,6 +3712,80 @@ body {
           이번 달 비용 거래가 없습니다
         </div>
       </div>
+    </div>
+  </div>
+  <!-- /tab-dashboard subtab -->
+  </div>
+  <!-- /tab-analysis -->
+
+  <!-- ═══ 현황 탭 (v0.7-11) — 시점형 위젯 모음 ═══ -->
+  <div class="tab-content" id="tab-status">
+    <div class="dash-header">
+      <div class="dash-title" id="status-title">현황</div>
+      <div class="dash-sub" id="status-asof">—</div>
+    </div>
+
+    <!-- 4 KPI -->
+    <div class="dash-kpi-grid">
+      <div class="dash-kpi-card">
+        <div class="dash-kpi-label">순자산</div>
+        <div class="dash-kpi-value" id="dash-kpi-networth">—</div>
+        <div class="dash-kpi-sub"   id="dash-kpi-networth-sub">—</div>
+      </div>
+      <div class="dash-kpi-card">
+        <div class="dash-kpi-label">이번달 순이익</div>
+        <div class="dash-kpi-value" id="dash-kpi-net">—</div>
+        <div class="dash-kpi-sub"   id="dash-kpi-net-sub">—</div>
+      </div>
+      <div class="dash-kpi-card">
+        <div class="dash-kpi-label">부채비율</div>
+        <div class="dash-kpi-value" id="dash-kpi-debt">—</div>
+        <div class="dash-kpi-sub"   id="dash-kpi-debt-sub">—</div>
+      </div>
+      <div class="dash-kpi-card">
+        <div class="dash-kpi-label">예산 소진율</div>
+        <div class="dash-kpi-value" id="dash-kpi-budget">—</div>
+        <div class="dash-kpi-sub"   id="dash-kpi-budget-sub">—</div>
+      </div>
+    </div>
+
+    <div id="status-body">
+      <!-- 자산 구성 도넛 -->
+      <div class="dash-card">
+        <div class="dash-card-head">
+          <div class="dash-card-title">자산 구성</div>
+          <div class="dash-card-sub" id="dash-assets-sub">—</div>
+        </div>
+        <div class="dash-doughnut-wrap">
+          <div class="dash-doughnut-chart">
+            <canvas id="dash-assets-chart"></canvas>
+          </div>
+          <div class="dash-doughnut-legend" id="dash-assets-legend"></div>
+        </div>
+        <div class="dash-chart-empty" id="dash-assets-empty" style="display:none;">
+          스냅샷이 없거나 자산이 0입니다
+        </div>
+      </div>
+
+      <!-- 추적자산 KPI (v0.7-9) — 자산결산 요약 인라인 -->
+      <div class="dash-card">
+        <div class="dash-card-head">
+          <div class="dash-card-title">추적자산</div>
+          <div class="dash-card-head-right">
+            <div class="dash-card-sub" id="dash-trk-sub">—</div>
+            <a href="#" class="dash-card-link" id="dash-trk-goto">자세히</a>
+          </div>
+        </div>
+        <!-- 카테고리 필터 칩 (v0.7-9c) — KPI/카테고리바에 적용. 추이 차트는 대시보드로 이동했지만 같은 필터 공유 -->
+        <div class="dash-trk-filter" id="dash-trk-filter">
+          <!-- chips inserted dynamically -->
+        </div>
+        <div class="dash-trk-body" id="dash-trk-body">
+          <div class="dash-chart-empty" id="dash-trk-empty">
+            추적 자산 결산이 없습니다 — 결산 탭의 <a href="#" id="dash-trk-link">자산결산</a>에서 입력하세요
+          </div>
+        </div>
+      </div>
 
       <!-- 경조사 카드 (v0.6 C2) -->
       <div class="dash-card">
@@ -3785,9 +3799,7 @@ body {
       </div>
     </div>
   </div>
-  <!-- /tab-dashboard subtab -->
-  </div>
-  <!-- /tab-analysis -->
+  <!-- /tab-status -->
 
   <!-- ═══ 계획 탭 (v0.7) — 예산 (경조사는 추후 이동) ═══ -->
   <div class="tab-content" id="tab-planning">
@@ -4945,6 +4957,11 @@ function switchTab(name, subtab) {
       activateSubtab($topPane, target);
     }
   }
+
+  // v0.7-11 — 현황 톱탭 진입 시 시점형 위젯 렌더
+  if (name === 'status') {
+    renderStatusAll();
+  }
 }
 
 // 단일 톱탭 영역 내에서 서브탭 활성화
@@ -4957,16 +4974,12 @@ function activateSubtab($topPane, subtab) {
     c.classList.toggle('active', c.id === `tab-${subtab}`)
   );
 
-  // 서브탭 진입 시 후처리 — 대시보드는 차트 재렌더
+  // 서브탭 진입 시 후처리 — 대시보드는 기간형 차트만 (v0.7-11)
   if (subtab === 'dashboard') {
-    renderDashKpi();
     renderDashNetworthChart();
     renderDashPlChart();
-    renderDashAssetsChart();
-    renderDashTrkCard();        // v0.7-9 — 추적자산 카드
-    renderDashTrkChart();       // v0.7-9 — 추적자산 추이
+    renderDashTrkChart();       // v0.7-9 — 추적자산 추이 (기간형)
     renderDashExpenseChart();
-    renderDashEventsCard();
   }
 
   // v0.7-7 — 수익률 서브탭 진입 시 렌더
@@ -4982,6 +4995,23 @@ function activateSubtab($topPane, subtab) {
   }
 }
 
+// v0.7-11 — 현황 탭 전체 렌더 (시점형 위젯 모음)
+function renderStatusAll() {
+  // 헤더의 currentMonth 갱신
+  const $title = document.getElementById('status-title');
+  if ($title) $title.textContent = `현황 · ${currentMonth}`;
+  const $asof = document.getElementById('status-asof');
+  if ($asof) {
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    $asof.textContent = `as of ${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  }
+  renderDashKpi();
+  renderDashAssetsChart();
+  renderDashTrkCard();
+  renderDashEventsCard();
+}
+
 // v0.7 — 대시보드 가시성 검사 헬퍼
 // 톱탭(분석) 활성 + 서브탭(대시보드) 활성을 모두 충족해야 화면에 보임
 function isDashboardVisible() {
@@ -4989,6 +5019,12 @@ function isDashboardVisible() {
   if (!$top || !$top.classList.contains('active')) return false;
   const $sub = document.getElementById('tab-dashboard');
   return !!$sub?.classList.contains('active');
+}
+
+// v0.7-11 — 현황 톱탭 가시성 검사
+function isStatusVisible() {
+  const $top = document.getElementById('tab-status');
+  return !!$top?.classList.contains('active');
 }
 
 // 톱탭 클릭 핸들러
@@ -5139,8 +5175,8 @@ async function loadAll() {
       renderBsBody(); // 재무상태표에도 영향
       renderEventAccountSelect();   // v0.6 적립 계좌 옵션 갱신
       renderSavings();              // v0.7-3b 자산결산도 갱신 (추적 토글 변경 등)
-      // 자산 분류가 바뀌면 도넛도 갱신 (대시보드 활성일 때)
-      if (isDashboardVisible()) {
+      // 자산 분류가 바뀌면 도넛도 갱신 (현황 탭 활성일 때) — v0.7-11
+      if (isStatusVisible()) {
         renderDashAssetsChart();
       }
     },
@@ -5160,8 +5196,8 @@ async function loadAll() {
       renderFxRates();
       renderAssetTypes();   // v0.3-2
       renderBsBody(); // 외화 환율 라벨이 BS에 들어가니 갱신
-      // 환율 변경되면 외화 자산 환산값이 바뀌니 도넛도 갱신
-      if (isDashboardVisible()) {
+      // 환율 변경되면 외화 자산 환산값이 바뀌니 도넛도 갱신 — v0.7-11 현황 탭 활성일 때
+      if (isStatusVisible()) {
         renderDashAssetsChart();
       }
       // v0.7-3b — 모달이 열려있으면 미리보기 갱신
@@ -5196,9 +5232,11 @@ async function loadAll() {
       renderDashKpi();      // v0.5 B2 — flow 결정에 settings 의존
       renderEventAccountSelect();   // v0.6 — eventSavingAccountId 선택 표시
       renderEventsList();           // v0.6 — settings 변경 시 다시 정렬 등
-      // 카테고리 마스터 변경(이름·flow 등)은 대시보드 카테고리 도넛 분류에 영향
+      // 카테고리 마스터 변경 — 트리맵(기간형, 대시보드)과 경조사(시점형, 현황) 둘 다 영향
       if (isDashboardVisible()) {
         renderDashExpenseChart();
+      }
+      if (isStatusVisible()) {
         renderDashEventsCard();   // v0.6 — 적립 계좌 이름 표시 영향
       }
     },
@@ -5236,7 +5274,7 @@ async function loadAll() {
   subscribeBgBudgets();
   subscribeBgTransactions();
 
-  // 대시보드 탭 — KPI (차트는 탭 진입 시 그림)
+  // 대시보드/현황 — KPI는 가벼우니 즉시. 차트는 탭 진입 시 그림 (v0.7-11)
   renderDashHeader();
   renderDashKpi();
   renderDashEventsCard();   // v0.6 — 가벼운 렌더라 즉시
@@ -5285,8 +5323,10 @@ function subscribeEvents() {
       renderEventsList();
       renderEventAccountSelect();
       renderEventBar();    // v0.6 — 경조사 마스터 변경 시 알림바 재평가
-      // 대시보드도 즉시 갱신 (C2)
-      if (typeof renderDashEventsCard === 'function') renderDashEventsCard();
+      // 현황 탭 활성일 때 경조사 카드도 즉시 갱신 (v0.7-11)
+      if (isStatusVisible() && typeof renderDashEventsCard === 'function') {
+        renderDashEventsCard();
+      }
     },
     err => { console.error('events subscribe error', err); showToast('경조사 로드 실패'); }
   );
@@ -5345,11 +5385,13 @@ function subscribeTransactions() {
       renderRecurringBar();
       renderBudgetBar();   // v0.4 A7
       renderEventBar();    // v0.6 — 경조사 적립 부족 알림
-      renderDashKpi();     // v0.5 B2
-      // 대시보드 차트들 — 활성일 때만 갱신 (불필요 부담 방지)
+      renderDashKpi();     // v0.5 B2 — 가벼우니 항상
+      // 기간형 차트는 대시보드 활성일 때 / 시점형은 현황 탭 활성일 때
       if (isDashboardVisible()) {
         renderDashPlChart();
         renderDashExpenseChart();
+      }
+      if (isStatusVisible()) {
         renderDashEventsCard();   // v0.6 D1 — 이번 달 적립 거래 영향
       }
     },
@@ -8235,15 +8277,16 @@ function setMonth(ym) {
   renderEventBar();        // v0.6 — 글로벌 월 기준 적립 부족 재계산
   // 글로벌 월 변경 시 트리맵 drill-down 상태 리셋 (다른 월에 그 카테고리가 없을 수 있음)
   dashExpenseDrillCategory = null;
-  // 대시보드 차트는 활성일 때만 재로드
+  // 대시보드(기간형) — 활성일 때만 재로드
   if (isDashboardVisible()) {
     renderDashNetworthChart();
     renderDashPlChart();
-    renderDashAssetsChart();
-    renderDashTrkCard();        // v0.7-9
-    renderDashTrkChart();       // v0.7-9
+    renderDashTrkChart();       // v0.7-9 — 추적자산 추이 (기간형)
     renderDashExpenseChart();
-    renderDashEventsCard();   // v0.6
+  }
+  // 현황(시점형) — 활성일 때만 재로드
+  if (isStatusVisible()) {
+    renderStatusAll();
   }
 
   // v0.7-8 — 배당 탭 활성일 때 월 변경 시 재렌더 (KPI/필터/차트는 currentMonth 종속)
@@ -8912,10 +8955,12 @@ function subscribeBsSnapshot() {
     snap => {
       bsSnapshot = snap.exists() ? snap.data() : null;
       renderBsHeader();
-      renderDashKpi();   // v0.5 B2
-      // 대시보드 탭이 활성이면 차트도 재로드 (B3, B5, D1)
+      renderDashKpi();   // v0.5 B2 — 가벼우니 항상
+      // 기간형 차트: 대시보드 활성 / 시점형 차트: 현황 활성
       if (isDashboardVisible()) {
         renderDashNetworthChart();
+      }
+      if (isStatusVisible()) {
         renderDashAssetsChart();
         renderDashEventsCard();   // v0.6 D1 — 적립 계좌 잔액 변동
       }
@@ -8966,11 +9011,14 @@ function subscribeMonthly() {
       renderBsBody();   // v0.7-5c — BS도 monthly 데이터 변경 반영
       renderBsHeader();
       renderDashKpi();
+      // 기간형 차트는 대시보드 활성 / 시점형은 현황 활성
       if (isDashboardVisible()) {
         renderDashNetworthChart();
+        renderDashTrkChart();     // v0.7-9 — 추적자산 추이 (기간형)
+      }
+      if (isStatusVisible()) {
         renderDashAssetsChart();
-        renderDashTrkCard();      // v0.7-9
-        renderDashTrkChart();     // v0.7-9
+        renderDashTrkCard();      // v0.7-9 — 추적자산 KPI 카드 (시점형)
       }
     },
     err => { console.error('monthly subscribe error', err); showToast('자산결산 로드 실패'); }
@@ -12071,9 +12119,10 @@ function renderTrkFilterChips() {
           }
         }
       }
-      // 카드 + 추이 차트 모두 재렌더 (대시보드 활성일 때)
+      // 카드는 즉시 재렌더 (현황 탭에서 클릭하므로 보임)
       renderDashTrkCard();
-      renderDashTrkChart();
+      // 추이 차트는 대시보드에 있음 — 활성일 때만 (v0.7-11)
+      if (isDashboardVisible()) renderDashTrkChart();
     });
   });
 }
