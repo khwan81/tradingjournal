@@ -2442,6 +2442,43 @@ body {
   font-weight: 500;
 }
 
+/* 추적자산 추이 — 측정 토글 + 원금 비교선 (v0.7-22) */
+.dash-trk-tools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.dash-trk-measure {
+  display: inline-flex;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+}
+.dash-trk-measure .seg-btn {
+  font-size: 11px;
+  padding: 4px 10px;
+}
+.dash-trk-prin {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text2);
+  cursor: pointer;
+  user-select: none;
+}
+.dash-trk-prin input[type="checkbox"] {
+  width: 13px; height: 13px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
 .dash-trk-summary {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -3930,11 +3967,24 @@ body {
 
       <!-- 손익 흐름 차트는 v0.7-22에서 제거 — 손익 탭의 추세 차트와 동일하므로 중복 -->
 
-      <!-- 추적자산 추이 차트 (v0.7-9) — 최근 12개월 총 평가액 -->
+      <!-- 추적자산 추이 차트 (v0.7-9 / v0.7-22 측정 토글) — 분석 기간 -->
       <div class="dash-card">
         <div class="dash-card-head">
           <div class="dash-card-title">추적자산 추이</div>
           <div class="dash-card-sub" id="dash-trk-chart-sub">최근 12개월</div>
+        </div>
+        <!-- 측정 토글 + 원금 비교선 (v0.7-22) -->
+        <div class="dash-trk-tools">
+          <div class="dash-trk-measure">
+            <button type="button" class="seg-btn active" data-trk-m="balance">평가액</button>
+            <button type="button" class="seg-btn"        data-trk-m="cumReturn">누적수익</button>
+            <button type="button" class="seg-btn"        data-trk-m="cumRate">수익률%</button>
+          </div>
+          <!-- 원금 비교선 — 단일 카테고리 + 평가액 모드일 때만 노출 -->
+          <label class="dash-trk-prin" id="dash-trk-prin-wrap" style="display:none;">
+            <input type="checkbox" id="dash-trk-show-prin" checked>
+            <span>원금 비교선</span>
+          </label>
         </div>
         <div class="dash-chart-wrap">
           <canvas id="dash-trk-chart"></canvas>
@@ -13044,49 +13094,97 @@ function svCatColorVar(cat) {
   }
 }
 
-// ─── 추이 차트 (12개월 총 평가액) ─────────────
+// ─── 추이 차트 (v0.7-22 — 카테고리별 분해 + 측정 토글) ─────────────
+// 동작:
+//   • 측정: balance (평가액) / cumReturn (누적수익) / cumRate (수익률%)
+//   • 카테고리 필터 (trkFilterCats — 현황 카드와 공유):
+//       - 단일 선택  → 그 카테고리의 라인 1개 (+ balance 모드일 때 원금 점선)
+//       - 전체/다중  → 카테고리별 스택 영역 (cumRate는 % 합산이 무의미하므로 라인)
+//   • 원금 비교선 토글 → 단일 카테고리 + 평가액 모드일 때만 노출
+//
+// 데이터: monthly 도큐먼트 (balanceKrw / principal / cumReturn / cumReturnRate)
 let dashTrkChart = null;
+let trkShowPrin = true;       // 원금 비교선 표시 (체크박스 상태)
+let trkMeasure  = 'balance';  // 'balance' | 'cumReturn' | 'cumRate'
 
 async function renderDashTrkChart() {
   const $canvas = document.getElementById('dash-trk-chart');
   const $empty  = document.getElementById('dash-trk-chart-empty');
   const $sub    = document.getElementById('dash-trk-chart-sub');
+  const $prinWrap = document.getElementById('dash-trk-prin-wrap');
   if (!$canvas || !window.Chart) return;
   if (!currentUid) return;
 
   // v0.7-12 — 분석 탭 공유 기간 적용 (없으면 최근 12개월)
   const ymList = analysisPeriodYms(12, currentMonth);
+  const fromYm = ymList[0];
+  const toYm   = ymList[ymList.length - 1];
 
   try {
+    // 1) monthly 전체 fetch → 추적자산만 + 카테고리 필터 적용
     const monthlySnap = await getDocs(pathMonthly());
-    const monByYm = new Map();   // ym → 추적자산 도큐먼트 배열 (필터 적용 후)
+    // 카테고리 → ym → [docs] 2단계 그룹
+    const catYmDocs = new Map();   // cat → Map<ym, docs[]>
     monthlySnap.forEach(d => {
       const data = { id: d.id, ...d.data() };
       if (!data.ym || !data.trackPerformance) return;
+      const cat = data.assetsCategory || '기타';
       // v0.7-9c — 카테고리 필터 적용
-      if (trkFilterCats) {
-        const cat = data.assetsCategory || '기타';
-        if (!trkFilterCats.has(cat)) return;
-      }
-      if (!monByYm.has(data.ym)) monByYm.set(data.ym, []);
-      monByYm.get(data.ym).push(data);
+      if (trkFilterCats && !trkFilterCats.has(cat)) return;
+      if (!catYmDocs.has(cat)) catYmDocs.set(cat, new Map());
+      const ymMap = catYmDocs.get(cat);
+      if (!ymMap.has(data.ym)) ymMap.set(data.ym, []);
+      ymMap.get(data.ym).push(data);
     });
 
-    const labels = ymList.map(ym => ym.slice(2));
-    const totalData = [];
-    let validCount = 0;
-    for (const ym of ymList) {
-      const docs = monByYm.get(ym) || [];
-      if (docs.length === 0) {
-        totalData.push(null);
-      } else {
-        const sum = docs.reduce((s, d) => s + (Number(d.balanceKrw) || 0), 0);
-        totalData.push(sum);
-        validCount++;
+    // 2) 표시할 카테고리 목록 — 데이터에 등장한 카테고리, 정해진 순서
+    const presentCats = [
+      ...DEFAULT_ASSET_CATEGORIES.filter(c => catYmDocs.has(c)),
+      ...[...catYmDocs.keys()].filter(c => !DEFAULT_ASSET_CATEGORIES.includes(c)).sort(),
+    ];
+    const isSingle = presentCats.length === 1;
+    const showPrinLine = isSingle && trkMeasure === 'balance' && trkShowPrin;
+
+    // 3) 측정값 추출 헬퍼
+    //    docs: 한 ym의 docs 배열 → 측정값 합계
+    function measureSum(docs) {
+      if (!docs || docs.length === 0) return null;
+      if (trkMeasure === 'balance') {
+        return docs.reduce((s, d) => s + (Number(d.balanceKrw) || 0), 0);
       }
+      if (trkMeasure === 'cumReturn') {
+        // 누적수익 = 평가액 - 원금 (KRW 환산)
+        return docs.reduce((s, d) => {
+          const bal = Number(d.balanceKrw) || 0;
+          const prn = Number(d.principal)  || 0;
+          return s + (bal - prn);
+        }, 0);
+      }
+      // cumRate — 카테고리 합산 가중평균 (원금 비중)
+      let balSum = 0, prnSum = 0;
+      for (const d of docs) {
+        balSum += Number(d.balanceKrw) || 0;
+        prnSum += Number(d.principal)  || 0;
+      }
+      if (prnSum <= 0) return null;
+      return ((balSum - prnSum) / prnSum) * 100;
     }
 
-    if (validCount === 0) {
+    // 4) 카테고리별 시리즈 데이터 빌드
+    const catSeries = new Map();   // cat → [측정값] (ymList 순서)
+    let anyData = false;
+    for (const cat of presentCats) {
+      const ymMap = catYmDocs.get(cat);
+      const arr = ymList.map(ym => {
+        const v = measureSum(ymMap.get(ym));
+        if (v != null) anyData = true;
+        return v;
+      });
+      catSeries.set(cat, arr);
+    }
+
+    // 5) 데이터 없음 처리
+    if (!anyData || presentCats.length === 0) {
       if (dashTrkChart) { dashTrkChart.destroy(); dashTrkChart = null; }
       $canvas.style.display = 'none';
       if ($empty) {
@@ -13096,46 +13194,110 @@ async function renderDashTrkChart() {
           : '추적 자산 결산이 없습니다';
       }
       if ($sub) $sub.textContent = '데이터 없음';
+      if ($prinWrap) $prinWrap.style.display = 'none';
       return;
     }
-
     $canvas.style.display = '';
     if ($empty) $empty.style.display = 'none';
 
-    if (dashTrkChart) dashTrkChart.destroy();
+    // 6) 원금 비교선 토글 노출 — 단일 카테고리 + 평가액 모드
+    if ($prinWrap) {
+      $prinWrap.style.display = (isSingle && trkMeasure === 'balance') ? 'inline-flex' : 'none';
+    }
 
-    const ctx = $canvas.getContext('2d');
+    // 7) Chart.js 데이터셋
+    const labels = ymList.map(ym => ym.slice(2));
+    const datasets = [];
+    const isPct = trkMeasure === 'cumRate';
+    const stacked = !isSingle && !isPct;   // 단일 라인 또는 % 모드는 스택 X
+
+    if (isSingle) {
+      // 단일 카테고리 — 라인 (변형 C)
+      const cat = presentCats[0];
+      const color = svCatColorVar(cat);
+      datasets.push({
+        label: cat,
+        data: catSeries.get(cat),
+        borderColor: color,
+        backgroundColor: color + '22',
+        borderWidth: 2.5,
+        tension: 0.3,
+        pointRadius: 3,
+        pointBackgroundColor: color,
+        spanGaps: true,
+        fill: false,
+      });
+      // 원금 점선 — 평가액 모드일 때만
+      if (showPrinLine) {
+        const ymMap = catYmDocs.get(cat);
+        const prinArr = ymList.map(ym => {
+          const docs = ymMap.get(ym);
+          if (!docs || docs.length === 0) return null;
+          return docs.reduce((s, d) => s + (Number(d.principal) || 0), 0);
+        });
+        datasets.push({
+          label: cat + ' 원금',
+          data: prinArr,
+          borderColor: color,
+          backgroundColor: 'transparent',
+          borderWidth: 1.5,
+          borderDash: [5, 4],
+          tension: 0.3,
+          pointRadius: 0,
+          spanGaps: true,
+          fill: false,
+        });
+      }
+    } else {
+      // 다중 카테고리 — 스택 영역 (변형 B), cumRate는 라인
+      for (const cat of presentCats) {
+        const color = svCatColorVar(cat);
+        datasets.push({
+          label: cat,
+          data: catSeries.get(cat),
+          borderColor: color,
+          backgroundColor: color + (isPct ? '22' : 'cc'),
+          borderWidth: isPct ? 2 : 1.5,
+          tension: 0.3,
+          pointRadius: isPct ? 3 : 2,
+          pointBackgroundColor: color,
+          spanGaps: true,
+          fill: !isPct,
+          stack: isPct ? undefined : 'main',
+        });
+      }
+    }
+
+    // 8) Chart 옵션
+    if (dashTrkChart) dashTrkChart.destroy();
     const css = getComputedStyle(document.documentElement);
-    const colAccent = css.getPropertyValue('--accent').trim()  || '#4f8fff';
     const colText2  = css.getPropertyValue('--text2').trim()   || '#8b909e';
     const colText3  = css.getPropertyValue('--text3').trim()   || '#555b6a';
     const colBorder = 'rgba(255,255,255,0.07)';
 
-    dashTrkChart = new Chart(ctx, {
+    dashTrkChart = new Chart($canvas.getContext('2d'), {
       type: 'line',
-      data: {
-        labels,
-        datasets: [{
-          label: '추적자산 총 평가액',
-          data: totalData,
-          borderColor: colAccent,
-          backgroundColor: colAccent + '22',
-          borderWidth: 2,
-          tension: 0.3,
-          fill: true,
-          pointRadius: 3,
-          pointBackgroundColor: colAccent,
-          spanGaps: true,
-        }]
-      },
+      data: { labels, datasets },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
         plugins: {
           legend: { display: false },
           tooltip: {
+            backgroundColor: 'rgba(20,22,28,0.95)',
+            titleColor: '#fff',
+            bodyColor: '#cbd2db',
+            borderColor: colBorder,
+            borderWidth: 1,
+            padding: 8,
             callbacks: {
-              label: ctx => '₩' + (ctx.parsed.y || 0).toLocaleString('ko-KR'),
+              label: (ctx) => {
+                const v = ctx.parsed.y;
+                if (v == null) return `${ctx.dataset.label}: —`;
+                if (isPct) return `${ctx.dataset.label}: ${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(2)}%`;
+                return `${ctx.dataset.label}: ${v >= 0 ? '' : '−'}₩${Math.abs(Math.round(v)).toLocaleString('ko-KR')}`;
+              },
             }
           }
         },
@@ -13145,13 +13307,18 @@ async function renderDashTrkChart() {
             grid: { color: colBorder, drawBorder: false },
           },
           y: {
-            beginAtZero: false,
+            stacked,
+            beginAtZero: trkMeasure !== 'balance',  // 누적수익/수익률은 0선 기준
             ticks: {
               color: colText3,
               font: { size: 10 },
-              callback: v => v >= 1e8 ? (v/1e8).toFixed(1)+'억' :
-                             v >= 1e6 ? (v/1e6).toFixed(1)+'M' :
-                             v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v,
+              callback: v => {
+                if (isPct) return v.toFixed(0) + '%';
+                const abs = Math.abs(v);
+                if (abs >= 1e8) return (v/1e8).toFixed(1) + '억';
+                if (abs >= 1e4) return (v/1e4).toFixed(0) + '만';
+                return v.toLocaleString();
+              },
             },
             grid: { color: colBorder, drawBorder: false },
           }
@@ -13159,19 +13326,43 @@ async function renderDashTrkChart() {
       }
     });
 
+    // 9) 서브 라벨
     if ($sub) {
-      const fromYm = ymList[0];
-      const toYm = ymList[ymList.length - 1];
+      const mLabel = { balance: '평가액', cumReturn: '누적수익', cumRate: '수익률%' }[trkMeasure];
       const filterInfo = trkFilterCats
         ? ` · ${trkFilterCats.size}/${trkAvailableCats.length} 카테고리`
-        : '';
-      $sub.textContent = `${fromYm} ~ ${toYm} · ${validCount}개월 입력${filterInfo}`;
+        : ` · ${presentCats.length}개 카테고리`;
+      $sub.textContent = `${fromYm} ~ ${toYm} · ${mLabel}${filterInfo}`;
     }
   } catch (e) {
     console.error('[dashboard] trk chart error', e);
     if ($sub) $sub.textContent = '차트 로드 실패';
+    if ($prinWrap) $prinWrap.style.display = 'none';
   }
 }
+
+// 측정 토글 / 원금 비교선 핸들러 (v0.7-22)
+function initTrkChartControls() {
+  document.querySelectorAll('.dash-trk-measure .seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const m = btn.dataset.trkM;
+      if (m === trkMeasure) return;
+      trkMeasure = m;
+      document.querySelectorAll('.dash-trk-measure .seg-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.trkM === m);
+      });
+      renderDashTrkChart();
+    });
+  });
+  const $prin = document.getElementById('dash-trk-show-prin');
+  if ($prin) {
+    $prin.addEventListener('change', () => {
+      trkShowPrin = $prin.checked;
+      renderDashTrkChart();
+    });
+  }
+}
+initTrkChartControls();
 
 // ── 지출 트리맵 (v0.5 B6) ──
 // 그룹 모드:
