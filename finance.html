@@ -1843,7 +1843,10 @@ body {
 
 /* 그룹 헤더 (매출 / (-)고정비 / (-)변동비) */
 .pl-group-head {
-  display: flex; justify-content: space-between; align-items: baseline;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: baseline;
+  gap: 12px;
   padding: 14px 16px 6px 16px;
   font-size: 14px;
   font-weight: 500;
@@ -1852,31 +1855,38 @@ body {
 .pl-group-head .pl-group-total {
   font-family: var(--font-mono);
   font-size: 16px;
+  text-align: right;
 }
 .pl-group.revenue .pl-group-total  { color: var(--green); }
 .pl-group.expense .pl-group-total  { color: var(--red); }
 
 /* 카테고리 행 */
 .pl-row {
-  display: flex; justify-content: space-between; align-items: baseline;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: baseline;
+  gap: 12px;
   padding: 6px 16px 6px 28px;
   font-size: 13px;
 }
 .pl-row .pl-name {
   color: var(--text2);
-  flex: 1; min-width: 0;
+  min-width: 0;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .pl-row .pl-amt {
   font-family: var(--font-mono);
   color: var(--text);
-  flex-shrink: 0;
+  text-align: right;
 }
 .pl-group:last-of-type .pl-row:last-child { padding-bottom: 12px; }
 
 /* 당기순이익 푸터 */
 .pl-net-row {
-  display: flex; justify-content: space-between; align-items: baseline;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: baseline;
+  gap: 12px;
   padding: 14px 16px;
   background: var(--bg);
   border-top: 2px solid var(--border2);
@@ -1887,10 +1897,52 @@ body {
 .pl-net-row .pl-net-amt {
   font-family: var(--font-mono);
   font-size: 18px;
+  text-align: right;
 }
 .pl-net-row .pl-net-amt.up   { color: var(--green); }
 .pl-net-row .pl-net-amt.down { color: var(--red); }
 .pl-net-row .pl-net-amt.muted { color: var(--text3); }
+
+/* v0.7-12k — 직전 동일 기간 비교 (delta 셀) */
+.pl-delta-cell {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-align: right;
+  min-width: 120px;
+  white-space: nowrap;
+}
+.pl-delta { display: inline-block; }
+.pl-delta.up    { color: var(--green); }
+.pl-delta.down  { color: var(--red); }
+.pl-delta.muted { color: var(--text3); }
+
+/* 모바일 — delta는 한 줄 아래로 */
+@media (max-width: 700px) {
+  .pl-group-head,
+  .pl-row,
+  .pl-net-row {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "name amt"
+      "name delta";
+  }
+  .pl-group-head .pl-group-title,
+  .pl-row .pl-name,
+  .pl-net-row .pl-net-label {
+    grid-area: name;
+    align-self: center;
+  }
+  .pl-group-head .pl-group-total,
+  .pl-row .pl-amt,
+  .pl-net-row .pl-net-amt {
+    grid-area: amt;
+  }
+  .pl-delta-cell {
+    grid-area: delta;
+    min-width: 0;
+    font-size: 10.5px;
+  }
+}
 
 /* 빈 그룹 (카테고리별 0건일 때 그룹 헤더는 표시하되 행은 "—") */
 .pl-row.empty .pl-amt,
@@ -5618,13 +5670,26 @@ async function renderPlBody() {
     modeLabel = currentMonth;
   }
 
-  // 안내(있다면) 동적 갱신 — "글로벌 월 (...) 단일 기준" 문구를 기간 표시로 교체
+  // v0.7-12k — 직전 동일 기간 fetch (MoM/QoQ 비교)
+  // 단일월이면 전월, N개월이면 직전 N개월
+  const monthSpan = (() => {
+    let n = 0, cur = fromYm;
+    while (cur <= toYm) { n++; cur = shiftYm(cur, 1); if (n > 120) break; }
+    return n;
+  })();
+  const prevToYm   = shiftYm(fromYm, -1);
+  const prevFromYm = shiftYm(prevToYm, -(monthSpan - 1));
+  const prevTxList = await loadAnalysisTransactions(prevFromYm, prevToYm);
+  const prevLabel  = (prevFromYm === prevToYm) ? prevFromYm : `${prevFromYm} ~ ${prevToYm}`;
+
+  // 안내(있다면) 동적 갱신 — 기간 표시 + 비교 기간
   const $info = $body.parentElement?.querySelector('.sv-info > div');
   if ($info) {
+    const compareInfo = ` · 비교: ${prevLabel}`;
     if (fromYm !== toYm) {
-      $info.innerHTML = `기간 모드 (<b>${modeLabel}</b>) · 헤더의 기간 필터로 조정합니다`;
+      $info.innerHTML = `기간 모드 (<b>${modeLabel}</b>)${compareInfo} · 헤더의 기간 필터로 조정합니다`;
     } else {
-      $info.innerHTML = `단일월 (<b>${modeLabel}</b>) · 헤더의 기간 필터로 조정합니다`;
+      $info.innerHTML = `단일월 (<b>${modeLabel}</b>)${compareInfo} · 헤더의 기간 필터로 조정합니다`;
     }
   }
 
@@ -5633,55 +5698,83 @@ async function renderPlBody() {
     return;
   }
 
-  // 1) flow별 카테고리 합계 집계
-  const sums = { revenue: new Map(), fixed: new Map(), variable: new Map() };
-  let totalRevenue = 0, totalFixed = 0, totalVariable = 0;
+  // 1) flow별 카테고리 합계 집계 — 현재 + 이전 기간 모두
+  const aggregate = (list) => {
+    const sums = { revenue: new Map(), fixed: new Map(), variable: new Map() };
+    let totalRevenue = 0, totalFixed = 0, totalVariable = 0;
+    for (const t of list || []) {
+      const flow = txFlow(t);
+      const amt = Number(t.amount) || 0;
+      if (!sums[flow]) continue;
+      const cat = t.category || '(분류 없음)';
+      sums[flow].set(cat, (sums[flow].get(cat) || 0) + amt);
+      if (flow === 'revenue')        totalRevenue  += amt;
+      else if (flow === 'fixed')     totalFixed    += amt;
+      else if (flow === 'variable')  totalVariable += amt;
+    }
+    return { sums, totalRevenue, totalFixed, totalVariable };
+  };
+  const cur  = aggregate(txList);
+  const prev = aggregate(prevTxList);
+  const { sums, totalRevenue, totalFixed, totalVariable } = cur;
 
-  for (const t of txList) {
-    const flow = txFlow(t);
-    const amt = Number(t.amount) || 0;
-    if (!sums[flow]) continue;     // 알 수 없는 flow 무시
-    const cat = t.category || '(분류 없음)';
-    sums[flow].set(cat, (sums[flow].get(cat) || 0) + amt);
-    if (flow === 'revenue')        totalRevenue  += amt;
-    else if (flow === 'fixed')     totalFixed    += amt;
-    else if (flow === 'variable')  totalVariable += amt;
-  }
+  // delta 빌더 — 절대값 + 변화율
+  //   type: 'revenue' (증가=green) | 'expense' (증가=red) | 'net' (양=green/음=red)
+  const buildDelta = (curVal, prevVal, type) => {
+    const delta = curVal - prevVal;
+    if (Math.abs(delta) < 1) return '<span class="pl-delta muted">변동 없음</span>';
+    let cls;
+    if (type === 'expense') cls = delta > 0 ? 'down' : 'up';
+    else                    cls = delta > 0 ? 'up'   : 'down';
+    const sign  = delta > 0 ? '+' : '−';
+    const arrow = delta > 0 ? '▲' : '▼';
+    const absD  = Math.abs(delta);
+    let pctStr  = '';
+    if (Math.abs(prevVal) > 0) {
+      const pct = (delta / Math.abs(prevVal)) * 100;
+      pctStr = ` (${sign}${Math.abs(pct).toFixed(1)}%)`;
+    } else if (curVal !== 0) {
+      pctStr = ' (신규)';
+    }
+    return `<span class="pl-delta ${cls}">${arrow} ${sign}${fmtAmount(absD)}${pctStr}</span>`;
+  };
 
   // 2) 카테고리 순서 결정 — settings.categories 마스터 순서 우선,
-  //    마스터에 없는 카테고리(거래 시점엔 있었지만 이후 삭제됨)는 뒤에 붙임
+  //    마스터에 없는 카테고리는 뒤에 (현재+이전 합쳐서 등장한 것 모두)
   const orderCats = (flow) => {
     const masterList = settings?.categories?.[flow] || [];
-    const inMap = sums[flow];
+    const inMapCur = sums[flow];
+    const inMapPrev = prev.sums[flow];
+    const allCats = new Set([...inMapCur.keys(), ...inMapPrev.keys()]);
     const ordered = [];
     for (const m of masterList) {
-      if (inMap.has(m)) ordered.push(m);
+      if (allCats.has(m)) ordered.push(m);
     }
-    // 마스터에 없지만 거래엔 등장한 카테고리들 (정렬: 금액 내림차순)
-    const extras = [];
-    for (const k of inMap.keys()) {
-      if (!masterList.includes(k)) extras.push(k);
-    }
-    extras.sort((a, b) => inMap.get(b) - inMap.get(a));
+    const extras = [...allCats].filter(c => !masterList.includes(c))
+      .sort((a, b) => (inMapCur.get(b) || 0) - (inMapCur.get(a) || 0));
     return [...ordered, ...extras];
   };
 
-  // 3) 그룹 HTML 빌더
-  const buildGroup = (flow, label, total, sign /* '+'|'-' */, cls /* 'revenue'|'expense' */) => {
+  // 3) 그룹 HTML 빌더 — 행마다 delta 포함
+  const buildGroup = (flow, label, total, prevTotal, sign /* '+'|'-' */, cls /* 'revenue'|'expense' */, deltaType) => {
     const cats = orderCats(flow);
     const totalStr = total === 0 ? '0' : `${sign}${fmtAmount(total)}`;
+    const totalDelta = buildDelta(total, prevTotal, deltaType);
 
     let rowsHtml;
     if (cats.length === 0) {
-      rowsHtml = `<div class="pl-row empty"><span class="pl-name">—</span><span class="pl-amt">—</span></div>`;
+      rowsHtml = `<div class="pl-row empty"><span class="pl-name">—</span><span class="pl-amt">—</span><span class="pl-delta-cell"></span></div>`;
     } else {
       rowsHtml = cats.map(cat => {
-        const amt = sums[flow].get(cat) || 0;
+        const amt     = sums[flow].get(cat) || 0;
+        const prevAmt = prev.sums[flow].get(cat) || 0;
         const amtStr = amt === 0 ? '0' : `${sign}${fmtAmount(amt)}`;
+        const rowDelta = buildDelta(amt, prevAmt, deltaType);
         return `
           <div class="pl-row">
             <span class="pl-name">${escapeHtml(cat)}</span>
             <span class="pl-amt">${amtStr}</span>
+            <span class="pl-delta-cell">${rowDelta}</span>
           </div>`;
       }).join('');
     }
@@ -5691,27 +5784,31 @@ async function renderPlBody() {
         <div class="pl-group-head">
           <span class="pl-group-title">${label}</span>
           <span class="pl-group-total">${totalStr}</span>
+          <span class="pl-delta-cell">${totalDelta}</span>
         </div>
         ${rowsHtml}
       </div>`;
   };
 
   // 4) 순이익 계산 + 표시
-  const net = totalRevenue - totalFixed - totalVariable;
+  const net     = totalRevenue - totalFixed - totalVariable;
+  const prevNet = prev.totalRevenue - prev.totalFixed - prev.totalVariable;
   let netStr, netCls;
   if (net > 0)      { netStr = `+${fmtAmount(net)}`;            netCls = 'up'; }
   else if (net < 0) { netStr = `-${fmtAmount(Math.abs(net))}`;  netCls = 'down'; }
   else              { netStr = '0';                              netCls = 'muted'; }
+  const netDelta = buildDelta(net, prevNet, 'net');
 
   // 5) 전체 HTML 조립
   $body.innerHTML = `
     <div class="pl-table">
-      ${buildGroup('revenue',  '💰 매출',      totalRevenue, '+', 'revenue')}
-      ${buildGroup('fixed',    '🔵 (-) 고정비', totalFixed,   '-', 'expense')}
-      ${buildGroup('variable', '🟡 (-) 변동비', totalVariable,'-', 'expense')}
+      ${buildGroup('revenue',  '💰 매출',      totalRevenue, prev.totalRevenue, '+', 'revenue', 'revenue')}
+      ${buildGroup('fixed',    '🔵 (-) 고정비', totalFixed,   prev.totalFixed,   '-', 'expense', 'expense')}
+      ${buildGroup('variable', '🟡 (-) 변동비', totalVariable, prev.totalVariable,'-', 'expense', 'expense')}
       <div class="pl-net-row">
         <span class="pl-net-label">당기순이익</span>
         <span class="pl-net-amt ${netCls}">${netStr}</span>
+        <span class="pl-delta-cell">${netDelta}</span>
       </div>
     </div>
   `;
