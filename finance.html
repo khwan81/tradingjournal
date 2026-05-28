@@ -1651,11 +1651,13 @@ body {
     gap: 6px;
   }
   .subtab-bar.with-action.analysis-bar .subtab-list { width: 100%; }
+  /* v0.7-21 — .subtab-action이 기본 flex-shrink:0이라 좁아지므로 모바일에선 100% */
+  .subtab-bar.with-action.analysis-bar .subtab-action { width: 100%; }
   .subtab-bar.with-action.analysis-bar .rt-period-group {
-    display: flex; gap: 6px; flex-direction: column;
+    display: flex; gap: 6px; flex-direction: column; width: 100%;
   }
   .subtab-bar.with-action.analysis-bar .rt-presets {
-    display: flex; gap: 4px;
+    display: flex; gap: 4px; width: 100%;
   }
   .subtab-bar.with-action.analysis-bar .rt-presets .rt-preset {
     flex: 1; padding: 0; text-align: center;
