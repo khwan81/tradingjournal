@@ -3694,8 +3694,8 @@ html, body { overflow-x: hidden; }
   <div class="top-header">
     <h1>💰 Finance</h1>
     <div class="user-info">
-      <a class="btn-app-switch" href="/tradingjournal/" title="매매일지로 이동">
-        <span class="sw-icon">📈</span><span class="sw-label">매매일지</span>
+      <a class="btn-app-switch" href="/tradingjournal/" title="Trading으로 이동">
+        <span class="sw-icon">📈</span><span class="sw-label">Trading</span>
       </a>
       <span id="user-email"></span>
       <button class="btn-logout" id="btn-logout">로그아웃</button>
@@ -5484,7 +5484,9 @@ import {
 } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection,
          onSnapshot, query, orderBy, getDocs, addDoc, updateDoc,
-         where, serverTimestamp, writeBatch, Timestamp } from 'firebase/firestore';
+         where, serverTimestamp, writeBatch, Timestamp,
+         initializeFirestore, persistentLocalCache,
+         persistentMultipleTabManager } from 'firebase/firestore';
 
 // ── Firebase 설정 ──
 const firebaseConfig = {
@@ -5499,7 +5501,20 @@ const firebaseConfig = {
 
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db   = getFirestore(app);
+
+/* Firestore — 오프라인 캐시 활성화 (IndexedDB persistence)
+ * 실패 시 메모리 캐시로 fallback (사파리 private 모드 등) */
+let db;
+try {
+  db = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager()
+    })
+  });
+} catch (err) {
+  console.warn('[firestore] persistent cache 실패, 메모리 모드로 동작:', err);
+  db = getFirestore(app);
+}
 
 // ── 전역 상태 ──
 let currentUid = null;

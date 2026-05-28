@@ -1,7 +1,7 @@
 {
-  "name": "가계부",
-  "short_name": "가계부",
-  "description": "개인 가계부 — 수입/지출/재무상태",
+  "name": "Finance",
+  "short_name": "Finance",
+  "description": "수입·지출 기록, 손익, 재무상태",
   "start_url": "/tradingjournal/finance.html",
   "scope": "/tradingjournal/",
   "display": "standalone",

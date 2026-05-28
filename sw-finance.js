@@ -1,63 +1,116 @@
-const CACHE_NAME = 'finance-v1';
+/* ============================================================
+ * sw-finance.js — Finance 서비스워커
+ * ============================================================
+ * 전략: sw.js와 동일.
+ *   - 앱 셸: network-first
+ *   - CDN: stale-while-revalidate
+ *   - Firestore: SW 패스 (SDK가 IndexedDB로 처리)
+ * 캐시 이름은 Trading 앱과 분리.
+ * ============================================================ */
 
-// 오프라인에서도 앱 껍데기는 보여주기 위한 캐시 목록
-const SHELL_ASSETS = [
+const CACHE_VERSION = 'v2';   // ← 이전 v1 캐시 강제 정리용
+const APP_CACHE     = `finance-app-${CACHE_VERSION}`;
+const CDN_CACHE     = `finance-cdn-${CACHE_VERSION}`;
+
+const APP_SHELL = [
   '/tradingjournal/finance.html',
   '/tradingjournal/manifest-finance.json',
+  '/tradingjournal/icons/icon-finance-192.png',
+  '/tradingjournal/icons/icon-finance-512.png',
 ];
 
-// 설치 시 shell 캐시
+const CDN_HOSTS = [
+  'www.gstatic.com',
+  'cdn.jsdelivr.net',
+  'fonts.googleapis.com',
+  'fonts.gstatic.com',
+];
+
+const FIRESTORE_HOSTS = [
+  'firestore.googleapis.com',
+  'firebaseinstallations.googleapis.com',
+  'identitytoolkit.googleapis.com',
+  'securetoken.googleapis.com',
+];
+
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(SHELL_ASSETS))
+    caches.open(APP_CACHE).then(cache => {
+      return Promise.allSettled(
+        APP_SHELL.map(url => cache.add(url).catch(err => {
+          console.warn('[sw-finance] precache skip:', url, err);
+        }))
+      );
+    }).then(() => self.skipWaiting())
   );
-  self.skipWaiting();
 });
 
-// 활성화 시 이전 캐시 정리
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys
-          .filter(key => key !== CACHE_NAME)
-          .map(key => caches.delete(key))
-      )
-    )
+    caches.keys().then(keys => Promise.all(
+      keys.filter(k => k !== APP_CACHE && k !== CDN_CACHE)
+          .map(k => caches.delete(k))
+    )).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-// 네트워크 우선, 실패 시 캐시 (Firebase는 항상 네트워크)
 self.addEventListener('fetch', event => {
-  const url = new URL(event.request.url);
+  const req = event.request;
+  if (req.method !== 'GET') return;
 
-  // http(s) 외 스킴(chrome-extension, data, blob 등)은 무시 — Cache API가 거부함
-  if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
-
-  // GET 외 메서드도 Cache.put 불가 — 캐시 우회
-  if (event.request.method !== 'GET') return;
-
-  // Firebase / CDN 요청은 캐시하지 않음 (항상 최신 데이터)
-  if (
-    url.hostname.includes('firebase') ||
-    url.hostname.includes('google') ||
-    url.hostname.includes('cdnjs') ||
-    url.hostname.includes('fonts')
-  ) {
-    return; // 브라우저 기본 동작
+  let url;
+  try {
+    url = new URL(req.url);
+  } catch {
+    return;
   }
 
-  // 앱 shell: 네트워크 우선, 실패 시 캐시
-  event.respondWith(
-    fetch(event.request)
-      .then(response => {
-        if (response.ok) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-        }
-        return response;
-      })
-      .catch(() => caches.match(event.request))
-  );
+  // http(s) 외 스킴 무시
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+
+  if (FIRESTORE_HOSTS.includes(url.hostname)) return;
+
+  if (url.origin === self.location.origin) {
+    event.respondWith(networkFirst(req, APP_CACHE));
+    return;
+  }
+
+  if (CDN_HOSTS.includes(url.hostname)) {
+    event.respondWith(staleWhileRevalidate(req, CDN_CACHE));
+    return;
+  }
 });
+
+async function networkFirst(req, cacheName) {
+  try {
+    const res = await fetch(req);
+    if (res && res.ok) {
+      const cache = await caches.open(cacheName);
+      cache.put(req, res.clone());
+    }
+    return res;
+  } catch (err) {
+    const cached = await caches.match(req);
+    if (cached) return cached;
+    if (req.mode === 'navigate') {
+      const root = await caches.match('/tradingjournal/finance.html');
+      if (root) return root;
+    }
+    throw err;
+  }
+}
+
+async function staleWhileRevalidate(req, cacheName) {
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(req);
+
+  const network = fetch(req).then(res => {
+    if (res && res.ok) cache.put(req, res.clone());
+    return res;
+  }).catch(() => null);
+
+  if (cached) return cached;
+  const res = await network;
+  if (res) return res;
+  throw new Error('sw-finance: no cache and no network for ' + req.url);
+}
