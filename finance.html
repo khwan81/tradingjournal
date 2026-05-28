@@ -156,12 +156,15 @@ body {
 .btn-google:hover { background: var(--bg4); }
 .btn-google svg { width: 18px; height: 18px; flex-shrink: 0; }
 
-/* ── App Shell ── */
+/* ── App Shell ──
+ * safe-area-inset-top은 .top-header에서만 처리 (이중 적용 방지).
+ * PWA standalone 모드에서 상단 공백이 두 번 들어가는 이슈 수정.
+ */
 #app {
   display: none;
   max-width: 980px;
   margin: 0 auto;
-  padding: env(safe-area-inset-top) 20px 40px;
+  padding: 0 20px 40px;
 }
 
 /* 상단 헤더 */
@@ -3466,7 +3469,7 @@ body {
 
 /* ── Responsive (모바일) ── */
 @media (max-width: 700px) {
-  #app { padding: env(safe-area-inset-top) 14px 30px; }
+  #app { padding: 0 14px 30px; }
   .top-header h1 { font-size: 16px; }
   .tab { padding: 11px 8px; font-size: 12px; }
   input, select, textarea, button {
@@ -3474,6 +3477,15 @@ body {
     font-size: 16px;  /* 줌 방지 */
   }
   .btn-logout { min-height: 32px; font-size: 12px; }
+  /* 필터 칩(.fchip)은 컴팩트 — 48px 강제 규칙 예외
+   * (.dash-series-filter, .dash-cat-filter, .dash-trk-filter 등에서 사용) */
+  .fchip {
+    min-height: 0;
+    height: 28px;
+    font-size: 11.5px;
+    padding: 0 11px;
+    border-radius: 99px;
+  }
   .tab { min-height: 44px; }
 
   /* 모달 → 바텀시트 */
@@ -3539,8 +3551,7 @@ body {
   .kpi-card .value { grid-area: value; font-size: 18px; text-align: right; white-space: nowrap; }
   .kpi-card .sub   { grid-area: sub;   margin-top: 0; line-height: 1.4; }
 
-  /* 필터 칩 모바일 — 폰트만 살짝 다운, height는 sm 토큰 유지 (28px) */
-  .fchip { font-size: 11px; }
+  /* 필터 칩(.fchip) 모바일 스타일은 상단(입력 최소높이 예외 처리)에서 통합됨 */
 }
 </style>
 </head>
