@@ -143,6 +143,19 @@ body {
 }
 .btn-signout:hover { border-color: var(--border2); color: var(--text); }
 
+/* 앱 스위처 — 다른 앱으로 이동 (user-chip 톤 매치) */
+.btn-app-switch {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 12px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 99px;
+  color: var(--text2); font-size: 12px; font-family: var(--font);
+  text-decoration: none; cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.btn-app-switch:hover { background: var(--bg4); color: var(--text); border-color: var(--border2); }
+.btn-app-switch .sw-icon { font-size: 13px; line-height: 1; }
+
 /* ── Tab Bar ── */
 .tab-bar {
   display: flex; gap: 2px;
@@ -626,6 +639,8 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
   .top-header { padding: 14px 0 12px; }
   .top-header h1 { font-size: 15px; }
   .user-chip span { display: none; }
+  .btn-app-switch .sw-label { display: none; }
+  .btn-app-switch { padding: 5px 10px; }
 
   /* 탭바 유지 (상단) */
   .tab-bar { display: flex; }
@@ -953,6 +968,9 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator {
   <div class="top-header">
     <h1>📈 매매일지</h1>
     <div class="header-right">
+      <a class="btn-app-switch" href="/tradingjournal/finance.html" title="Finance로 이동">
+        <span class="sw-icon">💰</span><span class="sw-label">Finance</span>
+      </a>
       <div class="user-chip" id="user-chip">
         <img id="user-photo" src="" alt="" onerror="this.style.display='none'">
         <span id="user-name"></span>
