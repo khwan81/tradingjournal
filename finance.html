@@ -161,8 +161,7 @@ body {
   display: none;
   max-width: 980px;
   margin: 0 auto;
-  /* v0.7-21 — safe-area는 .top-header에서만 처리. 여기 두면 이중 적용으로 iOS PWA 상단 공간 발생 */
-  padding: 0 20px 40px;
+  padding: env(safe-area-inset-top) 20px 40px;
 }
 
 /* 상단 헤더 */
@@ -805,6 +804,100 @@ body {
 }
 .restore-progress-step.active { color: var(--accent); border-color: var(--accent); }
 .restore-progress-step.done { color: var(--green); }
+
+/* 전체 초기화 모달 (v0.7-21) */
+.modal-reset { max-width: 540px; }
+.reset-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text2);
+  margin: 14px 0 8px;
+  letter-spacing: 0.02em;
+}
+.reset-section-title:first-child { margin-top: 4px; }
+.reset-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.reset-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.reset-option:hover { border-color: var(--border2); }
+.reset-option:has(.reset-check:checked) {
+  border-color: rgba(239, 68, 68, 0.45);
+  background: rgba(239, 68, 68, 0.06);
+}
+.reset-check {
+  margin-top: 2px;
+  width: 16px; height: 16px;
+  accent-color: var(--red, #ef4444);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.reset-option-body { flex: 1; min-width: 0; }
+.reset-option-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.reset-option-desc {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 2px;
+  line-height: 1.45;
+}
+.reset-count {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text3);
+  font-weight: 400;
+}
+.reset-count.has-data { color: var(--accent); }
+.reset-quick-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+.reset-confirm-block {
+  margin-top: 14px;
+  padding: 12px;
+  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid rgba(239, 68, 68, 0.28);
+  border-radius: 8px;
+}
+.reset-confirm-label {
+  font-size: 12px;
+  color: #fca5a5;
+  margin-bottom: 8px;
+}
+.reset-confirm-input {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: var(--font-mono);
+}
+.reset-confirm-input:focus {
+  outline: none;
+  border-color: var(--red, #ef4444);
+}
 
 /* 자산 종류 삭제 모달 (v0.3-2) */
 .atd-account-list {
@@ -1651,27 +1744,14 @@ body {
     gap: 6px;
   }
   .subtab-bar.with-action.analysis-bar .subtab-list { width: 100%; }
-  /* v0.7-21 — .subtab-action이 기본 flex-shrink:0이라 좁아지므로 모바일에선 100% */
-  .subtab-bar.with-action.analysis-bar .subtab-action { width: 100%; }
   .subtab-bar.with-action.analysis-bar .rt-period-group {
-    display: flex; gap: 6px; flex-direction: column; width: 100%;
+    display: flex; gap: 6px; flex-direction: column;
   }
   .subtab-bar.with-action.analysis-bar .rt-presets {
-    display: flex; gap: 4px; width: 100%;
+    display: flex; gap: 4px;
   }
   .subtab-bar.with-action.analysis-bar .rt-presets .rt-preset {
     flex: 1; padding: 0; text-align: center;
-  }
-  /* v0.7-21 — month range도 가로 정렬 + sm 토큰 사이즈로 통일 */
-  .subtab-bar.with-action.analysis-bar .rt-range {
-    display: flex; gap: 6px; align-items: center; justify-content: center;
-  }
-  .subtab-bar.with-action.analysis-bar .rt-month-input {
-    min-height: var(--btn-h-sm);
-    height: var(--btn-h-sm);
-    font-size: var(--btn-fs-sm);
-    padding: 0 8px;
-    flex: 0 1 auto;
   }
 }
 
@@ -2068,6 +2148,14 @@ body {
 .pl-delta.down  { color: var(--red); }
 .pl-delta.muted { color: var(--text3); }
 
+/* v0.7-23 — 비교 기간 부재 시 델타 열 자체를 그리드에서 제거 */
+.pl-table.no-delta .pl-group-head,
+.pl-table.no-delta .pl-row,
+.pl-table.no-delta .pl-net-row {
+  grid-template-columns: 1fr auto;
+}
+.pl-table.no-delta .pl-delta-cell { display: none; }
+
 /* 모바일 — delta는 한 줄 아래로 */
 @media (max-width: 700px) {
   .pl-group-head,
@@ -2093,6 +2181,12 @@ body {
     grid-area: delta;
     min-width: 0;
     font-size: 10.5px;
+  }
+  /* v0.7-23 — no-delta 모바일: delta 영역 자체 제거, name 세로 stretch X */
+  .pl-table.no-delta .pl-group-head,
+  .pl-table.no-delta .pl-row,
+  .pl-table.no-delta .pl-net-row {
+    grid-template-areas: "name amt";
   }
 }
 
@@ -2333,6 +2427,74 @@ body {
 .dash-trk-filter .fchip .chip-dot.cat-other     { background: var(--text3); }
 .dash-trk-filter .fchip[data-trk-cat="__all__"] {
   font-weight: 500;
+}
+
+/* 추이 차트 필터 칩바 (v0.7-22 카테고리 + v0.7-23 시리즈) — 공통 스타일 */
+/* 칩 색상 dot은 인라인 style 또는 svCatClass로 지정 */
+.dash-cat-filter,
+.dash-series-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 14px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.dash-cat-filter:empty,
+.dash-series-filter:empty { display: none; }
+.dash-cat-filter .fchip,
+.dash-series-filter .fchip {
+  font-size: 11px;
+  padding: 3px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: 0.2px;
+}
+.dash-cat-filter .fchip .chip-dot,
+.dash-series-filter .fchip .chip-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  flex-shrink: 0;
+}
+.dash-cat-filter .fchip[data-cat-exp="__all__"] {
+  font-weight: 500;
+}
+
+/* 추적자산 추이 — 측정 토글 + 원금 비교선 (v0.7-22) */
+.dash-trk-tools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.dash-trk-measure {
+  display: inline-flex;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+}
+.dash-trk-measure .seg-btn {
+  font-size: 11px;
+  padding: 4px 10px;
+}
+.dash-trk-prin {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text2);
+  cursor: pointer;
+  user-select: none;
+}
+.dash-trk-prin input[type="checkbox"] {
+  width: 13px; height: 13px;
+  accent-color: var(--accent);
+  cursor: pointer;
 }
 
 .dash-trk-summary {
@@ -3304,18 +3466,15 @@ body {
 
 /* ── Responsive (모바일) ── */
 @media (max-width: 700px) {
-  /* v0.7-21 — safe-area는 .top-header에서만 처리 (이중 적용 방지) */
-  #app { padding: 0 14px 30px; }
+  #app { padding: env(safe-area-inset-top) 14px 30px; }
   .top-header h1 { font-size: 16px; }
-  /* v0.7-21 — 탭바 컴팩트 (44px → 38px) */
-  .tab { padding: 9px 8px; font-size: 12px; min-height: 38px; }
-  /* v0.7-21 — button은 토큰 사이즈(sm 28px / md 34px)를 따라가도록 제외.
-   *           input/select/textarea만 48px 유지 (접근성 + iOS 자동 줌 방지). */
-  input, select, textarea {
+  .tab { padding: 11px 8px; font-size: 12px; }
+  input, select, textarea, button {
     min-height: 48px;
     font-size: 16px;  /* 줌 방지 */
   }
-  /* 옛 .btn-logout 별도 min-height 32px도 제거됨 (이제 sm 28px 토큰 적용) */
+  .btn-logout { min-height: 32px; font-size: 12px; }
+  .tab { min-height: 44px; }
 
   /* 모달 → 바텀시트 */
   .ov { padding: 0; align-items: flex-end; }
@@ -3810,45 +3969,93 @@ body {
     <span id="dash-asof" style="display:none;"></span>
 
     <div id="dash-body">
-      <!-- 순자산 추이 12개월 (B3) -->
+      <!-- 순자산 추이 12개월 (B3 / v0.7-23 — 시리즈 토글 칩 추가) -->
       <div class="dash-card">
         <div class="dash-card-head">
           <div class="dash-card-title">순자산 추이</div>
           <div class="dash-card-sub" id="dash-networth-sub">최근 12개월</div>
         </div>
+        <!-- 시리즈 토글 칩바 — 자산/부채/순자산 켜고 끄기 -->
+        <div class="dash-series-filter" id="dash-networth-filter">
+          <button type="button" class="fchip active" data-nw-series="asset">
+            <span class="chip-dot" style="background:#34d399;"></span>자산
+          </button>
+          <button type="button" class="fchip active" data-nw-series="liab">
+            <span class="chip-dot" style="background:#ef4444;"></span>부채
+          </button>
+          <button type="button" class="fchip active" data-nw-series="net">
+            <span class="chip-dot" style="background:#4f8fff;"></span>순자산
+          </button>
+        </div>
         <div class="dash-chart-wrap">
           <canvas id="dash-networth-chart"></canvas>
         </div>
         <div class="dash-chart-empty" id="dash-networth-empty" style="display:none;">
-          스냅샷이 없습니다 — 재무상태 탭에서 잔액을 입력하세요
+          잔액 데이터가 없습니다 — 결산 탭에서 잔액을 입력하세요
         </div>
       </div>
 
-      <!-- 손익 흐름 6개월 (B4) -->
-      <div class="dash-card">
-        <div class="dash-card-head">
-          <div class="dash-card-title">손익 흐름</div>
-          <div class="dash-card-sub" id="dash-pl-sub">최근 6개월</div>
-        </div>
-        <div class="dash-chart-wrap">
-          <canvas id="dash-pl-chart"></canvas>
-        </div>
-        <div class="dash-chart-empty" id="dash-pl-empty" style="display:none;">
-          거래가 없습니다 — 거래 탭에서 거래를 추가하세요
-        </div>
-      </div>
+      <!-- 손익 흐름 차트는 v0.7-22에서 제거 — 손익 탭의 추세 차트와 동일하므로 중복 -->
 
-      <!-- 추적자산 추이 차트 (v0.7-9) — 최근 12개월 총 평가액 -->
+      <!-- 추적자산 추이 차트 (v0.7-9 / v0.7-22 측정 토글) — 분석 기간 -->
       <div class="dash-card">
         <div class="dash-card-head">
           <div class="dash-card-title">추적자산 추이</div>
           <div class="dash-card-sub" id="dash-trk-chart-sub">최근 12개월</div>
+        </div>
+        <!-- 측정 토글 + 원금 비교선 + 영역 토글 (v0.7-23) -->
+        <div class="dash-trk-tools">
+          <div class="dash-trk-measure">
+            <button type="button" class="seg-btn active" data-trk-m="balance">평가액</button>
+            <button type="button" class="seg-btn"        data-trk-m="cumReturn">누적수익</button>
+            <button type="button" class="seg-btn"        data-trk-m="cumRate">수익률%</button>
+          </div>
+          <!-- 원금 비교선 — 단일 카테고리 + 평가액 모드일 때만 노출 -->
+          <label class="dash-trk-prin" id="dash-trk-prin-wrap" style="display:none;">
+            <input type="checkbox" id="dash-trk-show-prin" checked>
+            <span>원금 비교선</span>
+          </label>
+          <!-- 영역 채우기 — 스택 모드일 때만 노출 (다중 카테고리 + 평가액/누적수익) -->
+          <label class="dash-trk-prin" id="dash-trk-fill-wrap" style="display:none;">
+            <input type="checkbox" id="dash-trk-show-fill" checked>
+            <span>영역 채우기</span>
+          </label>
+        </div>
+        <!-- 카테고리 필터 칩 (v0.7-22) — 현황 탭 칩과 독립적으로 동작 -->
+        <div class="dash-trk-filter" id="dash-trk-chart-filter">
+          <!-- chips inserted dynamically -->
         </div>
         <div class="dash-chart-wrap">
           <canvas id="dash-trk-chart"></canvas>
         </div>
         <div class="dash-chart-empty" id="dash-trk-chart-empty" style="display:none;">
           추적 자산 결산이 없습니다
+        </div>
+      </div>
+
+      <!-- 카테고리별 지출 추이 (v0.7-22) — 분석 기간 + flow 토글 + 카테고리 다중 선택 -->
+      <div class="dash-card">
+        <div class="dash-card-head">
+          <div class="dash-card-title">카테고리별 지출 추이</div>
+          <div class="dash-card-sub" id="dash-cat-exp-sub">—</div>
+        </div>
+        <!-- flow 토글 (v0.7-22) — 변동 기본 -->
+        <div class="dash-trk-tools">
+          <div class="dash-trk-measure">
+            <button type="button" class="seg-btn"        data-cat-exp-flow="all">전체</button>
+            <button type="button" class="seg-btn"        data-cat-exp-flow="fixed">고정</button>
+            <button type="button" class="seg-btn active" data-cat-exp-flow="variable">변동</button>
+          </div>
+        </div>
+        <!-- 카테고리 필터 칩 — 선택된 flow 안에서 등장하는 카테고리만 -->
+        <div class="dash-cat-filter" id="dash-cat-exp-filter">
+          <!-- chips inserted dynamically -->
+        </div>
+        <div class="dash-chart-wrap">
+          <canvas id="dash-cat-exp-chart"></canvas>
+        </div>
+        <div class="dash-chart-empty" id="dash-cat-exp-empty" style="display:none;">
+          지출 거래가 없습니다
         </div>
       </div>
 
@@ -3918,7 +4125,7 @@ body {
           <div class="dash-doughnut-legend" id="dash-assets-legend"></div>
         </div>
         <div class="dash-chart-empty" id="dash-assets-empty" style="display:none;">
-          스냅샷이 없거나 자산이 0입니다
+          잔액 데이터가 없거나 자산이 0입니다
         </div>
       </div>
 
@@ -4186,17 +4393,18 @@ body {
         <button class="btn-p" id="btn-backup-download">📥 백업 다운로드</button>
       </div>
 
-      <!-- 잔고 초기화 도구 -->
+      <!-- 전체 초기화 도구 (v0.7-21) -->
       <div class="backup-card" id="reset-card">
         <div class="backup-info">
-          <div class="backup-info-title">🧹 자산/부채 잔고 초기화</div>
+          <div class="backup-info-title">🧹 전체 초기화</div>
           <div class="backup-info-desc danger">
-            자산·부채 결산(<code>monthly</code> / <code>monthly_liab</code>) 데이터를 모두 삭제합니다.<br>
-            거래·계좌 마스터·예산은 보존됩니다. 진행 전 백업을 받으세요.<br>
+            삭제할 데이터를 선택해서 초기화합니다.<br>
+            거래·결산·마스터·설정 중 원하는 항목만 골라서 삭제할 수 있습니다.<br>
+            진행 전 반드시 백업을 받으세요.<br>
             <span id="reset-status">—</span>
           </div>
         </div>
-        <button class="btn-danger" id="btn-reset-balances">전체 초기화</button>
+        <button class="btn-danger" id="btn-reset-open">전체 초기화</button>
       </div>
 
       <div class="backup-card backup-card-restore">
@@ -4279,7 +4487,7 @@ body {
           <label class="form-label" for="restore-confirm-input">
             계속하려면 <strong>복원</strong> 이라고 정확히 입력하세요
           </label>
-          <input type="text" id="restore-confirm-input" class="form-input" placeholder="복원" autocomplete="off">
+          <input type="text" id="restore-confirm-input" class="input" placeholder="복원" autocomplete="off">
         </div>
       </div>
 
@@ -4293,8 +4501,135 @@ body {
       </div>
     </div>
     <div class="modal-foot">
-      <button class="btn" data-close="ov-restore" id="restore-cancel">취소</button>
+      <button class="btn-s" data-close="ov-restore" id="restore-cancel">취소</button>
       <button class="btn-danger" id="restore-execute" disabled>복원 실행</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 모달: 전체 초기화 (v0.7-21) ── -->
+<div class="ov" id="ov-reset">
+  <div class="modal modal-reset">
+    <div class="modal-head">
+      <h3>🧹 전체 초기화</h3>
+      <button class="modal-close" data-close="ov-reset">×</button>
+    </div>
+    <div class="modal-body">
+      <!-- 단계 1: 항목 선택 -->
+      <div id="reset-step-select">
+        <div class="restore-warn" style="margin-bottom:14px;">
+          ⚠️ 삭제된 데이터는 <strong>복구할 수 없습니다</strong>.<br>
+          진행 전 반드시 백업을 받으세요.
+        </div>
+
+        <div class="reset-section-title">📊 거래·결산 데이터</div>
+        <div class="reset-options">
+          <label class="reset-option">
+            <input type="checkbox" class="reset-check" data-key="transactions">
+            <div class="reset-option-body">
+              <div class="reset-option-title">거래내역 <span class="reset-count" id="rsc-transactions">…</span></div>
+              <div class="reset-option-desc">모든 수입/지출 거래</div>
+            </div>
+          </label>
+          <label class="reset-option">
+            <input type="checkbox" class="reset-check" data-key="monthly">
+            <div class="reset-option-body">
+              <div class="reset-option-title">자산 결산 <span class="reset-count" id="rsc-monthly">…</span></div>
+              <div class="reset-option-desc">월별 자산 잔고/원금 (monthly · 옛 snapshots 포함)</div>
+            </div>
+          </label>
+          <label class="reset-option">
+            <input type="checkbox" class="reset-check" data-key="monthlyLiab">
+            <div class="reset-option-body">
+              <div class="reset-option-title">부채 결산 <span class="reset-count" id="rsc-monthlyLiab">…</span></div>
+              <div class="reset-option-desc">월별 부채 잔액 (monthly_liab)</div>
+            </div>
+          </label>
+          <label class="reset-option">
+            <input type="checkbox" class="reset-check" data-key="dividends">
+            <div class="reset-option-body">
+              <div class="reset-option-title">배당 <span class="reset-count" id="rsc-dividends">…</span></div>
+              <div class="reset-option-desc">배당 수령 기록</div>
+            </div>
+          </label>
+        </div>
+
+        <div class="reset-section-title">📅 계획 데이터</div>
+        <div class="reset-options">
+          <label class="reset-option">
+            <input type="checkbox" class="reset-check" data-key="budgets">
+            <div class="reset-option-body">
+              <div class="reset-option-title">예산 <span class="reset-count" id="rsc-budgets">…</span></div>
+              <div class="reset-option-desc">월별 카테고리 예산</div>
+            </div>
+          </label>
+          <label class="reset-option">
+            <input type="checkbox" class="reset-check" data-key="recurring">
+            <div class="reset-option-body">
+              <div class="reset-option-title">반복지출 <span class="reset-count" id="rsc-recurring">…</span></div>
+              <div class="reset-option-desc">반복지출 템플릿</div>
+            </div>
+          </label>
+          <label class="reset-option">
+            <input type="checkbox" class="reset-check" data-key="events">
+            <div class="reset-option-body">
+              <div class="reset-option-title">경조사 <span class="reset-count" id="rsc-events">…</span></div>
+              <div class="reset-option-desc">경조사 일정/기록</div>
+            </div>
+          </label>
+        </div>
+
+        <div class="reset-section-title">🏦 마스터 데이터</div>
+        <div class="reset-options">
+          <label class="reset-option">
+            <input type="checkbox" class="reset-check" data-key="accounts">
+            <div class="reset-option-body">
+              <div class="reset-option-title">계좌 마스터 <span class="reset-count" id="rsc-accounts">…</span></div>
+              <div class="reset-option-desc">모든 계좌 항목 (휴지통 포함, 자산 종류 enum은 보존)</div>
+            </div>
+          </label>
+          <label class="reset-option">
+            <input type="checkbox" class="reset-check" data-key="liabilities">
+            <div class="reset-option-body">
+              <div class="reset-option-title">부채 마스터 <span class="reset-count" id="rsc-liabilities">…</span></div>
+              <div class="reset-option-desc">모든 부채 항목 (휴지통 포함)</div>
+            </div>
+          </label>
+          <label class="reset-option">
+            <input type="checkbox" class="reset-check" data-key="settings">
+            <div class="reset-option-body">
+              <div class="reset-option-title">기타 설정</div>
+              <div class="reset-option-desc">카테고리·결제수단·환율 등 (financeSettings 전체 초기화)</div>
+            </div>
+          </label>
+        </div>
+
+        <!-- 빠른 선택 -->
+        <div class="reset-quick-row">
+          <button type="button" class="btn-s" id="btn-reset-select-all">전체 선택</button>
+          <button type="button" class="btn-s" id="btn-reset-select-none">전체 해제</button>
+        </div>
+
+        <!-- 확인 입력 -->
+        <div class="reset-confirm-block" id="reset-confirm-block" style="display:none;">
+          <div class="reset-confirm-label">
+            확인을 위해 <strong>초기화</strong>를 입력하세요
+          </div>
+          <input type="text" id="reset-confirm-input" class="reset-confirm-input" placeholder="초기화" autocomplete="off">
+        </div>
+      </div>
+
+      <!-- 단계 2: 진행 표시 -->
+      <div id="reset-step-progress" style="display:none;">
+        <div class="restore-progress">
+          <div class="restore-progress-step" id="reset-ps-1">⏳ 데이터 삭제 중…</div>
+          <div class="restore-progress-step" id="reset-ps-2">⏳ 마무리…</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-s" data-close="ov-reset" id="reset-cancel">취소</button>
+      <button class="btn-danger" id="reset-execute" disabled>초기화 실행</button>
     </div>
   </div>
 </div>
@@ -5131,8 +5466,8 @@ function activateSubtab($topPane, subtab) {
   // 서브탭 진입 시 후처리 — 대시보드는 기간형 차트만 (v0.7-11)
   if (subtab === 'dashboard') {
     renderDashNetworthChart();
-    renderDashPlChart();
     renderDashTrkChart();       // v0.7-9 — 추적자산 추이 (기간형)
+    renderDashCatExpenseChart(); // v0.7-22 — 카테고리별 지출 추이
     renderDashExpenseChart();
   }
 
@@ -5384,6 +5719,7 @@ async function loadAll() {
       renderEventsList();           // v0.6 — settings 변경 시 다시 정렬 등
       // 카테고리 마스터 변경 — 트리맵(기간형, 대시보드)과 경조사(시점형, 현황) 둘 다 영향
       if (isDashboardVisible()) {
+        renderDashCatExpenseChart();   // v0.7-22 — 카테고리명 변경 반영
         renderDashExpenseChart();
       }
       if (isStatusVisible()) {
@@ -5544,7 +5880,7 @@ function subscribeTransactions() {
       renderDashKpi();     // v0.5 B2 — 가벼우니 항상
       // 기간형 차트는 대시보드 활성일 때 / 시점형은 현황 탭 활성일 때
       if (isDashboardVisible()) {
-        renderDashPlChart();
+        renderDashCatExpenseChart();   // v0.7-22 — 거래 변경 반영
         renderDashExpenseChart();
       }
       if (isStatusVisible()) {
@@ -5832,11 +6168,16 @@ async function renderPlBody() {
   const prevFromYm = shiftYm(prevToYm, -(monthSpan - 1));
   const prevTxList = await loadAnalysisTransactions(prevFromYm, prevToYm);
   const prevLabel  = (prevFromYm === prevToYm) ? prevFromYm : `${prevFromYm} ~ ${prevToYm}`;
+  // v0.7-23 — 비교 기간이 통째로 비어 있으면 델타 표시 자체를 생략
+  //           (모든 행이 "신규"로 도배되는 무의미한 출력 방지)
+  const prevEmpty  = !prevTxList || prevTxList.length === 0;
 
   // 안내(있다면) 동적 갱신 — 기간 표시 + 비교 기간
   const $info = $body.parentElement?.querySelector('.sv-info > div');
   if ($info) {
-    const compareInfo = ` · 비교: ${prevLabel}`;
+    const compareInfo = prevEmpty
+      ? ` · 비교: ${prevLabel} (데이터 없음 — 변동 표시 생략)`
+      : ` · 비교: ${prevLabel}`;
     if (fromYm !== toYm) {
       $info.innerHTML = `기간 모드 (<b>${modeLabel}</b>)${compareInfo} · 헤더의 기간 필터로 조정합니다`;
     } else {
@@ -5871,7 +6212,9 @@ async function renderPlBody() {
 
   // delta 빌더 — 절대값 + 변화율
   //   type: 'revenue' (증가=green) | 'expense' (증가=red) | 'net' (양=green/음=red)
+  //   v0.7-23 — 비교 기간 전체가 비어 있으면 ('') 반환해 표시 자체 생략
   const buildDelta = (curVal, prevVal, type) => {
+    if (prevEmpty) return '';
     const delta = curVal - prevVal;
     if (Math.abs(delta) < 1) return '<span class="pl-delta muted">변동 없음</span>';
     let cls;
@@ -5951,8 +6294,10 @@ async function renderPlBody() {
   const netDelta = buildDelta(net, prevNet, 'net');
 
   // 5) 전체 HTML 조립
+  // v0.7-23 — prevEmpty면 .no-delta modifier로 그리드를 2열로 축소 (델타 셀 자리 제거)
+  const tableCls = prevEmpty ? 'pl-table no-delta' : 'pl-table';
   $body.innerHTML = `
-    <div class="pl-table">
+    <div class="${tableCls}">
       ${buildGroup('revenue',  '💰 매출',      totalRevenue, prev.totalRevenue, '+', 'revenue', 'revenue')}
       ${buildGroup('fixed',    '🔵 (-) 고정비', totalFixed,   prev.totalFixed,   '-', 'expense', 'expense')}
       ${buildGroup('variable', '🟡 (-) 변동비', totalVariable, prev.totalVariable,'-', 'expense', 'expense')}
@@ -8291,49 +8636,236 @@ async function writeAllToCollection(collRef, items, idField) {
 
 
 // ──────────────────────────────────────────────────────
-// v0.7-5a — 자산/부채 잔고 초기화 (snapshots/monthly/monthly_liab 일괄 삭제)
+// v0.7-21 — 전체 초기화 (선택형)
 // ──────────────────────────────────────────────────────
-async function resetBalances() {
+// 사용자가 체크박스로 선택한 항목만 삭제. 모든 데이터를 완전히 지울 수도 있고,
+// 일부만 지울 수도 있다.
+//
+// 삭제 가능 항목:
+//   • transactions  — 거래내역
+//   • monthly       — 자산 결산 (옛 snapshots 잔재도 함께)
+//   • monthlyLiab   — 부채 결산
+//   • dividends     — 배당
+//   • budgets       — 예산
+//   • recurring     — 반복지출
+//   • events        — 경조사
+//   • accounts      — 계좌 마스터 (items 컬렉션 전체. categoriesEnum 등 settings는 보존)
+//   • liabilities   — 부채 마스터 + 휴지통 (financeSettings의 liabilities/liabilitiesDeleted 필드만 삭제)
+//   • settings      — financeSettings 도큐먼트 전체 삭제 (카테고리·결제수단·환율 등)
+// ──────────────────────────────────────────────────────
+
+// 카운트 캐시 (모달 오픈 시 채워짐)
+let resetCounts = {};
+
+async function openResetModal() {
   if (!currentUid) { showToast('로그인이 필요합니다'); return; }
 
-  const ok1 = confirm(
-    '⚠️ 자산/부채 잔고 데이터를 모두 삭제합니다.\n\n' +
-    '• 자산 결산 (monthly)\n' +
-    '• 부채 결산 (monthly_liab)\n\n' +
-    '거래·계좌 마스터·예산·반복지출·경조사는 보존됩니다.\n\n' +
-    '백업을 먼저 다운로드했나요?'
-  );
-  if (!ok1) return;
-  const ok2 = confirm('정말 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.');
-  if (!ok2) return;
+  // 단계 초기화
+  document.getElementById('reset-step-select').style.display = '';
+  document.getElementById('reset-step-progress').style.display = 'none';
+  document.getElementById('reset-confirm-block').style.display = 'none';
+  document.getElementById('reset-confirm-input').value = '';
+  document.getElementById('reset-execute').disabled = true;
+  document.getElementById('reset-cancel').disabled = false;
+  document.querySelectorAll('.reset-check').forEach(cb => { cb.checked = false; });
 
-  const $btn = document.getElementById('btn-reset-balances');
-  const $status = document.getElementById('reset-status');
-  $btn.disabled = true;
-  $status.textContent = '삭제 중…';
+  // 카운트 placeholder
+  ['transactions','monthly','monthlyLiab','dividends','budgets','recurring','events','accounts','liabilities']
+    .forEach(k => {
+      const el = document.getElementById('rsc-' + k);
+      if (el) { el.textContent = '…'; el.classList.remove('has-data'); }
+    });
 
+  openOv('ov-reset');
+
+  // 백그라운드에서 카운트 페치
   try {
-    const [delSnap, delMonthly, delMonthlyLiab] = await Promise.all([
-      deleteAllInCollection(pathSnapshots()),  // 옛 잔재 정리 (있어도 없어도 무해)
-      deleteAllInCollection(pathMonthly()),
-      deleteAllInCollection(pathMonthlyLiab()),
+    const [
+      txSnap, monthlySnap, snapSnap, monthlyLiabSnap, divSnap,
+      budgetsSnap, recurringSnap, eventsSnap, accountsSnap
+    ] = await Promise.all([
+      getDocs(pathTransactions()),
+      getDocs(pathMonthly()),
+      getDocs(pathSnapshots()),
+      getDocs(pathMonthlyLiab()),
+      getDocs(pathDividends()),
+      getDocs(pathBudgets()),
+      getDocs(pathRecurring()),
+      getDocs(pathEvents()),
+      getDocs(pathAccountsItems()),
     ]);
-    const totalN = delSnap + delMonthly + delMonthlyLiab;
-    $status.innerHTML = `✅ 삭제 완료 — 총 ${totalN}건 (자산 ${delMonthly} · 부채 ${delMonthlyLiab}${delSnap > 0 ? ` · 옛 스냅 ${delSnap}` : ''})`;
-    showToast('잔고 데이터 초기화 완료');
 
-    // v0.7-7 — 수익률 캐시 무효화
-    invalidateReturnsCache();
-    if (isReturnsVisible()) renderReturns();
+    // 부채 마스터/휴지통 카운트는 현재 메모리상의 settings에서 — 별도 fetch 불필요
+    const liabActive = Array.isArray(settings?.liabilities) ? settings.liabilities.length : 0;
+    const liabTrash  = Array.isArray(settings?.liabilitiesDeleted) ? settings.liabilitiesDeleted.length : 0;
+    const liabTotal  = liabActive + liabTrash;
+
+    resetCounts = {
+      transactions: txSnap.size,
+      monthly:      monthlySnap.size + snapSnap.size,  // 옛 snapshots도 monthly 카운트에 포함
+      monthlyLiab:  monthlyLiabSnap.size,
+      dividends:    divSnap.size,
+      budgets:      budgetsSnap.size,
+      recurring:    recurringSnap.size,
+      events:       eventsSnap.size,
+      accounts:     accountsSnap.size,
+      liabilities:  liabTotal,
+      _snapshots:   snapSnap.size,  // 내부용 — monthly에 합쳐서 표시
+    };
+
+    // 카운트 UI 갱신
+    for (const k of Object.keys(resetCounts)) {
+      if (k.startsWith('_')) continue;
+      const el = document.getElementById('rsc-' + k);
+      if (!el) continue;
+      const n = resetCounts[k];
+      el.textContent = `· ${n}건`;
+      if (n > 0) el.classList.add('has-data');
+    }
   } catch (e) {
-    console.error('[reset balances]', e);
-    $status.textContent = '❌ 초기화 실패: ' + (e.message || e.code);
-  } finally {
-    $btn.disabled = false;
+    console.error('[reset] count fetch', e);
+    showToast('카운트 조회 실패: ' + (e.message || e.code));
   }
 }
 
-document.getElementById('btn-reset-balances').addEventListener('click', resetBalances);
+function getSelectedResetKeys() {
+  return Array.from(document.querySelectorAll('.reset-check'))
+    .filter(cb => cb.checked)
+    .map(cb => cb.dataset.key);
+}
+
+// 체크박스 변경 → 확인 입력 영역 표시/숨김 + 실행 버튼 활성화 조건 갱신
+function updateResetUiState() {
+  const selected = getSelectedResetKeys();
+  const $confirmBlock = document.getElementById('reset-confirm-block');
+  const $confirmInput = document.getElementById('reset-confirm-input');
+  const $exec = document.getElementById('reset-execute');
+
+  if (selected.length === 0) {
+    $confirmBlock.style.display = 'none';
+    $confirmInput.value = '';
+    $exec.disabled = true;
+    return;
+  }
+  $confirmBlock.style.display = '';
+  $exec.disabled = $confirmInput.value.trim() !== '초기화';
+}
+
+// 진행 단계 표시 헬퍼
+function setResetStep(idx, state, customText) {
+  const el = document.getElementById('reset-ps-' + idx);
+  if (!el) return;
+  el.classList.remove('active', 'done');
+  if (state === 'active') el.classList.add('active');
+  if (state === 'done')   el.classList.add('done');
+  if (customText) el.textContent = customText;
+}
+
+// 실제 삭제 실행
+async function executeReset() {
+  if (!currentUid) { showToast('로그인이 필요합니다'); return; }
+  const selected = getSelectedResetKeys();
+  if (selected.length === 0) { showToast('삭제할 항목을 선택하세요'); return; }
+  if (document.getElementById('reset-confirm-input').value.trim() !== '초기화') {
+    showToast('확인 문구가 일치하지 않습니다');
+    return;
+  }
+
+  const $exec   = document.getElementById('reset-execute');
+  const $cancel = document.getElementById('reset-cancel');
+  $exec.disabled = true;
+  $cancel.disabled = true;
+
+  // 진행 화면으로 전환
+  document.getElementById('reset-step-select').style.display = 'none';
+  document.getElementById('reset-step-progress').style.display = '';
+
+  // 구독자 정지 — 삭제 도중 onSnapshot 콜백이 발화해 렌더 에러를 내는 것 방지.
+  // 곧 페이지를 새로고침하므로 UI 상태가 잠시 비어 보일 수 있다 (의도된 동작).
+  try { unsubscribeAll(); } catch (_) { /* ignore */ }
+
+  try {
+    setResetStep(1, 'active');
+    const results = [];   // 진행 로그 ([라벨, 건수])
+
+    // 컬렉션 삭제 작업 매핑
+    // (전체 초기화 시 병렬 처리 가능하지만, 진행 가시성을 위해 순차로 처리)
+    const collectionTasks = [
+      { key: 'transactions', label: '거래내역',   ref: pathTransactions() },
+      { key: 'monthly',      label: '자산 결산',  ref: pathMonthly() },
+      { key: 'monthlyLiab',  label: '부채 결산',  ref: pathMonthlyLiab() },
+      { key: 'dividends',    label: '배당',       ref: pathDividends() },
+      { key: 'budgets',      label: '예산',       ref: pathBudgets() },
+      { key: 'recurring',    label: '반복지출',   ref: pathRecurring() },
+      { key: 'events',       label: '경조사',     ref: pathEvents() },
+      { key: 'accounts',     label: '계좌 마스터', ref: pathAccountsItems() },
+    ];
+
+    for (const t of collectionTasks) {
+      if (!selected.includes(t.key)) continue;
+      const n = await deleteAllInCollection(t.ref);
+      results.push([t.label, n]);
+    }
+
+    // 자산 결산을 선택하면 옛 snapshots 잔재도 함께 정리
+    if (selected.includes('monthly')) {
+      const n = await deleteAllInCollection(pathSnapshots());
+      if (n > 0) results.push(['옛 스냅', n]);
+    }
+
+    // 부채 마스터 + 휴지통 → financeSettings의 두 필드만 삭제 (도큐먼트는 보존)
+    // settings 전체 삭제도 같이 선택했다면 어차피 도큐먼트가 사라지므로 스킵
+    if (selected.includes('liabilities') && !selected.includes('settings')) {
+      const curSettings = settings || {};
+      // eslint-disable-next-line no-unused-vars
+      const { liabilities: _omitL, liabilitiesDeleted: _omitD, ...rest } = curSettings;
+      await setDoc(pathFinanceSettings(), rest, { merge: false });
+      const liabN = resetCounts.liabilities || 0;
+      results.push(['부채 마스터', liabN]);
+    }
+
+    // financeSettings 도큐먼트 전체 삭제 (카테고리·결제수단·환율 등)
+    if (selected.includes('settings')) {
+      await deleteDoc(pathFinanceSettings());
+      results.push(['기타 설정', 1]);
+    }
+
+    const totalDeleted = results.reduce((a, [, n]) => a + n, 0);
+    const summary = results.length
+      ? results.map(([l, n]) => `${l} ${n}`).join(' · ')
+      : '삭제된 항목 없음';
+    setResetStep(1, 'done', `✓ 삭제 완료 (총 ${totalDeleted}건) — ${summary}`);
+
+    // 마무리 — 페이지 새로고침으로 모든 구독 상태 깨끗이 정리
+    setResetStep(2, 'active', '⏳ 새로고침 준비 중…');
+    await new Promise(r => setTimeout(r, 600));
+    setResetStep(2, 'done', '✓ 완료 — 3초 후 새로고침됩니다');
+
+    showToast('초기화 완료 — 페이지를 새로고침합니다');
+    setTimeout(() => { window.location.reload(); }, 3000);
+  } catch (e) {
+    console.error('[reset] 실행 오류', e);
+    showToast('초기화 실패: ' + (e.message || e.code || '알 수 없는 오류'));
+    $cancel.disabled = false;
+    setResetStep(1, '', '⚠️ 중단됨 — 콘솔(F12)에서 오류 확인 후 다시 시도하세요');
+  }
+}
+
+// 이벤트 바인딩
+document.getElementById('btn-reset-open').addEventListener('click', openResetModal);
+document.querySelectorAll('.reset-check').forEach(cb => {
+  cb.addEventListener('change', updateResetUiState);
+});
+document.getElementById('reset-confirm-input').addEventListener('input', updateResetUiState);
+document.getElementById('btn-reset-select-all').addEventListener('click', () => {
+  document.querySelectorAll('.reset-check').forEach(cb => { cb.checked = true; });
+  updateResetUiState();
+});
+document.getElementById('btn-reset-select-none').addEventListener('click', () => {
+  document.querySelectorAll('.reset-check').forEach(cb => { cb.checked = false; });
+  updateResetUiState();
+});
+document.getElementById('reset-execute').addEventListener('click', executeReset);
 
 // ── 메인: 복원 실행 ──
 async function executeRestore() {
@@ -8444,8 +8976,8 @@ function setMonth(ym) {
   // 대시보드(기간형) — 활성일 때만 재로드
   if (isDashboardVisible()) {
     renderDashNetworthChart();
-    renderDashPlChart();
     renderDashTrkChart();       // v0.7-9 — 추적자산 추이 (기간형)
+    renderDashCatExpenseChart(); // v0.7-22 — 카테고리별 지출 추이
     renderDashExpenseChart();
   }
   // 현황(시점형) — 활성일 때만 재로드
@@ -10390,8 +10922,8 @@ function applyAnalysisPeriod() {
     renderReturns();
   } else if (activeSub === 'dashboard') {
     renderDashNetworthChart();
-    renderDashPlChart();
     renderDashTrkChart();
+    renderDashCatExpenseChart(); // v0.7-22 — 카테고리별 지출 추이
     renderDashExpenseChart();
   } else if (activeSub === 'pl') {
     renderPlBody();
@@ -11987,6 +12519,9 @@ function renderDashKpi() {
 let dashNetworthChart = null;   // Chart.js 인스턴스 (재생성 시 destroy)
 let dashChartsLoaded = false;   // 12개월 데이터 캐시 여부
 
+// v0.7-23 — 순자산 차트 시리즈 토글 상태 (자산/부채/순자산 켜고 끄기)
+let networthSeries = { asset: true, liab: true, net: true };
+
 // CSS 변수에서 색상 가져오기 (다크 테마 일관성)
 function getCssVar(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -12074,45 +12609,15 @@ async function renderDashNetworthChart() {
     if ($sub) $sub.textContent = `${fromYm} ~ ${toYm} (${validCount}개월 데이터)`;
 
     // 5) 색상 토큰 (다크 테마)
-    const colorText  = getCssVar('--text2')  || '#9aa5b1';
-    const colorGrid  = getCssVar('--border') || 'rgba(255,255,255,0.08)';
     const colorAsset = getCssVar('--green')  || '#34d399';
     const colorLiab  = getCssVar('--red')    || '#ef4444';
     const colorNet   = getCssVar('--accent') || '#4f8fff';
 
-    // 6) Chart.js 데이터셋
+    // 6) Chart.js 데이터셋 — 공통 헬퍼 (v0.7-23) + 시리즈 토글
     const datasets = [
-      {
-        label: '자산',
-        data: assetData,
-        borderColor: colorAsset,
-        backgroundColor: colorAsset + '20',
-        tension: 0.25,
-        spanGaps: true,
-        pointRadius: 3,
-        pointHoverRadius: 5,
-      },
-      {
-        label: '부채',
-        data: liabData,
-        borderColor: colorLiab,
-        backgroundColor: colorLiab + '20',
-        tension: 0.25,
-        spanGaps: true,
-        pointRadius: 3,
-        pointHoverRadius: 5,
-      },
-      {
-        label: '순자산',
-        data: netData,
-        borderColor: colorNet,
-        backgroundColor: colorNet + '20',
-        tension: 0.25,
-        spanGaps: true,
-        pointRadius: 4,
-        pointHoverRadius: 6,
-        borderWidth: 2.5,
-      },
+      makeDashDataset({ label: '자산',   data: assetData, color: colorAsset, mode: 'line', hidden: !networthSeries.asset }),
+      makeDashDataset({ label: '부채',   data: liabData,  color: colorLiab,  mode: 'line', hidden: !networthSeries.liab  }),
+      makeDashDataset({ label: '순자산', data: netData,   color: colorNet,   mode: 'line', hidden: !networthSeries.net   }),
     ];
 
     // 7) 기존 차트 destroy 후 재생성
@@ -12125,45 +12630,14 @@ async function renderDashNetworthChart() {
         responsive: true,
         maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
-        scales: {
-          x: {
-            ticks: { color: colorText, font: { size: 11 } },
-            grid:  { color: colorGrid, drawBorder: false },
+        scales: makeDashScales(),
+        plugins: makeDashPlugins({
+          tooltipLabel: (ctx) => {
+            const v = ctx.parsed.y;
+            if (v == null) return `${ctx.dataset.label}: —`;
+            return `${ctx.dataset.label}: ${(v >= 0 ? '+' : '−')}${fmtAmount(Math.abs(v))}`;
           },
-          y: {
-            ticks: {
-              color: colorText, font: { size: 11 },
-              callback: (v) => {
-                const abs = Math.abs(v);
-                if (abs >= 100000000) return (v / 100000000).toFixed(1) + '억';
-                if (abs >= 10000)     return (v / 10000).toFixed(0)   + '만';
-                return v.toLocaleString();
-              },
-            },
-            grid: { color: colorGrid, drawBorder: false },
-          },
-        },
-        plugins: {
-          legend: {
-            labels: { color: colorText, font: { size: 12 }, usePointStyle: true, padding: 14 },
-            position: 'top',
-          },
-          tooltip: {
-            backgroundColor: 'rgba(20,22,28,0.95)',
-            titleColor: '#fff',
-            bodyColor: '#cbd2db',
-            borderColor: colorGrid,
-            borderWidth: 1,
-            padding: 10,
-            callbacks: {
-              label: (ctx) => {
-                const v = ctx.parsed.y;
-                if (v == null) return `${ctx.dataset.label}: —`;
-                return `${ctx.dataset.label}: ${(v >= 0 ? '+' : '−')}${fmtAmount(Math.abs(v))}`;
-              },
-            },
-          },
-        },
+        }),
       },
     });
 
@@ -12174,163 +12648,23 @@ async function renderDashNetworthChart() {
   }
 }
 
-// ── 손익 6개월 차트 (v0.5 B4) ──
-// 데이터: 최근 6개월 거래 fetch → 월별 매출/비용/순이익 집계
-// 차트: 매출/비용 그룹 막대 + 순이익 라인 (혼합)
-let dashPlChart = null;
-
-async function renderDashPlChart() {
-  const $canvas = document.getElementById('dash-pl-chart');
-  const $empty  = document.getElementById('dash-pl-empty');
-  const $sub    = document.getElementById('dash-pl-sub');
-  if (!$canvas || !window.Chart) return;
-  if (!currentUid) return;
-
-  // v0.7-12 — 분석 탭 공유 기간 적용 (없으면 최근 6개월)
-  const ymList = analysisPeriodYms(6, currentMonth);
-  const N = ymList.length;
-  const fromYm = ymList[0];
-  const toYm   = ymList[ymList.length - 1];
-
-  try {
-    // 거래 일괄 fetch — ym in ymList
-    // Firestore 'in' 쿼리는 최대 30개 값. 그보다 길면 전체 fetch + 클라이언트 필터.
-    let txSnap;
-    if (ymList.length <= 30) {
-      txSnap = await getDocs(
-        query(pathTransactions(), where('ym', 'in', ymList))
-      );
-    } else {
-      txSnap = await getDocs(pathTransactions());
-    }
-
-    // 월별 집계
-    const sums = new Map();
-    for (const ym of ymList) sums.set(ym, { revenue: 0, expense: 0 });
-    txSnap.forEach(d => {
-      const t = d.data();
-      const bucket = sums.get(t.ym);
-      if (!bucket) return;
-      const flow = txFlow(t);
-      const amt = Number(t.amount) || 0;
-      if (flow === 'revenue')                            bucket.revenue += amt;
-      else if (flow === 'fixed' || flow === 'variable') bucket.expense += amt;
+// 순자산 차트 시리즈 토글 (v0.7-23)
+function initNetworthSeriesToggle() {
+  document.querySelectorAll('#dash-networth-filter [data-nw-series]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const s = btn.dataset.nwSeries;
+      networthSeries[s] = !networthSeries[s];
+      // 최소 한 개는 유지 — 다 끄면 마지막 누른 걸 다시 켬
+      if (!networthSeries.asset && !networthSeries.liab && !networthSeries.net) {
+        networthSeries[s] = true;
+        return;
+      }
+      btn.classList.toggle('active', networthSeries[s]);
+      renderDashNetworthChart();
     });
-
-    // 차트 데이터
-    const labels = ymList.map(ym => ym.slice(2));   // "26-05"
-    const revenueData = ymList.map(ym => sums.get(ym).revenue);
-    const expenseData = ymList.map(ym => sums.get(ym).expense);
-    const netData     = ymList.map(ym => sums.get(ym).revenue - sums.get(ym).expense);
-
-    // 모든 값이 0이면 empty
-    const hasData = revenueData.some(v => v > 0) || expenseData.some(v => v > 0);
-    if (!hasData) {
-      $canvas.style.display = 'none';
-      $empty.style.display = '';
-      if ($sub) $sub.textContent = '데이터 없음';
-      if (dashPlChart) { dashPlChart.destroy(); dashPlChart = null; }
-      return;
-    }
-    $canvas.style.display = '';
-    $empty.style.display = 'none';
-    if ($sub) $sub.textContent = `${fromYm} ~ ${toYm}`;
-
-    // 색상 토큰
-    const colorText    = getCssVar('--text2')  || '#9aa5b1';
-    const colorGrid    = getCssVar('--border') || 'rgba(255,255,255,0.08)';
-    const colorRevenue = getCssVar('--green')  || '#34d399';
-    const colorExpense = getCssVar('--red')    || '#ef4444';
-    const colorNet     = getCssVar('--accent') || '#4f8fff';
-
-    const datasets = [
-      {
-        type: 'bar',
-        label: '매출',
-        data: revenueData,
-        backgroundColor: colorRevenue + 'aa',
-        borderColor: colorRevenue,
-        borderWidth: 1,
-        order: 2,
-      },
-      {
-        type: 'bar',
-        label: '비용',
-        data: expenseData,
-        backgroundColor: colorExpense + 'aa',
-        borderColor: colorExpense,
-        borderWidth: 1,
-        order: 2,
-      },
-      {
-        type: 'line',
-        label: '순이익',
-        data: netData,
-        borderColor: colorNet,
-        backgroundColor: colorNet + '20',
-        tension: 0.25,
-        pointRadius: 4,
-        pointHoverRadius: 6,
-        borderWidth: 2.5,
-        order: 1,  // 라인이 막대 위에
-      },
-    ];
-
-    if (dashPlChart) { dashPlChart.destroy(); dashPlChart = null; }
-
-    dashPlChart = new Chart($canvas, {
-      data: { labels, datasets },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
-        scales: {
-          x: {
-            ticks: { color: colorText, font: { size: 11 } },
-            grid:  { color: colorGrid, drawBorder: false },
-          },
-          y: {
-            ticks: {
-              color: colorText, font: { size: 11 },
-              callback: (v) => {
-                const abs = Math.abs(v);
-                if (abs >= 100000000) return (v / 100000000).toFixed(1) + '억';
-                if (abs >= 10000)     return (v / 10000).toFixed(0)   + '만';
-                return v.toLocaleString();
-              },
-            },
-            grid: { color: colorGrid, drawBorder: false },
-          },
-        },
-        plugins: {
-          legend: {
-            labels: { color: colorText, font: { size: 12 }, usePointStyle: true, padding: 14 },
-            position: 'top',
-          },
-          tooltip: {
-            backgroundColor: 'rgba(20,22,28,0.95)',
-            titleColor: '#fff',
-            bodyColor: '#cbd2db',
-            borderColor: colorGrid,
-            borderWidth: 1,
-            padding: 10,
-            callbacks: {
-              label: (ctx) => {
-                const v = ctx.parsed.y;
-                if (v == null) return `${ctx.dataset.label}: —`;
-                const sign = ctx.dataset.label === '비용' ? '−' : (v >= 0 ? '+' : '−');
-                return `${ctx.dataset.label}: ${sign}${fmtAmount(Math.abs(v))}`;
-              },
-            },
-          },
-        },
-      },
-    });
-  } catch (e) {
-    console.error('[dashboard] pl chart error', e);
-    if ($sub) $sub.textContent = '차트 로드 실패';
-  }
+  });
 }
+initNetworthSeriesToggle();
 
 // ── 자산 구성 도넛 (v0.5 B5 / v0.7-3b monthly SSOT) ──
 // 데이터: 현재 월 monthlyDocs의 자산 잔액 + accounts 마스터 join
@@ -12776,133 +13110,308 @@ function svCatColorVar(cat) {
   }
 }
 
-// ─── 추이 차트 (12개월 총 평가액) ─────────────
+// ─── 추이 차트 (v0.7-22 — 카테고리별 분해 + 측정 토글) ─────────────
+// 동작:
+//   • 측정: balance (평가액) / cumReturn (누적수익) / cumRate (수익률%)
+//   • 카테고리 필터 (trkChartFilterCats — 차트 전용, 현황과 분리):
+//       - 단일 선택  → 그 카테고리의 라인 1개 (+ balance 모드일 때 원금 점선)
+//       - 전체/다중  → 카테고리별 스택 영역 (cumRate는 % 합산이 무의미하므로 라인)
+//   • 원금 비교선 토글 → 단일 카테고리 + 평가액 모드일 때만 노출
+//
+// 데이터: monthly 도큐먼트 (balanceKrw / principal / cumReturn / cumReturnRate)
+//
+// v0.7-22 — 카테고리 필터는 차트 전용 상태(trkChartFilterCats)를 가짐.
+//           현황 탭 추적자산 카드의 trkFilterCats와 분리되어 양쪽이 서로 영향을 안 줌.
 let dashTrkChart = null;
+let trkShowPrin = true;       // 원금 비교선 표시 (체크박스 상태)
+let trkShowFill = true;       // v0.7-23 — 스택 모드 영역 채우기 (체크박스 상태)
+let trkMeasure  = 'balance';  // 'balance' | 'cumReturn' | 'cumRate'
+let trkChartFilterCats = null;        // null = 전체, Set = 선택된 카테고리
+let trkChartAvailableCats = [];       // 칩 렌더용 (필터 적용 전 가용 카테고리)
 
 async function renderDashTrkChart() {
   const $canvas = document.getElementById('dash-trk-chart');
   const $empty  = document.getElementById('dash-trk-chart-empty');
   const $sub    = document.getElementById('dash-trk-chart-sub');
+  const $prinWrap = document.getElementById('dash-trk-prin-wrap');
+  const $fillWrap = document.getElementById('dash-trk-fill-wrap');
   if (!$canvas || !window.Chart) return;
   if (!currentUid) return;
 
   // v0.7-12 — 분석 탭 공유 기간 적용 (없으면 최근 12개월)
   const ymList = analysisPeriodYms(12, currentMonth);
+  const fromYm = ymList[0];
+  const toYm   = ymList[ymList.length - 1];
 
   try {
+    // 1) monthly 전체 fetch → 추적자산만 + 카테고리별 ym 그룹핑 (필터 적용 전)
     const monthlySnap = await getDocs(pathMonthly());
-    const monByYm = new Map();   // ym → 추적자산 도큐먼트 배열 (필터 적용 후)
+    // 카테고리 → ym → [docs] 2단계 그룹
+    const catYmDocsAll = new Map();   // cat → Map<ym, docs[]> (필터 전체)
     monthlySnap.forEach(d => {
       const data = { id: d.id, ...d.data() };
       if (!data.ym || !data.trackPerformance) return;
-      // v0.7-9c — 카테고리 필터 적용
-      if (trkFilterCats) {
-        const cat = data.assetsCategory || '기타';
-        if (!trkFilterCats.has(cat)) return;
-      }
-      if (!monByYm.has(data.ym)) monByYm.set(data.ym, []);
-      monByYm.get(data.ym).push(data);
+      const cat = data.assetsCategory || '기타';
+      if (!catYmDocsAll.has(cat)) catYmDocsAll.set(cat, new Map());
+      const ymMap = catYmDocsAll.get(cat);
+      if (!ymMap.has(data.ym)) ymMap.set(data.ym, []);
+      ymMap.get(data.ym).push(data);
     });
 
-    const labels = ymList.map(ym => ym.slice(2));
-    const totalData = [];
-    let validCount = 0;
-    for (const ym of ymList) {
-      const docs = monByYm.get(ym) || [];
-      if (docs.length === 0) {
-        totalData.push(null);
-      } else {
-        const sum = docs.reduce((s, d) => s + (Number(d.balanceKrw) || 0), 0);
-        totalData.push(sum);
-        validCount++;
-      }
+    // 1b) 가용 카테고리 — 데이터에 등장한 모든 카테고리 (정해진 순서 + 기타)
+    //     칩 렌더는 항상 이걸로 함 (필터 선택 후에도 다른 칩이 사라지지 않도록)
+    trkChartAvailableCats = [
+      ...DEFAULT_ASSET_CATEGORIES.filter(c => catYmDocsAll.has(c)),
+      ...[...catYmDocsAll.keys()].filter(c => !DEFAULT_ASSET_CATEGORIES.includes(c)).sort(),
+    ];
+
+    // 1c) 필터 상태 보정 — 가용 목록에 없는 카테고리는 제외, 비면 null
+    if (trkChartFilterCats) {
+      const valid = new Set([...trkChartFilterCats].filter(c => trkChartAvailableCats.includes(c)));
+      trkChartFilterCats = valid.size === 0 ? null : valid;
     }
 
-    if (validCount === 0) {
+    // 1d) 칩바 렌더 (트랜시버)
+    renderTrkChartFilterChips();
+
+    // 1e) 필터 적용된 카테고리별 그룹
+    const catYmDocs = new Map();
+    for (const cat of trkChartAvailableCats) {
+      if (trkChartFilterCats && !trkChartFilterCats.has(cat)) continue;
+      catYmDocs.set(cat, catYmDocsAll.get(cat));
+    }
+
+    // 2) 표시할 카테고리 목록 — 필터 적용 후
+    const presentCats = [...catYmDocs.keys()];
+    const isSingle = presentCats.length === 1;
+    const showPrinLine = isSingle && trkMeasure === 'balance' && trkShowPrin;
+
+    // 3) 측정값 추출 헬퍼
+    //    docs: 한 ym의 docs 배열 → 측정값 합계
+    function measureSum(docs) {
+      if (!docs || docs.length === 0) return null;
+      if (trkMeasure === 'balance') {
+        return docs.reduce((s, d) => s + (Number(d.balanceKrw) || 0), 0);
+      }
+      if (trkMeasure === 'cumReturn') {
+        // 누적수익 = 평가액 - 원금 (KRW 환산)
+        return docs.reduce((s, d) => {
+          const bal = Number(d.balanceKrw) || 0;
+          const prn = Number(d.principal)  || 0;
+          return s + (bal - prn);
+        }, 0);
+      }
+      // cumRate — 카테고리 합산 가중평균 (원금 비중)
+      let balSum = 0, prnSum = 0;
+      for (const d of docs) {
+        balSum += Number(d.balanceKrw) || 0;
+        prnSum += Number(d.principal)  || 0;
+      }
+      if (prnSum <= 0) return null;
+      return ((balSum - prnSum) / prnSum) * 100;
+    }
+
+    // 4) 카테고리별 시리즈 데이터 빌드
+    const catSeries = new Map();   // cat → [측정값] (ymList 순서)
+    let anyData = false;
+    for (const cat of presentCats) {
+      const ymMap = catYmDocs.get(cat);
+      const arr = ymList.map(ym => {
+        const v = measureSum(ymMap.get(ym));
+        if (v != null) anyData = true;
+        return v;
+      });
+      catSeries.set(cat, arr);
+    }
+
+    // 5) 데이터 없음 처리
+    if (!anyData || presentCats.length === 0) {
       if (dashTrkChart) { dashTrkChart.destroy(); dashTrkChart = null; }
       $canvas.style.display = 'none';
       if ($empty) {
         $empty.style.display = '';
-        $empty.textContent = trkFilterCats
+        $empty.textContent = trkChartFilterCats
           ? '선택된 카테고리에 해당하는 결산이 없습니다'
           : '추적 자산 결산이 없습니다';
       }
       if ($sub) $sub.textContent = '데이터 없음';
+      if ($prinWrap) $prinWrap.style.display = 'none';
+      if ($fillWrap) $fillWrap.style.display = 'none';
       return;
     }
-
     $canvas.style.display = '';
     if ($empty) $empty.style.display = 'none';
 
+    // v0.7-23 — 측정 모드별 플래그를 토글 노출보다 먼저 계산
+    const isPct = trkMeasure === 'cumRate';
+    const stacked = !isSingle && !isPct;   // 단일 라인 또는 % 모드는 스택 X
+
+    // 6) 토글 노출 (v0.7-23)
+    //    • 원금 비교선: 단일 카테고리 + 평가액 모드
+    //    • 영역 채우기: 다중(=스택) 모드일 때만 — cumRate는 스택이 아니므로 제외
+    if ($prinWrap) {
+      $prinWrap.style.display = (isSingle && trkMeasure === 'balance') ? 'inline-flex' : 'none';
+    }
+    if ($fillWrap) {
+      $fillWrap.style.display = stacked ? 'inline-flex' : 'none';
+    }
+
+    // 7) Chart.js 데이터셋
+    const labels = ymList.map(ym => ym.slice(2));
+    const datasets = [];
+
+    if (isSingle) {
+      // 단일 카테고리 — 라인 (변형 C)
+      const cat = presentCats[0];
+      const color = svCatColorVar(cat);
+      datasets.push(makeDashDataset({
+        label: cat, data: catSeries.get(cat), color, mode: 'line',
+      }));
+      // 원금 점선 — 평가액 모드일 때만
+      if (showPrinLine) {
+        const ymMap = catYmDocs.get(cat);
+        const prinArr = ymList.map(ym => {
+          const docs = ymMap.get(ym);
+          if (!docs || docs.length === 0) return null;
+          return docs.reduce((s, d) => s + (Number(d.principal) || 0), 0);
+        });
+        datasets.push(makeDashDataset({
+          label: cat + ' 원금', data: prinArr, color, mode: 'dashed',
+        }));
+      }
+    } else {
+      // 다중 카테고리 — 스택 영역 (변형 B), cumRate는 라인
+      for (const cat of presentCats) {
+        const color = svCatColorVar(cat);
+        datasets.push(makeDashDataset({
+          label: cat,
+          data: catSeries.get(cat),
+          color,
+          mode: isPct ? 'line' : 'stack',
+          fill: trkShowFill,   // v0.7-23 — 영역 채우기 체크박스
+        }));
+      }
+    }
+
+    // 8) Chart 옵션 — 공통 헬퍼 (v0.7-23)
     if (dashTrkChart) dashTrkChart.destroy();
-
-    const ctx = $canvas.getContext('2d');
-    const css = getComputedStyle(document.documentElement);
-    const colAccent = css.getPropertyValue('--accent').trim()  || '#4f8fff';
-    const colText2  = css.getPropertyValue('--text2').trim()   || '#8b909e';
-    const colText3  = css.getPropertyValue('--text3').trim()   || '#555b6a';
-    const colBorder = 'rgba(255,255,255,0.07)';
-
-    dashTrkChart = new Chart(ctx, {
+    dashTrkChart = new Chart($canvas.getContext('2d'), {
       type: 'line',
-      data: {
-        labels,
-        datasets: [{
-          label: '추적자산 총 평가액',
-          data: totalData,
-          borderColor: colAccent,
-          backgroundColor: colAccent + '22',
-          borderWidth: 2,
-          tension: 0.3,
-          fill: true,
-          pointRadius: 3,
-          pointBackgroundColor: colAccent,
-          spanGaps: true,
-        }]
-      },
+      data: { labels, datasets },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: ctx => '₩' + (ctx.parsed.y || 0).toLocaleString('ko-KR'),
-            }
-          }
-        },
-        scales: {
-          x: {
-            ticks: { color: colText2, font: { size: 10 } },
-            grid: { color: colBorder, drawBorder: false },
+        interaction: { mode: 'index', intersect: false },
+        plugins: makeDashPlugins({
+          tooltipLabel: (ctx) => {
+            const v = ctx.parsed.y;
+            if (v == null) return `${ctx.dataset.label}: —`;
+            if (isPct) return `${ctx.dataset.label}: ${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(2)}%`;
+            return `${ctx.dataset.label}: ${v >= 0 ? '' : '−'}₩${Math.abs(Math.round(v)).toLocaleString('ko-KR')}`;
           },
-          y: {
-            beginAtZero: false,
-            ticks: {
-              color: colText3,
-              font: { size: 10 },
-              callback: v => v >= 1e8 ? (v/1e8).toFixed(1)+'억' :
-                             v >= 1e6 ? (v/1e6).toFixed(1)+'M' :
-                             v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v,
-            },
-            grid: { color: colBorder, drawBorder: false },
-          }
-        }
+        }),
+        scales: makeDashScales({
+          stacked,
+          isPct,
+          beginAtZero: trkMeasure !== 'balance',
+        }),
       }
     });
 
+    // 9) 서브 라벨
     if ($sub) {
-      const fromYm = ymList[0];
-      const toYm = ymList[ymList.length - 1];
-      const filterInfo = trkFilterCats
-        ? ` · ${trkFilterCats.size}/${trkAvailableCats.length} 카테고리`
-        : '';
-      $sub.textContent = `${fromYm} ~ ${toYm} · ${validCount}개월 입력${filterInfo}`;
+      const mLabel = { balance: '평가액', cumReturn: '누적수익', cumRate: '수익률%' }[trkMeasure];
+      const filterInfo = trkChartFilterCats
+        ? ` · ${trkChartFilterCats.size}/${trkChartAvailableCats.length} 카테고리`
+        : ` · ${presentCats.length}개 카테고리`;
+      $sub.textContent = `${fromYm} ~ ${toYm} · ${mLabel}${filterInfo}`;
     }
   } catch (e) {
     console.error('[dashboard] trk chart error', e);
     if ($sub) $sub.textContent = '차트 로드 실패';
+    if ($prinWrap) $prinWrap.style.display = 'none';
+    if ($fillWrap) $fillWrap.style.display = 'none';
   }
+}
+
+// 측정 토글 / 원금 비교선 핸들러 (v0.7-22)
+function initTrkChartControls() {
+  document.querySelectorAll('.dash-trk-measure .seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const m = btn.dataset.trkM;
+      if (m === trkMeasure) return;
+      trkMeasure = m;
+      document.querySelectorAll('.dash-trk-measure .seg-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.trkM === m);
+      });
+      renderDashTrkChart();
+    });
+  });
+  const $prin = document.getElementById('dash-trk-show-prin');
+  if ($prin) {
+    $prin.addEventListener('change', () => {
+      trkShowPrin = $prin.checked;
+      renderDashTrkChart();
+    });
+  }
+  // v0.7-23 — 영역 채우기 토글
+  const $fill = document.getElementById('dash-trk-show-fill');
+  if ($fill) {
+    $fill.addEventListener('change', () => {
+      trkShowFill = $fill.checked;
+      renderDashTrkChart();
+    });
+  }
+}
+initTrkChartControls();
+
+// 차트 전용 카테고리 칩 렌더 (v0.7-22)
+// 현황 탭의 renderTrkFilterChips와 같은 패턴이지만, 자체 상태(trkChartFilterCats)와
+// 자체 data 속성(data-trk-chart-cat)을 사용해 완전히 분리.
+function renderTrkChartFilterChips() {
+  const $filter = document.getElementById('dash-trk-chart-filter');
+  if (!$filter) return;
+  if (trkChartAvailableCats.length === 0) {
+    $filter.innerHTML = '';
+    return;
+  }
+
+  // "전체" 활성 = trkChartFilterCats === null
+  const allActive = trkChartFilterCats === null;
+  let html = `<button type="button" class="fchip ${allActive ? 'active' : ''}" data-trk-chart-cat="__all__">전체</button>`;
+  for (const cat of trkChartAvailableCats) {
+    const active = trkChartFilterCats ? trkChartFilterCats.has(cat) : true;
+    html += `<button type="button" class="fchip ${active ? 'active' : ''}" data-trk-chart-cat="${escapeHtml(cat)}">
+      <span class="chip-dot ${svCatClass(cat)}"></span>${escapeHtml(cat)}
+    </button>`;
+  }
+  $filter.innerHTML = html;
+
+  // 클릭 핸들러 — 요소가 매번 재생성되므로 직접 바인딩
+  $filter.querySelectorAll('[data-trk-chart-cat]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const cat = btn.dataset.trkChartCat;
+      if (cat === '__all__') {
+        trkChartFilterCats = null;
+      } else {
+        if (trkChartFilterCats === null) {
+          // "전체" 상태에서 한 칩 클릭 → 그것만 보기
+          trkChartFilterCats = new Set([cat]);
+        } else {
+          const next = new Set(trkChartFilterCats);
+          if (next.has(cat)) next.delete(cat);
+          else next.add(cat);
+          if (next.size === 0 || next.size === trkChartAvailableCats.length) {
+            trkChartFilterCats = null;
+          } else {
+            trkChartFilterCats = next;
+          }
+        }
+      }
+      // 차트 재렌더 (칩바도 안에서 다시 그려짐)
+      renderDashTrkChart();
+    });
+  });
 }
 
 // ── 지출 트리맵 (v0.5 B6) ──
@@ -12923,6 +13432,370 @@ const EXPENSE_TREEMAP_COLORS = {
     '#34d399', '#22c55e', '#10b981', '#06b6d4', '#0ea5e9', '#84cc16',
   ],
 };
+
+// ──────────────────────────────────────────────────────
+// 라인 차트 식별 팔레트 (v0.7-23) — 추이 차트 전용
+// ──────────────────────────────────────────────────────
+// 트리맵은 카테고리 비중 시각화라 같은 톤(그린/시안 또는 블루/퍼플)이 적절하지만,
+// 라인 차트는 라인 간 식별이 핵심이라 톤이 다른 10색이 필요.
+// dark theme에서 가독성이 검증된 톤들로 구성.
+const DASH_LINE_PALETTE = [
+  '#5b8def',   // 블루
+  '#ef6c4d',   // 오렌지
+  '#34d399',   // 그린
+  '#a78bfa',   // 퍼플
+  '#fbbf24',   // 앰버
+  '#f472b6',   // 핑크
+  '#22d3ee',   // 시안
+  '#84cc16',   // 라임
+  '#f87171',   // 레드
+  '#9aa5b1',   // 그레이
+];
+
+// 공통 차트 옵션 토큰 (v0.7-23) — 3개 추이 차트가 일관된 시각 유지
+// 각 차트는 dataset 단위 옵션만 다르고 옵션 객체는 이 헬퍼로 통일.
+function getDashChartTokens() {
+  const css = getComputedStyle(document.documentElement);
+  return {
+    text:   (css.getPropertyValue('--text2').trim()   || '#8b909e'),
+    text3:  (css.getPropertyValue('--text3').trim()   || '#555b6a'),
+    grid:   'rgba(255,255,255,0.07)',
+    tooltipBg: 'rgba(20,22,28,0.95)',
+  };
+}
+
+// 공통 dataset 스타일 (라인 모드 / 스택 모드 / 단일 라인)
+//   color: 라인 색
+//   mode: 'line' (단일 또는 다중 라인) | 'stack' (영역 스택) | 'dashed' (점선 비교선)
+//   fill: stack 모드에서 영역 채우기 끌 수 있음 (기본 true)
+function makeDashDataset({ label, data, color, mode = 'line', stackId, hidden, fill }) {
+  const base = {
+    label,
+    data,
+    borderColor: color,
+    tension: 0.3,
+    spanGaps: true,
+    hidden: !!hidden,
+  };
+  if (mode === 'stack') {
+    // v0.7-23 — 알파 22(0.13)로 통일 (다른 차트와 동일)
+    // fill 끌 수 있도록 옵션화 — 끄면 라인만 보이는 누적 라인 차트가 됨
+    const fillOn = fill !== false;
+    return {
+      ...base,
+      backgroundColor: color + '22',
+      borderWidth: 2,
+      pointRadius: 2,
+      pointHoverRadius: 5,
+      pointBackgroundColor: color,
+      fill: fillOn,
+      stack: stackId || 'main',
+    };
+  }
+  if (mode === 'dashed') {
+    return {
+      ...base,
+      backgroundColor: 'transparent',
+      borderWidth: 1.5,
+      borderDash: [5, 4],
+      pointRadius: 0,
+      pointHoverRadius: 0,
+      fill: false,
+    };
+  }
+  // line (단일 또는 다중)
+  return {
+    ...base,
+    backgroundColor: color + '22',
+    borderWidth: 2.5,
+    pointRadius: 2,
+    pointHoverRadius: 5,
+    pointBackgroundColor: color,
+    fill: false,
+  };
+}
+
+// 공통 axis 옵션 (KRW 또는 %)
+function makeDashScales({ stacked = false, isPct = false, beginAtZero = false } = {}) {
+  const t = getDashChartTokens();
+  return {
+    x: {
+      ticks: { color: t.text, font: { size: 10 } },
+      grid:  { color: t.grid, drawBorder: false },
+    },
+    y: {
+      stacked,
+      beginAtZero,
+      ticks: {
+        color: t.text3,
+        font: { size: 10 },
+        callback: (v) => {
+          if (isPct) return v.toFixed(0) + '%';
+          const abs = Math.abs(v);
+          if (abs >= 1e8) return (v / 1e8).toFixed(1) + '억';
+          if (abs >= 1e4) return (v / 1e4).toFixed(0) + '만';
+          return v.toLocaleString();
+        },
+      },
+      grid: { color: t.grid, drawBorder: false },
+    },
+  };
+}
+
+// 공통 plugins 옵션 (legend는 항상 끔 — 칩이 범례 역할)
+function makeDashPlugins({ tooltipLabel } = {}) {
+  const t = getDashChartTokens();
+  return {
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: t.tooltipBg,
+      titleColor: '#fff',
+      bodyColor: '#cbd2db',
+      borderColor: t.grid,
+      borderWidth: 1,
+      padding: 8,
+      callbacks: tooltipLabel ? { label: tooltipLabel } : undefined,
+    },
+  };
+}
+
+// ──────────────────────────────────────────────────────
+// 카테고리별 지출 추이 차트 (v0.7-22)
+// ──────────────────────────────────────────────────────
+// 데이터: 분석 기간 transactions의 fixed/variable 거래
+//         (returnsCurrentRange 있으면 그 기간, 없으면 최근 6개월)
+// 표시: 카테고리별 라인 (최대 N개) — 월별 합계
+// 필터: 카테고리 다중 선택. 선택 안 하면 합계 상위 N개 자동 표시
+//
+// 색상: 트리맵과 같은 EXPENSE_TREEMAP_COLORS 팔레트 재사용 (시각적 일관성)
+//
+// 상태:
+//   • catExpFilter === null  : 전체 (상위 N개 자동)
+//   • catExpFilter = Set([..]) : 선택한 카테고리만
+//   • catExpFlow             : 'all' | 'fixed' | 'variable' (기본 'variable')
+
+let dashCatExpenseChart = null;
+let catExpFilter = null;           // null = 전체 (상위 자동), Set = 선택 카테고리
+let catExpAvailableCats = [];      // 가장 최근 렌더에서 등장한 카테고리 [{cat, flow, total}]
+let catExpFlow = 'variable';       // v0.7-22 — flow 토글 (전체/고정/변동), 변동 기본
+const CAT_EXP_TOP_N = 5;           // "전체" 모드일 때 상위 몇 개 카테고리를 라인으로 그릴지
+
+// 카테고리 → 일관된 색상 매핑 (trace의 모든 호출에서 같은 카테고리는 같은 색)
+// v0.7-23 — 라인 식별을 위해 DASH_LINE_PALETTE 사용 (트리맵과 분리)
+//           트리맵은 같은 톤(비중 시각화), 라인은 다른 톤(식별)이 목적
+function buildCatExpColorMap(cats) {
+  const map = new Map();
+  let i = 0;
+  for (const { cat } of cats) {
+    if (map.has(cat)) continue;
+    map.set(cat, DASH_LINE_PALETTE[i % DASH_LINE_PALETTE.length]);
+    i++;
+  }
+  return map;
+}
+
+async function renderDashCatExpenseChart() {
+  const $canvas = document.getElementById('dash-cat-exp-chart');
+  const $empty  = document.getElementById('dash-cat-exp-empty');
+  const $sub    = document.getElementById('dash-cat-exp-sub');
+  if (!$canvas || !window.Chart) return;
+  if (!currentUid) return;
+
+  try {
+    // 1) 기간 결정 — 트리맵과 동일한 로직 (분석 캐시 활용)
+    let txData;
+    let modeLabel;
+    let ymList;
+    if (returnsCurrentRange) {
+      const { fromYm, toYm } = returnsCurrentRange;
+      txData = await loadAnalysisTransactions(fromYm, toYm);
+      ymList = buildYmList(fromYm, toYm);
+      modeLabel = (fromYm === toYm) ? fromYm : `${fromYm} ~ ${toYm}`;
+    } else {
+      // 분석 캐시 없음 → 분석 탭 기본 기간(최근 6개월)을 사용해 fetch
+      ymList = analysisPeriodYms(6, currentMonth);
+      const fromYm = ymList[0];
+      const toYm   = ymList[ymList.length - 1];
+      txData = await loadAnalysisTransactions(fromYm, toYm);
+      modeLabel = `${fromYm} ~ ${toYm}`;
+    }
+
+    // 2) 카테고리별 월별 합계 집계 (flow 토글 적용 — fixed/variable/all)
+    //    catTotals: Map<cat, { flow, monthSums: Map<ym, sum>, total }>
+    const catTotals = new Map();
+    for (const t of (txData || [])) {
+      const flow = txFlow(t);
+      if (flow !== 'fixed' && flow !== 'variable') continue;
+      // v0.7-22 — flow 토글 적용: 'all'은 모두 통과, 'fixed'/'variable'은 해당 flow만
+      if (catExpFlow !== 'all' && flow !== catExpFlow) continue;
+      const cat = t.category || '(분류 없음)';
+      const ym  = t.ym;
+      if (!ymList.includes(ym)) continue;
+      const amt = Number(t.amount) || 0;
+      if (!catTotals.has(cat)) {
+        catTotals.set(cat, { flow, monthSums: new Map(), total: 0 });
+      }
+      const entry = catTotals.get(cat);
+      entry.monthSums.set(ym, (entry.monthSums.get(ym) || 0) + amt);
+      entry.total += amt;
+    }
+
+    // 3) 가용 카테고리 — 총합 큰 순서로 정렬 (트리맵 색상 매핑은 등장 순서로 일관)
+    const cats = Array.from(catTotals.entries())
+      .map(([cat, v]) => ({ cat, flow: v.flow, total: v.total }))
+      .sort((a, b) => b.total - a.total);
+    catExpAvailableCats = cats;
+
+    // 4) 필터 상태 보정 — 가용 목록에 없는 카테고리는 제외
+    if (catExpFilter) {
+      const validCats = new Set(cats.map(c => c.cat));
+      const valid = new Set([...catExpFilter].filter(c => validCats.has(c)));
+      catExpFilter = valid.size === 0 ? null : valid;
+    }
+
+    // 5) 필터 칩 렌더 (색상 매핑 일관성 위해 항상 전체 cats로 빌드)
+    const colorMap = buildCatExpColorMap(cats);
+    renderCatExpFilterChips(cats, colorMap);
+
+    // 6) 데이터 없음 처리
+    if (cats.length === 0) {
+      if (dashCatExpenseChart) { dashCatExpenseChart.destroy(); dashCatExpenseChart = null; }
+      $canvas.style.display = 'none';
+      if ($empty) {
+        $empty.style.display = '';
+        // flow별 안내 메시지
+        const flowLabel = catExpFlow === 'fixed' ? '고정지출' : catExpFlow === 'variable' ? '변동지출' : '지출';
+        $empty.textContent = `${flowLabel} 거래가 없습니다`;
+      }
+      if ($sub) $sub.textContent = `${modeLabel} · 데이터 없음`;
+      return;
+    }
+    $canvas.style.display = '';
+    if ($empty) $empty.style.display = 'none';
+
+    // 7) 그릴 카테고리 결정
+    //    • 필터 있음 → 그것만
+    //    • 필터 없음 → 상위 N개
+    let drawCats;
+    if (catExpFilter) {
+      drawCats = cats.filter(c => catExpFilter.has(c.cat));
+    } else {
+      drawCats = cats.slice(0, CAT_EXP_TOP_N);
+    }
+
+    if (drawCats.length === 0) {
+      if (dashCatExpenseChart) { dashCatExpenseChart.destroy(); dashCatExpenseChart = null; }
+      $canvas.style.display = 'none';
+      if ($empty) { $empty.style.display = ''; $empty.textContent = '선택된 카테고리에 해당하는 거래가 없습니다'; }
+      if ($sub) $sub.textContent = `${modeLabel} · 0/${cats.length}`;
+      return;
+    }
+
+    // 8) 차트 데이터셋 빌드
+    const labels = ymList.map(ym => ym.slice(2));   // "26-05"
+    const datasets = drawCats.map(({ cat }) => {
+      const entry = catTotals.get(cat);
+      const data = ymList.map(ym => entry.monthSums.get(ym) || 0);
+      const color = colorMap.get(cat) || '#9aa5b1';
+      return makeDashDataset({ label: cat, data, color, mode: 'line' });
+    });
+
+    // 9) Chart.js 옵션 — 공통 헬퍼 사용 (v0.7-23)
+    if (dashCatExpenseChart) dashCatExpenseChart.destroy();
+
+    dashCatExpenseChart = new Chart($canvas.getContext('2d'), {
+      type: 'line',
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: makeDashPlugins({
+          tooltipLabel: (ctx) => `${ctx.dataset.label}: ${fmtAmount(ctx.parsed.y || 0)}`,
+        }),
+        scales: makeDashScales({ beginAtZero: true }),
+      },
+    });
+
+    // 10) 서브 라벨
+    if ($sub) {
+      const totalSum = drawCats.reduce((s, c) => s + c.total, 0);
+      const flowLabel = catExpFlow === 'fixed' ? '고정' : catExpFlow === 'variable' ? '변동' : '전체';
+      const filterInfo = catExpFilter
+        ? ` · ${drawCats.length}/${cats.length} 카테고리`
+        : (cats.length > CAT_EXP_TOP_N ? ` · 상위 ${CAT_EXP_TOP_N}/${cats.length}` : '');
+      $sub.textContent = `${modeLabel} · ${flowLabel} · ${fmtAmount(totalSum)}${filterInfo}`;
+    }
+  } catch (e) {
+    console.error('[dashboard] cat-expense chart error', e);
+    if ($sub) $sub.textContent = '차트 로드 실패';
+  }
+}
+
+// 필터 칩 렌더 — 트랜시버 (renderDashCatExpenseChart에서 호출)
+function renderCatExpFilterChips(cats, colorMap) {
+  const $filter = document.getElementById('dash-cat-exp-filter');
+  if (!$filter) return;
+  if (!cats || cats.length === 0) {
+    $filter.innerHTML = '';
+    return;
+  }
+
+  // "전체" 활성 = catExpFilter === null
+  const allActive = catExpFilter === null;
+  let html = `<button type="button" class="fchip ${allActive ? 'active' : ''}" data-cat-exp="__all__">전체</button>`;
+
+  for (const { cat } of cats) {
+    const active = catExpFilter ? catExpFilter.has(cat) : false;
+    const color  = colorMap.get(cat) || '#9aa5b1';
+    html += `<button type="button" class="fchip ${active ? 'active' : ''}" data-cat-exp="${escapeHtml(cat)}">
+      <span class="chip-dot" style="background:${color};"></span>${escapeHtml(cat)}
+    </button>`;
+  }
+  $filter.innerHTML = html;
+
+  // 클릭 핸들러
+  $filter.querySelectorAll('[data-cat-exp]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const cat = btn.dataset.catExp;
+      if (cat === '__all__') {
+        catExpFilter = null;
+      } else {
+        if (catExpFilter === null) {
+          // "전체" 상태에서 한 칩 클릭 → 그것만 보기
+          catExpFilter = new Set([cat]);
+        } else {
+          const next = new Set(catExpFilter);
+          if (next.has(cat)) next.delete(cat);
+          else next.add(cat);
+          // 비면 자동으로 "전체"로 복귀
+          if (next.size === 0) catExpFilter = null;
+          else catExpFilter = next;
+        }
+      }
+      // 차트 재렌더 (대시보드 활성일 때만 의미 있음)
+      renderDashCatExpenseChart();
+    });
+  });
+}
+
+// flow 토글 핸들러 (v0.7-22) — 전체/고정/변동
+// flow 변경 시: 카테고리 필터는 자동 리셋 (이전 flow의 카테고리가 다른 flow엔 존재하지 않을 수 있음)
+function initCatExpFlowToggle() {
+  document.querySelectorAll('[data-cat-exp-flow]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const f = btn.dataset.catExpFlow;
+      if (f === catExpFlow) return;
+      catExpFlow = f;
+      catExpFilter = null;   // flow가 바뀌면 카테고리 필터 리셋
+      document.querySelectorAll('[data-cat-exp-flow]').forEach(b => {
+        b.classList.toggle('active', b.dataset.catExpFlow === f);
+      });
+      renderDashCatExpenseChart();
+    });
+  });
+}
+initCatExpFlowToggle();
 
 async function renderDashExpenseChart() {
   const $canvas = document.getElementById('dash-expense-chart');
