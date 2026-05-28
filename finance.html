@@ -4162,13 +4162,22 @@ html, body { overflow-x: hidden; }
         </div>
       </div>
 
-      <!-- 지출 트리맵 (v0.5 B6) — 카테고리 → 메모 2단계 + drill-down -->
+      <!-- 지출 트리맵 (v0.5 B6) — 카테고리 → 메모 2단계 + drill-down
+           v0.7-24 — flow 토글 (전체/고정/변동) 추가 -->
       <div class="dash-card">
         <div class="dash-card-head">
           <div class="dash-card-title" id="dash-expense-title">지출 트리맵</div>
           <div class="dash-card-head-right">
             <button type="button" class="btn-s" id="btn-dash-expense-back" style="display:none;">← 돌아가기</button>
             <div class="dash-card-sub" id="dash-expense-sub">—</div>
+          </div>
+        </div>
+        <!-- flow 토글 (v0.7-24) — 전체 기본. 변경 시 drill-down 자동 해제 -->
+        <div class="dash-trk-tools">
+          <div class="dash-trk-measure">
+            <button type="button" class="seg-btn active" data-exp-tm-flow="all">전체</button>
+            <button type="button" class="seg-btn"        data-exp-tm-flow="fixed">고정</button>
+            <button type="button" class="seg-btn"        data-exp-tm-flow="variable">변동</button>
           </div>
         </div>
         <div class="dash-treemap-wrap">
@@ -13524,6 +13533,7 @@ function renderTrkChartFilterChips() {
 // 표시: chartjs-chart-treemap
 let dashExpenseChart = null;
 let dashExpenseDrillCategory = null;  // null이면 전체 모드, 아니면 drill-down 모드
+let dashExpenseFlow = 'all';          // v0.7-24 — flow 토글 (all | fixed | variable), 전체 기본
 
 // 카테고리 그룹별 색상 팔레트 — flow별로 톤 구분
 // 고정비: 블루/퍼플 (안정적), 변동비: 그린/시안 (활동적)
@@ -13926,12 +13936,14 @@ async function renderDashExpenseChart() {
 
     // 1) 카테고리 색상 인덱스 빌드 (drill-down 시에도 색상 일관성 유지)
     //    데이터를 한 번 훑어서 카테고리별 색상 결정
+    //    v0.7-24 — 선택된 flow에만 한정
     const categoryColor = new Map();
     const flowCatCounter = { fixed: 0, variable: 0 };
     const allCatsSeen = new Set();
     for (const t of txData) {
       const flow = txFlow(t);
       if (flow !== 'fixed' && flow !== 'variable') continue;
+      if (dashExpenseFlow !== 'all' && flow !== dashExpenseFlow) continue;
       const cat = t.category || '(분류 없음)';
       if (allCatsSeen.has(cat)) continue;
       allCatsSeen.add(cat);
@@ -13946,10 +13958,12 @@ async function renderDashExpenseChart() {
 
     if (!isDrill) {
       // 전체 모드: category → memo 2단계, 메모별 합산
+      // v0.7-24 — flow 필터 적용
       const buckets = new Map();
       for (const t of txData) {
         const flow = txFlow(t);
         if (flow !== 'fixed' && flow !== 'variable') continue;
+        if (dashExpenseFlow !== 'all' && flow !== dashExpenseFlow) continue;
         const amt = Number(t.amount) || 0;
         if (amt <= 0) continue;
         const category = t.category || '(분류 없음)';
@@ -13966,11 +13980,13 @@ async function renderDashExpenseChart() {
     } else {
       // drill-down 모드: 그 카테고리의 거래 1건씩 (날짜 + 메모로 식별)
       // — 같은 메모 여러 번이어도 합치지 않고 각각 슬라이스로 표시
+      // v0.7-24 — flow 필터 적용 (drill 중 flow 바뀌면 핸들러가 drill 해제하지만 안전망)
       const cat = dashExpenseDrillCategory;
       const items = [];
       for (const t of txData) {
         const flow = txFlow(t);
         if (flow !== 'fixed' && flow !== 'variable') continue;
+        if (dashExpenseFlow !== 'all' && flow !== dashExpenseFlow) continue;
         const tCat = t.category || '(분류 없음)';
         if (tCat !== cat) continue;
         const amt = Number(t.amount) || 0;
@@ -13994,10 +14010,11 @@ async function renderDashExpenseChart() {
     if (total <= 0) {
       $canvas.style.display = 'none';
       $empty.style.display = '';
+      const flowLabel = dashExpenseFlow === 'fixed' ? '고정' : dashExpenseFlow === 'variable' ? '변동' : '전체';
       $empty.textContent = isDrill
         ? `이 카테고리에 거래가 없습니다`
-        : `${modeLabel} 비용 거래가 없습니다`;
-      if ($sub) $sub.textContent = `${modeLabel}`;
+        : `${modeLabel} ${flowLabel} 비용 거래가 없습니다`;
+      if ($sub) $sub.textContent = `${modeLabel} · ${flowLabel}`;
       if (dashExpenseChart) { dashExpenseChart.destroy(); dashExpenseChart = null; }
       return;
     }
@@ -14118,9 +14135,10 @@ async function renderDashExpenseChart() {
     });
 
     if ($sub) {
+      const flowLabel = dashExpenseFlow === 'fixed' ? '고정' : dashExpenseFlow === 'variable' ? '변동' : '전체';
       $sub.textContent = isDrill
-        ? `${modeLabel} · ${dashExpenseDrillCategory} ${fmtAmount(total)} (${tree.length}건)`
-        : `${modeLabel} · 총 ${fmtAmount(total)}`;
+        ? `${modeLabel} · ${flowLabel} · ${dashExpenseDrillCategory} ${fmtAmount(total)} (${tree.length}건)`
+        : `${modeLabel} · ${flowLabel} · 총 ${fmtAmount(total)}`;
     }
   } catch (e) {
     console.error('[dashboard] expense treemap error', e);
@@ -14133,6 +14151,24 @@ document.getElementById('btn-dash-expense-back').addEventListener('click', () =>
   dashExpenseDrillCategory = null;
   renderDashExpenseChart();
 });
+
+// flow 토글 핸들러 (v0.7-24) — 전체/고정/변동
+// flow 변경 시 drill-down 자동 해제 (다른 flow엔 그 카테고리가 없을 수 있음)
+function initDashExpenseFlowToggle() {
+  document.querySelectorAll('[data-exp-tm-flow]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const f = btn.dataset.expTmFlow;
+      if (f === dashExpenseFlow) return;
+      dashExpenseFlow = f;
+      dashExpenseDrillCategory = null;   // flow 바뀌면 drill 해제
+      document.querySelectorAll('[data-exp-tm-flow]').forEach(b => {
+        b.classList.toggle('active', b.dataset.expTmFlow === f);
+      });
+      renderDashExpenseChart();
+    });
+  });
+}
+initDashExpenseFlowToggle();
 
 // ── 대시보드 경조사 카드 (v0.6 C2) ──
 // 이번 달 적립 필요액 + 임박 경조사 목록
