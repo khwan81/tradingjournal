@@ -693,6 +693,11 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
   /* 버튼 */
   .btn-p, .btn-s, .btn-danger { min-height: 48px; font-size: 15px; }
 
+  /* 모달 폼 그리드 — 모바일에서 1열로 통일
+   * .fg2(2열), .fg3(3열)이 모바일에선 압축돼 카드가 작게 보이는 문제 해결.
+   * .auto-grid는 자동계산 요약이라 2×2 유지(컴팩트한 게 자연스러움). */
+  .fg2, .fg3 { grid-template-columns: 1fr; gap: 12px; }
+
   /* 자동계산 2×2 */
   .auto-grid { grid-template-columns: 1fr 1fr; }
 

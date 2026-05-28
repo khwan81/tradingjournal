@@ -3470,6 +3470,26 @@ html, body { overflow-x: hidden; }
 .input:focus, .select:focus { border-color: var(--accent); }
 .input::placeholder { color: var(--text3); }
 
+/* input[type=date|time|datetime-local|month] — iOS native 스타일이 가운데 정렬 +
+ * 미세한 패딩 차이로 다른 input과 시각적 불균형을 만드는 걸 잡음.
+ * box-sizing 명시 + 좌측 정렬 + min-height 통일. */
+.input[type="date"],
+.input[type="time"],
+.input[type="datetime-local"],
+.input[type="month"] {
+  -webkit-appearance: none;
+  appearance: none;
+  text-align: left;
+  box-sizing: border-box;
+}
+/* iOS Safari가 placeholder 자리에 가운데 정렬을 강제하는 경우 보정 */
+.input[type="date"]::-webkit-date-and-time-value,
+.input[type="time"]::-webkit-date-and-time-value,
+.input[type="datetime-local"]::-webkit-date-and-time-value,
+.input[type="month"]::-webkit-date-and-time-value {
+  text-align: left;
+}
+
 /* 라디오 칩 */
 .radio-chips { display: flex; gap: 6px; }
 .radio-chips input { display: none; }
