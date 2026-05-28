@@ -1744,22 +1744,51 @@ html, body { overflow-x: hidden; }
 }
 .rt-month-input:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
 
-/* v0.7-17 — 분석 탭 서브탭바 (with-action) 모바일에서는 두 줄 */
+/* v0.7-17 — 분석 탭 서브탭바 (with-action) 모바일에서는 두 줄
+ * 프리셋(1M/3M/6M/YTD/ALL)은 풀폭 세그먼트형으로 균등 분배.
+ * month range는 좌우 input 균등 + sep 가운데. */
 @media (max-width: 700px) {
   .subtab-bar.with-action.analysis-bar {
     flex-direction: column;
     align-items: stretch;
-    gap: 6px;
+    gap: 8px;
   }
   .subtab-bar.with-action.analysis-bar .subtab-list { width: 100%; }
   .subtab-bar.with-action.analysis-bar .rt-period-group {
-    display: flex; gap: 6px; flex-direction: column;
+    display: flex; gap: 8px; flex-direction: column;
+    width: 100%;
   }
+  /* 프리셋 그룹 — 세그먼트 컨트롤처럼 한 줄 풀폭, 균등 분배 */
   .subtab-bar.with-action.analysis-bar .rt-presets {
-    display: flex; gap: 4px;
+    display: flex;
+    gap: 4px;
+    width: 100%;
+    flex-wrap: nowrap;          /* 5개가 한 줄에 고정 */
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px;
   }
   .subtab-bar.with-action.analysis-bar .rt-presets .rt-preset {
-    flex: 1; padding: 0; text-align: center;
+    flex: 1 1 0;                /* 5개 균등 분배, 0 basis로 깔끔하게 */
+    min-width: 0;
+    min-height: 0;              /* 48px 강제 규칙 무력화 */
+    height: 32px;
+    padding: 0;
+    text-align: center;
+    border: none;               /* 컨테이너가 테두리 담당, 내부는 평평하게 */
+    background: transparent;
+    border-radius: 5px;
+    font-size: 12px;
+    letter-spacing: 0.4px;
+  }
+  .subtab-bar.with-action.analysis-bar .rt-presets .rt-preset:hover {
+    background: var(--bg3);
+  }
+  .subtab-bar.with-action.analysis-bar .rt-presets .rt-preset.active {
+    background: var(--bg4);
+    color: var(--accent);
+    border-color: transparent;
   }
 }
 
@@ -1853,8 +1882,27 @@ html, body { overflow-x: hidden; }
 /* 모바일 */
 @media (max-width: 700px) {
   /* .rt-period-bar는 v0.7-17에서 제거됨. 분석 탭 새 구조의 모바일 처리는 위쪽 .subtab-bar.with-action.analysis-bar 분기 참고 */
-  .rt-range { justify-content: space-between; }
-  .rt-month-input { flex: 1; min-width: 0; }
+  /* month range — 컨테이너가 카드형, input은 평평하게 (프리셋과 시각적 짝맞춤) */
+  .rt-range {
+    justify-content: space-between;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px 6px;
+    gap: 4px;
+  }
+  .rt-month-input {
+    flex: 1; min-width: 0;
+    min-height: 0;
+    height: 36px;
+    background: transparent;
+    border: none;
+    font-size: 13px;
+    text-align: center;
+    padding: 0 4px;
+  }
+  .rt-month-input:focus { outline: none; }
+  .rt-range-sep { flex-shrink: 0; padding: 0 2px; }
 
   .rt-compare {
     grid-template-columns: repeat(5, 1fr);
