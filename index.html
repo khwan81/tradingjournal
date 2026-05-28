@@ -940,6 +940,199 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator {
   .acct-field-row { flex-direction: column; align-items: flex-start; gap: 6px; }
   .settings-top-grid { display: flex; flex-direction: column; gap: 12px; }
 }
+
+/* ===== v0.7-27: 데이터 관리 (Finance 패턴 차용) ===== */
+
+/* 백업/복원/초기화 카드 */
+.backup-card {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 16px;
+  margin-top: 10px;
+}
+.backup-card:first-of-type { margin-top: 4px; }
+.backup-card-restore { border-color: rgba(248,113,113,.22); }
+.backup-info { flex: 1; min-width: 0; }
+.backup-info-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+.backup-info-desc {
+  font-size: 11px; color: var(--text3); line-height: 1.55;
+}
+.backup-info-desc.danger { color: var(--red); }
+.backup-last {
+  font-size: 11px; color: var(--text3); margin-top: 6px;
+}
+.backup-last.never { color: var(--amber); }
+.backup-last.stale { color: var(--amber); }
+
+/* 데이터 관리 카드 폼-힌트 */
+.form-hint { font-size: 11px; color: var(--text3); }
+
+/* 모달 오버레이 (Trading 기존 .ov 재사용) - 별도 클래스 추가 */
+.ov.open { display: flex; }
+
+/* 복원 모달 전용 */
+.modal-restore, .modal-reset { max-width: 560px; }
+.modal-body { max-height: calc(100vh - 220px); overflow-y: auto; }
+.modal-foot {
+  display: flex; gap: 10px; justify-content: flex-end;
+  margin-top: 16px; padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+/* 복원 미리보기 */
+.restore-meta {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px; margin-bottom: 12px;
+}
+.restore-meta-row {
+  display: flex; justify-content: space-between;
+  font-size: 12px; padding: 4px 0;
+}
+.restore-meta-k { color: var(--text3); }
+.restore-meta-v { color: var(--text); font-family: var(--font-mono); font-size: 11px; }
+.restore-meta-v.uid-mismatch { color: var(--amber); }
+
+.restore-counts {
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  gap: 6px; margin-bottom: 12px;
+}
+.restore-count {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 6px; text-align: center;
+}
+.rc-n { font-size: 16px; font-weight: 600; color: var(--text); font-family: var(--font-mono); }
+.rc-l { font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+.restore-warn {
+  background: var(--amber-bg); border: 1px solid rgba(251,191,36,.22);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px; font-size: 12px; color: var(--text2);
+  line-height: 1.5; margin-bottom: 10px;
+}
+.restore-warn-danger {
+  background: var(--red-bg); border-color: rgba(248,113,113,.22);
+  color: var(--text);
+}
+.restore-warn strong { color: var(--text); }
+
+/* 단계 진행 표시 */
+.restore-progress {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 20px 0;
+}
+.restore-progress-step {
+  font-size: 13px; color: var(--text3);
+  padding: 10px 14px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  transition: all .2s;
+}
+.restore-progress-step.active {
+  color: var(--accent); border-color: var(--accent);
+  background: rgba(79,143,255,.08);
+}
+.restore-progress-step.done {
+  color: var(--green); border-color: rgba(52,211,153,.25);
+  background: var(--green-bg);
+}
+
+/* 폼 그룹 (모달 내) */
+.form-group { margin-bottom: 12px; }
+.form-label {
+  display: block; font-size: 11px; color: var(--text3);
+  margin-bottom: 6px;
+}
+.input.modal-input {
+  width: 100%;
+  background: var(--bg4); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--text); font-family: var(--font);
+  font-size: 14px; padding: 10px 12px;
+  box-sizing: border-box;
+}
+.input.modal-input:focus { border-color: var(--accent); outline: none; }
+
+/* 초기화 모달 — 체크박스 옵션 */
+.reset-section-title {
+  font-size: 11px; color: var(--text3);
+  text-transform: uppercase; letter-spacing: .06em;
+  font-weight: 500;
+  margin: 14px 0 8px;
+}
+.reset-section-title:first-child { margin-top: 4px; }
+.reset-options {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.reset-option {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer; transition: border-color .12s;
+}
+.reset-option:hover { border-color: var(--border2); }
+.reset-option input[type="checkbox"] {
+  margin: 2px 0 0; flex-shrink: 0; cursor: pointer;
+  width: 16px; height: 16px;
+  accent-color: var(--accent);
+}
+.reset-option-body { flex: 1; min-width: 0; }
+.reset-option-title { font-size: 13px; color: var(--text); font-weight: 500; }
+.reset-count {
+  font-size: 11px; color: var(--text3); font-weight: 400;
+  font-family: var(--font-mono);
+}
+.reset-count.has-data { color: var(--amber); }
+.reset-option-desc { font-size: 11px; color: var(--text3); margin-top: 3px; line-height: 1.45; }
+.reset-quick-row {
+  display: flex; gap: 8px;
+  margin-top: 10px; padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.reset-confirm-block {
+  margin-top: 14px; padding: 12px;
+  background: var(--red-bg); border: 1px solid rgba(248,113,113,.22);
+  border-radius: var(--radius-sm);
+}
+.reset-confirm-label { font-size: 12px; color: var(--text); margin-bottom: 8px; }
+.reset-confirm-label strong { color: var(--red); }
+.reset-confirm-input {
+  width: 100%;
+  background: var(--bg4); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--text); font-family: var(--font);
+  font-size: 14px; padding: 9px 12px;
+  box-sizing: border-box;
+}
+.reset-confirm-input:focus { border-color: var(--red); outline: none; }
+
+/* 공유 마스터 옵션 박스 (복원/백업 양쪽) */
+.shared-opt {
+  margin-top: 10px; padding: 10px 12px;
+  background: var(--bg3); border: 1px dashed var(--border2);
+  border-radius: var(--radius-sm);
+  display: flex; align-items: flex-start; gap: 10px;
+}
+.shared-opt input[type="checkbox"] {
+  margin: 2px 0 0; flex-shrink: 0; cursor: pointer;
+  width: 16px; height: 16px;
+  accent-color: var(--accent);
+}
+.shared-opt-body { flex: 1; min-width: 0; cursor: pointer; }
+.shared-opt-title { font-size: 12px; color: var(--text); font-weight: 500; }
+.shared-opt-desc { font-size: 11px; color: var(--text3); margin-top: 3px; line-height: 1.45; }
+
+/* 모바일 */
+@media (max-width: 700px) {
+  .restore-counts { grid-template-columns: repeat(3, 1fr); }
+  .backup-card { flex-direction: column; align-items: stretch; gap: 10px; }
+  .backup-card .btn-p, .backup-card .btn-danger { width: 100%; }
+  .modal-foot { flex-direction: column-reverse; }
+  .modal-foot .btn-p, .modal-foot .btn-s, .modal-foot .btn-danger { width: 100%; }
+}
 </style>
 </head>
 <body>
@@ -1203,6 +1396,65 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator {
       </div>
     </div>
 
+    <!-- ───────── 데이터 관리 (v0.7-27) ───────── -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div class="card-title" style="margin-bottom:0;">💾 데이터 관리</div>
+        <span style="font-size:11px;color:var(--text3);">백업 다운로드 / 복원 / 초기화</span>
+      </div>
+
+      <div class="backup-card">
+        <div class="backup-info">
+          <div class="backup-info-title">전체 데이터 백업</div>
+          <div class="backup-info-desc">
+            거래 기록·전략·계좌 설정을 JSON 파일 한 개로 다운로드합니다.<br>
+            공유 마스터(계좌 마스터·환율)는 옵션으로 포함할 수 있습니다.
+          </div>
+          <div class="backup-last" id="backup-last-info">마지막 백업: —</div>
+        </div>
+        <button class="btn-p" id="btn-backup-download">📥 백업 다운로드</button>
+      </div>
+
+      <div class="shared-opt">
+        <input type="checkbox" id="backup-include-shared">
+        <label class="shared-opt-body" for="backup-include-shared">
+          <div class="shared-opt-title">공유 마스터(계좌·환율)도 포함</div>
+          <div class="shared-opt-desc">
+            Finance 앱이 함께 쓰는 <code>config/accounts</code> 데이터입니다. 포함하면 단일 파일로 완전 복구 가능하지만, 복원 시 Finance에 영향을 줄 수 있습니다.
+          </div>
+        </label>
+      </div>
+
+      <div class="backup-card" id="reset-card" style="margin-top:14px;">
+        <div class="backup-info">
+          <div class="backup-info-title">🧹 거래 초기화</div>
+          <div class="backup-info-desc danger">
+            거래 기록 / 전략 / 계좌 설정 중 선택해서 삭제합니다.<br>
+            공유 마스터는 이 메뉴에서 건드리지 않습니다 (Finance에서 관리).<br>
+            <strong>진행 전 반드시 백업을 받으세요.</strong>
+          </div>
+        </div>
+        <button class="btn-danger" id="btn-reset-open">초기화</button>
+      </div>
+
+      <div class="backup-card backup-card-restore" style="margin-top:10px;">
+        <div class="backup-info">
+          <div class="backup-info-title">백업 파일에서 복원</div>
+          <div class="backup-info-desc danger">
+            ⚠️ 현재 데이터는 모두 덮어쓰여집니다.<br>
+            복원 전에 반드시 백업 다운로드를 먼저 수행하세요.
+          </div>
+        </div>
+        <button class="btn-danger" id="btn-restore-open">📤 복원하기</button>
+        <input type="file" id="restore-file-input" accept=".json,application/json" style="display:none;">
+      </div>
+
+      <div class="form-hint" style="margin-top:10px;">
+        ※ 백업 파일은 클라우드 동기화 외 별도 저장소(이메일·드라이브 등)에 보관하세요.<br>
+        ※ Finance 백업 파일과는 호환되지 않습니다 — Finance 데이터는 Finance에서 백업하세요.
+      </div>
+    </div>
+
     <div style="display:flex;justify-content:flex-end;">
       <button class="btn-p" onclick="saveSettings()">설정 저장</button>
     </div>
@@ -1359,6 +1611,170 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator {
 <!-- ─── FAB (모바일 새 거래) ─── -->
 <button class="fab" onclick="openModal()" aria-label="새 거래 입력">+</button>
 
+<!-- ─── 모달: 복원 (v0.7-27) ─── -->
+<div class="ov" id="ov-restore">
+  <div class="modal modal-restore">
+    <div class="modal-hd">
+      <span class="modal-title">📤 데이터 복원</span>
+      <button class="modal-close" onclick="closeOv('ov-restore')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 2l12 12M14 2L2 14"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <!-- 단계 1: 미리보기 -->
+      <div id="restore-step-preview">
+        <div class="restore-meta">
+          <div class="restore-meta-row">
+            <span class="restore-meta-k">파일</span>
+            <span class="restore-meta-v" id="restore-meta-filename">—</span>
+          </div>
+          <div class="restore-meta-row">
+            <span class="restore-meta-k">백업 시각</span>
+            <span class="restore-meta-v" id="restore-meta-exported">—</span>
+          </div>
+          <div class="restore-meta-row">
+            <span class="restore-meta-k">앱</span>
+            <span class="restore-meta-v" id="restore-meta-app">—</span>
+          </div>
+          <div class="restore-meta-row">
+            <span class="restore-meta-k">앱 버전</span>
+            <span class="restore-meta-v" id="restore-meta-appver">—</span>
+          </div>
+          <div class="restore-meta-row">
+            <span class="restore-meta-k">스키마</span>
+            <span class="restore-meta-v" id="restore-meta-schema">—</span>
+          </div>
+          <div class="restore-meta-row" id="restore-meta-uid-row">
+            <span class="restore-meta-k">백업 계정</span>
+            <span class="restore-meta-v" id="restore-meta-uid">—</span>
+          </div>
+        </div>
+
+        <div class="restore-counts">
+          <div class="restore-count"><div class="rc-n" id="rc-trades">—</div><div class="rc-l">거래</div></div>
+          <div class="restore-count"><div class="rc-n" id="rc-strats">—</div><div class="rc-l">전략</div></div>
+          <div class="restore-count"><div class="rc-n" id="rc-accts">—</div><div class="rc-l">계좌</div></div>
+          <div class="restore-count"><div class="rc-n" id="rc-shared">—</div><div class="rc-l">공유</div></div>
+          <div class="restore-count"><div class="rc-n" id="rc-shared-items">—</div><div class="rc-l">공유 항목</div></div>
+        </div>
+
+        <div class="restore-warn" id="restore-uid-warn" style="display:none;">
+          ⚠️ 이 백업은 <strong>다른 계정</strong>에서 만들어졌습니다.<br>
+          현재 계정으로 데이터를 옮기시려면 그대로 진행하셔도 됩니다.
+        </div>
+
+        <div class="restore-warn restore-warn-danger">
+          🚨 <strong>현재 계정의 Trading 데이터(거래·전략·계좌 설정)가 삭제되고 백업 파일 내용으로 교체됩니다.</strong><br>
+          이 작업은 되돌릴 수 없습니다.
+        </div>
+
+        <!-- 공유 마스터 옵션 (백업에 포함된 경우만 표시) -->
+        <div class="shared-opt" id="restore-shared-opt" style="display:none;">
+          <input type="checkbox" id="restore-include-shared">
+          <label class="shared-opt-body" for="restore-include-shared">
+            <div class="shared-opt-title">공유 마스터(계좌·환율)도 복원</div>
+            <div class="shared-opt-desc">
+              ⚠️ <strong>주의</strong>: Finance 앱이 함께 쓰는 데이터입니다. 체크하면 현재의 공유 마스터가 백업 시점으로 되돌려져 <strong>Finance의 잔고/결산 데이터가 고아 상태가 될 수 있습니다</strong>. 기본값은 비활성(현재 마스터 유지).
+            </div>
+          </label>
+        </div>
+
+        <div class="form-group" style="margin-top:14px;">
+          <label class="form-label" for="restore-confirm-input">
+            계속하려면 <strong>복원</strong> 이라고 정확히 입력하세요
+          </label>
+          <input type="text" id="restore-confirm-input" class="input modal-input" placeholder="복원" autocomplete="off">
+        </div>
+      </div>
+
+      <!-- 단계 2: 진행 -->
+      <div id="restore-step-progress" style="display:none;">
+        <div class="restore-progress">
+          <div class="restore-progress-step" id="rps-1">⏳ 기존 데이터 삭제 중…</div>
+          <div class="restore-progress-step" id="rps-2">⏳ 백업 데이터 쓰는 중…</div>
+          <div class="restore-progress-step" id="rps-3">⏳ 마무리…</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-s" onclick="closeOv('ov-restore')" id="restore-cancel">취소</button>
+      <button class="btn-danger" id="restore-execute" disabled>복원 실행</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── 모달: 초기화 (v0.7-27) ─── -->
+<div class="ov" id="ov-reset">
+  <div class="modal modal-reset">
+    <div class="modal-hd">
+      <span class="modal-title">🧹 거래 초기화</span>
+      <button class="modal-close" onclick="closeOv('ov-reset')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 2l12 12M14 2L2 14"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <!-- 단계 1: 선택 -->
+      <div id="reset-step-select">
+        <div class="restore-warn" style="margin-bottom:14px;">
+          ⚠️ 삭제된 데이터는 <strong>복구할 수 없습니다</strong>.<br>
+          진행 전 반드시 백업을 받으세요.
+        </div>
+
+        <div class="reset-section-title">📊 거래 데이터</div>
+        <div class="reset-options">
+          <label class="reset-option">
+            <input type="checkbox" class="reset-check" data-key="trades">
+            <div class="reset-option-body">
+              <div class="reset-option-title">거래 기록 <span class="reset-count" id="rsc-trades">…</span></div>
+              <div class="reset-option-desc">모든 매매 기록 (오픈/클로즈 포함)</div>
+            </div>
+          </label>
+        </div>
+
+        <div class="reset-section-title">⚙️ Trading 설정</div>
+        <div class="reset-options">
+          <label class="reset-option">
+            <input type="checkbox" class="reset-check" data-key="settings">
+            <div class="reset-option-body">
+              <div class="reset-option-title">전략·환율·계좌 설정 <span class="reset-count" id="rsc-settings">…</span></div>
+              <div class="reset-option-desc">
+                <code>config/settings</code> 도큐먼트 전체 (전략 목록, 공통 환율, 계좌 시드/목표/리스크)<br>
+                ※ 다음 로그인 시 기본값으로 초기화됨
+              </div>
+            </div>
+          </label>
+        </div>
+
+        <!-- 빠른 선택 -->
+        <div class="reset-quick-row">
+          <button type="button" class="btn-s" id="btn-reset-select-all">전체 선택</button>
+          <button type="button" class="btn-s" id="btn-reset-select-none">전체 해제</button>
+        </div>
+
+        <!-- 확인 입력 -->
+        <div class="reset-confirm-block" id="reset-confirm-block" style="display:none;">
+          <div class="reset-confirm-label">
+            확인을 위해 <strong>초기화</strong>를 입력하세요
+          </div>
+          <input type="text" id="reset-confirm-input" class="reset-confirm-input" placeholder="초기화" autocomplete="off">
+        </div>
+      </div>
+
+      <!-- 단계 2: 진행 -->
+      <div id="reset-step-progress" style="display:none;">
+        <div class="restore-progress">
+          <div class="restore-progress-step" id="reset-ps-1">⏳ 데이터 삭제 중…</div>
+          <div class="restore-progress-step" id="reset-ps-2">⏳ 마무리…</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-s" onclick="closeOv('ov-reset')" id="reset-cancel">취소</button>
+      <button class="btn-danger" id="reset-execute" disabled>초기화 실행</button>
+    </div>
+  </div>
+</div>
+
 <!-- ─── 토스트 ─── -->
 <div class="toast" id="toast"></div>
 
@@ -1372,7 +1788,8 @@ import { getAuth, GoogleAuthProvider,
          signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, collection, doc,
          addDoc, setDoc, deleteDoc,
-         onSnapshot, query, orderBy, getDoc,
+         onSnapshot, query, orderBy, getDoc, getDocs,
+         writeBatch, Timestamp,
          initializeFirestore, persistentLocalCache,
          persistentMultipleTabManager }              from 'firebase/firestore';
 
@@ -2388,6 +2805,592 @@ function showToast(msg){
   t.textContent=msg;t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),2500);
 }
+
+// ════════════════════════════════════════════════════════════════════
+// v0.7-27 — 데이터 관리 (백업 / 복원 / 초기화)
+// ════════════════════════════════════════════════════════════════════
+//
+// 백업 스코프 (Trading):
+//   • users/{uid}/trades/*              — 거래 컬렉션 (필수)
+//   • users/{uid}/config/settings        — 전략/환율/계좌 설정 (필수)
+//   • users/{uid}/config/accounts        — 공유 마스터 settings (선택, 옵션 ON 시)
+//   • users/{uid}/config/accounts/items  — 공유 마스터 계좌 항목 (선택, 옵션 ON 시)
+//
+// 백업 파일 식별:
+//   { app: "trading", schemaVersion: 1, ... }
+//   → Finance 백업과 명확히 분리. 다른 앱 백업 받으면 거부.
+//
+// 공유 마스터는 Trading이 직접 쓰지는 않지만, 단일 파일 복구를 위해
+// 옵션으로 포함 가능. 복원 시에는 사용자 선택으로만 덮어쓴다.
+// ════════════════════════════════════════════════════════════════════
+
+// 경로 헬퍼
+const tradingPath = {
+  trades:        () => collection(db, 'users', currentUid, 'trades'),
+  settings:      () => doc(db, 'users', currentUid, 'config', 'settings'),
+  sharedSettings:() => doc(db, 'users', currentUid, 'config', 'accounts'),
+  sharedItems:   () => collection(db, 'users', currentUid, 'config', 'accounts', 'items'),
+};
+
+// ──────────────────────────────────────────────────────
+// 백업 다운로드
+// ──────────────────────────────────────────────────────
+async function downloadBackup() {
+  if (!currentUid) { showToast('로그인이 필요합니다'); return; }
+
+  const $btn = ge('btn-backup-download');
+  const orig = $btn.textContent;
+  $btn.disabled = true;
+  $btn.textContent = '⏳ 백업 중…';
+
+  const includeShared = ge('backup-include-shared')?.checked === true;
+
+  try {
+    // 병렬 페치
+    const fetches = [
+      getDocs(tradingPath.trades()),
+      getDoc(tradingPath.settings()),
+    ];
+    if (includeShared) {
+      fetches.push(getDoc(tradingPath.sharedSettings()));
+      fetches.push(getDocs(tradingPath.sharedItems()));
+    }
+    const results = await Promise.all(fetches);
+    const tradesSnap   = results[0];
+    const settingsSnap = results[1];
+    const sharedDocSnap   = includeShared ? results[2] : null;
+    const sharedItemsSnap = includeShared ? results[3] : null;
+
+    const tradesArr = [];
+    tradesSnap.forEach(d => tradesArr.push({ id: d.id, ...d.data() }));
+
+    const sharedItems = [];
+    if (sharedItemsSnap) sharedItemsSnap.forEach(d => sharedItems.push({ id: d.id, ...d.data() }));
+
+    const payload = {
+      app: 'trading',
+      schemaVersion: 1,
+      appVersion: 'v0.7-27',
+      exportedAt: new Date().toISOString(),
+      uid: currentUid,
+      data: {
+        trades: tradesArr,
+        tradingSettings: settingsSnap.exists() ? settingsSnap.data() : null,
+        // 공유 마스터 (옵션) — 미포함 시 null로 명시
+        sharedConfigAccounts: sharedDocSnap ? (sharedDocSnap.exists() ? sharedDocSnap.data() : null) : null,
+        sharedAccountsItems:  sharedItemsSnap ? sharedItems : null,
+      },
+    };
+
+    // JSON 직렬화 (Firestore Timestamp 마커 변환)
+    const json = JSON.stringify(payload, (key, value) => {
+      if (value && typeof value === 'object' && typeof value.seconds === 'number' && typeof value.nanoseconds === 'number') {
+        return { __ts__: true, seconds: value.seconds, nanoseconds: value.nanoseconds };
+      }
+      return value;
+    }, 2);
+
+    // 파일명
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const stamp = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+    const filename = `trading-backup-${stamp}.json`;
+
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+    const sizeKb = (blob.size / 1024).toFixed(1);
+    const sharedMsg = includeShared ? ` · 공유 ${sharedItems.length}` : '';
+    showToast(`백업 완료 — 거래 ${tradesArr.length}${sharedMsg} (${sizeKb} KB)`);
+
+    // lastBackupAt 기록 (settings에 머지)
+    try {
+      const nowIso = new Date().toISOString();
+      await setDoc(tradingPath.settings(), { lastBackupAt: nowIso }, { merge: true });
+      // 메모리 settings에도 즉시 반영 (인터벌 안 기다리고 바로 UI 갱신)
+      if (settings && typeof settings === 'object') settings.lastBackupAt = nowIso;
+      renderLastBackupInfo();
+    } catch (e) {
+      console.warn('[backup] lastBackupAt 저장 실패 (백업 자체는 성공)', e);
+    }
+  } catch (e) {
+    console.error('[backup] error', e);
+    showToast('백업 실패: ' + (e.message || e.code || '알 수 없는 오류'));
+  } finally {
+    $btn.disabled = false;
+    $btn.textContent = orig;
+  }
+}
+
+// 마지막 백업 시각 표시
+function renderLastBackupInfo() {
+  const $el = ge('backup-last-info');
+  if (!$el) return;
+
+  const iso = settings?.lastBackupAt;
+  $el.classList.remove('stale', 'never');
+
+  if (!iso) {
+    $el.textContent = '마지막 백업: 없음 — 지금 백업해 두는 것을 권장합니다';
+    $el.classList.add('never');
+    return;
+  }
+
+  const dt = new Date(iso);
+  if (isNaN(dt)) {
+    $el.textContent = '마지막 백업: (날짜 정보 손상)';
+    $el.classList.add('stale');
+    return;
+  }
+
+  const pad = n => String(n).padStart(2, '0');
+  const fmt = `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+  const diffMs   = Date.now() - dt.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  let ago;
+  if      (diffMs < 60 * 1000)      ago = '방금';
+  else if (diffMs < 60 * 60 * 1000) ago = `${Math.floor(diffMs / 60000)}분 전`;
+  else if (diffDays < 1)            ago = `${Math.floor(diffMs / 3600000)}시간 전`;
+  else                              ago = `${diffDays}일 전`;
+
+  $el.textContent = `마지막 백업: ${fmt} (${ago})`;
+  if (diffDays >= 7) $el.classList.add('stale');
+}
+
+// 백업 정보가 settings에 들어오면 표시 갱신 — loadSettings 후 호출
+// (loadSettings 자체를 수정하지 않고 onAuthStateChanged 흐름에 기대지 않도록
+//  타이머로 폴링하는 대신, 명시적 setInterval 한 번)
+setInterval(() => {
+  if (currentUid) renderLastBackupInfo();
+}, 5000);
+// 첫 호출
+setTimeout(renderLastBackupInfo, 1500);
+
+// ──────────────────────────────────────────────────────
+// 공통 유틸 — Timestamp 복원, batch 헬퍼
+// ──────────────────────────────────────────────────────
+function reviveTimestamps(_key, value) {
+  if (value && typeof value === 'object' && value.__ts__ === true &&
+      typeof value.seconds === 'number' && typeof value.nanoseconds === 'number') {
+    return new Timestamp(value.seconds, value.nanoseconds);
+  }
+  return value;
+}
+
+async function deleteAllInCollection(collRef) {
+  const snap = await getDocs(collRef);
+  if (snap.empty) return 0;
+  let count = 0, inBatch = 0;
+  let batch = writeBatch(db);
+  for (const d of snap.docs) {
+    batch.delete(d.ref);
+    inBatch++; count++;
+    if (inBatch >= 450) { await batch.commit(); batch = writeBatch(db); inBatch = 0; }
+  }
+  if (inBatch > 0) await batch.commit();
+  return count;
+}
+
+async function writeAllToCollection(collRef, items, idField) {
+  if (!Array.isArray(items) || items.length === 0) return 0;
+  let count = 0, inBatch = 0;
+  let batch = writeBatch(db);
+  for (const it of items) {
+    const id = it[idField];
+    if (!id) { console.warn('[restore] id 누락 항목 스킵', it); continue; }
+    const { [idField]: _omit, ...data } = it;
+    batch.set(doc(collRef, id), data);
+    inBatch++; count++;
+    if (inBatch >= 450) { await batch.commit(); batch = writeBatch(db); inBatch = 0; }
+  }
+  if (inBatch > 0) await batch.commit();
+  return count;
+}
+
+// ──────────────────────────────────────────────────────
+// 복원
+// ──────────────────────────────────────────────────────
+let restorePayload = null;
+let restoreFilename = null;
+
+function validateBackupPayload(p) {
+  if (!p || typeof p !== 'object') return '유효하지 않은 JSON 구조입니다';
+  if (p.app !== 'trading') {
+    return `이 앱(Trading)의 백업이 아닙니다 (app="${p.app || '없음'}"). Finance 백업은 Finance 앱에서 복원하세요.`;
+  }
+  if (p.schemaVersion !== 1) {
+    return `지원하지 않는 스키마 버전입니다 (v${p.schemaVersion}). 이 앱은 v1만 지원합니다`;
+  }
+  if (!p.data || typeof p.data !== 'object') return 'data 필드가 없습니다';
+  if (!Array.isArray(p.data.trades)) return 'data.trades는 배열이어야 합니다';
+  // sharedAccountsItems는 null 또는 배열 (옵션)
+  if (p.data.sharedAccountsItems !== null && !Array.isArray(p.data.sharedAccountsItems)) {
+    return 'sharedAccountsItems는 null 또는 배열이어야 합니다';
+  }
+  return null;
+}
+
+window.closeOv = function(id) {
+  const el = ge(id);
+  if (el) el.classList.remove('open');
+};
+function openOv(id) {
+  const el = ge(id);
+  if (el) el.classList.add('open');
+}
+
+function openRestoreFromFile() {
+  if (!currentUid) { showToast('로그인이 필요합니다'); return; }
+  ge('restore-file-input').click();
+}
+
+async function handleRestoreFileChosen(e) {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  try {
+    const text = await file.text();
+    const payload = JSON.parse(text, reviveTimestamps);
+
+    const err = validateBackupPayload(payload);
+    if (err) {
+      showToast('백업 파일 오류: ' + err);
+      e.target.value = '';
+      return;
+    }
+
+    restorePayload = payload;
+    restoreFilename = file.name;
+    fillRestorePreview();
+    openOv('ov-restore');
+  } catch (ex) {
+    console.error('[restore] parse error', ex);
+    showToast('JSON 파싱 실패: ' + (ex.message || '알 수 없는 오류'));
+  } finally {
+    e.target.value = '';
+  }
+}
+
+function fillRestorePreview() {
+  const p = restorePayload;
+  const d = p.data;
+
+  ge('restore-meta-filename').textContent = restoreFilename || '—';
+
+  let exportedStr = p.exportedAt || '—';
+  try {
+    if (p.exportedAt) {
+      const dt = new Date(p.exportedAt);
+      if (!isNaN(dt)) {
+        const pad = n => String(n).padStart(2, '0');
+        exportedStr = `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`;
+      }
+    }
+  } catch (_) {}
+  ge('restore-meta-exported').textContent = exportedStr;
+  ge('restore-meta-app').textContent     = p.app || '—';
+  ge('restore-meta-appver').textContent  = p.appVersion || '—';
+  ge('restore-meta-schema').textContent  = `v${p.schemaVersion}`;
+
+  // uid 표시 + 불일치 경고
+  const backupUid = p.uid || '(없음)';
+  const mismatched = p.uid && p.uid !== currentUid;
+  const uidShort = backupUid.length > 16 ? backupUid.slice(0, 8) + '…' + backupUid.slice(-4) : backupUid;
+  const $uidV = ge('restore-meta-uid');
+  $uidV.textContent = mismatched ? `${uidShort} (다른 계정)` : uidShort;
+  $uidV.classList.toggle('uid-mismatch', mismatched);
+  ge('restore-uid-warn').style.display = mismatched ? '' : 'none';
+
+  // 카운트
+  ge('rc-trades').textContent = d.trades.length;
+  const stratCount = Array.isArray(d.tradingSettings?.strategies) ? d.tradingSettings.strategies.length : 0;
+  const acctCount  = Array.isArray(d.tradingSettings?.accounts)   ? d.tradingSettings.accounts.length   : 0;
+  ge('rc-strats').textContent = stratCount;
+  ge('rc-accts').textContent  = acctCount;
+
+  // 공유 마스터 포함 여부
+  const hasShared = d.sharedAccountsItems !== null;
+  const sharedItemCount = hasShared ? d.sharedAccountsItems.length : 0;
+  ge('rc-shared').textContent       = hasShared ? '✓' : '—';
+  ge('rc-shared-items').textContent = hasShared ? sharedItemCount : '—';
+
+  // 공유 마스터 옵션 토글 (백업에 있어야만 표시)
+  const $sharedOpt = ge('restore-shared-opt');
+  $sharedOpt.style.display = hasShared ? '' : 'none';
+  ge('restore-include-shared').checked = false;  // 기본 OFF
+
+  // confirm 초기화
+  ge('restore-confirm-input').value = '';
+  ge('restore-execute').disabled = true;
+
+  // 단계 UI 초기화
+  ge('restore-step-preview').style.display = '';
+  ge('restore-step-progress').style.display = 'none';
+  document.querySelectorAll('#ov-restore .restore-progress-step').forEach(el => {
+    el.classList.remove('active', 'done');
+    const orig = el.dataset.orig;
+    if (orig) el.textContent = orig;
+  });
+  ge('restore-cancel').disabled = false;
+}
+
+ge('restore-confirm-input').addEventListener('input', e => {
+  ge('restore-execute').disabled = e.target.value.trim() !== '복원';
+});
+
+ge('btn-restore-open').addEventListener('click', openRestoreFromFile);
+ge('restore-file-input').addEventListener('change', handleRestoreFileChosen);
+
+function setRestoreStep(idx, state, customText) {
+  const el = ge('rps-' + idx);
+  if (!el) return;
+  if (!el.dataset.orig) el.dataset.orig = el.textContent;
+  el.classList.remove('active', 'done');
+  if (state === 'active') el.classList.add('active');
+  if (state === 'done')   el.classList.add('done');
+  if (customText) el.textContent = customText;
+}
+
+async function executeRestore() {
+  if (!restorePayload) { showToast('복원할 데이터가 없습니다'); return; }
+  if (!currentUid)     { showToast('로그인이 필요합니다'); return; }
+
+  const $exec   = ge('restore-execute');
+  const $cancel = ge('restore-cancel');
+  $exec.disabled = true;
+  $cancel.disabled = true;
+
+  ge('restore-step-preview').style.display = 'none';
+  ge('restore-step-progress').style.display = '';
+
+  // 구독 정리
+  try { if (unsubTrades) { unsubTrades(); unsubTrades = null; } } catch (_) {}
+
+  const includeShared = ge('restore-include-shared')?.checked === true;
+  const d = restorePayload.data;
+
+  try {
+    // 1. 기존 데이터 삭제
+    setRestoreStep(1, 'active');
+    const delTrades = await deleteAllInCollection(tradingPath.trades());
+    let delShared = 0;
+    if (includeShared && d.sharedAccountsItems !== null) {
+      delShared = await deleteAllInCollection(tradingPath.sharedItems());
+    }
+    const totalDel = delTrades + delShared;
+    setRestoreStep(1, 'done', `✓ 기존 데이터 삭제 (${totalDel}건)`);
+
+    // 2. 새 데이터 쓰기
+    setRestoreStep(2, 'active');
+
+    // 2a. tradingSettings (단일 도큐먼트) — null이면 도큐먼트 삭제
+    if (d.tradingSettings && typeof d.tradingSettings === 'object') {
+      await setDoc(tradingPath.settings(), d.tradingSettings);
+    } else {
+      try { await deleteDoc(tradingPath.settings()); } catch (_) {}
+    }
+
+    // 2b. 공유 마스터 (옵션)
+    let wShared = 0;
+    if (includeShared && d.sharedAccountsItems !== null) {
+      if (d.sharedConfigAccounts && typeof d.sharedConfigAccounts === 'object') {
+        await setDoc(tradingPath.sharedSettings(), d.sharedConfigAccounts);
+      }
+      wShared = await writeAllToCollection(tradingPath.sharedItems(), d.sharedAccountsItems, 'id');
+    }
+
+    // 2c. trades 컬렉션
+    const wTrades = await writeAllToCollection(tradingPath.trades(), d.trades, 'id');
+
+    const sharedMsg = includeShared && d.sharedAccountsItems !== null ? ` · 공유 ${wShared}` : '';
+    setRestoreStep(2, 'done', `✓ 데이터 복원 (거래 ${wTrades}${sharedMsg})`);
+
+    // 3. 마무리
+    setRestoreStep(3, 'active', '⏳ 새로고침 준비 중…');
+    await new Promise(r => setTimeout(r, 600));
+    setRestoreStep(3, 'done', '✓ 완료 — 3초 후 새로고침됩니다');
+
+    showToast('복원 완료 — 페이지를 새로고침합니다');
+    setTimeout(() => { window.location.reload(); }, 3000);
+  } catch (e) {
+    console.error('[restore] 실행 오류', e);
+    showToast('복원 실패: ' + (e.message || e.code || '알 수 없는 오류'));
+    $cancel.disabled = false;
+    setRestoreStep(1, '', '⚠️ 중단됨 — 콘솔(F12)에서 오류 확인 후 다시 시도하세요');
+  }
+}
+
+ge('restore-execute').addEventListener('click', executeRestore);
+
+// ──────────────────────────────────────────────────────
+// 초기화 (선택형)
+// ──────────────────────────────────────────────────────
+let resetCounts = {};
+
+async function openResetModal() {
+  if (!currentUid) { showToast('로그인이 필요합니다'); return; }
+
+  // 단계 초기화
+  ge('reset-step-select').style.display = '';
+  ge('reset-step-progress').style.display = 'none';
+  ge('reset-confirm-block').style.display = 'none';
+  ge('reset-confirm-input').value = '';
+  ge('reset-execute').disabled = true;
+  ge('reset-cancel').disabled = false;
+  document.querySelectorAll('#ov-reset .reset-check').forEach(cb => { cb.checked = false; });
+
+  // 카운트 placeholder
+  ['trades', 'settings'].forEach(k => {
+    const el = ge('rsc-' + k);
+    if (el) { el.textContent = '…'; el.classList.remove('has-data'); }
+  });
+
+  openOv('ov-reset');
+
+  // 백그라운드에서 카운트 페치
+  try {
+    const [tradesSnap, settingsSnap] = await Promise.all([
+      getDocs(tradingPath.trades()),
+      getDoc(tradingPath.settings()),
+    ]);
+    resetCounts = {
+      trades:   tradesSnap.size,
+      settings: settingsSnap.exists() ? 1 : 0,
+    };
+    for (const k of Object.keys(resetCounts)) {
+      const el = ge('rsc-' + k);
+      if (!el) continue;
+      const n = resetCounts[k];
+      el.textContent = k === 'settings' ? (n > 0 ? '· 존재' : '· 없음') : `· ${n}건`;
+      if (n > 0) el.classList.add('has-data');
+    }
+  } catch (e) {
+    console.error('[reset] count fetch', e);
+    showToast('카운트 조회 실패: ' + (e.message || e.code));
+  }
+}
+
+function getSelectedResetKeys() {
+  return Array.from(document.querySelectorAll('#ov-reset .reset-check'))
+    .filter(cb => cb.checked)
+    .map(cb => cb.dataset.key);
+}
+
+function updateResetUiState() {
+  const selected = getSelectedResetKeys();
+  const $confirmBlock = ge('reset-confirm-block');
+  const $confirmInput = ge('reset-confirm-input');
+  const $exec = ge('reset-execute');
+
+  if (selected.length === 0) {
+    $confirmBlock.style.display = 'none';
+    $confirmInput.value = '';
+    $exec.disabled = true;
+    return;
+  }
+  $confirmBlock.style.display = '';
+  $exec.disabled = $confirmInput.value.trim() !== '초기화';
+}
+
+function setResetStep(idx, state, customText) {
+  const el = ge('reset-ps-' + idx);
+  if (!el) return;
+  if (!el.dataset.orig) el.dataset.orig = el.textContent;
+  el.classList.remove('active', 'done');
+  if (state === 'active') el.classList.add('active');
+  if (state === 'done')   el.classList.add('done');
+  if (customText) el.textContent = customText;
+}
+
+async function executeReset() {
+  if (!currentUid) { showToast('로그인이 필요합니다'); return; }
+  const selected = getSelectedResetKeys();
+  if (selected.length === 0) { showToast('삭제할 항목을 선택하세요'); return; }
+  if (ge('reset-confirm-input').value.trim() !== '초기화') {
+    showToast('확인 문구가 일치하지 않습니다');
+    return;
+  }
+
+  const $exec = ge('reset-execute');
+  const $cancel = ge('reset-cancel');
+  $exec.disabled = true;
+  $cancel.disabled = true;
+
+  ge('reset-step-select').style.display = 'none';
+  ge('reset-step-progress').style.display = '';
+
+  // 구독 정리
+  try { if (unsubTrades) { unsubTrades(); unsubTrades = null; } } catch (_) {}
+
+  try {
+    setResetStep(1, 'active');
+    const results = [];
+
+    if (selected.includes('trades')) {
+      const n = await deleteAllInCollection(tradingPath.trades());
+      results.push(['거래 기록', n]);
+    }
+
+    if (selected.includes('settings')) {
+      try {
+        await deleteDoc(tradingPath.settings());
+        results.push(['Trading 설정', 1]);
+      } catch (e) {
+        // 도큐먼트가 없으면 에러 대신 skip
+        if (e.code !== 'not-found') throw e;
+        results.push(['Trading 설정', 0]);
+      }
+    }
+
+    const totalDeleted = results.reduce((a, [, n]) => a + n, 0);
+    const summary = results.length
+      ? results.map(([l, n]) => `${l} ${n}`).join(' · ')
+      : '삭제된 항목 없음';
+    setResetStep(1, 'done', `✓ 삭제 완료 (총 ${totalDeleted}건) — ${summary}`);
+
+    setResetStep(2, 'active', '⏳ 새로고침 준비 중…');
+    await new Promise(r => setTimeout(r, 600));
+    setResetStep(2, 'done', '✓ 완료 — 3초 후 새로고침됩니다');
+
+    showToast('초기화 완료 — 페이지를 새로고침합니다');
+    setTimeout(() => { window.location.reload(); }, 3000);
+  } catch (e) {
+    console.error('[reset] 실행 오류', e);
+    showToast('초기화 실패: ' + (e.message || e.code || '알 수 없는 오류'));
+    $cancel.disabled = false;
+    setResetStep(1, '', '⚠️ 중단됨 — 콘솔(F12)에서 오류 확인 후 다시 시도하세요');
+  }
+}
+
+// 이벤트 바인딩
+ge('btn-backup-download').addEventListener('click', downloadBackup);
+ge('btn-reset-open').addEventListener('click', openResetModal);
+document.querySelectorAll('#ov-reset .reset-check').forEach(cb => {
+  cb.addEventListener('change', updateResetUiState);
+});
+ge('reset-confirm-input').addEventListener('input', updateResetUiState);
+ge('btn-reset-select-all').addEventListener('click', () => {
+  document.querySelectorAll('#ov-reset .reset-check').forEach(cb => { cb.checked = true; });
+  updateResetUiState();
+});
+ge('btn-reset-select-none').addEventListener('click', () => {
+  document.querySelectorAll('#ov-reset .reset-check').forEach(cb => { cb.checked = false; });
+  updateResetUiState();
+});
+ge('reset-execute').addEventListener('click', executeReset);
+
+// 모달 오버레이 바깥 클릭 시 닫기
+['ov-restore', 'ov-reset'].forEach(id => {
+  const el = ge(id);
+  if (el) el.addEventListener('click', e => {
+    if (e.target === el) closeOv(id);
+  });
+});
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 if(typeof Chart!=='undefined'){

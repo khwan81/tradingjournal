@@ -4598,6 +4598,10 @@ html, body { overflow-x: hidden; }
             <span class="restore-meta-v" id="restore-meta-exported">—</span>
           </div>
           <div class="restore-meta-row">
+            <span class="restore-meta-k">앱</span>
+            <span class="restore-meta-v" id="restore-meta-app">—</span>
+          </div>
+          <div class="restore-meta-row">
             <span class="restore-meta-k">앱 버전</span>
             <span class="restore-meta-v" id="restore-meta-appver">—</span>
           </div>
@@ -8471,8 +8475,9 @@ async function downloadBackup() {
     budgetsSnap.forEach(d => budgets.push({ ym: d.id, ...d.data() }));
 
     const payload = {
+      app: 'finance',
       schemaVersion: 3,
-      appVersion: 'v0.7-10',
+      appVersion: 'v0.7-27',
       exportedAt: new Date().toISOString(),
       uid: currentUid,
       data: {
@@ -8610,9 +8615,14 @@ function reviveTimestamps(_key, value) {
   return value;
 }
 
-// 백업 페이로드 구조 검증 (v0.7-10에서 v2 + v3 호환)
+// 백업 페이로드 구조 검증 (v0.7-10에서 v2 + v3 호환, v0.7-27에서 app 필드 검증)
 function validateBackupPayload(p) {
   if (!p || typeof p !== 'object') return '유효하지 않은 JSON 구조입니다';
+  // app 필드: v0.7-27부터 명시. 옛 백업(v2/v3)은 app 필드가 없을 수 있으므로 허용.
+  // 단 "trading" 등 다른 앱 백업은 명확히 거부.
+  if (p.app && p.app !== 'finance') {
+    return `이 앱(Finance)의 백업이 아닙니다 (app="${p.app}"). Trading 백업은 Trading 앱에서 복원하세요.`;
+  }
   if (p.schemaVersion !== 2 && p.schemaVersion !== 3) {
     return `지원하지 않는 스키마 버전입니다 (v${p.schemaVersion}). 이 앱은 v2/v3만 지원합니다`;
   }
@@ -8692,6 +8702,7 @@ function fillRestorePreview() {
   } catch (_) { /* ignore */ }
 
   document.getElementById('restore-meta-exported').textContent = exportedStr;
+  document.getElementById('restore-meta-app').textContent      = p.app || '(v2 이하 — 미명시)';
   document.getElementById('restore-meta-appver').textContent   = p.appVersion || '—';
   document.getElementById('restore-meta-schema').textContent   = `v${p.schemaVersion}`;
 
