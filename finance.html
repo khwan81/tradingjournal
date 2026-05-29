@@ -2819,6 +2819,22 @@ html, body { overflow-x: hidden; }
   font-family: var(--font-mono);
   font-size: 13px;
 }
+/* 배분 가능 잔액 — 매출 예산 − 지출 예산 */
+.bg-summary-remain {
+  border-top: 1px solid var(--border2) !important;
+  margin-top: 2px;
+  padding-top: 8px;
+}
+.bg-summary-remain .bg-summary-label { color: var(--text); font-weight: 600; }
+.bg-remain { font-weight: 700; }
+.bg-remain.ok   { color: var(--green); }
+.bg-remain.over { color: var(--red); }
+.bg-remain-hint {
+  color: var(--text3);
+  font-size: 11px;
+  font-family: var(--font-ui, inherit);
+  margin-left: 6px;
+}
 
 /* 카테고리별 표 */
 .bg-table {
@@ -2946,6 +2962,26 @@ html, body { overflow-x: hidden; }
   font-family: var(--font-mono);
   text-align: right;
 }
+/* 모달 — 지출 예산 입력 시 남은 배분 가능액 미리보기 */
+.bg-modal-remain {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.bg-modal-remain .rm-label { color: var(--text2); }
+.bg-modal-remain .rm-val {
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+.bg-modal-remain .rm-val.ok   { color: var(--green); }
+.bg-modal-remain .rm-val.over { color: var(--red); }
 
 /* (kpi-grid / kpi-card는 .kpi-grid / .kpi-card로 통합됨 — v0.7-13) */
 
@@ -5005,6 +5041,8 @@ html, body { overflow-x: hidden; }
           <div class="form-hint" id="bg-modal-hint">
             매출은 목표 금액, 비용은 한도 금액을 입력하세요.
           </div>
+          <!-- 지출 예산 입력 시 남은 배분 가능액 미리보기 -->
+          <div class="bg-modal-remain" id="bg-modal-remain" style="display:none;"></div>
         </div>
 
         <div class="form-group">
@@ -12440,6 +12478,14 @@ function renderBgBody() {
             : ''}
         </span>
       </div>
+      ${totalRevBudget > 0 ? `
+      <div class="bg-summary-row bg-summary-remain">
+        <span class="bg-summary-label">📊 배분 가능 잔액</span>
+        <span class="bg-summary-val">
+          <span class="bg-remain ${(totalRevBudget - totalExpBudget) < 0 ? 'over' : 'ok'}">${fmtSigned(totalRevBudget - totalExpBudget)}</span>
+          <span class="bg-remain-hint">(매출 예산 − 지출 예산)</span>
+        </span>
+      </div>` : ''}
     </div>
   `;
 
@@ -12585,6 +12631,12 @@ document.getElementById('btn-bg-add')?.addEventListener('click', () => openBudge
 document.getElementById('bg-modal-flow-select')?.addEventListener('change', e => {
   fillBudgetCatSelect(e.target.value);
   bgSyncAddHint();
+  bgUpdateRemainPreview();
+});
+
+// 추가 모드 — 카테고리 변경 시 잔액 미리보기 갱신
+document.getElementById('bg-modal-cat-select')?.addEventListener('change', () => {
+  bgUpdateRemainPreview();
 });
 
 // ──────────────────────────────────────────────────────
@@ -14474,6 +14526,54 @@ function bgSyncAddHint() {
     : '이 카테고리의 이번 달 지출 한도를 입력하세요.';
 }
 
+// 모달 — 지출 예산 입력 시 "남은 배분 가능액" 미리보기 갱신
+// 남은 = 매출 예산 합 − (현재 카테고리 제외한 지출 예산 합 + 입력값)
+// 매출 카테고리를 편집/추가할 때는 숨긴다 (매출은 풀 자체).
+function bgUpdateRemainPreview() {
+  const $box = document.getElementById('bg-modal-remain');
+  if (!$box) return;
+
+  // 현재 모달의 flow / category 판별 (추가 모드 vs 편집 모드)
+  const isAddMode = document.getElementById('bg-modal-picker').style.display !== 'none';
+  let flow, category;
+  if (isAddMode) {
+    flow     = document.getElementById('bg-modal-flow-select').value;
+    category = document.getElementById('bg-modal-cat-select').value;
+  } else if (editingBudget) {
+    flow     = editingBudget.flow;
+    category = editingBudget.category;
+  } else {
+    $box.style.display = 'none';
+    return;
+  }
+
+  // 매출 카테고리거나 매출 예산이 아예 없으면 미리보기 의미 없음 → 숨김
+  const totalRevBudget = bgBudgets
+    .filter(b => b.flow === 'revenue')
+    .reduce((s, b) => s + (Number(b.budget) || 0), 0);
+  if (flow === 'revenue' || totalRevBudget <= 0) {
+    $box.style.display = 'none';
+    return;
+  }
+
+  // 다른 지출 예산 합 (현재 편집 중인 카테고리는 제외)
+  const otherExpBudget = bgBudgets
+    .filter(b => b.flow !== 'revenue' && !(b.flow === flow && b.category === category))
+    .reduce((s, b) => s + (Number(b.budget) || 0), 0);
+
+  // 입력 중인 금액
+  const raw = (document.getElementById('bg-modal-amount').value || '').replace(/[^0-9]/g, '');
+  const entered = raw ? parseInt(raw, 10) : 0;
+
+  const remain = totalRevBudget - (otherExpBudget + entered);
+  const cls = remain < 0 ? 'over' : 'ok';
+
+  $box.style.display = 'flex';
+  $box.innerHTML =
+    `<span class="rm-label">이 예산 반영 후 남는 금액</span>` +
+    `<span class="rm-val ${cls}">${fmtSigned(remain)}</span>`;
+}
+
 function openBudgetModal(flow, category) {
   if (!currentUid) { showToast('로그인이 필요합니다'); return; }
   if (!settings)   { showToast('설정 로딩 중…'); return; }
@@ -14497,6 +14597,7 @@ function openBudgetModal(flow, category) {
     $flowSel.value = (flow === 'revenue' || flow === 'fixed' || flow === 'variable') ? flow : 'variable';
     fillBudgetCatSelect($flowSel.value);
     bgSyncAddHint();
+    bgUpdateRemainPreview();
 
     openOv('ov-budget');
     setTimeout(() => $catSel.focus(), 50);
@@ -14539,6 +14640,8 @@ function openBudgetModal(flow, category) {
 
   // 삭제 버튼은 기존 예산 있을 때만
   document.getElementById('btn-bg-delete').style.display = existing ? 'inline-flex' : 'none';
+
+  bgUpdateRemainPreview();
 
   openOv('ov-budget');
   setTimeout(() => document.getElementById('bg-modal-amount').focus(), 50);
@@ -14610,8 +14713,9 @@ document.getElementById('btn-bg-delete').addEventListener('click', async () => {
 // 금액 입력 — 콤마 자동 포맷
 document.getElementById('bg-modal-amount').addEventListener('input', e => {
   const raw = e.target.value.replace(/[^0-9]/g, '');
-  if (!raw) { e.target.value = ''; return; }
+  if (!raw) { e.target.value = ''; bgUpdateRemainPreview(); return; }
   e.target.value = Number(raw).toLocaleString('ko-KR');
+  bgUpdateRemainPreview();
 });
 
 // ── 잔액 입력 모달 ──
