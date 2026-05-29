@@ -2741,7 +2741,21 @@ html, body { overflow-x: hidden; }
   display: flex; justify-content: space-between; align-items: baseline;
   margin-bottom: 8px;
   gap: 10px;
+  cursor: pointer;
+  user-select: none;
 }
+.dash-event-save-caret {
+  display: inline-block;
+  font-size: 10px;
+  color: var(--text3);
+  margin-right: 5px;
+  transition: transform 0.15s ease;
+}
+.dash-event-save-card:not(.collapsed) .dash-event-save-caret {
+  transform: rotate(90deg);
+}
+.dash-event-save-card.collapsed .dash-event-save-head { margin-bottom: 0; }
+.dash-event-save-card.collapsed .dash-event-save-list { display: none; }
 .dash-event-save-head .dash-event-summary-title { margin-bottom: 0; }
 .dash-event-save-total {
   font-family: var(--font-mono);
@@ -3095,33 +3109,14 @@ html, body { overflow-x: hidden; }
 .bs-item .name {
   color: var(--text);
   min-width: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 2px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .bs-item .name .meta {
   font-size: 10px;
   color: var(--text3);
   margin-left: 6px;
-}
-/* 경조 적립 계좌 — 전월 잔액 기준 목표 대비 부족/충족 배지 */
-.bs-item .name .bs-event-need {
-  display: inline-block;
-  font-size: 10px;
-  font-weight: 600;
-  margin-left: 6px;
-  padding: 1px 6px;
-  border-radius: 4px;
-  white-space: nowrap;
-}
-.bs-item .name .bs-event-need.short {
-  color: var(--red);
-  background: color-mix(in srgb, var(--red) 14%, transparent);
-}
-.bs-item .name .bs-event-need.ok {
-  color: var(--green);
-  background: color-mix(in srgb, var(--green) 14%, transparent);
 }
 .bs-item .amt {
   color: var(--text);
@@ -6111,8 +6106,6 @@ function subscribeEvents() {
       if (isStatusVisible() && typeof renderDashEventsCard === 'function') {
         renderDashEventsCard();
       }
-      // 경조 적립 계좌 부족분이 BS에 표시되므로 BS도 갱신
-      if (document.getElementById('bs-body')) renderBsBody();
     },
     err => { console.error('events subscribe error', err); showToast('경조사 로드 실패'); }
   );
@@ -9799,30 +9792,10 @@ function renderBsBody() {
       }
     }
     const prevKrw = prevDoc ? (Number(prevDoc.balanceKrw) || 0) : null;
-
-    // 경조 적립 계좌면: 전월 잔액 기준으로, 전월에 나갈(인출될) 경조 금액을 감당할 수 있는지 표시
-    let baseMeta = isFx ? a.currency : (a.trackPerformance ? '추적' : '');
-    let eventNeedMeta = '';
-    if (settings?.eventSavingAccountId && a.id === settings.eventSavingAccountId) {
-      const pYm = prevYm(currentMonth);
-      const outflow = eventOutflowForYm(pYm);
-      if (outflow > 0) {
-        if (prevKrw == null) {
-          eventNeedMeta = `<span class="bs-event-need short">경조 인출 ${fmtAmount(outflow)}원 (전월 잔액 없음)</span>`;
-        } else {
-          const shortfall = outflow - prevKrw;
-          eventNeedMeta = shortfall > 0
-            ? `<span class="bs-event-need short">경조 부족 ${fmtAmount(shortfall)}원</span>`
-            : `<span class="bs-event-need ok">경조 충족 (+${fmtAmount(-shortfall)}원)</span>`;
-        }
-      }
-    }
-
     assetRows[tier].push({
       key: a.id,
       name: a.name,
-      meta: baseMeta,
-      eventNeed: eventNeedMeta,
+      meta: isFx ? a.currency : (a.trackPerformance ? '추적' : ''),
       isFx,
       filled: !!doc,
       krw: curKrw,
@@ -10108,7 +10081,6 @@ function buildBsItemHtml(r, type) {
   if (r.auto)    classes.push('auto');
 
   const metaHtml = r.meta ? `<span class="meta">${escapeHtml(r.meta)}</span>` : '';
-  const eventNeedHtml = r.eventNeed ? r.eventNeed : '';
   const deltaStr = (r.filled && r.delta != null) ? renderInlineDelta(r.delta, type) : '';
 
   let amtHtml;
@@ -10125,7 +10097,7 @@ function buildBsItemHtml(r, type) {
 
   return `
     <div class="${classes.join(' ')}">
-      <div class="name">${escapeHtml(r.name)}${metaHtml}${eventNeedHtml}</div>
+      <div class="name">${escapeHtml(r.name)}${metaHtml}</div>
       <div class="amt">${amtHtml}</div>
     </div>
   `;
@@ -14500,9 +14472,9 @@ function renderDashEventsCard() {
        </div>`
     ).join('');
     saveHtml = `
-      <div class="dash-event-summary-card dash-event-save-card">
-        <div class="dash-event-save-head">
-          <span class="dash-event-summary-title">💰 이번 달 적립 권장액</span>
+      <div class="dash-event-summary-card dash-event-save-card collapsed" id="dash-event-save-card">
+        <div class="dash-event-save-head" data-event-save-toggle>
+          <span class="dash-event-summary-title"><span class="dash-event-save-caret">▸</span>💰 이번 달 적립 권장액</span>
           <span class="dash-event-save-total">${fmtAmount(saveTotal)}원</span>
         </div>
         <div class="dash-event-save-list">${itemRows}</div>
@@ -14570,6 +14542,12 @@ function renderDashEventsCard() {
     $section?.classList.toggle('collapsed');
   });
 
+  // 이번 달 적립 권장액 세부내역 접기/펼치기 (기본 접힘)
+  const $saveCard = $body.querySelector('#dash-event-save-card');
+  $body.querySelector('[data-event-save-toggle]')?.addEventListener('click', () => {
+    $saveCard?.classList.toggle('collapsed');
+  });
+
   // v0.7-15 — 처리는 거래 탭 알림바에서. 여기는 거래 탭으로 라우팅만 제공.
   $body.querySelectorAll('[data-goto-tx-tab]').forEach(el => {
     el.addEventListener('click', (e) => {
@@ -14622,21 +14600,6 @@ function eventThisMonthRecommend(ev, ym) {
   const recurM = parseInt(ev.recurMonth, 10);
   if (recurM === cm) return 0;
   return Math.round(amount / 11);
-}
-
-// 해당 ym에 실제로 나갈(인출될) 경조 금액 합 (KRW)
-// — recurMonth가 그 달인 경조사들의 amount 합. 이미 처리(lastDoneYm=ym)된 건도 포함
-//   (그 달에 나가야 할 총액이라는 의미는 동일하므로).
-function eventOutflowForYm(ym) {
-  if (!ym || !Array.isArray(eventsMasters)) return 0;
-  const [, cm] = ym.split('-').map(Number);
-  let total = 0;
-  for (const ev of eventsMasters) {
-    const amount = Number(ev.amount) || 0;
-    if (amount <= 0) continue;
-    if (parseInt(ev.recurMonth, 10) === cm) total += amount;
-  }
-  return total;
 }
 
 // ── 예산 모달 (v0.4 A4) ──
