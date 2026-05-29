@@ -100,6 +100,36 @@
   --card-bar-px:  14px;
 }
 
+/* ── 라이트 테마 (data-theme="light") ── */
+html[data-theme="light"] {
+  --bg:        #f4f5f7;
+  --bg2:       #ffffff;
+  --bg3:       #eef0f3;
+  --bg4:       #e2e5ea;
+  --border:    rgba(0,0,0,0.08);
+  --border2:   rgba(0,0,0,0.14);
+  --text:      #1a1d23;
+  --text2:     #5c6373;
+  --text3:     #9298a6;
+  --accent:    #2f6fe0;
+  --accent2:   #2560c8;
+  --green:     #0f9d6f;
+  --green-bg:  rgba(15,157,111,0.10);
+  --red:       #e0524d;
+  --red-bg:    rgba(224,82,77,0.10);
+  --amber:     #c8870f;
+  --amber-bg:  rgba(200,135,15,0.12);
+  --acat-cash:      #3b82f6;
+  --acat-emergency: #8b5cf6;
+  --acat-trading:   #ec4899;
+  --acat-longterm:  #10b981;
+  --acat-pension:   #d97706;
+}
+/* 라이트 모드 — 흰색 오버레이 hover가 안 보이므로 어두운 오버레이로 보정 */
+html[data-theme="light"] .bg-row:hover { background: rgba(0,0,0,0.03); }
+html[data-theme="light"] .subtab:hover { border-color: rgba(0,0,0,0.14); }
+html[data-theme="light"] .toggle.on::after { background: #fff; }
+
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500&display=swap');
 
 body {
@@ -3793,6 +3823,18 @@ html, body { overflow-x: hidden; }
 </head>
 <body>
 
+<!-- 테마 즉시 적용 (깜빡임 방지) — 렌더 전에 localStorage 값으로 data-theme 설정 -->
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem('financeTheme') || 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute('content', t === 'light' ? '#f4f5f7' : '#0d0f12');
+    } catch (e) {}
+  })();
+</script>
+
 <!-- Loading -->
 <div id="loading">로딩 중…</div>
 
@@ -4475,6 +4517,22 @@ html, body { overflow-x: hidden; }
   </div>
 
   <div class="tab-content" id="tab-settings">
+    <!-- 테마 선택 -->
+    <div class="section-card">
+      <div class="section-head">
+        <div>
+          <div class="section-title">🎨 테마</div>
+          <div class="section-sub">화면 밝기 모드를 선택하세요</div>
+        </div>
+        <div class="section-actions">
+          <div class="seg" id="theme-seg">
+            <button type="button" class="seg-btn" data-theme-choice="dark">🌙 다크</button>
+            <button type="button" class="seg-btn" data-theme-choice="light">☀️ 라이트</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 환율 (공유 마스터) -->
     <div class="section-card" id="sec-fxrates">
       <div class="section-head">
@@ -15951,6 +16009,38 @@ document.getElementById('btn-bal-delete').addEventListener('click', deleteBalanc
 
 // 환율 저장
 document.getElementById('btn-fx-save').addEventListener('click', saveFxRates);
+
+// ── 테마 (다크/라이트) ──
+function applyTheme(theme) {
+  const t = theme === 'light' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  try { localStorage.setItem('financeTheme', t); } catch (e) {}
+  // theme-color 메타 동기화 (PWA 상태바)
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', t === 'light' ? '#f4f5f7' : '#0d0f12');
+  // 세그 버튼 active 표시
+  document.querySelectorAll('#theme-seg [data-theme-choice]').forEach(b => {
+    b.classList.toggle('active', b.dataset.themeChoice === t);
+  });
+  // 차트는 CSS 변수 토큰을 읽어 그리므로, 현재 탭을 다시 렌더해 색을 갱신
+  const $activeTab = document.querySelector('.tab.active');
+  if ($activeTab && typeof switchTab === 'function') {
+    switchTab($activeTab.dataset.tab);
+  }
+}
+
+document.querySelectorAll('#theme-seg [data-theme-choice]').forEach(btn => {
+  btn.addEventListener('click', () => applyTheme(btn.dataset.themeChoice));
+});
+
+// 초기 active 표시 (즉시적용 스크립트가 이미 data-theme는 설정함)
+(function () {
+  let t = 'dark';
+  try { t = localStorage.getItem('financeTheme') || 'dark'; } catch (e) {}
+  document.querySelectorAll('#theme-seg [data-theme-choice]').forEach(b => {
+    b.classList.toggle('active', b.dataset.themeChoice === t);
+  });
+})();
 
 // 환율 수정 링크 — 설정 탭의 환율 섹션으로 스크롤
 document.getElementById('fx-edit-link').addEventListener('click', () => {
