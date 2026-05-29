@@ -2749,6 +2749,21 @@ html, body { overflow-x: hidden; }
   display: flex; justify-content: space-between; align-items: baseline;
   gap: 8px;
   margin-bottom: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+/* 접기/펼치기 — 기본 접힘: detail 숨김, head 여백 제거 */
+.dash-event-progress-row.collapsed .dash-event-progress-detail { display: none; }
+.dash-event-progress-row.collapsed .dash-event-progress-head { margin-bottom: 0; }
+.dash-event-caret {
+  display: inline-block;
+  font-size: 10px;
+  color: var(--text3);
+  margin-right: 5px;
+  transition: transform 0.15s ease;
+}
+.dash-event-progress-row:not(.collapsed) .dash-event-caret {
+  transform: rotate(90deg);
 }
 .dash-event-progress-title {
   font-size: 13px;
@@ -3040,14 +3055,33 @@ html, body { overflow-x: hidden; }
 .bs-item .name {
   color: var(--text);
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 0;
 }
 .bs-item .name .meta {
   font-size: 10px;
   color: var(--text3);
   margin-left: 6px;
+}
+/* 경조 적립 계좌 — 전월 잔액 기준 목표 대비 부족/충족 배지 */
+.bs-item .name .bs-event-need {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.bs-item .name .bs-event-need.short {
+  color: var(--red);
+  background: color-mix(in srgb, var(--red) 14%, transparent);
+}
+.bs-item .name .bs-event-need.ok {
+  color: var(--green);
+  background: color-mix(in srgb, var(--green) 14%, transparent);
 }
 .bs-item .amt {
   color: var(--text);
@@ -6037,6 +6071,8 @@ function subscribeEvents() {
       if (isStatusVisible() && typeof renderDashEventsCard === 'function') {
         renderDashEventsCard();
       }
+      // 경조 적립 계좌 부족분이 BS에 표시되므로 BS도 갱신
+      if (document.getElementById('bs-body')) renderBsBody();
     },
     err => { console.error('events subscribe error', err); showToast('경조사 로드 실패'); }
   );
@@ -9723,10 +9759,27 @@ function renderBsBody() {
       }
     }
     const prevKrw = prevDoc ? (Number(prevDoc.balanceKrw) || 0) : null;
+
+    // 경조 적립 계좌면: 전월 잔액 기준으로 목표까지 얼마 더 필요한지 메타에 표시
+    let baseMeta = isFx ? a.currency : (a.trackPerformance ? '추적' : '');
+    let eventNeedMeta = '';
+    if (settings?.eventSavingAccountId && a.id === settings.eventSavingAccountId) {
+      const target = eventTargetBalanceForYm(prevYm(currentMonth));
+      if (target > 0 && prevKrw != null) {
+        const shortfall = target - prevKrw;
+        eventNeedMeta = shortfall > 0
+          ? `<span class="bs-event-need short">경조 부족 ${fmtAmount(shortfall)}원</span>`
+          : `<span class="bs-event-need ok">경조 충족 (+${fmtAmount(-shortfall)}원)</span>`;
+      } else if (target > 0 && prevKrw == null) {
+        eventNeedMeta = `<span class="bs-event-need short">경조 목표 ${fmtAmount(target)}원 (전월 잔액 없음)</span>`;
+      }
+    }
+
     assetRows[tier].push({
       key: a.id,
       name: a.name,
-      meta: isFx ? a.currency : (a.trackPerformance ? '추적' : ''),
+      meta: baseMeta,
+      eventNeed: eventNeedMeta,
       isFx,
       filled: !!doc,
       krw: curKrw,
@@ -10012,6 +10065,7 @@ function buildBsItemHtml(r, type) {
   if (r.auto)    classes.push('auto');
 
   const metaHtml = r.meta ? `<span class="meta">${escapeHtml(r.meta)}</span>` : '';
+  const eventNeedHtml = r.eventNeed ? r.eventNeed : '';
   const deltaStr = (r.filled && r.delta != null) ? renderInlineDelta(r.delta, type) : '';
 
   let amtHtml;
@@ -10028,7 +10082,7 @@ function buildBsItemHtml(r, type) {
 
   return `
     <div class="${classes.join(' ')}">
-      <div class="name">${escapeHtml(r.name)}${metaHtml}</div>
+      <div class="name">${escapeHtml(r.name)}${metaHtml}${eventNeedHtml}</div>
       <div class="amt">${amtHtml}</div>
     </div>
   `;
@@ -14416,17 +14470,21 @@ function renderDashEventsCard() {
     }
 
     return `
-      <div class="dash-event-progress-row">
+      <div class="dash-event-progress-row collapsed" data-event-toggle>
         <div class="dash-event-progress-head">
-          <span class="dash-event-progress-title">${escapeHtml(ev.title)}</span>
+          <span class="dash-event-progress-title">
+            <span class="dash-event-caret">▸</span>${escapeHtml(ev.title)}
+          </span>
           <span class="dash-event-progress-amt">${fmtAmount(accumulated)} / ${fmtAmount(amount)}원</span>
         </div>
-        <div class="dash-event-progress-bar">
-          <div class="dash-event-progress-bar-fill ${barCls}" style="width:${Math.min(100, pct)}%"></div>
-        </div>
-        <div class="dash-event-progress-foot">
-          <span class="dash-event-progress-time">${escapeHtml(timeText)}</span>
-          <span class="dash-event-progress-pct ${pctCls}">${pct}%${stateLabel ? ' · ' + stateLabel : ''}</span>
+        <div class="dash-event-progress-detail">
+          <div class="dash-event-progress-bar">
+            <div class="dash-event-progress-bar-fill ${barCls}" style="width:${Math.min(100, pct)}%"></div>
+          </div>
+          <div class="dash-event-progress-foot">
+            <span class="dash-event-progress-time">${escapeHtml(timeText)}</span>
+            <span class="dash-event-progress-pct ${pctCls}">${pct}%${stateLabel ? ' · ' + stateLabel : ''}</span>
+          </div>
         </div>
       </div>`;
   }).join('');
@@ -14434,6 +14492,13 @@ function renderDashEventsCard() {
   $body.innerHTML = e1Html + `
     <div class="dash-event-progress-section-title">개별 진도</div>
     ${rowsHtml}`;
+
+  // 개별 진도 카드 접기/펼치기 (기본 접힘)
+  $body.querySelectorAll('[data-event-toggle]').forEach(el => {
+    el.querySelector('.dash-event-progress-head')?.addEventListener('click', () => {
+      el.classList.toggle('collapsed');
+    });
+  });
 
   // v0.7-15 — 처리는 거래 탭 알림바에서. 여기는 거래 탭으로 라우팅만 제공.
   $body.querySelectorAll('[data-goto-tx-tab]').forEach(el => {
@@ -14487,6 +14552,19 @@ function eventThisMonthRecommend(ev, ym) {
   const recurM = parseInt(ev.recurMonth, 10);
   if (recurM === cm) return 0;
   return Math.round(amount / 11);
+}
+
+// 모든 경조사의 ym 말 시점 목표 누적 잔액 합 (KRW)
+// — 적립 계좌가 그 시점에 보유하고 있어야 할 총액. estimateEventProgress 기반.
+function eventTargetBalanceForYm(ym) {
+  if (!ym || !Array.isArray(eventsMasters)) return 0;
+  let total = 0;
+  for (const ev of eventsMasters) {
+    const amount = Number(ev.amount) || 0;
+    if (amount <= 0) continue;
+    total += Math.round(amount * estimateEventProgress(ev, ym));
+  }
+  return total;
 }
 
 // ── 예산 모달 (v0.4 A4) ──
