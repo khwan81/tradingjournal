@@ -241,6 +241,18 @@ html, body { overflow-x: hidden; }
 .btn-app-switch:hover { background: var(--bg4); color: var(--text); }
 .btn-app-switch .sw-icon { font-size: 13px; line-height: 1; }
 
+/* 테마 토글 버튼 (헤더) */
+.btn-theme-toggle {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text2);
+  height: var(--btn-h-sm); width: var(--btn-h-sm);
+  font-size: 14px; line-height: 1; cursor: pointer;
+  transition: background .15s, color .15s;
+  display: inline-flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.btn-theme-toggle:hover { background: var(--bg4); color: var(--text); }
+
 /* 글로벌 월 헤더 (v0.5+ 월 통일) */
 .global-month-bar {
   display: flex; align-items: center; justify-content: center;
@@ -3713,6 +3725,7 @@ html, body { overflow-x: hidden; }
     font-size: 16px;  /* 줌 방지 */
   }
   .btn-logout { min-height: 32px; font-size: 12px; }
+  .btn-theme-toggle { min-height: 32px; height: 32px; width: 32px; font-size: 13px; }
   /* 앱 스위처 모바일 — 라벨 숨기고 아이콘만, 이메일도 숨김 (좁아짐 방지) */
   .btn-app-switch { min-height: 32px; font-size: 12px; padding: 0 10px; }
   .btn-app-switch .sw-label { display: none; }
@@ -3827,7 +3840,7 @@ html, body { overflow-x: hidden; }
 <script>
   (function () {
     try {
-      var t = localStorage.getItem('financeTheme') || 'dark';
+      var t = localStorage.getItem('appTheme') || 'dark';
       document.documentElement.setAttribute('data-theme', t);
       var meta = document.querySelector('meta[name="theme-color"]');
       if (meta) meta.setAttribute('content', t === 'light' ? '#f4f5f7' : '#0d0f12');
@@ -3861,6 +3874,7 @@ html, body { overflow-x: hidden; }
   <div class="top-header">
     <h1>💰 Finance</h1>
     <div class="user-info">
+      <button class="btn-theme-toggle" id="btn-theme-toggle" title="테마 전환" aria-label="테마 전환"></button>
       <a class="btn-app-switch" href="/tradingjournal/" title="Trading으로 이동">
         <span class="sw-icon">📈</span><span class="sw-label">Trading</span>
       </a>
@@ -4517,22 +4531,6 @@ html, body { overflow-x: hidden; }
   </div>
 
   <div class="tab-content" id="tab-settings">
-    <!-- 테마 선택 -->
-    <div class="section-card">
-      <div class="section-head">
-        <div>
-          <div class="section-title">🎨 테마</div>
-          <div class="section-sub">화면 밝기 모드를 선택하세요</div>
-        </div>
-        <div class="section-actions">
-          <div class="seg" id="theme-seg">
-            <button type="button" class="seg-btn" data-theme-choice="dark">🌙 다크</button>
-            <button type="button" class="seg-btn" data-theme-choice="light">☀️ 라이트</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- 환율 (공유 마스터) -->
     <div class="section-card" id="sec-fxrates">
       <div class="section-head">
@@ -16014,14 +16012,16 @@ document.getElementById('btn-fx-save').addEventListener('click', saveFxRates);
 function applyTheme(theme) {
   const t = theme === 'light' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', t);
-  try { localStorage.setItem('financeTheme', t); } catch (e) {}
+  try { localStorage.setItem('appTheme', t); } catch (e) {}
   // theme-color 메타 동기화 (PWA 상태바)
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute('content', t === 'light' ? '#f4f5f7' : '#0d0f12');
-  // 세그 버튼 active 표시
-  document.querySelectorAll('#theme-seg [data-theme-choice]').forEach(b => {
-    b.classList.toggle('active', b.dataset.themeChoice === t);
-  });
+  // 헤더 버튼 아이콘 — 누르면 바뀔 모드를 표시 (다크면 ☀️, 라이트면 🌙)
+  const $btn = document.getElementById('btn-theme-toggle');
+  if ($btn) {
+    $btn.textContent = t === 'light' ? '🌙' : '☀️';
+    $btn.title = t === 'light' ? '다크 모드로 전환' : '라이트 모드로 전환';
+  }
   // 차트는 CSS 변수 토큰을 읽어 그리므로, 현재 탭을 다시 렌더해 색을 갱신
   const $activeTab = document.querySelector('.tab.active');
   if ($activeTab && typeof switchTab === 'function') {
@@ -16029,17 +16029,19 @@ function applyTheme(theme) {
   }
 }
 
-document.querySelectorAll('#theme-seg [data-theme-choice]').forEach(btn => {
-  btn.addEventListener('click', () => applyTheme(btn.dataset.themeChoice));
+document.getElementById('btn-theme-toggle')?.addEventListener('click', () => {
+  const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+  applyTheme(cur === 'light' ? 'dark' : 'light');
 });
 
-// 초기 active 표시 (즉시적용 스크립트가 이미 data-theme는 설정함)
+// 초기 아이콘 표시 (즉시적용 스크립트가 이미 data-theme는 설정함)
 (function () {
-  let t = 'dark';
-  try { t = localStorage.getItem('financeTheme') || 'dark'; } catch (e) {}
-  document.querySelectorAll('#theme-seg [data-theme-choice]').forEach(b => {
-    b.classList.toggle('active', b.dataset.themeChoice === t);
-  });
+  const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+  const $btn = document.getElementById('btn-theme-toggle');
+  if ($btn) {
+    $btn.textContent = cur === 'light' ? '🌙' : '☀️';
+    $btn.title = cur === 'light' ? '다크 모드로 전환' : '라이트 모드로 전환';
+  }
 })();
 
 // 환율 수정 링크 — 설정 탭의 환율 섹션으로 스크롤

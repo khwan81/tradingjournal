@@ -69,6 +69,37 @@
   --font-mono: 'DM Mono', 'Fira Mono', monospace;
 }
 
+/* ── 라이트 테마 (data-theme="light") ── */
+html[data-theme="light"] {
+  --bg:        #f4f5f7;
+  --bg2:       #ffffff;
+  --bg3:       #eef0f3;
+  --bg4:       #e2e5ea;
+  --border:    rgba(0,0,0,0.08);
+  --border2:   rgba(0,0,0,0.14);
+  --text:      #1a1d23;
+  --text2:     #5c6373;
+  --text3:     #9298a6;
+  --accent:    #2f6fe0;
+  --accent2:   #2560c8;
+  --green:     #0f9d6f;
+  --green-bg:  rgba(15,157,111,0.10);
+  --red:       #e0524d;
+  --red-bg:    rgba(224,82,77,0.10);
+  --amber:     #c8870f;
+  --amber-bg:  rgba(200,135,15,0.12);
+  --purple:    #7c5cdc;
+  --purple-bg: rgba(124,92,220,0.10);
+  --coin-bg:   rgba(124,92,220,0.12);
+  --coin-c:    #6b46c1;
+  --kor-bg:    rgba(15,157,111,0.12);
+  --kor-c:     #0c7a56;
+  --us-bg:     rgba(47,111,224,0.12);
+  --us-c:      #2560c8;
+  --open-bg:   rgba(200,135,15,0.14);
+  --open-c:    #a06d0a;
+}
+
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500&display=swap');
 
 body {
@@ -155,6 +186,18 @@ body {
 }
 .btn-app-switch:hover { background: var(--bg4); color: var(--text); border-color: var(--border2); }
 .btn-app-switch .sw-icon { font-size: 13px; line-height: 1; }
+
+/* 테마 토글 버튼 (헤더) */
+.btn-theme-toggle {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 99px;
+  color: var(--text2); font-size: 14px; line-height: 1;
+  cursor: pointer; flex-shrink: 0;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.btn-theme-toggle:hover { background: var(--bg4); color: var(--text); border-color: var(--border2); }
 
 /* ── Tab Bar ── */
 .tab-bar {
@@ -1137,6 +1180,18 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator {
 </head>
 <body>
 
+<!-- 테마 즉시 적용 (깜빡임 방지) -->
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem('appTheme') || 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute('content', t === 'light' ? '#f4f5f7' : '#0d0f12');
+    } catch (e) {}
+  })();
+</script>
+
 <!-- Loading -->
 <div id="loading">
   <div class="spinner"></div>
@@ -1166,6 +1221,7 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator {
   <div class="top-header">
     <h1>📈 Trading</h1>
     <div class="header-right">
+      <button class="btn-theme-toggle" id="btn-theme-toggle" title="테마 전환" aria-label="테마 전환"></button>
       <a class="btn-app-switch" href="/tradingjournal/finance.html" title="Finance로 이동">
         <span class="sw-icon">💰</span><span class="sw-label">Finance</span>
       </a>
@@ -3393,11 +3449,49 @@ ge('reset-execute').addEventListener('click', executeReset);
 });
 
 // ── Init ──────────────────────────────────────────────────────────────────────
-if(typeof Chart!=='undefined'){
-  Chart.defaults.color='#555b6a';
-  Chart.defaults.borderColor='rgba(255,255,255,0.06)';
-  Chart.defaults.font.family="'DM Sans','Noto Sans KR',sans-serif";
+function applyChartThemeDefaults() {
+  if (typeof Chart === 'undefined') return;
+  const css = getComputedStyle(document.documentElement);
+  Chart.defaults.color = (css.getPropertyValue('--text3') || '#555b6a').trim();
+  Chart.defaults.borderColor = (css.getPropertyValue('--border') || 'rgba(255,255,255,0.06)').trim();
+  Chart.defaults.font.family = "'DM Sans','Noto Sans KR',sans-serif";
 }
+applyChartThemeDefaults();
+
+// ── 테마 (다크/라이트) — Finance와 localStorage('appTheme') 공유 ──
+function applyTheme(theme) {
+  const t = theme === 'light' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  try { localStorage.setItem('appTheme', t); } catch (e) {}
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', t === 'light' ? '#f4f5f7' : '#0d0f12');
+  const btn = ge('btn-theme-toggle');
+  if (btn) {
+    btn.textContent = t === 'light' ? '🌙' : '☀️';
+    btn.title = t === 'light' ? '다크 모드로 전환' : '라이트 모드로 전환';
+  }
+  // 차트 기본색 갱신 후, 대시보드가 보이면 다시 그려 반영
+  applyChartThemeDefaults();
+  if (ge('screen-dashboard')?.classList.contains('active') && typeof renderDashboard === 'function') {
+    renderDashboard();
+  }
+}
+
+ge('btn-theme-toggle')?.addEventListener('click', () => {
+  const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+  applyTheme(cur === 'light' ? 'dark' : 'light');
+});
+
+// 초기 버튼 아이콘 (즉시적용 스크립트가 data-theme는 이미 설정함)
+(function () {
+  const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+  const btn = ge('btn-theme-toggle');
+  if (btn) {
+    btn.textContent = cur === 'light' ? '🌙' : '☀️';
+    btn.title = cur === 'light' ? '다크 모드로 전환' : '라이트 모드로 전환';
+  }
+})();
+
 renderStrategies();
 renderRDist([0,0,0,0,0,0,0]);
 renderStrategyBars(strategies.map(s=>({n:s,c:0})));
