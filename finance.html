@@ -4327,6 +4327,7 @@ html, body { overflow-x: hidden; }
       </div>
       <div class="subtab-action">
         <!-- 예산 활성 시 -->
+        <button class="btn-s" id="btn-bg-add"       data-action-for="budget">+ 예산 추가</button>
         <button class="btn-s" id="btn-bg-copy-prev" data-action-for="budget">📋 전월 복사</button>
         <!-- 경조사 활성 시 -->
         <button class="btn-s" id="btn-add-event"     data-action-for="events"    style="display:none;">+ 경조사 추가</button>
@@ -4962,7 +4963,23 @@ html, body { overflow-x: hidden; }
     </div>
     <div class="modal-body">
       <form id="form-budget" onsubmit="return false;">
-        <!-- 컨텍스트 (수정 불가) -->
+        <!-- 카테고리 선택 (수동 추가 모드에서만 표시) -->
+        <div class="bg-modal-picker" id="bg-modal-picker" style="display:none;">
+          <div class="form-group">
+            <label class="form-label">구분</label>
+            <select class="select" id="bg-modal-flow-select">
+              <option value="revenue">💰 매출 (목표)</option>
+              <option value="fixed">🔵 고정비 (한도)</option>
+              <option value="variable">🟡 변동비 (한도)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">카테고리</label>
+            <select class="select" id="bg-modal-cat-select"></select>
+          </div>
+        </div>
+
+        <!-- 컨텍스트 (편집 모드 — 수정 불가) -->
         <div class="bg-modal-context" id="bg-modal-context">
           <div class="bg-modal-ctx-row">
             <span class="bg-modal-ctx-k">구분</span>
@@ -12268,21 +12285,26 @@ function renderBgBody() {
     if (budgetByCat[b.flow]) budgetByCat[b.flow].set(b.category, b);
   }
 
-  // 3) 카테고리 순서 — 마스터 순서 + 마스터엔 없지만 거래/예산엔 등장한 추가 카테고리
+  // 3) 카테고리 순서 — 예산이 설정됐거나 거래가 있는 카테고리만 표시 (수동 추가형)
+  //    마스터 전체를 자동으로 깔지 않는다. 마스터 순서를 따르되, 예산/거래에 등장한 것만 포함.
+  //    마스터에 없는데 예산/거래에 등장한 항목은 뒤에 붙인다.
   const orderCats = (flow) => {
     const masterList = settings?.categories?.[flow] || [];
     const usageMap   = usage[flow];
     const budgetMap  = budgetByCat[flow];
     const ordered = [];
     const seen = new Set();
+    // 마스터 순서 유지하되, 예산 있거나 거래(사용액)가 있는 것만
     for (const m of masterList) {
-      ordered.push(m);
-      seen.add(m);
+      if (budgetMap.has(m) || (usageMap.get(m) || 0) > 0) {
+        ordered.push(m);
+        seen.add(m);
+      }
     }
     // 마스터에 없지만 거래 또는 예산엔 등장한 항목들
     const extras = [];
-    for (const k of usageMap.keys())  if (!seen.has(k)) { extras.push(k); seen.add(k); }
     for (const k of budgetMap.keys()) if (!seen.has(k)) { extras.push(k); seen.add(k); }
+    for (const k of usageMap.keys())  if (!seen.has(k) && (usageMap.get(k) || 0) > 0) { extras.push(k); seen.add(k); }
     return [...ordered, ...extras];
   };
 
@@ -12380,7 +12402,7 @@ function renderBgBody() {
             / <span class="bg-budget">${fmtAmount(groupBudget)}</span>${groupPctHtml}
           </span>
         </div>
-        ${rowsHtml || '<div class="bg-row empty"><div class="bg-row-head"><span class="bg-cat">—</span><span class="bg-amt">카테고리 없음</span></div></div>'}
+        ${rowsHtml || '<div class="bg-row empty"><div class="bg-row-head"><span class="bg-cat">—</span><span class="bg-amt">설정된 예산 없음</span></div></div>'}
       </div>`;
   };
 
@@ -12555,6 +12577,15 @@ async function copyBudgetsFromPrevMonth() {
 }
 
 document.getElementById('btn-bg-copy-prev').addEventListener('click', copyBudgetsFromPrevMonth);
+
+// + 예산 추가 (수동) — 카테고리 직접 선택 모드로 모달 열기
+document.getElementById('btn-bg-add')?.addEventListener('click', () => openBudgetModal(null, null));
+
+// 추가 모드 — 구분 변경 시 카테고리 목록 + 힌트 갱신
+document.getElementById('bg-modal-flow-select')?.addEventListener('change', e => {
+  fillBudgetCatSelect(e.target.value);
+  bgSyncAddHint();
+});
 
 // ──────────────────────────────────────────────────────
 // 대시보드 (v0.5)
@@ -14417,9 +14448,64 @@ function budgetDocId(ym, flow, category) {
 // 현재 편집 중인 예산의 컨텍스트
 let editingBudget = null; // { ym, flow, category, existing? }
 
+// 추가 모드 — 선택한 flow의 카테고리로 select 채우기
+// 이미 이번 달 예산이 설정된 카테고리는 "(설정됨)" 표기 (선택은 가능 → 편집됨)
+function fillBudgetCatSelect(flow) {
+  const $catSel = document.getElementById('bg-modal-cat-select');
+  if (!$catSel) return;
+  const cats = settings?.categories?.[flow] || [];
+  const hasBudget = new Set(bgBudgets.filter(b => b.flow === flow).map(b => b.category));
+  if (!cats.length) {
+    $catSel.innerHTML = '<option value="">카테고리 없음 (설정에서 추가)</option>';
+    return;
+  }
+  $catSel.innerHTML = cats.map(c =>
+    `<option value="${escapeHtml(c)}">${escapeHtml(c)}${hasBudget.has(c) ? ' (설정됨)' : ''}</option>`
+  ).join('');
+}
+
+// 추가 모드 힌트 — 선택한 flow에 맞는 안내
+function bgSyncAddHint() {
+  const flow = document.getElementById('bg-modal-flow-select')?.value;
+  const $hint = document.getElementById('bg-modal-hint');
+  if (!$hint) return;
+  $hint.textContent = (flow === 'revenue')
+    ? '이 카테고리의 이번 달 목표 매출액을 입력하세요.'
+    : '이 카테고리의 이번 달 지출 한도를 입력하세요.';
+}
+
 function openBudgetModal(flow, category) {
   if (!currentUid) { showToast('로그인이 필요합니다'); return; }
   if (!settings)   { showToast('설정 로딩 중…'); return; }
+
+  const $picker  = document.getElementById('bg-modal-picker');
+  const $context = document.getElementById('bg-modal-context');
+  const $flowSel = document.getElementById('bg-modal-flow-select');
+  const $catSel  = document.getElementById('bg-modal-cat-select');
+
+  // ── 추가 모드 (category 미지정) — 카테고리 직접 선택 ──
+  if (!category) {
+    editingBudget = null;
+    $picker.style.display  = '';
+    $context.style.display = 'none';
+    document.getElementById('bg-modal-title').textContent = '예산 추가';
+    document.getElementById('btn-bg-delete').style.display = 'none';
+    document.getElementById('bg-modal-amount').value = '';
+    document.getElementById('bg-modal-note').value   = '';
+
+    // 구분 기본값 (전달된 flow가 있으면 사용, 없으면 변동비)
+    $flowSel.value = (flow === 'revenue' || flow === 'fixed' || flow === 'variable') ? flow : 'variable';
+    fillBudgetCatSelect($flowSel.value);
+    bgSyncAddHint();
+
+    openOv('ov-budget');
+    setTimeout(() => $catSel.focus(), 50);
+    return;
+  }
+
+  // ── 편집 모드 (행 클릭) — 컨텍스트 고정 ──
+  $picker.style.display  = 'none';
+  $context.style.display = '';
 
   // 기존 예산 찾기
   const existing = bgBudgets.find(b => b.flow === flow && b.category === category) || null;
@@ -14460,8 +14546,19 @@ function openBudgetModal(flow, category) {
 
 // 저장 (추가/편집 공통)
 document.getElementById('btn-bg-save').addEventListener('click', async () => {
-  if (!editingBudget) return;
-  const { ym, flow, category, existing } = editingBudget;
+  // 추가 모드 / 편집 모드 분기로 flow·category 결정
+  let ym, flow, category, existing;
+  const isAddMode = document.getElementById('bg-modal-picker').style.display !== 'none';
+  if (isAddMode) {
+    ym       = currentMonth;
+    flow     = document.getElementById('bg-modal-flow-select').value;
+    category = document.getElementById('bg-modal-cat-select').value;
+    if (!category) { showToast('카테고리를 선택하세요'); return; }
+    existing = bgBudgets.find(b => b.flow === flow && b.category === category) || null;
+  } else {
+    if (!editingBudget) return;
+    ({ ym, flow, category, existing } = editingBudget);
+  }
 
   const raw = document.getElementById('bg-modal-amount').value.trim();
   // 콤마 제거 + 숫자
