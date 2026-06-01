@@ -4896,6 +4896,13 @@ html, body { overflow-x: hidden; }
               <div class="reset-option-desc">경조사 일정/기록</div>
             </div>
           </label>
+          <label class="reset-option">
+            <input type="checkbox" class="reset-check" data-key="favorites">
+            <div class="reset-option-body">
+              <div class="reset-option-title">즐겨찾기 <span class="reset-count" id="rsc-favorites">…</span></div>
+              <div class="reset-option-desc">자주 쓰는 거래 템플릿</div>
+            </div>
+          </label>
         </div>
 
         <div class="reset-section-title">🏦 마스터 데이터</div>
@@ -5386,6 +5393,15 @@ html, body { overflow-x: hidden; }
     </div>
     <div class="modal-body">
       <form id="form-tx" onsubmit="return false;">
+        <!-- 즐겨찾기 칩 줄 (v0.7-28) — 새 거래 모드 + 즐겨찾기 있을 때만 표시 -->
+        <div class="form-group" id="tx-fav-group" style="display:none;">
+          <label class="form-label" style="display:flex; align-items:center; gap:6px;">
+            즐겨찾기
+            <span style="color:var(--text3); font-weight:400;">— 탭하면 폼이 채워져요</span>
+          </label>
+          <div id="tx-fav-row" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:2px; -webkit-overflow-scrolling:touch;"></div>
+        </div>
+
         <div class="form-row cols-2 form-group">
           <div>
             <label class="form-label">날짜</label>
@@ -5450,6 +5466,7 @@ html, body { overflow-x: hidden; }
     </div>
     <div class="modal-foot">
       <button class="btn-danger grow" id="btn-tx-delete" style="display:none;">삭제</button>
+      <button class="btn-s" id="btn-tx-star" title="이 거래를 즐겨찾기로 등록" aria-pressed="false" style="display:none; min-width:42px; padding:0;">☆</button>
       <button class="btn-s" data-close="ov-tx">취소</button>
       <button class="btn-p" id="btn-tx-save">저장</button>
     </div>
@@ -5892,6 +5909,7 @@ let sharedSettings = null; // config/accounts 도큐먼트 (categoriesEnum + fxR
 let transactions = []; // 현재 월의 거래
 let recurringMasters = []; // 반복지출 마스터 (전체)
 let eventsMasters = []; // 경조사 마스터 (v0.6+)
+let favorites = []; // 즐겨찾기 거래 (v0.7-28) — useCount 내림차순 정렬
 let pendingProcessEventId = null;   // v0.7-15 — 거래 저장 시 lastDoneYm을 갱신할 경조사 id
 let currentMonth = currentYm(); // YYYY-MM 형식 (글로벌 — 모든 탭 공유, v0.5+)
 let plTransactions = [];        // 손익 탭에서 보고 있는 월의 거래
@@ -5907,6 +5925,7 @@ let unsubSettings = null;
 let unsubTransactions = null;
 let unsubRecurring = null;
 let unsubEvents = null;          // v0.6+ 경조사
+let unsubFavorites = null;       // v0.7-28 즐겨찾기 거래
 let unsubPlTransactions = null;     // 손익 탭 거래 구독
 let unsubBgBudgets = null;          // 예산 탭 예산 구독 (v0.4)
 let unsubBgTransactions = null;     // 예산 탭 거래 구독 (v0.4)
@@ -5968,6 +5987,10 @@ const pathMonthlyLiabDoc = (ym, key) => doc(db, `users/${currentUid}/finance/con
 // 배당 거래
 const pathDividends = () => collection(db, `users/${currentUid}/finance/config/dividends`);
 const pathDividend = id => doc(db, `users/${currentUid}/finance/config/dividends/${id}`);
+
+// 즐겨찾기 거래 (v0.7-28) — 자주 쓰는 거래 템플릿 (자동 분개 아님, 폼 프리필용)
+const pathFavorites = () => collection(db, `users/${currentUid}/finance/config/favorites`);
+const pathFavorite = id => doc(db, `users/${currentUid}/finance/config/favorites/${id}`);
 
 // monthly 도큐먼트 id 만들기 / 쪼개기
 function monthlyKeyFor(ym, accId)      { return `${ym}__${accId}`; }
@@ -6090,6 +6113,7 @@ async function loadAll() {
   // 반복지출 마스터 구독
   subscribeRecurring();
   subscribeEvents();   // v0.6 경조사
+  subscribeFavorites();   // v0.7-28 즐겨찾기 거래
 
   // 거래내역 탭 — 예산 알림바용 (v0.4 A7)
   subscribeTxTabBudgets();
@@ -6167,7 +6191,32 @@ function subscribeEvents() {
   );
 }
 
-// 경조사 다음 발생 ym 계산 (정렬 + 표시용)
+// 즐겨찾기 거래 구독 (v0.7-28)
+// 모델: users/{uid}/finance/config/favorites/{favId}
+//   { label, categoryName, flow, paymentName, defaultAmount, useCount, createdAt, updatedAt }
+// 정렬: useCount 내림차순 (자주 쓰는 순), 동률이면 최근 생성 순.
+function subscribeFavorites() {
+  if (unsubFavorites) { unsubFavorites(); unsubFavorites = null; }
+  if (!currentUid) return;
+  unsubFavorites = onSnapshot(
+    pathFavorites(),
+    snap => {
+      favorites = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      favorites.sort((a, b) => {
+        const ua = Number(a.useCount) || 0;
+        const ub = Number(b.useCount) || 0;
+        if (ua !== ub) return ub - ua;
+        // 동률 — createdAt(Timestamp) 최근 순
+        const ta = a.createdAt?.seconds || 0;
+        const tb = b.createdAt?.seconds || 0;
+        return tb - ta;
+      });
+      // 거래 모달이 열려 있고 새 거래 모드면 칩 줄 즉시 갱신
+      if (typeof renderFavoriteChips === 'function') renderFavoriteChips();
+    },
+    err => { console.error('favorites subscribe error', err); showToast('즐겨찾기 로드 실패'); }
+  );
+}
 // 매년 행사: 올해 또는 다음 해 recurMonth (현재 월이 이미 지났으면 내년)
 function nextEventYm(ev) {
   if (!ev) return null;
@@ -6776,6 +6825,7 @@ function unsubscribeAll() {
   if (unsubBgTransactions) { unsubBgTransactions(); unsubBgTransactions = null; } // v0.4
   if (unsubTxTabBudgets) { unsubTxTabBudgets(); unsubTxTabBudgets = null; }       // v0.4 A7
   if (unsubEvents) { unsubEvents(); unsubEvents = null; }                         // v0.6
+  if (unsubFavorites) { unsubFavorites(); unsubFavorites = null; }                // v0.7-28
   if (unsubMonthly) { unsubMonthly(); unsubMonthly = null; }                      // v0.7-3b
   if (unsubMonthlyPrev) { unsubMonthlyPrev(); unsubMonthlyPrev = null; }          // v0.7-3b
   if (unsubMonthlyLiab) { unsubMonthlyLiab(); unsubMonthlyLiab = null; }          // v0.7-5c
@@ -6787,6 +6837,7 @@ function unsubscribeAll() {
   transactions = [];
   recurringMasters = [];
   eventsMasters = [];    // v0.6
+  favorites = [];        // v0.7-28
   allUnpaidTxs = [];
   plTransactions = [];   // A2
   bgBudgets = [];        // v0.4
@@ -8611,6 +8662,7 @@ async function downloadBackup() {
       dividendsSnap,
       eventsSnap,
       budgetsSnap,
+      favoritesSnap,
     ] = await Promise.all([
       getDoc(pathAccountsSettings()),
       getDocs(pathAccountsItems()),
@@ -8623,6 +8675,7 @@ async function downloadBackup() {
       getDocs(pathDividends()),
       getDocs(pathEvents()),
       getDocs(pathBudgets()),
+      getDocs(pathFavorites()),
     ]);
 
     const sharedAccountsItems = [];
@@ -8654,10 +8707,14 @@ async function downloadBackup() {
     const budgets = [];
     budgetsSnap.forEach(d => budgets.push({ ym: d.id, ...d.data() }));
 
+    // v0.7-28 — 즐겨찾기 거래
+    const favorites = [];
+    favoritesSnap.forEach(d => favorites.push({ id: d.id, ...d.data() }));
+
     const payload = {
       app: 'finance',
       schemaVersion: 3,
-      appVersion: 'v0.7-27',
+      appVersion: 'v0.7-28',
       exportedAt: new Date().toISOString(),
       uid: currentUid,
       data: {
@@ -8673,6 +8730,8 @@ async function downloadBackup() {
         dividends,
         events,
         budgets,
+        // v0.7-28 추가 (옵셔널 — 옛 백업엔 없음)
+        favorites,
       },
     };
 
@@ -8821,7 +8880,7 @@ function validateBackupPayload(p) {
 
   // v3 추가 필드: 있으면 배열, 없거나 누락은 빈 배열로 간주 (호환)
   if (p.schemaVersion === 3) {
-    for (const k of ['monthly', 'monthlyLiab', 'dividends', 'events', 'budgets']) {
+    for (const k of ['monthly', 'monthlyLiab', 'dividends', 'events', 'budgets', 'favorites']) {
       if (k in d && !Array.isArray(d[k])) return `${k}는 배열이어야 합니다`;
     }
   }
@@ -9041,7 +9100,7 @@ async function openResetModal() {
   try {
     const [
       txSnap, monthlySnap, snapSnap, monthlyLiabSnap, divSnap,
-      budgetsSnap, recurringSnap, eventsSnap, accountsSnap
+      budgetsSnap, recurringSnap, eventsSnap, accountsSnap, favoritesSnap
     ] = await Promise.all([
       getDocs(pathTransactions()),
       getDocs(pathMonthly()),
@@ -9052,6 +9111,7 @@ async function openResetModal() {
       getDocs(pathRecurring()),
       getDocs(pathEvents()),
       getDocs(pathAccountsItems()),
+      getDocs(pathFavorites()),
     ]);
 
     // 부채 마스터/휴지통 카운트는 현재 메모리상의 settings에서 — 별도 fetch 불필요
@@ -9068,6 +9128,7 @@ async function openResetModal() {
       recurring:    recurringSnap.size,
       events:       eventsSnap.size,
       accounts:     accountsSnap.size,
+      favorites:    favoritesSnap.size,
       liabilities:  liabTotal,
       _snapshots:   snapSnap.size,  // 내부용 — monthly에 합쳐서 표시
     };
@@ -9157,6 +9218,7 @@ async function executeReset() {
       { key: 'budgets',      label: '예산',       ref: pathBudgets() },
       { key: 'recurring',    label: '반복지출',   ref: pathRecurring() },
       { key: 'events',       label: '경조사',     ref: pathEvents() },
+      { key: 'favorites',    label: '즐겨찾기',   ref: pathFavorites() },
       { key: 'accounts',     label: '계좌 마스터', ref: pathAccountsItems() },
     ];
 
@@ -9257,7 +9319,8 @@ async function executeRestore() {
     const delDiv      = await deleteAllInCollection(pathDividends());
     const delEvents   = await deleteAllInCollection(pathEvents());
     const delBudgets  = await deleteAllInCollection(pathBudgets());
-    const totalDel = delTx + delSnap + delRec + delAcc + delMonthly + delLiab + delDiv + delEvents + delBudgets;
+    const delFav      = await deleteAllInCollection(pathFavorites());   // v0.7-28
+    const totalDel = delTx + delSnap + delRec + delAcc + delMonthly + delLiab + delDiv + delEvents + delBudgets + delFav;
     setRestoreStep(1, 'done', `✓ 기존 데이터 삭제 (${totalDel}건)`);
 
     // 2. 새 데이터 쓰기
@@ -9283,8 +9346,9 @@ async function executeRestore() {
     const wDiv      = await writeAllToCollection(pathDividends(),   d.dividends   || [], 'id');
     const wEvents   = await writeAllToCollection(pathEvents(),      d.events      || [], 'id');
     const wBudgets  = await writeAllToCollection(pathBudgets(),     d.budgets     || [], 'ym');
+    const wFav      = await writeAllToCollection(pathFavorites(),   d.favorites   || [], 'id');   // v0.7-28
     setRestoreStep(2, 'done',
-      `✓ 데이터 복원 (거래 ${wTx} · 결산 ${wMonthly} · 부채 ${wLiab} · 배당 ${wDiv} · 경조사 ${wEvents} · 예산 ${wBudgets} · 반복 ${wRec})`
+      `✓ 데이터 복원 (거래 ${wTx} · 결산 ${wMonthly} · 부채 ${wLiab} · 배당 ${wDiv} · 경조사 ${wEvents} · 예산 ${wBudgets} · 반복 ${wRec} · 즐겨찾기 ${wFav})`
     );
 
     // 3. 마무리 — 페이지 새로고침으로 모든 구독 상태 깨끗이 정리
@@ -15582,6 +15646,134 @@ function fmtFxNative(n, currency) {
 // ──────────────────────────────────────────────────────
 let editingTxId = null;
 
+// ── 즐겨찾기 거래 (v0.7-28) ───────────────────────────
+// 새 거래 모달 상단 칩 줄에서 탭 → 폼 프리필. 푸터 ☆ → 저장 시 즐겨찾기로 굳히기.
+// 칩 탭은 단순 프리필이라 자동 분개가 아님 (저장 시 일반 거래로 떨어짐).
+let txStarOn = false;          // ☆ 토글 상태 (저장 시 즐겨찾기 upsert 여부)
+let appliedFavoriteId = null;  // 칩으로 프리필한 즐겨찾기 id (저장 시 useCount +1)
+
+// 즐겨찾기 → 거래 폼 키 (중복 판정용): 카테고리|결제수단|금액
+function favKey(categoryName, paymentName, amount) {
+  return `${categoryName || ''}|${paymentName || ''}|${amount == null ? '' : amount}`;
+}
+
+// 칩 줄 렌더 — 새 거래 모드 + 즐겨찾기 있을 때만. 0개면 그룹 숨김.
+function renderFavoriteChips() {
+  const $group = document.getElementById('tx-fav-group');
+  const $row = document.getElementById('tx-fav-row');
+  if (!$group || !$row) return;
+  // 편집 모드거나 즐겨찾기 0개면 칩 줄 영역 자체를 숨김
+  if (editingTxId || !favorites.length) {
+    $group.style.display = 'none';
+    $row.innerHTML = '';
+    return;
+  }
+  $group.style.display = '';
+  $row.innerHTML = favorites.map(f => {
+    const label = f.label || f.categoryName || '거래';
+    const amt = (f.defaultAmount != null && f.defaultAmount > 0)
+      ? ` ${fmtAmount(f.defaultAmount)}원` : '';
+    return `<button type="button" class="fav-chip" data-fav-id="${escapeHtml(f.id)}"
+      style="flex:0 0 auto; min-height:0; height:32px; padding:0 12px; font-size:13px;
+      background:var(--bg3); color:var(--text); border:1px solid var(--border);
+      border-radius:8px; white-space:nowrap; cursor:pointer;">${escapeHtml(label)}${escapeHtml(amt)}</button>`;
+  }).join('');
+}
+
+// 칩 탭 → 폼 프리필
+function applyFavorite(favId) {
+  const f = favorites.find(x => x.id === favId);
+  if (!f) return;
+  appliedFavoriteId = favId;
+
+  // 카테고리 (현재 카테고리 옵션에 존재할 때만 선택)
+  const $cat = document.getElementById('tx-category');
+  if (f.categoryName && [...$cat.options].some(o => o.value === f.categoryName)) {
+    $cat.value = f.categoryName;
+    updateTxCategoryHint();
+  }
+  // 결제수단
+  const $pay = document.getElementById('tx-payment');
+  if (f.paymentName && [...$pay.options].some(o => o.value === f.paymentName)) {
+    $pay.value = f.paymentName;
+    // paid 자동 (사용자가 토글 안 만졌으면)
+    const payType = (settings?.payments.find(p => p.name === f.paymentName))?.type || 'cash';
+    if (!paidTouchedByUser) setPaid(payType === 'cash', payType, false);
+  }
+  // 금액 (KRW 모드일 때만 — 외화 계좌면 native/환율 흐름이라 건너뜀)
+  const isFx = getSelectedTxAccountCurrency() !== 'KRW';
+  if (!isFx && f.defaultAmount != null && f.defaultAmount > 0) {
+    document.getElementById('tx-amount').value = Number(f.defaultAmount).toLocaleString('en-US');
+  }
+}
+
+// 칩 줄 위임 클릭
+document.getElementById('tx-fav-row').addEventListener('click', e => {
+  const btn = e.target.closest('.fav-chip');
+  if (!btn) return;
+  applyFavorite(btn.dataset.favId);
+});
+
+// ☆ 토글
+function setStar(on) {
+  txStarOn = on;
+  const $btn = document.getElementById('btn-tx-star');
+  if (!$btn) return;
+  $btn.textContent = on ? '★' : '☆';
+  $btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  $btn.style.color = on ? 'var(--accent)' : '';
+}
+document.getElementById('btn-tx-star').addEventListener('click', () => setStar(!txStarOn));
+
+// 저장 후 즐겨찾기 반영 (useCount 증가 / upsert)
+//   - ☆ ON: 같은 키 즐겨찾기 있으면 useCount +1, 없으면 신규 생성 (dedupe)
+//   - ☆ OFF인데 칩으로 프리필했고 키가 그대로면: 그 즐겨찾기 useCount +1 (일반 사용)
+async function recordFavoriteOnSave(savedData) {
+  const { category, payment, amount } = savedData;
+  if (!category || !payment) return;
+  const key = favKey(category, payment, amount);
+
+  const existing = favorites.find(f => favKey(f.categoryName, f.paymentName, f.defaultAmount) === key);
+
+  try {
+    if (txStarOn) {
+      if (existing) {
+        await updateDoc(pathFavorite(existing.id), {
+          useCount: (Number(existing.useCount) || 0) + 1,
+          updatedAt: serverTimestamp(),
+        });
+        showToast('★ 이미 등록된 즐겨찾기예요');
+      } else {
+        await addDoc(pathFavorites(), {
+          label: category,            // 기본 라벨 = 카테고리명
+          categoryName: category,
+          flow: mapCategoryToFlow(category),
+          paymentName: payment,
+          defaultAmount: amount ?? null,
+          useCount: 1,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+        showToast('★ 즐겨찾기로 등록했어요');
+      }
+    } else if (appliedFavoriteId) {
+      // 칩으로 프리필한 거래를 그대로 저장 → 사용 1회로 카운트
+      const applied = favorites.find(f => f.id === appliedFavoriteId);
+      if (applied && favKey(applied.categoryName, applied.paymentName, applied.defaultAmount) === key) {
+        await updateDoc(pathFavorite(applied.id), {
+          useCount: (Number(applied.useCount) || 0) + 1,
+          updatedAt: serverTimestamp(),
+        });
+      }
+    }
+  } catch (e) {
+    console.error('[favorite] 반영 실패', e);
+    // 거래 저장은 이미 성공했으므로 조용히 무시 (토스트만)
+    showToast('즐겨찾기 반영 실패 (거래는 저장됨)');
+  }
+}
+
+
 function openTxModal(id = null) {
   // 사전조건 검증
   if (!settings) return;
@@ -15641,6 +15833,13 @@ function openTxModal(id = null) {
 
   // 메모
   document.getElementById('tx-memo').value = tx?.memo || '';
+
+  // v0.7-28 — 즐겨찾기 상태 초기화 + 칩 줄 렌더
+  //   ☆ 버튼은 새 거래 모드에서만 노출 (편집 모드는 숨김)
+  setStar(false);
+  appliedFavoriteId = null;
+  document.getElementById('btn-tx-star').style.display = isEdit ? 'none' : 'inline-flex';
+  renderFavoriteChips();
 
   openOv('ov-tx');
   setTimeout(() => document.getElementById('tx-amount').focus(), 50);
@@ -15900,6 +16099,11 @@ document.getElementById('btn-tx-save').addEventListener('click', async () => {
       data.createdAt = serverTimestamp();
       await addDoc(pathTransactions(), data);
       showToast('거래가 추가되었습니다');
+    }
+
+    // v0.7-28 — 즐겨찾기 반영 (신규 거래일 때만; 편집은 대상 아님)
+    if (!editingTxId) {
+      await recordFavoriteOnSave({ category, payment, amount });
     }
 
     // v0.7-15 — closeOv가 처리 마커를 null로 만들기 전에 로컬 캡처
