@@ -11991,6 +11991,27 @@ function bindDividendsHandlers() {
 // ──────────────────────────────────────────────────────
 // 자산결산 결산 입력 모달
 // ──────────────────────────────────────────────────────
+// ── 자산결산 입력 임시저장(draft) — 환율 수정/배경 클릭/앱 종료 시 입력값 보존 ──
+const SV_DRAFT_KEY = 'svDraft';
+function saveSavingsDraft() {
+  if (!editingSavingsKey) return;
+  const draft = {
+    key:       editingSavingsKey,                                    // 어느 계좌·월인지
+    balance:   document.getElementById('sv-input-balance').value,
+    deposit:   document.getElementById('sv-input-deposit').value,
+    principal: document.getElementById('sv-input-principal').value,
+    memo:      document.getElementById('sv-input-memo').value,
+  };
+  try { localStorage.setItem(SV_DRAFT_KEY, JSON.stringify(draft)); } catch (e) {}
+}
+function loadSavingsDraft() {
+  try { const raw = localStorage.getItem(SV_DRAFT_KEY); return raw ? JSON.parse(raw) : null; }
+  catch (e) { return null; }
+}
+function clearSavingsDraft() {
+  try { localStorage.removeItem(SV_DRAFT_KEY); } catch (e) {}
+}
+
 function openSavingsModal(accId) {
   const acc = accounts.find(a => a.id === accId);
   if (!acc) { showToast('계좌를 찾을 수 없습니다'); return; }
@@ -12070,6 +12091,15 @@ function openSavingsModal(accId) {
   }
   // - memo
   document.getElementById('sv-input-memo').value = doc?.memo || '';
+
+  // 임시저장된 입력값 복원 (같은 계좌·월일 때만) — 환율 수정 등으로 닫혔다 다시 열렸을 때
+  const _svDraft = loadSavingsDraft();
+  if (_svDraft && _svDraft.key === editingSavingsKey) {
+    if (_svDraft.balance   !== undefined) document.getElementById('sv-input-balance').value = _svDraft.balance;
+    if (_svDraft.deposit   !== undefined) document.getElementById('sv-input-deposit').value = _svDraft.deposit;
+    if (_svDraft.principal !== undefined) document.getElementById('sv-input-principal').value = _svDraft.principal;
+    if (_svDraft.memo      !== undefined) document.getElementById('sv-input-memo').value = _svDraft.memo;
+  }
 
   // 삭제 버튼: 도큐먼트 있을 때만
   document.getElementById('btn-sv-delete').style.display = doc ? '' : 'none';
@@ -12283,6 +12313,7 @@ async function saveSavingsEntry() {
       if ((d.data().ym || '') > ym) futureN++;
     });
 
+    clearSavingsDraft();   // 정상 저장됐으므로 임시저장 폐기
     closeOv('ov-savings');
     if (futureN > 0) {
       // 체인 재계산 — 이 ym 이후의 도큐먼트들 누적값 갱신
@@ -12448,8 +12479,16 @@ async function deleteSavingsEntry() {
 document.getElementById('sv-input-balance').addEventListener('input', svUpdatePreview);
 document.getElementById('sv-input-deposit').addEventListener('input', svUpdatePreview);
 document.getElementById('sv-input-principal').addEventListener('input', svUpdatePreview);
+// 입력할 때마다 임시저장 (memo 포함)
+['sv-input-balance', 'sv-input-deposit', 'sv-input-principal', 'sv-input-memo'].forEach(id => {
+  document.getElementById(id).addEventListener('input', saveSavingsDraft);
+});
 document.getElementById('sv-fx-keep')?.addEventListener('change', svUpdatePreview);
 document.getElementById('btn-sv-save').addEventListener('click', saveSavingsEntry);
+// 취소 버튼만 임시저장 폐기 (× / 배경 클릭 / 환율 수정은 보존)
+document.querySelectorAll('#ov-savings .modal-foot [data-close="ov-savings"]').forEach(btn => {
+  btn.addEventListener('click', clearSavingsDraft);
+});
 document.getElementById('btn-sv-delete').addEventListener('click', deleteSavingsEntry);
 
 // 환율 수정 링크 (모달 안에서)
@@ -14973,6 +15012,25 @@ function calcCardUnpaidTotal() {
   return allUnpaidTxs.reduce((s, t) => s + (Number(t.amount) || 0), 0);
 }
 
+// ── 잔액 입력 임시저장(draft) — 환율 수정/배경 클릭/앱 종료 시 입력값 보존 ──
+const BAL_DRAFT_KEY = 'balDraft';
+function saveBalanceDraft() {
+  const byKey = {};
+  for (const r of balRowsCache) {
+    if (r.locked || r.auto) continue;               // 잠긴/자동계산 항목 제외
+    if (r.native === '' || r.native == null) continue;
+    byKey[r.key] = r.native;
+  }
+  try { localStorage.setItem(BAL_DRAFT_KEY, JSON.stringify({ ym: balModalYm, byKey })); } catch (e) {}
+}
+function loadBalanceDraft() {
+  try { const raw = localStorage.getItem(BAL_DRAFT_KEY); return raw ? JSON.parse(raw) : null; }
+  catch (e) { return null; }
+}
+function clearBalanceDraft() {
+  try { localStorage.removeItem(BAL_DRAFT_KEY); } catch (e) {}
+}
+
 function openBalanceModal() {
   balModalYm = currentMonth;
   document.getElementById('bal-modal-ym').textContent = balModalYm;
@@ -15035,6 +15093,23 @@ function openBalanceModal() {
 
   // 토글 상태 적용 (기본 ON: 스냅 유지)
   applyFxKeepSnap();
+
+  // 임시저장된 입력값 복원 (같은 달일 때만) — 환율 수정 등으로 닫혔다 다시 열렸을 때
+  const _balDraft = loadBalanceDraft();
+  if (_balDraft && _balDraft.ym === balModalYm && _balDraft.byKey) {
+    for (const r of balRowsCache) {
+      if (r.locked || r.auto) continue;
+      if (!(r.key in _balDraft.byKey)) continue;
+      const v = parseNum(String(_balDraft.byKey[r.key]));
+      r.native = v;
+      if (r.isFx) {
+        const effRate = r.effectiveFxRate != null ? r.effectiveFxRate : (r.fxRate || 0);
+        r.krw = Math.round(v * effRate);
+      } else {
+        r.krw = v;
+      }
+    }
+  }
 
   renderBalanceLists();
 
@@ -15195,6 +15270,7 @@ function renderBalanceLists() {
   // input 핸들러 바인딩
   document.querySelectorAll('.bal-input').forEach($inp => {
     $inp.addEventListener('input', onBalanceInputChange);
+    $inp.addEventListener('input', saveBalanceDraft);   // 입력할 때마다 임시저장
   });
 
   // v0.7-5c — 추적 자산 행 클릭 → 자산결산 모달로 라우팅
@@ -15428,6 +15504,7 @@ async function saveBalanceSnapshot() {
     }
 
     await batch.commit();
+    clearBalanceDraft();   // 정상 저장됐으므로 임시저장 폐기
     closeOv('ov-balance');
     showToast(`${ym} 잔액 저장 — 자산 ${assetWrites}/${assetDeletes}d, 부채 ${liabWrites}/${liabDeletes}d`);
 
@@ -16207,6 +16284,10 @@ document.getElementById('btn-bulk-confirm').addEventListener('click', confirmBul
 // 재무상태표 모달 (v0.5+ 월 통일 — 옛 탭별 월 네비 리스너 제거됨)
 document.getElementById('btn-bs-edit').addEventListener('click', openBalanceModal);
 document.getElementById('btn-bal-save').addEventListener('click', saveBalanceSnapshot);
+// 취소 버튼만 임시저장 폐기 (× / 배경 클릭 / 환율 수정은 보존)
+document.querySelectorAll('#ov-balance .modal-foot [data-close="ov-balance"]').forEach(btn => {
+  btn.addEventListener('click', clearBalanceDraft);
+});
 document.getElementById('btn-bal-delete').addEventListener('click', deleteBalanceSnapshot);
 
 // 환율 저장
