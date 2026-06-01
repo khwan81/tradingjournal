@@ -1542,9 +1542,10 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator {
         <label class="flbl">계좌</label>
         <select id="m-account" onchange="onAccountChange()"></select>
       </div>
-      <div class="fgrp">
+      <div class="fgrp" style="position:relative;">
         <label class="flbl">티커</label>
-        <input type="text" id="m-symbol" class="mono" placeholder="BINANCE:BTCUSDT">
+        <input type="text" id="m-symbol" class="mono" placeholder="BINANCE:BTCUSDT" autocomplete="off">
+        <div id="symbol-suggest" style="display:none; position:absolute; left:0; right:0; top:100%; margin-top:4px; background:var(--bg3); border:1px solid var(--border2); border-radius:var(--radius-sm); overflow:hidden; z-index:20; max-height:228px; overflow-y:auto; box-shadow:0 6px 20px rgba(0,0,0,.35);"></div>
       </div>
     </div>
     <div class="fg3" style="margin-bottom:12px;">
@@ -2698,7 +2699,92 @@ function clearModal() {
   ge('mgb-cur').textContent='—'; ge('mgb-tgt').textContent='/ 목표 —';
   ge('mgb-pct').textContent='—'; ge('mgb-bar').style.width='0%';
   ge('mgb-after-val').textContent='—'; ge('mgb-remain').textContent='—';
+  if (typeof closeSymbolSuggest === 'function') closeSymbolSuggest();
 }
+
+// ── 티커 자동완성 (v0.7-29) ───────────────────────────────────────────────────
+// 매매 기록(trades)의 symbol을 빈도순으로 집계 → 티커 칸 탭/입력 시 드롭다운.
+// 별도 등록 없음 (매매 기록이 곧 사용 빈도). 탭하면 채움.
+function buildSymbolFreq() {
+  const map = new Map();  // symbol → { count, last }
+  for (const t of trades) {
+    const s = (t.symbol || '').trim();
+    if (!s) continue;
+    const cur = map.get(s) || { count: 0, last: 0 };
+    cur.count += 1;
+    const ts = t.createdAt || t.updatedAt || 0;
+    if (ts > cur.last) cur.last = ts;
+    map.set(s, cur);
+  }
+  return [...map.entries()]
+    .map(([symbol, m]) => ({ symbol, count: m.count, last: m.last }))
+    .sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count;  // 빈도 내림차순
+      return b.last - a.last;                             // 동률이면 최근 순
+    });
+}
+
+function escapeHtmlSym(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// filterText에 맞는 항목만 빈도순으로 드롭다운 렌더. 비면 숨김.
+function renderSymbolSuggest(filterText) {
+  const box = ge('symbol-suggest');
+  if (!box) return;
+  const q = (filterText || '').trim().toLowerCase();
+  let list = buildSymbolFreq();
+  if (q) {
+    list = list.filter(x => x.symbol.toLowerCase().includes(q));
+    // 입력값과 완전히 동일한 항목 하나만 남으면 보여줄 필요 없음
+    if (list.length === 1 && list[0].symbol.toLowerCase() === q) list = [];
+  }
+  list = list.slice(0, 12);
+  if (!list.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  box.innerHTML = list.map(x =>
+    `<div class="sym-sg-item" data-sym="${escapeHtmlSym(x.symbol)}"
+      style="display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:10px 12px; cursor:pointer; border-bottom:1px solid var(--border);">
+      <span class="mono" style="font-size:14px; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtmlSym(x.symbol)}</span>
+      <span style="font-size:11px; color:var(--text3); flex-shrink:0;">${x.count}회</span>
+    </div>`
+  ).join('');
+  box.style.display = 'block';
+}
+
+function closeSymbolSuggest() {
+  const box = ge('symbol-suggest');
+  if (box) { box.style.display = 'none'; box.innerHTML = ''; }
+}
+
+(function wireSymbolSuggest() {
+  const input = ge('m-symbol');
+  const box = ge('symbol-suggest');
+  if (!input || !box) return;
+
+  // 포커스 → 현재 입력값 기준으로 펼침
+  input.addEventListener('focus', () => renderSymbolSuggest(input.value));
+  // 입력 → 필터
+  input.addEventListener('input', () => renderSymbolSuggest(input.value));
+  // blur는 항목 선택(mousedown)보다 늦게 처리되도록 약간 지연
+  input.addEventListener('blur', () => { setTimeout(closeSymbolSuggest, 120); });
+
+  // 항목 선택 — mousedown으로 blur보다 먼저 처리 (모바일 터치 포함)
+  box.addEventListener('mousedown', e => {
+    const item = e.target.closest('.sym-sg-item');
+    if (!item) return;
+    e.preventDefault();   // input blur 방지
+    input.value = item.dataset.sym;
+    closeSymbolSuggest();
+  });
+
+  // 입력칸/드롭다운 밖 클릭 시 닫기
+  document.addEventListener('mousedown', e => {
+    if (e.target === input) return;
+    if (box.contains(e.target)) return;
+    closeSymbolSuggest();
+  });
+})();
 
 window.confirmDel = function(id,e) {
   e.stopPropagation(); delTargetId=id;
