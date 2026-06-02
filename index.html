@@ -232,14 +232,24 @@ body {
 .fchip:hover { border-color: var(--accent); color: var(--text); }
 .fchip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
-.pbar { display: inline-flex; gap: 2px; padding: 2px; background: var(--bg3); border-radius: 8px; flex-wrap: wrap; }
-.pchip {
-  padding: 5px 12px; border-radius: 6px; font-size: 12px;
-  border: none; background: transparent; color: var(--text3);
-  cursor: pointer; font-family: var(--font); transition: all .15s;
+.period-group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.rt-presets { display: flex; gap: 4px; flex-wrap: wrap; }
+.rt-preset {
+  background: transparent; border: 1px solid var(--border2); color: var(--text2);
+  font-size: 12px; height: 30px; padding: 0 11px; border-radius: 6px;
+  cursor: pointer; font-family: var(--font); font-weight: 500; letter-spacing: .3px;
+  transition: all .12s; display: inline-flex; align-items: center; justify-content: center;
 }
-.pchip:hover { color: var(--text); }
-.pchip.active { background: var(--bg2); color: var(--text); font-weight: 500; }
+.rt-preset:hover { background: var(--bg3); color: var(--text); }
+.rt-preset.active { background: rgba(79,143,255,0.12); border-color: var(--accent); color: var(--accent); }
+.rt-range { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text2); }
+.rt-range-sep { color: var(--text3); }
+.rt-month-input {
+  background: var(--bg3); border: 1px solid var(--border2); color: var(--text);
+  font-family: var(--font-mono); font-size: 11.5px; padding: 4px 8px; border-radius: 6px;
+  color-scheme: dark;
+}
+.rt-month-input:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
 
 /* ── KPI Grid ── */
 .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
@@ -276,6 +286,23 @@ body {
 }
 .stat-num { font-size: 22px; font-weight: 600; }
 .stat-lbl { font-size: 10px; color: var(--text3); margin-top: 3px; }
+
+/* ── Grouped metric cards (대시보드 KPI 묶음) ── */
+.mgroup { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 12px; margin-bottom: 12px; }
+.mcells { display: grid; gap: 8px; }
+.mcell { background: var(--bg3); border-radius: var(--radius); padding: 11px 13px; }
+.mcell-lbl { font-size: 10px; color: var(--text3); margin-bottom: 5px; }
+.mcell-val { font-size: 19px; font-weight: 600; line-height: 1; color: var(--text); }
+.mcell-val.sm { font-size: 15px; }
+.mcell-val.pos { color: var(--green); }
+.mcell-val.neg { color: var(--red); }
+.mcell-sub { font-size: 10px; color: var(--text3); margin-top: 6px; }
+.mcell-sub .pos { color: var(--green); }
+.mcell-sub .neg { color: var(--red); }
+.mgrid-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 640px){
+  .mgrid-pair { grid-template-columns: 1fr; }
+}
 
 /* ── Bar Chart ── */
 .bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
@@ -1265,7 +1292,7 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator {
       <div class="fbar" id="db-fbar">
         <button class="fchip active" onclick="dbFilter(this,'all')">전체</button>
       </div>
-      <div class="pbar" id="db-period" style="margin-top:8px;"></div>
+      <div class="period-group" id="db-period" style="margin-top:8px;"></div>
     </div>
 
     <!-- 계좌별 누적 R 진행 -->
@@ -1286,53 +1313,34 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator {
       <div class="cum-chart-summary" id="cum-chart-summary"></div>
     </div>
 
-    <div class="kpi-grid">
-      <div class="kpi-card"><div class="kpi-lbl">누적 손익</div><div class="kpi-val" id="d-pnl">—</div><div class="kpi-sub" id="d-pnl-s">원화환산 합계</div></div>
-      <div class="kpi-card"><div class="kpi-lbl">전체 승률</div><div class="kpi-val" id="d-wr">—</div><div class="kpi-sub" id="d-wr-s">—</div></div>
-      <div class="kpi-card"><div class="kpi-lbl">평균 R</div><div class="kpi-val" id="d-r">—</div><div class="kpi-sub" id="d-r-s">—</div></div>
-      <div class="kpi-card"><div class="kpi-lbl">손익비 (PF)</div><div class="kpi-val" id="d-pf">—</div><div class="kpi-sub" id="d-pf-s">총이익 ÷ 총손실</div></div>
-      <div class="kpi-card"><div class="kpi-lbl">기대값</div><div class="kpi-val" id="d-exp">—</div><div class="kpi-sub" id="d-exp-s">거래당 R</div></div>
-      <div class="kpi-card">
-        <div class="kpi-lbl">총 거래수</div>
-        <div class="kpi-val" id="d-cnt">—</div>
-        <div class="kpi-sub" id="d-cnt-s">이번달</div>
-        <hr style="border:none;border-top:1px solid var(--border);margin:8px 0;">
-        <div style="display:flex;justify-content:space-between;">
-          <div><div style="font-size:10px;color:var(--text3);">평균 월 거래수</div><div style="font-size:12px;font-weight:500;color:var(--text2);" id="d-avg-monthly">—</div></div>
-          <div style="text-align:right;"><div style="font-size:10px;color:var(--text3);">활동 기간</div><div style="font-size:12px;font-weight:500;color:var(--text2);" id="d-active-months">—</div></div>
-        </div>
-      </div>
-    </div>
+    <div class="mgroup"><div class="mcells" style="grid-template-columns:repeat(3,1fr);">
+      <div class="mcell"><div class="mcell-lbl">누적 손익</div><div class="mcell-val" id="d-pnl">—</div><div class="mcell-sub" id="d-pnl-s">원화환산 합계</div></div>
+      <div class="mcell"><div class="mcell-lbl">손익비 (PF)</div><div class="mcell-val" id="d-pf">—</div><div class="mcell-sub" id="d-pf-s">총이익 ÷ 총손실</div></div>
+      <div class="mcell"><div class="mcell-lbl">기대값</div><div class="mcell-val" id="d-exp">—</div><div class="mcell-sub" id="d-exp-s">거래당 R</div></div>
+    </div></div>
 
-    <div class="grid-2 g2-dashboard" style="margin-bottom:12px;">
-      <div class="card">
-        <div class="card-title">연속 승패 & 드로다운</div>
-        <div class="grid-2" style="gap:8px;">
-          <div class="stat-box"><div class="stat-num pos" id="d-sw">—</div><div class="stat-lbl">최대 연속승</div></div>
-          <div class="stat-box"><div class="stat-num neg" id="d-sl">—</div><div class="stat-lbl">최대 연속패</div></div>
-          <div class="stat-box"><div class="stat-num neg" id="d-dd-pnl" style="font-size:14px;">—</div><div class="stat-lbl">최대 DD</div></div>
-          <div class="stat-box"><div class="stat-num neg" id="d-dd-r">—</div><div class="stat-lbl">최대 DD (R)</div></div>
-          <div class="stat-box"><div class="stat-num pos" id="d-avg-win" style="font-size:15px;">—</div><div class="stat-lbl">평균 익절 R</div></div>
-          <div class="stat-box"><div class="stat-num neg" id="d-avg-loss" style="font-size:15px;">—</div><div class="stat-lbl">평균 손절 R</div></div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-title">롱 / 숏</div>
-        <div class="grid-2" style="gap:8px;">
-          <div class="stat-box">
-            <div class="stat-num" id="d-long-cnt" style="font-size:17px;">—</div>
-            <div id="d-long-wr" style="font-size:11px;color:var(--text2);margin-top:3px;">—</div>
-            <div id="d-long-r"  style="font-size:11px;color:var(--text3);margin-top:1px;">—</div>
-            <div class="stat-lbl">롱</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-num" id="d-short-cnt" style="font-size:17px;">—</div>
-            <div id="d-short-wr" style="font-size:11px;color:var(--text2);margin-top:3px;">—</div>
-            <div id="d-short-r"  style="font-size:11px;color:var(--text3);margin-top:1px;">—</div>
-            <div class="stat-lbl">숏</div>
-          </div>
-        </div>
-      </div>
+    <div class="mgroup"><div class="mcells" style="grid-template-columns:repeat(3,1fr);">
+      <div class="mcell"><div class="mcell-lbl">전체 승률</div><div class="mcell-val" id="d-wr">—</div><div class="mcell-sub" id="d-wr-s">—</div></div>
+      <div class="mcell"><div class="mcell-lbl">평균 R</div><div class="mcell-val" id="d-r">—</div><div class="mcell-sub" id="d-r-s">—</div></div>
+      <div class="mcell"><div class="mcell-lbl">총 거래수</div><div class="mcell-val" id="d-cnt">—</div><div class="mcell-sub" id="d-cnt-s">—</div></div>
+    </div></div>
+
+    <div class="mgroup"><div class="mcells" style="grid-template-columns:repeat(4,1fr);">
+      <div class="mcell"><div class="mcell-lbl">최대 DD</div><div class="mcell-val sm neg" id="d-dd-pnl">—</div></div>
+      <div class="mcell"><div class="mcell-lbl">최대 DD (R)</div><div class="mcell-val sm neg" id="d-dd-r">—</div></div>
+      <div class="mcell"><div class="mcell-lbl">평균 익절 R</div><div class="mcell-val sm pos" id="d-avg-win">—</div></div>
+      <div class="mcell"><div class="mcell-lbl">평균 손절 R</div><div class="mcell-val sm neg" id="d-avg-loss">—</div></div>
+    </div></div>
+
+    <div class="mgrid-pair" style="margin-bottom:12px;">
+      <div class="mgroup" style="margin-bottom:0;"><div class="mcells" style="grid-template-columns:1fr 1fr;">
+        <div class="mcell"><div class="mcell-val pos" id="d-sw">—</div><div class="mcell-sub">최대 연속승</div></div>
+        <div class="mcell"><div class="mcell-val neg" id="d-sl">—</div><div class="mcell-sub">최대 연속패</div></div>
+      </div></div>
+      <div class="mgroup" style="margin-bottom:0;"><div class="mcells" style="grid-template-columns:1fr 1fr;">
+        <div class="mcell"><div class="mcell-val sm" id="d-long-cnt">—</div><div class="mcell-sub" id="d-long-s">롱</div></div>
+        <div class="mcell"><div class="mcell-val sm" id="d-short-cnt">—</div><div class="mcell-sub" id="d-short-s">숏</div></div>
+      </div></div>
     </div>
 
     <div class="grid-2 g2-dashboard" style="margin-bottom:12px;">
@@ -1408,7 +1416,7 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator {
         새 거래
       </button>
     </div>
-    <div class="pbar" id="log-period" style="margin-bottom:12px;"></div>
+    <div class="period-group" id="log-period" style="margin-bottom:12px;"></div>
     <div class="trade-wrap">
       <div class="trade-head t-cols">
         <span>날짜</span>
@@ -1903,7 +1911,7 @@ let settings    = {};
 let accounts    = [];        // 계좌 배열
 let strategies  = [...STRATEGIES_DEFAULT];
 let dbFilter_   = 'all';     // 'all' | accountId
-let period_     = 'all';     // 'all' | 'month' | '3m' | 'ytd' — 매도일(dateStart) 기준, 대시보드+목록 공유
+let period_     = { preset:'ALL', fromYm:null, toYm:null }; // 매도일(dateStart) 기준, 대시보드+목록 공유
 let logFilter_  = 'all';     // 'all' | accountId | 'long' | 'short' | 'stop' | 'open'
 let delTargetId = null;
 let unsubTrades = null;
@@ -2321,9 +2329,9 @@ function renderDashboard() {
   setText('d-pnl', pnlDisplay, totalKrw>=0?'pos':'neg');
   document.getElementById('d-pnl-s').textContent = '원화환산 합계';
   setText('d-wr',  wr==='—'?'—':wr+'%');
-  document.getElementById('d-wr-s').textContent = closed.length ? `${wins.length}승 ${closed.length-wins.length}패` : '거래 없음';
+  document.getElementById('d-wr-s').innerHTML = closed.length ? `<span class="pos">${wins.length}승</span> · <span class="neg">${closed.length-wins.length}패</span>` : '거래 없음';
   setText('d-r', avgR===null?'—':(avgR>=0?'+':'')+avgR.toFixed(2)+'R', avgR===null?'':avgR>=0?'pos':'neg');
-  document.getElementById('d-r-s').textContent = '전체 평균';
+  document.getElementById('d-r-s').textContent = `청산 ${closed.length}건`;
 
   // 손익비(PF) · 기대값 · 평균 익절/손절 R (R 기준, 청산 거래만)
   const rWins   = closed.filter(t => (t.rVal||0) > 0);
@@ -2343,13 +2351,10 @@ function renderDashboard() {
 
   // 총 거래수 (승률·평균R은 청산 거래만 사용)
   setText('d-cnt', String(filtered.length));
-  document.getElementById('d-cnt-s').textContent = `청산 ${closed.length}건`;
-  // 활동 기간 계산
   const months = [...new Set(filtered.map(t=>t.dateStart?.slice(0,7)).filter(Boolean))];
   const activeMonths = months.length || 1;
   const avgMonthly = (filtered.length / activeMonths).toFixed(1);
-  const amEl = ge('d-avg-monthly'); if (amEl) amEl.textContent = avgMonthly + '건';
-  const amEl2 = ge('d-active-months'); if (amEl2) amEl2.textContent = activeMonths + '개월';
+  document.getElementById('d-cnt-s').textContent = `청산 ${closed.length} · 월 ${avgMonthly} · ${activeMonths}개월`;
 
   // 연속 승패 + 최대 DD (시간순 정렬 후 계산)
   const closedAsc = [...closed].sort((a,b)=>
@@ -2373,15 +2378,22 @@ function renderDashboard() {
   document.getElementById('d-dd-pnl').textContent = dd<0?'-₩'+Math.round(-dd).toLocaleString('ko-KR'):'—';
   document.getElementById('d-dd-r').textContent   = ddR<0?ddR.toFixed(2)+'R':'—';
 
-  // 롱/숏
+  // 롱/숏 — 건수 + 승률·평균R (부호색)
   const longs  = filtered.filter(t=>t.dir==='long' &&!t.isOpen&&t.pnl!==null);
   const shorts = filtered.filter(t=>t.dir==='short'&&!t.isOpen&&t.pnl!==null);
+  const dirSub = (arr, label) => {
+    if(!arr.length) return `${label} · 거래 없음`;
+    const wr = arr.filter(t=>t.pnl>0).length/arr.length*100;
+    const r  = arr.reduce((s,t)=>s+(t.rVal||0),0)/arr.length;
+    const wrCls = wr>=50?'pos':'neg';
+    const rCls  = r>=0?'pos':'neg';
+    const rTxt  = (r>=0?'+':'')+r.toFixed(2)+'R';
+    return `${label} · 승 <span class="${wrCls}">${wr.toFixed(0)}%</span> · <span class="${rCls}">${rTxt}</span>`;
+  };
   document.getElementById('d-long-cnt').textContent  = longs.length+'건';
   document.getElementById('d-short-cnt').textContent = shorts.length+'건';
-  document.getElementById('d-long-wr').textContent   = '승률 '+(longs.length?(longs.filter(t=>t.pnl>0).length/longs.length*100).toFixed(0)+'%':'—');
-  document.getElementById('d-short-wr').textContent  = '승률 '+(shorts.length?(shorts.filter(t=>t.pnl>0).length/shorts.length*100).toFixed(0)+'%':'—');
-  document.getElementById('d-long-r').textContent    = longs.length?(longs.reduce((s,t)=>s+(t.rVal||0),0)/longs.length).toFixed(2)+'R':'—';
-  document.getElementById('d-short-r').textContent   = shorts.length?(shorts.reduce((s,t)=>s+(t.rVal||0),0)/shorts.length).toFixed(2)+'R':'—';
+  document.getElementById('d-long-s').innerHTML  = dirSub(longs,  '롱');
+  document.getElementById('d-short-s').innerHTML = dirSub(shorts, '숏');
 
   // R 분포 (1R 등간격 버킷)
   const rBuckets=[0,0,0,0,0,0,0];
@@ -2495,7 +2507,7 @@ function renderCumChart(filtered) {
     .sort((a,b)=>(a.dateStart||'').localeCompare(b.dateStart||'')||((a.createdAt||0)-(b.createdAt||0)));
 
   let cum=0, peak=0, maxDD=0;
-  const labels=[], dataArr=[], underwater=[];
+  const labels=[], dataArr=[], underwater=[], runPeak=[];
   closed.forEach((t,i)=>{
     cum += cumMode==='r' ? (t.rVal||0) : (t.krw||0);
     peak = Math.max(peak, cum);
@@ -2504,6 +2516,7 @@ function renderCumChart(filtered) {
     labels.push(i+1);
     dataArr.push(parseFloat(cum.toFixed(2)));
     underwater.push(parseFloat(dd.toFixed(2)));
+    runPeak.push(parseFloat(peak.toFixed(2)));
   });
 
   const color = cum>=0 ? '#34d399' : '#f87171';
@@ -2513,47 +2526,43 @@ function renderCumChart(filtered) {
     data: {
       labels,
       datasets: [{
+        label: '고점',
+        data: runPeak,
+        borderColor: 'transparent',
+        borderWidth: 0,
+        pointRadius: 0,
+        pointHoverRadius: 0,
+        fill: false,
+        tension: 0.3,
+        order: 2,
+      },{
+        label: '누적',
         data: dataArr,
         borderColor: color,
-        backgroundColor: cum>=0?'rgba(52,211,153,0.08)':'rgba(248,113,113,0.08)',
+        backgroundColor: 'rgba(148,163,184,0.22)',
         borderWidth: 2,
         pointRadius: dataArr.length<50?3:0,
         pointHoverRadius: 5,
-        fill: true,
+        fill: '-1',
         tension: 0.3,
-        yAxisID: 'y',
         order: 1,
-      },{
-        label: '고점 대비 하락',
-        data: underwater,
-        borderColor: 'rgba(248,113,113,0.5)',
-        backgroundColor: 'rgba(248,113,113,0.16)',
-        borderWidth: 1,
-        pointRadius: 0,
-        pointHoverRadius: 4,
-        fill: 'origin',
-        tension: 0.3,
-        yAxisID: 'yDD',
-        order: 2,
       }]
     },
     options: {
       responsive: true,
       plugins: {
         legend: { display: false },
-        tooltip: { callbacks: { label: ctx => {
+        tooltip: { filter: ctx => ctx.dataset.label==='누적', callbacks: { label: ctx => {
           const fmtv = v => cumMode==='r'
             ? (v>=0?'+':'')+v.toFixed(2)+'R'
             : (v>=0?'+':'')+'₩'+Math.round(Math.abs(v)).toLocaleString('ko-KR');
-          return ctx.dataset.yAxisID==='yDD'
-            ? '하락 '+fmtv(ctx.parsed.y)
-            : '누적 '+fmtv(ctx.parsed.y);
+          const dd = underwater[ctx.dataIndex]||0;
+          return dd<0 ? ['누적 '+fmtv(ctx.parsed.y), '고점 대비 '+fmtv(dd)] : '누적 '+fmtv(ctx.parsed.y);
         }}}
       },
       scales: {
         x: { grid:{color:'rgba(255,255,255,0.05)'}, ticks:{color:'#555b6a',font:{size:10}}, title:{display:true,text:'거래 순서',color:'#555b6a',font:{size:10}} },
-        y: { grid:{color:'rgba(255,255,255,0.05)'}, ticks:{color:'#555b6a',font:{size:10}, callback: v => cumMode==='r'?v.toFixed(1)+'R':((Math.abs(v)>=10000?(v/10000).toFixed(0)+'만':v.toLocaleString())+'₩')}, beginAtZero:false },
-        yDD: { display:false, position:'right', max: Math.abs(maxDD)*0.15 || 1, min: (maxDD||-1)*1.1, grid:{display:false} }
+        y: { grid:{color:'rgba(255,255,255,0.05)'}, ticks:{color:'#555b6a',font:{size:10}, callback: v => cumMode==='r'?v.toFixed(1)+'R':((Math.abs(v)>=10000?(v/10000).toFixed(0)+'만':v.toLocaleString())+'₩')}, beginAtZero:false }
       }
     }
   });
@@ -2717,31 +2726,66 @@ window.dbFilter = function(el,m) {
 };
 
 // ── 기간 필터 (매도일 dateStart 기준, 대시보드+목록 공유) ──────────────────────
-function periodStart(p){
-  const now=new Date();
-  if(p==='month') return new Date(now.getFullYear(),now.getMonth(),1);
-  if(p==='3m')    { const d=new Date(now); d.setMonth(d.getMonth()-3); return d; }
-  if(p==='ytd')   return new Date(now.getFullYear(),0,1);
-  return null; // 'all'
+// Finance와 동일: 1M/3M/6M/YTD/ALL 프리셋 + month range (from→to), 상호 배타
+function curYm(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+function shiftYm(ym,n){ const [y,m]=ym.split('-').map(Number); const d=new Date(y,m-1+n,1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+// 프리셋 → {fromYm,toYm} (월 단위). ALL은 null(=제한 없음)
+function presetRange(p){
+  const toYm=curYm();
+  switch(p){
+    case '1M':  return {fromYm:toYm,            toYm};
+    case '3M':  return {fromYm:shiftYm(toYm,-2),toYm};
+    case '6M':  return {fromYm:shiftYm(toYm,-5),toYm};
+    case 'YTD': return {fromYm:`${toYm.slice(0,4)}-01`, toYm};
+    default:    return null; // ALL
+  }
+}
+// 현재 활성 범위 {fromYm,toYm} 또는 null(전체)
+function activeRange(){
+  if(period_.preset==='ALL') return null;
+  if(period_.preset)         return presetRange(period_.preset);
+  if(period_.fromYm && period_.toYm) return {fromYm:period_.fromYm, toYm:period_.toYm};
+  return null;
 }
 function inPeriod(t){
-  if(period_==='all') return true;
+  const r=activeRange(); if(!r) return true;
   if(!t.dateStart) return false;
-  const start=periodStart(period_); if(!start) return true;
-  const d=new Date(t.dateStart+'T12:00:00');
-  return d>=start && d<=new Date();
+  const ym=t.dateStart.slice(0,7);
+  return ym>=r.fromYm && ym<=r.toYm;
 }
-const PERIODS=[['all','전체'],['month','이번달'],['3m','3개월'],['ytd','YTD']];
+const PRESETS=['1M','3M','6M','YTD','ALL'];
 function renderPeriodBar(id){
   const bar=ge(id); if(!bar) return;
-  bar.innerHTML=PERIODS.map(([v,l])=>
-    `<button class="pchip${period_===v?' active':''}" onclick="setPeriod('${v}')">${l}</button>`
-  ).join('');
+  const r=activeRange();
+  const fromV=period_.preset? (r?r.fromYm:'') : (period_.fromYm||'');
+  const toV  =period_.preset? (r?r.toYm:'')   : (period_.toYm||'');
+  bar.innerHTML=
+    `<div class="rt-presets">`+
+    PRESETS.map(p=>`<button class="rt-preset${period_.preset===p?' active':''}" onclick="setPreset('${p}')">${p}</button>`).join('')+
+    `</div>`+
+    `<div class="rt-range">`+
+    `<input type="month" class="rt-month-input" value="${fromV}" aria-label="시작 월" onchange="setRange('${id}',this.value,null)">`+
+    `<span class="rt-range-sep">→</span>`+
+    `<input type="month" class="rt-month-input" value="${toV}" aria-label="끝 월" onchange="setRange('${id}',null,this.value)">`+
+    `</div>`;
 }
-window.setPeriod = function(p){
-  period_=p;
-  renderPeriodBar('db-period');
-  renderPeriodBar('log-period');
+function refreshPeriodBars(){ renderPeriodBar('db-period'); renderPeriodBar('log-period'); }
+window.setPreset = function(p){
+  period_={preset:p, fromYm:null, toYm:null};
+  refreshPeriodBars();
+  renderDashboard();
+  renderTrades();
+};
+window.setRange = function(id,from,to){
+  // 한쪽만 바뀌므로 현재 입력값을 모두 읽어 병합
+  const bar=ge(id); if(!bar) return;
+  const ins=bar.querySelectorAll('.rt-month-input');
+  const f = from!==null ? from : (ins[0]?ins[0].value:'');
+  const t = to  !==null ? to   : (ins[1]?ins[1].value:'');
+  if(f && t && f>t){ alert('시작 월은 끝 월보다 빨라야 합니다.'); refreshPeriodBars(); return; }
+  period_={preset:(f&&t)?'':period_.preset, fromYm:f||null, toYm:t||null};
+  if(f&&t) period_.preset='';        // 양쪽 다 채워지면 커스텀 모드(프리셋 해제)
+  refreshPeriodBars();
   renderDashboard();
   renderTrades();
 };
@@ -3037,7 +3081,7 @@ function stripPct(str){return parseFloat((str||'').replace('%',''))||0;}
 function v(id){const el=ge(id);return el?el.value:'';}
 function sv(id,val){const el=ge(id);if(el)el.value=val;}
 function ge(id){return document.getElementById(id);}
-function setText(id,txt,cls=''){const el=ge(id);if(!el)return;el.textContent=txt;el.className='kpi-val '+(cls||'');}
+function setText(id,txt,cls=''){const el=ge(id);if(!el)return;el.textContent=txt;el.classList.remove('pos','neg');if(cls)el.classList.add(cls);}
 function setFmt(id,num){const el=ge(id);if(!el)return;el.value=Number(num).toLocaleString('ko-KR');}
 function parseNum(id){return parseFloat((v(id)||'').replace(/,/g,''))||0;}
 function getTether(){return parseNum('cfg-tether')||(settings.tether||1482);}
