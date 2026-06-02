@@ -301,7 +301,7 @@ body {
 .trade-wrap { border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
 .trade-head {
   display: grid;
-  grid-template-columns: 96px 80px 1fr 90px 60px 88px 56px 60px 68px;
+  grid-template-columns: 96px 80px 1fr 90px 60px 88px 56px 68px;
   padding: 9px 14px;
   gap: 0 12px;
   background: var(--bg3);
@@ -311,7 +311,7 @@ body {
 }
 .trade-row {
   display: grid;
-  grid-template-columns: 96px 80px 1fr 90px 60px 88px 56px 60px 68px;
+  grid-template-columns: 96px 80px 1fr 90px 60px 88px 56px 68px;
   padding: 11px 14px;
   gap: 0 12px;
   font-size: 12px;
@@ -1390,14 +1390,13 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator {
     </div>
     <div class="trade-wrap">
       <div class="trade-head t-cols">
-        <span>날짜/시간</span>
+        <span>날짜</span>
         <span>계좌</span>
         <span>종목</span>
         <span>전략</span>
         <span>방향</span>
         <span>손익</span>
         <span>R</span>
-        <span>기간</span>
         <span>관리</span>
       </div>
       <div id="trade-body">
@@ -1543,8 +1542,8 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator {
         <select id="m-account" onchange="onAccountChange()"></select>
       </div>
       <div class="fgrp" style="position:relative;">
-        <label class="flbl">티커</label>
-        <input type="text" id="m-symbol" class="mono" placeholder="BINANCE:BTCUSDT" autocomplete="off">
+        <label class="flbl">종목</label>
+        <input type="text" id="m-symbol" placeholder="TIGER 조선TOP10" autocomplete="off" style="text-transform:uppercase;">
         <div id="symbol-suggest" style="display:none; position:absolute; left:0; right:0; top:100%; margin-top:4px; background:var(--bg3); border:1px solid var(--border2); border-radius:var(--radius-sm); overflow:hidden; z-index:20; max-height:228px; overflow-y:auto; box-shadow:0 6px 20px rgba(0,0,0,.35);"></div>
       </div>
     </div>
@@ -1567,21 +1566,10 @@ input[type=datetime-local]::-webkit-calendar-picker-indicator {
     </div>
 
     <div class="divider"></div>
-    <p class="sec-lbl">날짜 & 시간</p>
-    <div class="fg2" style="margin-bottom:8px;">
-      <div class="fgrp">
-        <label class="flbl">진입 <span class="fslbl">날짜+시간</span></label>
-        <input type="datetime-local" id="m-datetime-start" oninput="calcDur();calcR();updateAutoN()">
-      </div>
-      <div class="fgrp">
-        <label class="flbl">청산 <span class="fslbl">비우면 오픈 포지션</span></label>
-        <input type="datetime-local" id="m-datetime-end" oninput="calcDur()">
-      </div>
-    </div>
-    <div class="info-row" style="margin-bottom:12px;">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--text3);"><circle cx="7" cy="7" r="6"/><path d="M7 4v3.5l2 1.5"/></svg>
-      <span class="info-row-lbl">기간 (자동계산)</span>
-      <span class="info-row-val" id="dur-out" style="color:var(--text2);">시간 입력 후 표시</span>
+    <p class="sec-lbl">날짜</p>
+    <div class="fgrp" style="margin-bottom:12px;">
+      <label class="flbl">매도일</label>
+      <input type="date" id="m-datetime-start" oninput="calcR();updateAutoN()">
     </div>
 
     <div class="divider"></div>
@@ -2132,16 +2120,15 @@ window.saveTrade = async function() {
   const acct     = accounts.find(a => a.id === acctId) || accounts[0];
   const market   = acct?.market || 'coin';
   const dtStart  = v('m-datetime-start');
-  const dtEnd    = v('m-datetime-end');
 
   if (!dtStart || !v('m-symbol').trim()) {
-    alert('진입 일시와 티커는 필수입니다.'); return;
+    alert('매도일과 종목은 필수입니다.'); return;
   }
 
   const dateStart = dtStart.slice(0,10);
-  const timeStart = dtStart.slice(11,16).replace(':','') || null;
-  const dateEnd   = dtEnd ? dtEnd.slice(0,10)  : null;
-  const timeEnd   = dtEnd ? dtEnd.slice(11,16).replace(':','') : null;
+  const timeStart = null;
+  const dateEnd   = null;
+  const timeEnd   = null;
 
   const pnl  = v('m-pnl') !== '' ? parseFloat(v('m-pnl')) : null;
   const seed = parseFloat(v('m-seed')) || null;
@@ -2163,7 +2150,7 @@ window.saveTrade = async function() {
   );
   const n = sameDay.length + (editId ? 0 : 1);
   const dow = DAYS[new Date(dateStart+'T12:00:00').getDay()];
-  const dur = calcDurValue();
+  const dur = null;
 
   const data = {
     accountId:   acctId,
@@ -2171,7 +2158,7 @@ window.saveTrade = async function() {
     market,
     strategy:  v('m-strategy'),
     dir:       v('m-dir'),
-    symbol:    v('m-symbol').trim(),
+    symbol:    v('m-symbol').trim().toUpperCase(),
     dateStart, dateEnd, timeStart, timeEnd,
     duration:  dur || null,
     pnl, seed, rVal, krw,
@@ -2256,14 +2243,13 @@ function buildTradeRow(t) {
 
   const desktopRow = `
     <div class="trade-row t-cols" id="row-${t.id}" onclick="toggleExp('${t.id}',event)">
-      <div><div style="font-size:12px;">${dtStr}</div><div style="font-size:10px;color:var(--text3);">${timeStr}</div></div>
+      <div><div style="font-size:12px;">${dtStr}</div></div>
       <div>${mktBadge}</div>
       <span style="font-weight:500;font-size:12px;">${t.symbol}</span>
       <span style="font-size:11px;color:var(--text2);">${t.strategy||'—'}</span>
       <div>${dirBadge}</div>
       <div>${pnlStr}</div>
       <div>${rStr}</div>
-      <span style="font-size:11px;color:var(--text3);">${t.duration||'—'}</span>
       <div class="trade-actions">
         <button class="btn-edit" onclick="openEdit('${t.id}',event)">✏</button>
         <button class="btn-del"  onclick="confirmDel('${t.id}',event)">🗑</button>
@@ -2286,7 +2272,7 @@ function buildTradeRow(t) {
         ${dirBadge}
         <span style="font-size:11px;color:var(--text2);">${t.strategy||''}</span>
         <span style="font-size:11px;color:${rColor};">${rMobile}</span>
-        <span class="tc-meta">${t.duration||''} · ${dtStr}</span>
+        <span class="tc-meta">${dtStr}</span>
       </div>
       <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:8px;">
         <button class="btn-edit" onclick="openEdit('${t.id}',event)">✏ 수정</button>
@@ -2642,7 +2628,7 @@ window.openModal = function() {
   sv('m-edit-id','');
   ge('modal-title-txt').textContent='새 거래 입력';
   const now=new Date();
-  const dtStr=now.toISOString().slice(0,16);
+  const dtStr=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
   sv('m-datetime-start', dtStr);
   onAccountChange();
   updateAutoN();
@@ -2661,14 +2647,8 @@ window.openEdit = function(id,e) {
   sv('m-strategy', t.strategy);
   sv('m-dir',      t.dir);
   sv('m-symbol',   t.symbol);
-  // datetime-local 형식으로 변환
   if(t.dateStart){
-    const ts = t.timeStart ? t.timeStart.slice(0,2)+':'+t.timeStart.slice(2,4) : '00:00';
-    sv('m-datetime-start', t.dateStart+'T'+ts);
-  }
-  if(t.dateEnd){
-    const te = t.timeEnd ? t.timeEnd.slice(0,2)+':'+t.timeEnd.slice(2,4) : '00:00';
-    sv('m-datetime-end', t.dateEnd+'T'+te);
+    sv('m-datetime-start', t.dateStart);
   }
   if(t.seed)       sv('m-seed',   String(t.seed));
   if(t.pnl!=null)  sv('m-pnl',    String(t.pnl));
@@ -2678,7 +2658,7 @@ window.openEdit = function(id,e) {
   sv('m-chart-url', t.chartUrl ||'');
   ge('modal-title-txt').textContent='거래 수정';
   onAccountChange();
-  calcDur(); calcR();
+  calcR();
   ge('modal-ov').classList.add('open');
   switchModalTab('trade');
 };
@@ -2687,12 +2667,11 @@ window.closeModal = function() { ge('modal-ov').classList.remove('open'); };
 window.bgClose    = function(e) { if(e.target===ge('modal-ov'))closeModal(); };
 
 function clearModal() {
-  ['m-edit-id','m-symbol','m-datetime-start','m-datetime-end',
+  ['m-edit-id','m-symbol','m-datetime-start',
    'm-pnl','m-seed','m-tether','m-usd','m-memo','m-chart-url'].forEach(id=>sv(id,''));
   if(accounts.length) sv('m-account', accounts[0].id);
   sv('m-dir','short');
   onAccountChange();
-  ge('dur-out').textContent='시간 입력 후 표시';
   ge('r-out').textContent='— R'; ge('r-out').style.color='';
   ge('krw-summary').textContent='— ₩'; ge('krw-summary').style.color='';
   ge('auto-n').textContent='—'; ge('auto-dow').textContent='—';
@@ -2745,7 +2724,7 @@ function renderSymbolSuggest(filterText) {
     `<div class="sym-sg-item" data-sym="${escapeHtmlSym(x.symbol)}"
       style="display:flex; align-items:center; justify-content:space-between; gap:10px;
       padding:10px 12px; cursor:pointer; border-bottom:1px solid var(--border);">
-      <span class="mono" style="font-size:14px; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtmlSym(x.symbol)}</span>
+      <span style="font-size:14px; color:var(--text); text-transform:uppercase; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtmlSym(x.symbol)}</span>
       <span style="font-size:11px; color:var(--text3); flex-shrink:0;">${x.count}회</span>
     </div>`
   ).join('');
@@ -2819,27 +2798,6 @@ function syncAccountSelect() {
   if(accounts.find(a=>a.id===cur)) sel.value=cur;
 }
 
-// ── 날짜/기간 계산 ─────────────────────────────────────────────────────────────
-window.calcDur = function() {
-  const result=calcDurValue();
-  ge('dur-out').textContent=result||'시간 입력 후 표시';
-};
-
-function calcDurValue() {
-  const s=v('m-datetime-start'), e=v('m-datetime-end');
-  if(s&&e){
-    const diff=new Date(e)-new Date(s);
-    if(diff>0){
-      const days=Math.floor(diff/86400000);
-      const hrs=Math.floor((diff%86400000)/3600000);
-      const mins=Math.floor((diff%3600000)/60000);
-      if(days>0) return `${days}일 ${hrs?hrs+'h':''}${mins?mins+'m':''}`.trim();
-      return hrs>0?(mins>0?`${hrs}h ${mins}m`:`${hrs}h`):`${mins}m`;
-    }
-  }
-  return '';
-}
-
 // ── R 계산 ────────────────────────────────────────────────────────────────────
 window.calcR = function() {
   const pnl  = parseFloat(v('m-pnl'));
@@ -2864,7 +2822,7 @@ window.calcR = function() {
   }
 
   const ds=v('m-datetime-start');
-  if(ds){ const dow=DAYS[new Date(ds).getDay()]; ge('auto-dow').textContent=dow+'요일'; }
+  if(ds){ const dow=DAYS[new Date(ds.slice(0,10)+'T12:00:00').getDay()]; ge('auto-dow').textContent=dow+'요일'; }
   updateModalGoalBox();
 };
 
