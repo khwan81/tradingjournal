@@ -251,6 +251,37 @@ body {
 }
 .rt-month-input:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
 
+@media (max-width: 700px) {
+  .period-group {
+    flex-direction: column; align-items: stretch;
+    width: 100%; gap: 8px;
+  }
+  .rt-presets {
+    display: flex; gap: 4px; width: 100%; flex-wrap: nowrap;
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 4px;
+  }
+  .rt-preset {
+    flex: 1 1 0; min-width: 0; height: 32px; padding: 0;
+    text-align: center; border: none; background: transparent;
+    border-radius: 5px; font-size: 12px; letter-spacing: .4px;
+  }
+  .rt-preset:hover { background: var(--bg3); }
+  .rt-preset.active { background: var(--bg4); color: var(--accent); border-color: transparent; }
+  .rt-range {
+    width: 100%; box-sizing: border-box; justify-content: space-between;
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 4px 6px; gap: 4px;
+  }
+  .rt-month-input {
+    flex: 1; min-width: 0; height: 36px;
+    background: transparent; border: none;
+    font-size: 13px; text-align: center; padding: 0 4px;
+  }
+  .rt-month-input:focus { outline: none; }
+  .rt-range-sep { flex-shrink: 0; padding: 0 2px; }
+}
+
 /* ── KPI Grid ── */
 .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
 .kpi-card {
@@ -2325,7 +2356,7 @@ function renderDashboard() {
   const avgR     = closed.length ? closed.reduce((s,t)=>s+(t.rVal||0),0)/closed.length : null;
   const totalKrw = filtered.filter(t=>t.krw!==null).reduce((s,t)=>s+(t.krw||0),0);
 
-  let pnlDisplay = (totalKrw>=0?'+':'') + '₩' + Math.round(Math.abs(totalKrw)).toLocaleString('ko-KR');
+  let pnlDisplay = totalKrw===0 ? '₩0' : fmtKrwShort(totalKrw);
   setText('d-pnl', pnlDisplay, totalKrw>=0?'pos':'neg');
   document.getElementById('d-pnl-s').textContent = '원화환산 합계';
   setText('d-wr',  wr==='—'?'—':wr+'%');
@@ -2375,7 +2406,7 @@ function renderDashboard() {
     peak =Math.max(peak,cum);   dd =Math.min(dd, cum-peak);
     peakR=Math.max(peakR,cumR); ddR=Math.min(ddR, cumR-peakR);
   });
-  document.getElementById('d-dd-pnl').textContent = dd<0?'-₩'+Math.round(-dd).toLocaleString('ko-KR'):'—';
+  document.getElementById('d-dd-pnl').textContent = dd<0?fmtKrwShort(dd):'—';
   document.getElementById('d-dd-r').textContent   = ddR<0?ddR.toFixed(2)+'R':'—';
 
   // 롱/숏 — 건수 + 승률·평균R (부호색)
@@ -2562,7 +2593,7 @@ function renderCumChart(filtered) {
       },
       scales: {
         x: { grid:{color:'rgba(255,255,255,0.05)'}, ticks:{color:'#555b6a',font:{size:10}}, title:{display:true,text:'거래 순서',color:'#555b6a',font:{size:10}} },
-        y: { grid:{color:'rgba(255,255,255,0.05)'}, ticks:{color:'#555b6a',font:{size:10}, callback: v => cumMode==='r'?v.toFixed(1)+'R':((Math.abs(v)>=10000?(v/10000).toFixed(0)+'만':v.toLocaleString())+'₩')}, beginAtZero:false }
+        y: { grid:{color:'rgba(255,255,255,0.05)'}, ticks:{color:'#555b6a',font:{size:10}, callback: v => cumMode==='r'?v.toFixed(1)+'R':fmtKrwAxis(v)+'₩'}, beginAtZero:false }
       }
     }
   });
@@ -2573,7 +2604,7 @@ function renderCumChart(filtered) {
   const sumEl  = ge('cum-chart-summary'); if (!sumEl) return;
   const fmt = v => cumMode==='r'
     ? (v>=0?'+':'')+v.toFixed(2)+'R'
-    : (v>=0?'+':'')+'₩'+Math.round(Math.abs(v)).toLocaleString('ko-KR');
+    : fmtKrwShort(v);
   sumEl.innerHTML = [
     { l:'현재 누적', v:latest, c:latest>=0?'var(--green)':'var(--red)' },
     { l:'최고점',    v:best,   c:'var(--green)' },
@@ -2659,13 +2690,13 @@ function renderMonthly(list) {
   const barCtx=ge('monthly-bar-canvas');
   if(barCtx){
     if(barChart)barChart.destroy();
-    barChart=new Chart(barCtx,{type:'bar',data:{labels,datasets:[{data:pnlData,backgroundColor:pnlColors,borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>(ctx.parsed.y>=0?'+':'')+'₩'+Math.abs(ctx.parsed.y).toLocaleString('ko-KR')}}},scales:{x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#555b6a',font:{size:11}}},y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#555b6a',font:{size:11},callback:v=>(Math.abs(v)>=10000?(v/10000).toFixed(0)+'만':v.toLocaleString())}}}}});
+    barChart=new Chart(barCtx,{type:'bar',data:{labels,datasets:[{data:pnlData,backgroundColor:pnlColors,borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>(ctx.parsed.y>=0?'+':'')+'₩'+Math.abs(ctx.parsed.y).toLocaleString('ko-KR')}}},scales:{x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#555b6a',font:{size:11}}},y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#555b6a',font:{size:11},callback:v=>fmtKrwAxis(v)}}}}});
     const totalPnl=pnlData.reduce((s,v)=>s+v,0);
     const thisPnl=tmThis?Math.round(tmThis.pnlSum):null;
     const winRate=(tmThis&&tmThis.cnt)?(tmThis.wins/tmThis.cnt*100).toFixed(0)+'%':'—';
     ge('chart-pnl-summary').innerHTML=[
-      {l:'누적 손익',v:(totalPnl>=0?'+':'')+'₩'+Math.round(Math.abs(totalPnl)).toLocaleString('ko-KR'),c:totalPnl>=0?'var(--green)':'var(--red)'},
-      {l:'이번달 손익',v:thisPnl===null?'—':(thisPnl>=0?'+':'')+'₩'+Math.abs(thisPnl).toLocaleString('ko-KR'),c:thisPnl===null?'var(--text3)':thisPnl>=0?'var(--green)':'var(--red)'},
+      {l:'누적 손익',v:fmtKrwShort(totalPnl),c:totalPnl>=0?'var(--green)':'var(--red)'},
+      {l:'이번달 손익',v:thisPnl===null?'—':fmtKrwShort(thisPnl),c:thisPnl===null?'var(--text3)':thisPnl>=0?'var(--green)':'var(--red)'},
       {l:'이번달 승률',v:winRate,c:'var(--text)'},
     ].map(s=>`<div style="background:var(--bg3);border-radius:var(--radius-sm);padding:10px 12px;"><div style="font-size:10px;color:var(--text3);margin-bottom:4px;">${s.l}</div><div style="font-size:14px;font-weight:600;color:${s.c};">${s.v}</div></div>`).join('');
   }
@@ -3081,6 +3112,22 @@ function stripPct(str){return parseFloat((str||'').replace('%',''))||0;}
 function v(id){const el=ge(id);return el?el.value:'';}
 function sv(id,val){const el=ge(id);if(el)el.value=val;}
 function ge(id){return document.getElementById(id);}
+// 원화 축약 포매터 (만/억). 부호+₩ 포함. 1만 미만은 전체 자릿수.
+//   22426 → +₩2.2만 / 1234567 → +₩123.5만 / 125000000 → +₩1.25억
+function fmtKrwShort(v){
+  const sign = v<0?'-':'+';
+  const a = Math.abs(v);
+  if(a < 10000)       return sign+'₩'+Math.round(a).toLocaleString('ko-KR');
+  if(a < 100000000){  const m=a/10000;  return sign+'₩'+(m>=1000?Math.round(m).toLocaleString('ko-KR'):m.toFixed(1))+'만'; }
+  const e=a/100000000; return sign+'₩'+(e>=100?Math.round(e).toLocaleString('ko-KR'):e>=10?e.toFixed(1):e.toFixed(2))+'억';
+}
+// 축약 (₩ 기호 없이, 차트 축 등): 2.2만 / 1.25억
+function fmtKrwAxis(v){
+  const a=Math.abs(v); const sign=v<0?'-':'';
+  if(a<10000)        return sign+Math.round(a).toLocaleString('ko-KR');
+  if(a<100000000){   const m=a/10000; return sign+(m>=1000?Math.round(m):m.toFixed(1))+'만'; }
+  const e=a/100000000; return sign+(e>=100?Math.round(e):e>=10?e.toFixed(1):e.toFixed(2))+'억';
+}
 function setText(id,txt,cls=''){const el=ge(id);if(!el)return;el.textContent=txt;el.classList.remove('pos','neg');if(cls)el.classList.add(cls);}
 function setFmt(id,num){const el=ge(id);if(!el)return;el.value=Number(num).toLocaleString('ko-KR');}
 function parseNum(id){return parseFloat((v(id)||'').replace(/,/g,''))||0;}
