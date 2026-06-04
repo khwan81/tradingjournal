@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Trading</title>
 
 <!-- PWA -->
@@ -792,6 +792,8 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
   /* 터치 타겟 */
   input[type=text], input[type=number], input[type=date],
   input[type=url], select, textarea { min-height: 48px; font-size: 16px; }
+  /* iOS 줌 방지: 모든 입력 16px 이상 강제 (월입력·계좌입력 등 누락분 포함) */
+  input, select, textarea { font-size: 16px !important; }
   textarea { min-height: 80px; }
   input.mono { font-size: 18px; }
   .acc-input { min-height: 44px; width: 100%; }
@@ -979,15 +981,25 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
 .mgb-after-item span { color: var(--text2); font-weight: 500; }
 
 /* ── datetime-local 다크 스타일 ── */
-input[type=datetime-local] {
-  background: var(--bg3); border: 1px solid var(--border2);
-  border-radius: var(--radius-sm); padding: 8px 11px;
-  color: var(--text); font-size: 13px; font-family: var(--font);
-  outline: none; transition: border-color .15s;
+/* input[type=date|month] — iOS 네이티브가 고유 min-width를 강제해
+ * 그리드 셀(매도일 카드)이 다른 카드보다 넓어지는 문제 해결 (Finance와 동일).
+ * appearance:none + box-sizing + 좌측 정렬 + width 제한. */
+input[type=date], input[type=month] {
+  -webkit-appearance: none;
+  appearance: none;
+  text-align: left;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   color-scheme: dark;
 }
-input[type=datetime-local]:focus { border-color: var(--accent); }
-input[type=datetime-local]::-webkit-calendar-picker-indicator {
+input[type=date]::-webkit-date-and-time-value,
+input[type=month]::-webkit-date-and-time-value {
+  text-align: left;
+}
+input[type=date]::-webkit-calendar-picker-indicator,
+input[type=month]::-webkit-calendar-picker-indicator {
   filter: invert(1) opacity(0.5);
   cursor: pointer;
 }

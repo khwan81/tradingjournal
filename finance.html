@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Finance</title>
 
 <!-- PWA -->
@@ -3724,6 +3724,8 @@ html, body { overflow-x: hidden; }
     min-height: 48px;
     font-size: 16px;  /* 줌 방지 */
   }
+  /* iOS 줌 방지: 클래스 지정으로 16px 미만이 된 입력(.rt-month-input 등)까지 강제 */
+  input, select, textarea { font-size: 16px !important; }
   .btn-logout { min-height: 32px; font-size: 12px; }
   .btn-theme-toggle { min-height: 32px; height: 32px; width: 32px; font-size: 13px; }
   /* 앱 스위처 모바일 — 라벨 숨기고 아이콘만, 이메일도 숨김 (좁아짐 방지) */
