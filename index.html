@@ -3351,8 +3351,8 @@ window.autoUpdateFx = async function(manual) {
       return;
     }
     sharedFx = { ...sharedFx, ...got };
-    if (got.USDT != null) setFmt('cfg-tether', got.USDT);
-    if (got.USD  != null) setFmt('cfg-usd',    got.USD);
+    if (got.USDT != null) { sharedFx.USDT = Math.round(got.USDT); setFmt('cfg-tether', sharedFx.USDT); }
+    if (got.USD  != null) { sharedFx.USD  = Math.round(got.USD);  setFmt('cfg-usd',    sharedFx.USD);  }
     await writeSharedFx(sharedFx);
     updateFxStatus();
     if (manual) showToast('✓ 환율이 갱신되었습니다');
