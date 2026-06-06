@@ -4541,6 +4541,7 @@ html, body { overflow-x: hidden; }
           <div class="section-sub">외화 자산 환산에 사용 — 잔액 입력 시 스냅됨</div>
         </div>
         <div class="section-actions">
+          <button class="btn-s" id="btn-fx-auto">↻ 자동</button>
           <button class="btn-s" id="btn-fx-save">저장</button>
         </div>
       </div>
@@ -4561,6 +4562,7 @@ html, body { overflow-x: hidden; }
           <span class="fx-suffix">원</span>
         </label>
       </div>
+      <div class="section-sub" id="fx-status" style="margin-top:8px;"></div>
     </div>
 
     <!-- 계좌 (공유 마스터) -->
@@ -6058,6 +6060,12 @@ async function loadAll() {
       renderFxRates();
       renderAssetTypes();   // v0.3-2
       renderBsBody(); // 외화 환율 라벨이 BS에 들어가니 갱신
+      // 저장된 환율이 오래됐거나(6시간) 비어있으면 세션당 1회 조용히 자동 갱신
+      if (!fxAutoTried) {
+        fxAutoTried = true;
+        const at = sharedSettings.fxUpdatedAt || 0;
+        if (Date.now() - at > 6*3600*1000) autoUpdateFx(false);
+      }
       // 환율 변경되면 외화 자산 환산값이 바뀌니 도넛도 갱신 — v0.7-11 현황 탭 활성일 때
       if (isStatusVisible()) {
         renderDashAssetsChart();
@@ -15563,13 +15571,23 @@ function renderFxRates() {
   if ($usd  && document.activeElement !== $usd)  $usd.value  = fx.USD  != null ? fx.USD  : '';
   if ($jpy  && document.activeElement !== $jpy)  $jpy.value  = fx.JPY  != null ? fx.JPY  : '';
   if ($usdt && document.activeElement !== $usdt) $usdt.value = fx.USDT != null ? fx.USDT : '';
+  const $st = document.getElementById('fx-status');
+  if ($st) {
+    const at = sharedSettings?.fxUpdatedAt;
+    if (!at) { $st.textContent = '아직 자동 갱신 안 됨 · USD·JPY는 open.er-api, USDT는 업비트 실시간'; }
+    else {
+      const d = new Date(at);
+      const t = `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+      $st.textContent = `마지막 갱신: ${t} · Trading과 공유`;
+    }
+  }
 }
 
 async function saveFxRates() {
   const usd  = parseNum(document.getElementById('fx-input-usd').value);
   const jpy  = parseNum(document.getElementById('fx-input-jpy').value);
   const usdt = parseNum(document.getElementById('fx-input-usdt').value);
-  const next = { ...(sharedSettings || {}), fxRates: { USD: usd, JPY: jpy, USDT: usdt } };
+  const next = { ...(sharedSettings || {}), fxRates: { USD: usd, JPY: jpy, USDT: usdt }, fxUpdatedAt: Date.now() };
   if (!next.categoriesEnum) next.categoriesEnum = DEFAULT_CATEGORIES_ENUM;
 
   const $btn = document.getElementById('btn-fx-save');
@@ -15582,6 +15600,59 @@ async function saveFxRates() {
     showToast('저장 실패: ' + (e.message || e.code));
   } finally {
     $btn.disabled = false;
+  }
+}
+
+// ── 자동 환율 fetch (무료·키없음·CORS 허용) — Trading과 동일 소스 ──
+//   USDT/KRW: 업비트 실시간 / USD·JPY/KRW: open.er-api → 실패 시 frankfurter
+let fxAutoTried = false;
+async function fetchFxRates() {
+  const out = {};
+  try {
+    const r = await fetch('https://api.upbit.com/v1/ticker?markets=KRW-USDT');
+    const j = await r.json();
+    if (j && j[0] && j[0].trade_price) out.USDT = j[0].trade_price;
+  } catch(e) { console.warn('[fx] upbit 실패', e); }
+  try {
+    const r = await fetch('https://open.er-api.com/v6/latest/USD');
+    const j = await r.json();
+    if (j && j.rates && j.rates.KRW) {
+      out.USD = j.rates.KRW;
+      if (j.rates.JPY) out.JPY = j.rates.KRW / j.rates.JPY;
+    } else { throw new Error('no rates'); }
+  } catch(e) {
+    try {
+      const r2 = await fetch('https://api.frankfurter.dev/v1/latest?base=USD&symbols=KRW,JPY');
+      const j2 = await r2.json();
+      if (j2 && j2.rates && j2.rates.KRW) {
+        out.USD = j2.rates.KRW;
+        if (j2.rates.JPY) out.JPY = j2.rates.KRW / j2.rates.JPY;
+      }
+    } catch(e2) { console.warn('[fx] frankfurter 실패', e2); }
+  }
+  return out;
+}
+
+// manual=true면 토스트·로딩 표시, false면 조용히(앱 로드 시 자동)
+async function autoUpdateFx(manual) {
+  const btn = document.getElementById('btn-fx-auto');
+  if (manual && btn) { btn.disabled = true; btn.textContent = '가져오는 중…'; }
+  try {
+    const got = await fetchFxRates();
+    if (!got.USDT && !got.USD && !got.JPY) {
+      if (manual) showToast('환율 가져오기 실패 — 기존 값 유지');
+      return;
+    }
+    const cur = sharedSettings?.fxRates || {};
+    const next = { ...(sharedSettings || {}), fxRates: { ...cur, ...got }, fxUpdatedAt: Date.now() };
+    if (!next.categoriesEnum) next.categoriesEnum = DEFAULT_CATEGORIES_ENUM;
+    await setDoc(pathAccountsSettings(), next, { merge: true });  // onSnapshot이 입력칸·상태 갱신
+    if (manual) showToast('✓ 환율이 갱신되었습니다');
+  } catch(e) {
+    console.error('[fx] autoUpdateFx', e);
+    if (manual) showToast('환율 갱신 중 오류');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '↻ 자동'; }
   }
 }
 
@@ -16294,6 +16365,7 @@ document.getElementById('btn-bal-delete').addEventListener('click', deleteBalanc
 
 // 환율 저장
 document.getElementById('btn-fx-save').addEventListener('click', saveFxRates);
+document.getElementById('btn-fx-auto').addEventListener('click', () => autoUpdateFx(true));
 
 // ── 테마 (다크/라이트) ──
 function applyTheme(theme) {

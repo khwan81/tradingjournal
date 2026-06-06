@@ -1499,17 +1499,22 @@ input[type=month]::-webkit-calendar-picker-indicator {
   <!-- ─── SETTINGS ─── -->
   <div class="screen" id="screen-settings">
 
-    <!-- 공통 환율: 전체 너비 -->
+    <!-- 공통 환율: 전체 너비 (공유 마스터 config/accounts.fxRates) -->
     <div class="card">
-      <div class="card-title">공통 환율 기본값 <span style="text-transform:none;letter-spacing:0;font-size:10px;color:var(--text3);">— 거래 입력 시 미입력이면 이 값 사용</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:4px;">
+        <div class="card-title" style="margin-bottom:0;">공통 환율 기본값 <span style="text-transform:none;letter-spacing:0;font-size:10px;color:var(--accent);border:1px solid rgba(79,143,255,.4);border-radius:5px;padding:2px 6px;margin-left:4px;">공유 마스터</span></div>
+        <button class="btn-icon" id="btn-fx-auto" onclick="autoUpdateFx(true)">↻ 자동 갱신</button>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Finance와 공유 · 거래 입력 시 미입력이면 이 값 사용</div>
       <div class="srow">
-        <div><div style="font-size:13px;">업비트 테더 (USDT/KRW)</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">코인 시장 원화 환산 기본값</div></div>
+        <div><div style="font-size:13px;">업비트 테더 (USDT/KRW)</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">업비트 실시간 체결가</div></div>
         <div class="input-wrap" style="width:150px;"><span class="input-prefix">₩</span><input type="text" id="cfg-tether" value="1,482" onblur="fmtComma(this)" oninput="rawNum(this)"></div>
       </div>
       <div class="srow">
-        <div><div style="font-size:13px;">원/달러 환율 (USD/KRW)</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">미장 원화 환산 기본값</div></div>
+        <div><div style="font-size:13px;">원/달러 환율 (USD/KRW)</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">open.er-api (실패 시 frankfurter)</div></div>
         <div class="input-wrap" style="width:150px;"><span class="input-prefix">₩</span><input type="text" id="cfg-usd" value="1,491" onblur="fmtComma(this)" oninput="rawNum(this)"></div>
       </div>
+      <div id="fx-status" style="font-size:11px;color:var(--text3);margin-top:10px;"></div>
     </div>
 
     <!-- PC: 전략 관리 + 매도 관리 2열 / 모바일: 1열 -->
@@ -1989,6 +1994,8 @@ let settings    = {};
 let accounts    = [];        // 계좌 배열
 let strategies  = [...STRATEGIES_DEFAULT];
 let sells       = [...SELLS_DEFAULT];
+let sharedFx    = {};        // 공유 마스터 config/accounts.fxRates { USD, JPY, USDT }
+let sharedFxAt  = 0;         // fxRates 마지막 갱신 시각(ms)
 let mStrat      = new Set();  // 모달에서 선택된 전략
 let mSell       = new Set();  // 모달에서 선택된 매도
 let dbFilter_   = 'all';     // 'all' | accountId
@@ -2052,12 +2059,21 @@ async function loadSettings() {
       strategies = [...STRATEGIES_DEFAULT];
       sells = [...SELLS_DEFAULT];
     }
+    // 공유 마스터 환율 로드 (config/accounts.fxRates) — Finance와 단일 출처
+    try {
+      const fxSnap = await getDoc(tradingPath.sharedSettings());
+      const sd = fxSnap.exists() ? fxSnap.data() : null;
+      sharedFx   = (sd && sd.fxRates) ? sd.fxRates : {};
+      sharedFxAt = (sd && sd.fxUpdatedAt) ? sd.fxUpdatedAt : 0;
+    } catch(e) { console.warn('[fx] 공유 환율 로드 실패', e); }
     applySettingsToUI();
     renderStrategies();
     renderSells();
     syncAccountSelect();
     renderDbFilterChips();
     renderLogFilterChips();
+    // 저장된 환율이 오래됐거나(6시간) 비어있으면 조용히 자동 갱신
+    if (Date.now() - sharedFxAt > 6*3600*1000) autoUpdateFx(false);
   } catch(e) { console.error(e); }
 }
 
@@ -2095,6 +2111,13 @@ window.saveSettings = async function() {
   };
   settings = cfg;
   await setDoc(doc(db, 'users', currentUid, 'config', 'settings'), cfg);
+  // 환율은 공유 마스터(config/accounts.fxRates)에도 기록 — Finance와 단일 출처
+  const usdt = parseNum('cfg-tether'), usd = parseNum('cfg-usd');
+  if (usdt || usd) {
+    if (usdt) sharedFx.USDT = usdt;
+    if (usd)  sharedFx.USD  = usd;
+    try { await writeSharedFx(sharedFx); updateFxStatus(); } catch(e) { console.warn('[fx] 공유 저장 실패', e); }
+  }
   showToast('✓ 설정이 저장되었습니다');
   syncAccountSelect();
   renderDbFilterChips();
@@ -2104,9 +2127,20 @@ window.saveSettings = async function() {
 };
 
 function applySettingsToUI() {
-  if (settings.tether)  setFmt('cfg-tether', settings.tether);
-  if (settings.usdRate) setFmt('cfg-usd',    settings.usdRate);
+  const usdt = sharedFx.USDT != null ? sharedFx.USDT : settings.tether;
+  const usd  = sharedFx.USD  != null ? sharedFx.USD  : settings.usdRate;
+  if (usdt != null) setFmt('cfg-tether', usdt);
+  if (usd  != null) setFmt('cfg-usd',    usd);
+  updateFxStatus();
   renderAccountList();
+}
+
+function updateFxStatus() {
+  const el = ge('fx-status'); if (!el) return;
+  if (!sharedFxAt) { el.textContent = '아직 자동 갱신 안 됨 · 수동 입력값 사용 중'; return; }
+  const d = new Date(sharedFxAt);
+  const t = `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  el.textContent = `마지막 갱신: ${t} · 수동 입력도 가능 (둘 다 공유 마스터에 저장)`;
 }
 
 // ── 계좌 목록 렌더 ────────────────────────────────────────────────────────────
@@ -3268,8 +3302,67 @@ function fmtKrwAxis(v){
 function setText(id,txt,cls=''){const el=ge(id);if(!el)return;el.textContent=txt;el.classList.remove('pos','neg');if(cls)el.classList.add(cls);}
 function setFmt(id,num){const el=ge(id);if(!el)return;el.value=Number(num).toLocaleString('ko-KR');}
 function parseNum(id){return parseFloat((v(id)||'').replace(/,/g,''))||0;}
-function getTether(){return parseNum('cfg-tether')||(settings.tether||1482);}
-function getUsdRate(){return parseNum('cfg-usd')||(settings.usdRate||1491);}
+function getTether(){return parseNum('cfg-tether')||sharedFx.USDT||settings.tether||1482;}
+function getUsdRate(){return parseNum('cfg-usd')||sharedFx.USD||settings.usdRate||1491;}
+
+// ── 자동 환율 fetch (무료·키없음·CORS 허용) ───────────────────────────────────
+//   USDT/KRW : 업비트 실시간 체결가
+//   USD/KRW · JPY/KRW : open.er-api → 실패 시 frankfurter
+async function fetchFxRates() {
+  const out = {};
+  try {
+    const r = await fetch('https://api.upbit.com/v1/ticker?markets=KRW-USDT');
+    const j = await r.json();
+    if (j && j[0] && j[0].trade_price) out.USDT = j[0].trade_price;
+  } catch(e) { console.warn('[fx] upbit 실패', e); }
+  try {
+    const r = await fetch('https://open.er-api.com/v6/latest/USD');
+    const j = await r.json();
+    if (j && j.rates && j.rates.KRW) {
+      out.USD = j.rates.KRW;
+      if (j.rates.JPY) out.JPY = j.rates.KRW / j.rates.JPY;
+    } else { throw new Error('no rates'); }
+  } catch(e) {
+    try {
+      const r2 = await fetch('https://api.frankfurter.dev/v1/latest?base=USD&symbols=KRW,JPY');
+      const j2 = await r2.json();
+      if (j2 && j2.rates && j2.rates.KRW) {
+        out.USD = j2.rates.KRW;
+        if (j2.rates.JPY) out.JPY = j2.rates.KRW / j2.rates.JPY;
+      }
+    } catch(e2) { console.warn('[fx] frankfurter 실패', e2); }
+  }
+  return out;
+}
+
+async function writeSharedFx(fx) {
+  sharedFxAt = Date.now();
+  await setDoc(tradingPath.sharedSettings(), { fxRates: fx, fxUpdatedAt: sharedFxAt }, { merge: true });
+}
+
+// manual=true면 토스트·로딩 표시, false면 조용히(앱 로드 시 자동)
+window.autoUpdateFx = async function(manual) {
+  const btn = ge('btn-fx-auto');
+  if (manual && btn) { btn.disabled = true; btn.textContent = '가져오는 중…'; }
+  try {
+    const got = await fetchFxRates();
+    if (!got.USDT && !got.USD) {  // 둘 다 실패 → 기존 값 유지
+      if (manual) showToast('환율 가져오기 실패 — 기존 값 유지');
+      return;
+    }
+    sharedFx = { ...sharedFx, ...got };
+    if (got.USDT != null) setFmt('cfg-tether', got.USDT);
+    if (got.USD  != null) setFmt('cfg-usd',    got.USD);
+    await writeSharedFx(sharedFx);
+    updateFxStatus();
+    if (manual) showToast('✓ 환율이 갱신되었습니다');
+  } catch(e) {
+    console.error('[fx] autoUpdateFx', e);
+    if (manual) showToast('환율 갱신 중 오류');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '↻ 자동 갱신'; }
+  }
+};
 
 function fmtDate(d){
   if(!d)return'—';
