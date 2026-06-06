@@ -615,6 +615,18 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
 }
 .strategy-name { flex: 1; font-size: 13px; color: var(--text); }
 .strategy-edit-input { flex: 1; display: none; }
+
+/* ── 모달 멀티선택 칩 (전략/매도) ── */
+.ms-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ms-chip {
+  cursor: pointer; user-select: none; font-size: 12px; line-height: 1;
+  padding: 8px 12px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border2); background: var(--bg3); color: var(--text2);
+  transition: all .12s;
+}
+.ms-chip:hover { border-color: var(--accent); color: var(--text); }
+.ms-chip.on { border-color: var(--accent); background: rgba(79,143,255,.15); color: var(--accent); }
+.ms-empty { font-size: 12px; color: var(--text3); padding: 4px 0; }
 .btn-icon {
   padding: 4px 8px; font-size: 11px; border-radius: var(--radius-sm);
   background: transparent; cursor: pointer; border: 1px solid var(--border2);
@@ -1399,6 +1411,11 @@ input[type=month]::-webkit-calendar-picker-indicator {
     </div>
 
     <div class="card" style="margin-bottom:12px;">
+      <div class="card-title">매도별</div>
+      <div id="db-sell-bars"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:12px;">
       <div class="card-title">요일별 성과</div>
       <div id="db-dow-bars"></div>
     </div>
@@ -1482,29 +1499,42 @@ input[type=month]::-webkit-calendar-picker-indicator {
   <!-- ─── SETTINGS ─── -->
   <div class="screen" id="screen-settings">
 
-    <!-- PC: 공통환율 + 전략관리 2열 / 모바일: 1열 -->
-    <div class="settings-top-grid">
-      <div class="card">
-        <div class="card-title">공통 환율 기본값 <span style="text-transform:none;letter-spacing:0;font-size:10px;color:var(--text3);">— 거래 입력 시 미입력이면 이 값 사용</span></div>
-        <div class="srow">
-          <div><div style="font-size:13px;">업비트 테더 (USDT/KRW)</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">코인 시장 원화 환산 기본값</div></div>
-          <div class="input-wrap" style="width:150px;"><span class="input-prefix">₩</span><input type="text" id="cfg-tether" value="1,482" onblur="fmtComma(this)" oninput="rawNum(this)"></div>
-        </div>
-        <div class="srow">
-          <div><div style="font-size:13px;">원/달러 환율 (USD/KRW)</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">미장 원화 환산 기본값</div></div>
-          <div class="input-wrap" style="width:150px;"><span class="input-prefix">₩</span><input type="text" id="cfg-usd" value="1,491" onblur="fmtComma(this)" oninput="rawNum(this)"></div>
-        </div>
+    <!-- 공통 환율: 전체 너비 -->
+    <div class="card">
+      <div class="card-title">공통 환율 기본값 <span style="text-transform:none;letter-spacing:0;font-size:10px;color:var(--text3);">— 거래 입력 시 미입력이면 이 값 사용</span></div>
+      <div class="srow">
+        <div><div style="font-size:13px;">업비트 테더 (USDT/KRW)</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">코인 시장 원화 환산 기본값</div></div>
+        <div class="input-wrap" style="width:150px;"><span class="input-prefix">₩</span><input type="text" id="cfg-tether" value="1,482" onblur="fmtComma(this)" oninput="rawNum(this)"></div>
       </div>
+      <div class="srow">
+        <div><div style="font-size:13px;">원/달러 환율 (USD/KRW)</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">미장 원화 환산 기본값</div></div>
+        <div class="input-wrap" style="width:150px;"><span class="input-prefix">₩</span><input type="text" id="cfg-usd" value="1,491" onblur="fmtComma(this)" oninput="rawNum(this)"></div>
+      </div>
+    </div>
 
+    <!-- PC: 전략 관리 + 매도 관리 2열 / 모바일: 1열 -->
+    <div class="settings-top-grid">
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
           <div class="card-title" style="margin-bottom:0;">전략 관리</div>
-          <span style="font-size:11px;color:var(--text3);">입력 폼의 전략 목록에 반영됩니다</span>
+          <span style="font-size:11px;color:var(--text3);">입력 폼의 전략 칩에 반영됩니다</span>
         </div>
         <div class="strategy-list" id="strategy-list"></div>
         <div style="display:flex;gap:8px;">
           <input type="text" id="new-strategy-input" placeholder="새 전략 이름 입력..." style="flex:1;font-size:13px;">
           <button class="btn-p" style="padding:9px 18px;font-size:13px;" onclick="addStrategy()">+ 추가</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <div class="card-title" style="margin-bottom:0;">매도 관리</div>
+          <span style="font-size:11px;color:var(--text3);">입력 폼의 매도 칩에 반영됩니다</span>
+        </div>
+        <div class="strategy-list" id="sell-list"></div>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="new-sell-input" placeholder="새 매도 방식 입력..." style="flex:1;font-size:13px;">
+          <button class="btn-p" style="padding:9px 18px;font-size:13px;" onclick="addSell()">+ 추가</button>
         </div>
       </div>
     </div>
@@ -1619,11 +1649,15 @@ input[type=month]::-webkit-calendar-picker-indicator {
         <div id="symbol-suggest" style="display:none; position:absolute; left:0; right:0; top:100%; margin-top:4px; background:var(--bg3); border:1px solid var(--border2); border-radius:var(--radius-sm); overflow:hidden; z-index:20; max-height:228px; overflow-y:auto; box-shadow:0 6px 20px rgba(0,0,0,.35);"></div>
       </div>
     </div>
-    <div class="fg3" style="margin-bottom:12px;">
-      <div class="fgrp">
-        <label class="flbl">전략</label>
-        <select id="m-strategy"></select>
-      </div>
+    <div class="fgrp" style="margin-bottom:12px;">
+      <label class="flbl">전략 <span class="fslbl">여러 개 선택 가능</span></label>
+      <div class="ms-chips" id="m-strat-chips"></div>
+    </div>
+    <div class="fgrp" style="margin-bottom:12px;">
+      <label class="flbl">매도 <span class="fslbl">여러 개 선택 가능</span></label>
+      <div class="ms-chips" id="m-sell-chips"></div>
+    </div>
+    <div class="fg2" style="margin-bottom:12px;">
       <div class="fgrp">
         <label class="flbl">방향</label>
         <select id="m-dir">
@@ -1940,6 +1974,7 @@ try {
 }
 const DAYS   = ['일','월','화','수','목','금','토'];
 const STRATEGIES_DEFAULT = ['역추세','OB','FVG','돌파','뇌동'];
+const SELLS_DEFAULT = ['전량익절','분할익절','손절','트레일링'];
 const R_LABELS = ['≤-2','-2~-1','-1~0','0~1','1~2','2~3','>3'];
 const R_COLORS = ['#f87171','#f87171','#f87171','#34d399','#34d399','#34d399','#34d399'];
 const BAR_COLORS = ['#a78bfa','#f87171','#4f8fff','#34d399','#fbbf24'];
@@ -1953,6 +1988,9 @@ let trades      = [];
 let settings    = {};
 let accounts    = [];        // 계좌 배열
 let strategies  = [...STRATEGIES_DEFAULT];
+let sells       = [...SELLS_DEFAULT];
+let mStrat      = new Set();  // 모달에서 선택된 전략
+let mSell       = new Set();  // 모달에서 선택된 매도
 let dbFilter_   = 'all';     // 'all' | accountId
 let period_     = { preset:'ALL', fromYm:null, toYm:null }; // 매도일(dateStart) 기준, 대시보드+목록 공유
 let logFilter_  = 'all';     // 'all' | accountId | 'long' | 'short' | 'stop' | 'open'
@@ -2007,14 +2045,16 @@ async function loadSettings() {
         accounts = migrateAccounts(settings);
       }
       strategies = settings.strategies || [...STRATEGIES_DEFAULT];
+      sells = settings.sells || [...SELLS_DEFAULT];
     } else {
       settings = {};
       accounts = defaultAccounts();
       strategies = [...STRATEGIES_DEFAULT];
+      sells = [...SELLS_DEFAULT];
     }
     applySettingsToUI();
     renderStrategies();
-    syncStrategySelect();
+    renderSells();
     syncAccountSelect();
     renderDbFilterChips();
     renderLogFilterChips();
@@ -2050,6 +2090,7 @@ window.saveSettings = async function() {
     tether:     parseNum('cfg-tether'),
     usdRate:    parseNum('cfg-usd'),
     strategies: strategies,
+    sells:      sells,
     accounts:   accounts,
   };
   settings = cfg;
@@ -2229,7 +2270,8 @@ window.saveTrade = async function() {
     accountId:   acctId,
     accountName: acct?.name || '',
     market,
-    strategy:  v('m-strategy'),
+    strategies: [...mStrat],
+    sells:      [...mSell],
     dir:       v('m-dir'),
     symbol:    v('m-symbol').trim().toUpperCase(),
     dateStart, dateEnd, timeStart, timeEnd,
@@ -2281,6 +2323,16 @@ function filterTradesList(list, f) {
   return list.filter(t => (t.accountId || t.market) === f);
 }
 
+// 다중 전략/매도 정규화 (옛 거래의 단일 strategy 문자열 하위호환)
+function stratsOf(t) {
+  if (Array.isArray(t.strategies) && t.strategies.length) return t.strategies;
+  return t.strategy ? [t.strategy] : [];
+}
+function sellsOf(t) {
+  if (Array.isArray(t.sells) && t.sells.length) return t.sells;
+  return [];
+}
+
 function buildTradeRow(t) {
   const acct = accounts.find(a => a.id === t.accountId);
   const mktKey = t.market || 'coin';
@@ -2308,6 +2360,16 @@ function buildTradeRow(t) {
     : `<div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-top:12px;margin-bottom:8px;">차트 이미지</div><div class="chart-empty">차트 이미지 없음</div>`;
 
   const expandHtml = `
+    <div style="display:flex;gap:28px;margin-bottom:12px;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">전략</div>
+        <div style="font-size:12px;color:var(--text2);">${stratsOf(t).join(' · ')||'—'}</div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">매도</div>
+        <div style="font-size:12px;color:var(--text2);">${sellsOf(t).join(' · ')||'—'}</div>
+      </div>
+    </div>
     <div class="memo-block">
       <div class="memo-header">메모</div>
       <div class="memo-text ${memo?'':'empty'}">${memo||'메모 없음'}</div>
@@ -2319,7 +2381,7 @@ function buildTradeRow(t) {
       <div><div style="font-size:12px;">${dtStr}</div></div>
       <div>${mktBadge}</div>
       <span style="font-weight:500;font-size:12px;">${t.symbol}</span>
-      <span style="font-size:11px;color:var(--text2);">${t.strategy||'—'}</span>
+      <span style="font-size:11px;color:var(--text2);">${stratsOf(t).join(' · ')||'—'}</span>
       <div>${dirBadge}</div>
       <div>${pnlStr}</div>
       <div>${rStr}</div>
@@ -2343,7 +2405,7 @@ function buildTradeRow(t) {
       </div>
       <div class="tc-bot">
         ${dirBadge}
-        <span style="font-size:11px;color:var(--text2);">${t.strategy||''}</span>
+        <span style="font-size:11px;color:var(--text2);">${stratsOf(t).join(' · ')}</span>
         <span style="font-size:11px;color:${rColor};">${rMobile}</span>
         <span class="tc-meta">${dtStr}</span>
       </div>
@@ -2447,22 +2509,31 @@ function renderDashboard() {
   });
   renderRDist(rBuckets);
 
-  // 전략별 — 건수 + 승률 + 평균 R
-  const stratMap={};
-  filtered.forEach(t=>{
-    if(!t.strategy) return;
-    const m=stratMap[t.strategy] || (stratMap[t.strategy]={cnt:0,closed:0,wins:0,rSum:0});
-    m.cnt++;
-    if(!t.isOpen && t.pnl!==null){ m.closed++; if(t.pnl>0)m.wins++; m.rSum+=(t.rVal||0); }
-  });
-  renderStrategyBars(strategies.map(s=>{
-    const m=stratMap[s]||{cnt:0,closed:0,wins:0,rSum:0};
-    return {
-      n:s, c:m.cnt, closed:m.closed,
-      wr:  m.closed? m.wins/m.closed*100 : null,
-      avgR:m.closed? m.rSum/m.closed     : null
-    };
-  }));
+  // 전략별 / 매도별 — 건수 + 승률 + 평균 R (거래가 여러 항목 가지면 각각 중복 집계)
+  function aggBy(getList, masterList, elId) {
+    const map={};
+    filtered.forEach(t=>{
+      getList(t).forEach(name=>{
+        if(!name) return;
+        const m=map[name] || (map[name]={cnt:0,closed:0,wins:0,rSum:0});
+        m.cnt++;
+        if(!t.isOpen && t.pnl!==null){ m.closed++; if(t.pnl>0)m.wins++; m.rSum+=(t.rVal||0); }
+      });
+    });
+    // 마스터 목록 + 마스터에 없지만 거래에 쓰인 항목까지 포함
+    const names=[...masterList];
+    Object.keys(map).forEach(n=>{ if(!names.includes(n)) names.push(n); });
+    renderStrategyBars(names.map(s=>{
+      const m=map[s]||{cnt:0,closed:0,wins:0,rSum:0};
+      return {
+        n:s, c:m.cnt, closed:m.closed,
+        wr:  m.closed? m.wins/m.closed*100 : null,
+        avgR:m.closed? m.rSum/m.closed     : null
+      };
+    }), elId);
+  }
+  aggBy(stratsOf, strategies, 'db-strategy-bars');
+  aggBy(sellsOf,  sells,      'db-sell-bars');
 
   // 요일별 성과 (청산 거래만, 월~금 기본 + 주말은 데이터 있을 때만)
   const dowMap={};
@@ -2648,9 +2719,11 @@ function renderDowBars(data) {
   }).join('');
 }
 
-function renderStrategyBars(data) {
+function renderStrategyBars(data, elId='db-strategy-bars') {
+  const el=ge(elId); if(!el) return;
+  if(!data.length){ el.innerHTML=`<div style="padding:8px 0;font-size:12px;color:var(--text3);">데이터 없음</div>`; return; }
   const max=Math.max(...data.map(d=>d.c),1);
-  ge('db-strategy-bars').innerHTML=data.map((d)=>{
+  el.innerHTML=data.map((d)=>{
     const w = d.c===0?0:Math.max(4,Math.round(d.c/max*100));
     const color = d.avgR===null ? 'var(--text3)' : d.avgR>=0 ? 'var(--green)' : 'var(--red)';
     const wrTxt = d.wr===null ? '—' : Math.round(d.wr)+'%';
@@ -2881,7 +2954,9 @@ window.openEdit = function(id,e) {
   // 계좌 선택 (accountId 없으면 market으로 매핑)
   const acctId = t.accountId || (accounts.find(a=>a.market===t.market)?.id || accounts[0]?.id);
   sv('m-account', acctId);
-  sv('m-strategy', t.strategy);
+  mStrat = new Set(stratsOf(t));
+  mSell  = new Set(sellsOf(t));
+  renderModalChips();
   sv('m-dir',      t.dir);
   sv('m-symbol',   t.symbol);
   if(t.dateStart){
@@ -2906,6 +2981,9 @@ window.bgClose    = function(e) { if(e.target===ge('modal-ov'))closeModal(); };
 function clearModal() {
   ['m-edit-id','m-symbol','m-datetime-start',
    'm-pnl','m-seed','m-tether','m-usd','m-memo','m-chart-url'].forEach(id=>sv(id,''));
+  mStrat = new Set();
+  mSell  = new Set();
+  renderModalChips();
   if(accounts.length) sv('m-account', accounts[0].id);
   sv('m-dir','short');
   onAccountChange();
@@ -3098,20 +3176,67 @@ function updateModalGoalBox() {
   ge('mgb-remain').textContent='+'+remain.toFixed(1)+'R';
 }
 
-// ── 전략 ──────────────────────────────────────────────────────────────────────
-window.renderStrategies = function() {
-  const list=ge('strategy-list'); list.innerHTML='';
-  strategies.forEach((s,i)=>{
+// ── 전략 / 매도 관리 ───────────────────────────────────────────────────────────
+function arrOf(kind){ return kind==='strat' ? strategies : sells; }
+function renderMgmtList(arr, listElId, kind) {
+  const list=ge(listElId); if(!list) return; list.innerHTML='';
+  arr.forEach((s,i)=>{
     const item=document.createElement('div'); item.className='strategy-item';
-    item.innerHTML=`<span class="strategy-name" id="sname-${i}">${s}</span><input class="strategy-edit-input" id="sedit-${i}" value="${s}" onkeydown="if(event.key==='Enter')saveStrategy(${i})"><button class="btn-icon" id="sedit-btn-${i}" onclick="startEditS(${i})">✏</button><button class="btn-icon confirm" id="ssave-btn-${i}" style="display:none;" onclick="saveStrategy(${i})">✓</button><button class="btn-icon danger" onclick="removeStrategy(${i})">✕</button>`;
+    item.innerHTML=`<span class="strategy-name" id="${kind}-name-${i}">${s}</span>`+
+      `<input class="strategy-edit-input" id="${kind}-edit-${i}" value="${s}" onkeydown="if(event.key==='Enter')saveMgmt('${kind}',${i})">`+
+      `<button class="btn-icon" id="${kind}-editbtn-${i}" onclick="startEditMgmt('${kind}',${i})">✏</button>`+
+      `<button class="btn-icon confirm" id="${kind}-savebtn-${i}" style="display:none;" onclick="saveMgmt('${kind}',${i})">✓</button>`+
+      `<button class="btn-icon danger" onclick="removeMgmt('${kind}',${i})">✕</button>`;
     list.appendChild(item);
   });
+}
+window.renderStrategies = function(){ renderMgmtList(strategies,'strategy-list','strat'); };
+window.renderSells      = function(){ renderMgmtList(sells,'sell-list','sell'); };
+
+window.startEditMgmt = function(kind,i){
+  ge(kind+'-name-'+i).style.display='none'; ge(kind+'-edit-'+i).style.display='block';
+  ge(kind+'-editbtn-'+i).style.display='none'; ge(kind+'-savebtn-'+i).style.display='';
+  ge(kind+'-edit-'+i).focus();
 };
-window.startEditS  = function(i){ge('sname-'+i).style.display='none';ge('sedit-'+i).style.display='block';ge('sedit-btn-'+i).style.display='none';ge('ssave-btn-'+i).style.display='';ge('sedit-'+i).focus();};
-window.saveStrategy= function(i){const val=ge('sedit-'+i).value.trim();if(val){strategies[i]=val;renderStrategies();syncStrategySelect();}};
-window.removeStrategy=function(i){if(strategies.length<=1){alert('최소 1개 전략이 필요합니다.');return;}strategies.splice(i,1);renderStrategies();syncStrategySelect();};
-window.addStrategy = function(){const inp=ge('new-strategy-input');const val=inp.value.trim();if(!val)return;strategies.push(val);inp.value='';renderStrategies();syncStrategySelect();};
-function syncStrategySelect(){const sel=ge('m-strategy');if(!sel)return;const cur=sel.value;sel.innerHTML=strategies.map(s=>`<option value="${s}">${s}</option>`).join('');if(strategies.includes(cur))sel.value=cur;}
+window.saveMgmt = function(kind,i){
+  const val=ge(kind+'-edit-'+i).value.trim(); if(!val) return;
+  const arr=arrOf(kind); const old=arr[i]; arr[i]=val;
+  const sel = kind==='strat'?mStrat:mSell;
+  if(sel.has(old)){ sel.delete(old); sel.add(val); }
+  (kind==='strat'?renderStrategies:renderSells)(); renderModalChips();
+};
+window.removeMgmt = function(kind,i){
+  const arr=arrOf(kind); const old=arr[i]; arr.splice(i,1);
+  (kind==='strat'?mStrat:mSell).delete(old);
+  (kind==='strat'?renderStrategies:renderSells)(); renderModalChips();
+};
+window.addStrategy = function(){
+  const inp=ge('new-strategy-input'); const val=inp.value.trim();
+  if(!val||strategies.includes(val)) return;
+  strategies.push(val); inp.value=''; renderStrategies(); renderModalChips();
+};
+window.addSell = function(){
+  const inp=ge('new-sell-input'); const val=inp.value.trim();
+  if(!val||sells.includes(val)) return;
+  sells.push(val); inp.value=''; renderSells(); renderModalChips();
+};
+
+// ── 모달 멀티선택 칩 (전략/매도) ─────────────────────────────────────────────────
+window.renderModalChips = function(){
+  const mk=(arr,sel,kind,elId)=>{
+    const el=ge(elId); if(!el) return;
+    const names=[...arr]; sel.forEach(n=>{ if(!names.includes(n)) names.push(n); });
+    if(!names.length){ el.innerHTML='<span class="ms-empty">설정에서 항목을 추가하세요</span>'; return; }
+    el.innerHTML=names.map(n=>`<span class="ms-chip${sel.has(n)?' on':''}" data-n="${n}" onclick="toggleMChip('${kind}',this)">${n}</span>`).join('');
+  };
+  mk(strategies,mStrat,'strat','m-strat-chips');
+  mk(sells,mSell,'sell','m-sell-chips');
+};
+window.toggleMChip = function(kind,el){
+  const n=el.dataset.n; const sel=kind==='strat'?mStrat:mSell;
+  sel.has(n)?sel.delete(n):sel.add(n);
+  el.classList.toggle('on');
+};
 
 // ── 설정 유틸 ──────────────────────────────────────────────────────────────────
 window.fmtComma = function(el){const raw=parseFloat(el.value.replace(/,/g,''));if(!isNaN(raw))el.value=raw.toLocaleString('ko-KR');};
@@ -3790,8 +3915,11 @@ ge('btn-theme-toggle')?.addEventListener('click', () => {
 })();
 
 renderStrategies();
+renderSells();
+renderModalChips();
 renderRDist([0,0,0,0,0,0,0]);
-renderStrategyBars(strategies.map(s=>({n:s,c:0,closed:0,wr:null,avgR:null})));
+renderStrategyBars(strategies.map(s=>({n:s,c:0,closed:0,wr:null,avgR:null})), 'db-strategy-bars');
+renderStrategyBars(sells.map(s=>({n:s,c:0,closed:0,wr:null,avgR:null})), 'db-sell-bars');
 
 </script>
 <!-- PWA 서비스워커 등록 -->
