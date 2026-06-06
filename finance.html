@@ -15568,9 +15568,9 @@ function renderFxRates() {
   const $usd  = document.getElementById('fx-input-usd');
   const $jpy  = document.getElementById('fx-input-jpy');
   const $usdt = document.getElementById('fx-input-usdt');
-  if ($usd  && document.activeElement !== $usd)  $usd.value  = fx.USD  != null ? fx.USD  : '';
+  if ($usd  && document.activeElement !== $usd)  $usd.value  = fx.USD  != null ? Math.round(fx.USD)  : '';
   if ($jpy  && document.activeElement !== $jpy)  $jpy.value  = fx.JPY  != null ? fx.JPY  : '';
-  if ($usdt && document.activeElement !== $usdt) $usdt.value = fx.USDT != null ? fx.USDT : '';
+  if ($usdt && document.activeElement !== $usdt) $usdt.value = fx.USDT != null ? Math.round(fx.USDT) : '';
   const $st = document.getElementById('fx-status');
   if ($st) {
     const at = sharedSettings?.fxUpdatedAt;
@@ -15584,9 +15584,9 @@ function renderFxRates() {
 }
 
 async function saveFxRates() {
-  const usd  = parseNum(document.getElementById('fx-input-usd').value);
+  const usd  = Math.round(parseNum(document.getElementById('fx-input-usd').value));
   const jpy  = parseNum(document.getElementById('fx-input-jpy').value);
-  const usdt = parseNum(document.getElementById('fx-input-usdt').value);
+  const usdt = Math.round(parseNum(document.getElementById('fx-input-usdt').value));
   const next = { ...(sharedSettings || {}), fxRates: { USD: usd, JPY: jpy, USDT: usdt }, fxUpdatedAt: Date.now() };
   if (!next.categoriesEnum) next.categoriesEnum = DEFAULT_CATEGORIES_ENUM;
 
@@ -15611,22 +15611,22 @@ async function fetchFxRates() {
   try {
     const r = await fetch('https://api.upbit.com/v1/ticker?markets=KRW-USDT');
     const j = await r.json();
-    if (j && j[0] && j[0].trade_price) out.USDT = j[0].trade_price;
+    if (j && j[0] && j[0].trade_price) out.USDT = Math.round(j[0].trade_price);
   } catch(e) { console.warn('[fx] upbit 실패', e); }
   try {
     const r = await fetch('https://open.er-api.com/v6/latest/USD');
     const j = await r.json();
     if (j && j.rates && j.rates.KRW) {
-      out.USD = j.rates.KRW;
-      if (j.rates.JPY) out.JPY = j.rates.KRW / j.rates.JPY;
+      out.USD = Math.round(j.rates.KRW);
+      if (j.rates.JPY) out.JPY = Math.round((j.rates.KRW / j.rates.JPY) * 100) / 100;
     } else { throw new Error('no rates'); }
   } catch(e) {
     try {
       const r2 = await fetch('https://api.frankfurter.dev/v1/latest?base=USD&symbols=KRW,JPY');
       const j2 = await r2.json();
       if (j2 && j2.rates && j2.rates.KRW) {
-        out.USD = j2.rates.KRW;
-        if (j2.rates.JPY) out.JPY = j2.rates.KRW / j2.rates.JPY;
+        out.USD = Math.round(j2.rates.KRW);
+        if (j2.rates.JPY) out.JPY = Math.round((j2.rates.KRW / j2.rates.JPY) * 100) / 100;
       }
     } catch(e2) { console.warn('[fx] frankfurter 실패', e2); }
   }

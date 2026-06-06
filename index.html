@@ -2103,8 +2103,8 @@ window.saveSettings = async function() {
     return { ...a, name, seed, monthlyGoal: goal, risk };
   });
   const cfg = {
-    tether:     parseNum('cfg-tether'),
-    usdRate:    parseNum('cfg-usd'),
+    tether:     Math.round(parseNum('cfg-tether')),
+    usdRate:    Math.round(parseNum('cfg-usd')),
     strategies: strategies,
     sells:      sells,
     accounts:   accounts,
@@ -2112,7 +2112,7 @@ window.saveSettings = async function() {
   settings = cfg;
   await setDoc(doc(db, 'users', currentUid, 'config', 'settings'), cfg);
   // 환율은 공유 마스터(config/accounts.fxRates)에도 기록 — Finance와 단일 출처
-  const usdt = parseNum('cfg-tether'), usd = parseNum('cfg-usd');
+  const usdt = Math.round(parseNum('cfg-tether')), usd = Math.round(parseNum('cfg-usd'));
   if (usdt || usd) {
     if (usdt) sharedFx.USDT = usdt;
     if (usd)  sharedFx.USD  = usd;
@@ -2129,8 +2129,8 @@ window.saveSettings = async function() {
 function applySettingsToUI() {
   const usdt = sharedFx.USDT != null ? sharedFx.USDT : settings.tether;
   const usd  = sharedFx.USD  != null ? sharedFx.USD  : settings.usdRate;
-  if (usdt != null) setFmt('cfg-tether', usdt);
-  if (usd  != null) setFmt('cfg-usd',    usd);
+  if (usdt != null) setFmt('cfg-tether', Math.round(usdt));
+  if (usd  != null) setFmt('cfg-usd',    Math.round(usd));
   updateFxStatus();
   renderAccountList();
 }
@@ -3313,22 +3313,22 @@ async function fetchFxRates() {
   try {
     const r = await fetch('https://api.upbit.com/v1/ticker?markets=KRW-USDT');
     const j = await r.json();
-    if (j && j[0] && j[0].trade_price) out.USDT = j[0].trade_price;
+    if (j && j[0] && j[0].trade_price) out.USDT = Math.round(j[0].trade_price);
   } catch(e) { console.warn('[fx] upbit 실패', e); }
   try {
     const r = await fetch('https://open.er-api.com/v6/latest/USD');
     const j = await r.json();
     if (j && j.rates && j.rates.KRW) {
-      out.USD = j.rates.KRW;
-      if (j.rates.JPY) out.JPY = j.rates.KRW / j.rates.JPY;
+      out.USD = Math.round(j.rates.KRW);
+      if (j.rates.JPY) out.JPY = Math.round((j.rates.KRW / j.rates.JPY) * 100) / 100;
     } else { throw new Error('no rates'); }
   } catch(e) {
     try {
       const r2 = await fetch('https://api.frankfurter.dev/v1/latest?base=USD&symbols=KRW,JPY');
       const j2 = await r2.json();
       if (j2 && j2.rates && j2.rates.KRW) {
-        out.USD = j2.rates.KRW;
-        if (j2.rates.JPY) out.JPY = j2.rates.KRW / j2.rates.JPY;
+        out.USD = Math.round(j2.rates.KRW);
+        if (j2.rates.JPY) out.JPY = Math.round((j2.rates.KRW / j2.rates.JPY) * 100) / 100;
       }
     } catch(e2) { console.warn('[fx] frankfurter 실패', e2); }
   }
