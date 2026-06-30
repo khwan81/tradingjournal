@@ -15881,6 +15881,7 @@ function renderFavoriteChips() {
     const amt = (f.defaultAmount != null && f.defaultAmount > 0)
       ? ` ${fmtAmount(f.defaultAmount)}원` : '';
     return `<button type="button" class="fav-chip" data-fav-id="${escapeHtml(f.id)}"
+      title="탭: 폼 채우기 · 길게 누르기/우클릭: 삭제"
       style="flex:0 0 auto; min-height:0; height:32px; padding:0 12px; font-size:13px;
       background:var(--bg3); color:var(--text); border:1px solid var(--border);
       border-radius:8px; white-space:nowrap; cursor:pointer;">${escapeHtml(label)}${escapeHtml(amt)}</button>`;
@@ -15895,8 +15896,11 @@ function renderFavoriteChips() {
 
   // 라벨 텍스트 — 즐겨찾기가 있으면 "즐겨찾기", 최근만 있으면 "최근 입력"
   if ($label) {
+    const hint = favorites.length
+      ? '— 탭해서 채우기 · 길게 눌러 삭제'
+      : '— 탭하면 폼이 채워져요';
     const labelText = favorites.length ? '즐겨찾기' : '최근 입력';
-    $label.innerHTML = `${labelText} <span style="color:var(--text3); font-weight:400;">— 탭하면 폼이 채워져요</span>`;
+    $label.innerHTML = `${labelText} <span style="color:var(--text3); font-weight:400;">${hint}</span>`;
   }
 
   $group.style.display = '';
@@ -15969,6 +15973,8 @@ function applyFavorite(favId) {
 
 // 칩 줄 위임 클릭
 document.getElementById('tx-fav-row').addEventListener('click', e => {
+  // 길게 눌러 삭제가 발동했으면 이 클릭은 무시 (프리필 방지)
+  if (favLongFired) { favLongFired = false; return; }
   // 최근 입력 칩 (v0.7-38) — 즐겨찾기와 분리 처리
   if (e.target.closest('[data-recent-chip]')) {
     applyLastTx();
@@ -15978,6 +15984,61 @@ document.getElementById('tx-fav-row').addEventListener('click', e => {
   if (!btn) return;
   applyFavorite(btn.dataset.favId);
 });
+
+// ── 즐겨찾기 삭제 (v0.7-39) — 칩 길게 누르기(모바일) / 우클릭(데스크탑) ──
+//   confirm 후 deleteDoc. onSnapshot이 favorites 갱신 + 칩 재렌더 담당.
+//   최근 입력 칩(data-recent-chip)은 doc이 아니라 localStorage라 대상 아님.
+let favPressTimer = null;
+let favLongFired = false;
+let favTouchX = 0, favTouchY = 0;
+function clearFavPress() {
+  if (favPressTimer) { clearTimeout(favPressTimer); favPressTimer = null; }
+}
+async function confirmDeleteFavorite(favId) {
+  const f = favorites.find(x => x.id === favId);
+  if (!f) return;
+  const label = f.label || f.categoryName || '즐겨찾기';
+  if (!confirm(`즐겨찾기 "${label}"을(를) 삭제할까요?\n\n이미 저장된 거래에는 영향이 없습니다.`)) return;
+  try {
+    await deleteDoc(pathFavorite(favId));
+    showToast('즐겨찾기를 삭제했어요');
+  } catch (e) {
+    console.error('[favorite] 삭제 실패', e);
+    showToast('삭제 실패: ' + (e.message || e.code));
+  }
+}
+(() => {
+  const $favRow = document.getElementById('tx-fav-row');
+  if (!$favRow) return;
+  // 모바일: 길게 누르기 (~550ms, 8px 이상 움직이면 취소 = 스크롤로 간주)
+  $favRow.addEventListener('touchstart', e => {
+    const btn = e.target.closest('.fav-chip[data-fav-id]');
+    if (!btn) return;
+    const t = e.touches[0];
+    favTouchX = t.clientX; favTouchY = t.clientY;
+    favLongFired = false;
+    clearFavPress();
+    favPressTimer = setTimeout(() => {
+      favLongFired = true;
+      confirmDeleteFavorite(btn.dataset.favId);
+    }, 550);
+  }, { passive: true });
+  $favRow.addEventListener('touchmove', e => {
+    if (!favPressTimer) return;
+    const t = e.touches[0];
+    if (Math.abs(t.clientX - favTouchX) > 8 || Math.abs(t.clientY - favTouchY) > 8) clearFavPress();
+  }, { passive: true });
+  $favRow.addEventListener('touchend', clearFavPress);
+  $favRow.addEventListener('touchcancel', clearFavPress);
+  // 데스크탑: 우클릭으로 삭제
+  $favRow.addEventListener('contextmenu', e => {
+    const btn = e.target.closest('.fav-chip[data-fav-id]');
+    if (!btn) return;
+    e.preventDefault();
+    favLongFired = true;   // 뒤따르는 click 프리필 방지
+    confirmDeleteFavorite(btn.dataset.favId);
+  });
+})();
 
 // ☆ 토글
 function setStar(on) {
