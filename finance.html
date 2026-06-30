@@ -16026,6 +16026,81 @@ async function recordFavoriteOnSave(savedData) {
 }
 
 
+// ── 새 거래 입력 임시저장 / draft (v0.7-38) ───────────
+// 입력 중 ×·배경 클릭·앱 종료로 모달이 닫혀도 입력값 보존 (잔액/자산결산과 동일 패턴).
+//   - 입력 이벤트마다 localStorage 백업 (새 거래 모드에서만)
+//   - 새 거래 모달 열 때 내용 있는 draft면 복원
+//   - 정상 저장 → clear,  취소 버튼 → clear  (× / 배경 클릭은 보존)
+const TX_DRAFT_KEY = 'txDraft';
+function saveTxDraft() {
+  if (editingTxId) return;          // 편집 모드는 대상 아님
+  const draft = {
+    date:        document.getElementById('tx-date').value,
+    amount:      document.getElementById('tx-amount').value,
+    category:    document.getElementById('tx-category').value,
+    payment:     document.getElementById('tx-payment').value,
+    accountId:   document.getElementById('tx-account').value,
+    fxNative:    document.getElementById('tx-fx-native').value,
+    fxRate:      document.getElementById('tx-fx-rate').value,
+    paid:        document.getElementById('tx-paid-toggle').classList.contains('on'),
+    paidTouched: paidTouchedByUser,
+    memo:        document.getElementById('tx-memo').value,
+  };
+  try { localStorage.setItem(TX_DRAFT_KEY, JSON.stringify(draft)); } catch (e) {}
+}
+function loadTxDraft() {
+  try { const raw = localStorage.getItem(TX_DRAFT_KEY); return raw ? JSON.parse(raw) : null; }
+  catch (e) { return null; }
+}
+function clearTxDraft() {
+  try { localStorage.removeItem(TX_DRAFT_KEY); } catch (e) {}
+}
+// 새 거래 모드에서 draft 복원 (openTxModal 기본값 세팅 뒤 호출)
+// draft는 사용자의 input/change/토글 이벤트로만 기록되고 저장·취소 시 지워지므로,
+// 남아있다는 것 자체가 "입력 중 ×·배경·앱 종료로 닫힌 상태" → 존재하면 복원.
+function restoreTxDraft() {
+  const d = loadTxDraft();
+  if (!d) return;
+
+  // 날짜
+  if (d.date) document.getElementById('tx-date').value = d.date;
+
+  // 계좌 → 외화 모드 (살아있는 옵션일 때만)
+  const $acc = document.getElementById('tx-account');
+  if (d.accountId && [...$acc.options].some(o => o.value === d.accountId)) {
+    $acc.value = d.accountId;
+  }
+  applyTxFxMode();   // 계좌 통화 기준 외화 영역 토글 (KRW면 native/rate 자동 클리어)
+
+  const isFx = getSelectedTxAccountCurrency() !== 'KRW';
+  if (isFx) {
+    if (d.fxNative !== undefined) document.getElementById('tx-fx-native').value = d.fxNative;
+    if (d.fxRate)                 document.getElementById('tx-fx-rate').value = d.fxRate;
+    recomputeTxFx();              // KRW 환산 금액 재계산
+  } else if (d.amount !== undefined) {
+    document.getElementById('tx-amount').value = d.amount;
+  }
+
+  // 카테고리
+  const $cat = document.getElementById('tx-category');
+  if (d.category && [...$cat.options].some(o => o.value === d.category)) {
+    $cat.value = d.category;
+    updateTxCategoryHint();
+  }
+  // 결제수단
+  const $pay = document.getElementById('tx-payment');
+  if (d.payment && [...$pay.options].some(o => o.value === d.payment)) {
+    $pay.value = d.payment;
+  }
+  // 결제완료 상태 (사용자가 만졌던 상태까지 복원)
+  const payType = (settings?.payments.find(p => p.name === document.getElementById('tx-payment').value))?.type || 'cash';
+  setPaid(!!d.paid, payType, !!d.paidTouched);
+
+  // 메모
+  if (d.memo !== undefined) document.getElementById('tx-memo').value = d.memo;
+}
+
+
 function openTxModal(id = null) {
   // 사전조건 검증
   if (!settings) return;
@@ -16092,6 +16167,9 @@ function openTxModal(id = null) {
   appliedFavoriteId = null;
   document.getElementById('btn-tx-star').style.display = isEdit ? 'none' : 'inline-flex';
   renderFavoriteChips();
+
+  // v0.7-38 — 새 거래 모드면 입력 중 닫혔던 임시저장 복원 (기본값 위에 덮어씀)
+  if (!isEdit) restoreTxDraft();
 
   openOv('ov-tx');
   setTimeout(() => document.getElementById('tx-amount').focus(), 50);
@@ -16238,6 +16316,18 @@ document.getElementById('tx-fx-rate').addEventListener('blur', e => {
   }
 });
 
+// v0.7-38 — 입력할 때마다 임시저장 (새 거래 모드에서만; saveTxDraft 내부에서 편집 모드 가드)
+['input', 'change'].forEach(evt => {
+  ['tx-date', 'tx-amount', 'tx-category', 'tx-payment', 'tx-account', 'tx-fx-native', 'tx-fx-rate', 'tx-memo']
+    .forEach(id => document.getElementById(id).addEventListener(evt, saveTxDraft));
+});
+// 결제완료 토글도 백업 (기존 토글 핸들러 뒤에 등록 → 변경된 상태 캡처)
+document.getElementById('tx-paid-toggle').addEventListener('click', saveTxDraft);
+// 취소 버튼만 임시저장 폐기 (× / 배경 클릭은 보존)
+document.querySelectorAll('#ov-tx .modal-foot [data-close="ov-tx"]').forEach(btn => {
+  btn.addEventListener('click', clearTxDraft);
+});
+
 // paid 토글 관리
 let paidTouchedByUser = false;
 function setPaid(on, paymentType, touched) {
@@ -16358,6 +16448,8 @@ document.getElementById('btn-tx-save').addEventListener('click', async () => {
       await recordFavoriteOnSave({ category, payment, amount });
       // v0.7-38 — 최근 입력 기억 (카테고리·결제수단·계좌만; 금액·메모 제외)
       saveLastTxInput({ category, payment, accountId: acc?.id || null });
+      // v0.7-38 — 정상 저장됐으므로 입력 임시저장 폐기
+      clearTxDraft();
     }
 
     // v0.7-15 — closeOv가 처리 마커를 null로 만들기 전에 로컬 캡처
