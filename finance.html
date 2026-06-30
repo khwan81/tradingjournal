@@ -5397,10 +5397,10 @@ html, body { overflow-x: hidden; }
     </div>
     <div class="modal-body">
       <form id="form-tx" onsubmit="return false;">
-        <!-- 즐겨찾기 칩 줄 (v0.7-28) — 새 거래 모드 + 즐겨찾기 있을 때만 표시 -->
+        <!-- 즐겨찾기 / 최근 입력 칩 줄 (v0.7-28, v0.7-38) — 새 거래 모드 + (최근 또는 즐겨찾기 있을 때만) 표시 -->
         <div class="form-group" id="tx-fav-group" style="display:none;">
-          <label class="form-label" style="display:flex; align-items:center; gap:6px;">
-            즐겨찾기
+          <label class="form-label" id="tx-fav-label" style="display:flex; align-items:center; gap:6px;">
+            빠른 입력
             <span style="color:var(--text3); font-weight:400;">— 탭하면 폼이 채워져요</span>
           </label>
           <div id="tx-fav-row" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:2px; -webkit-overflow-scrolling:touch;"></div>
@@ -15807,19 +15807,74 @@ function favKey(categoryName, paymentName, amount) {
   return `${categoryName || ''}|${paymentName || ''}|${amount == null ? '' : amount}`;
 }
 
-// 칩 줄 렌더 — 새 거래 모드 + 즐겨찾기 있을 때만. 0개면 그룹 숨김.
+// ── 최근 입력 기억 (v0.7-38) ──────────────────────────
+// 새 거래 저장 시 카테고리·결제수단·계좌만 localStorage에 기억 (금액·메모는 매번 새로).
+// 다음 새 거래 모달에서 "↩ 최근 입력" 칩으로 노출 → 탭하면 프리필.
+// 즐겨찾기와 달리 별도 컬렉션/자동 분개 없음. 단순 로컬 편의 기능.
+const LAST_TX_KEY = 'fin_lastTx';
+
+function saveLastTxInput({ category, payment, accountId }) {
+  try {
+    localStorage.setItem(LAST_TX_KEY, JSON.stringify({
+      category: category || null,
+      payment: payment || null,
+      accountId: accountId || null,
+    }));
+  } catch (e) {}
+}
+function loadLastTxInput() {
+  try {
+    const raw = localStorage.getItem(LAST_TX_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+// 현재 설정에 아직 살아있는 항목만 추려 칩 라벨용 조각 반환 (삭제된 마스터면 제외)
+function lastTxValidParts(last) {
+  if (!last) return null;
+  const allCats = settings
+    ? [...settings.categories.revenue, ...settings.categories.fixed, ...settings.categories.variable]
+    : [];
+  const catOk  = last.category && allCats.includes(last.category);
+  const payOk  = last.payment && settings?.payments.some(p => p.name === last.payment);
+  const accObj = last.accountId ? accounts.find(a => a.id === last.accountId && a.active !== false) : null;
+  if (!catOk && !payOk && !accObj) return null; // 전부 사라졌으면 칩 의미 없음
+  return {
+    category: catOk ? last.category : null,
+    payment:  payOk ? last.payment : null,
+    accountId: accObj ? accObj.id : null,
+    accountName: accObj ? accObj.name : null,
+  };
+}
+
+// 칩 줄 렌더 — 새 거래 모드에서 최근 입력 칩 + 즐겨찾기 칩. 둘 다 없으면 그룹 숨김.
 function renderFavoriteChips() {
   const $group = document.getElementById('tx-fav-group');
   const $row = document.getElementById('tx-fav-row');
+  const $label = document.getElementById('tx-fav-label');
   if (!$group || !$row) return;
-  // 편집 모드거나 즐겨찾기 0개면 칩 줄 영역 자체를 숨김
-  if (editingTxId || !favorites.length) {
+
+  // 편집 모드면 칩 줄 영역 자체를 숨김
+  if (editingTxId) {
     $group.style.display = 'none';
     $row.innerHTML = '';
     return;
   }
-  $group.style.display = '';
-  $row.innerHTML = favorites.map(f => {
+
+  // 최근 입력 칩 (v0.7-38) — 살아있는 항목만 라벨에 표시
+  const recent = lastTxValidParts(loadLastTxInput());
+  let recentHtml = '';
+  if (recent) {
+    const parts = [recent.category, recent.payment, recent.accountName].filter(Boolean);
+    const desc = parts.length ? parts.join(' · ') : '최근 입력';
+    recentHtml = `<button type="button" class="fav-chip" data-recent-chip="1"
+      title="마지막에 입력한 카테고리·결제수단·계좌로 채우기"
+      style="flex:0 0 auto; min-height:0; height:32px; padding:0 12px; font-size:13px;
+      background:var(--bg2); color:var(--text); border:1px dashed var(--accent);
+      border-radius:8px; white-space:nowrap; cursor:pointer;">↩ ${escapeHtml(desc)}</button>`;
+  }
+
+  // 즐겨찾기 칩
+  const favHtml = favorites.map(f => {
     const label = f.label || f.categoryName || '거래';
     const amt = (f.defaultAmount != null && f.defaultAmount > 0)
       ? ` ${fmtAmount(f.defaultAmount)}원` : '';
@@ -15828,6 +15883,48 @@ function renderFavoriteChips() {
       background:var(--bg3); color:var(--text); border:1px solid var(--border);
       border-radius:8px; white-space:nowrap; cursor:pointer;">${escapeHtml(label)}${escapeHtml(amt)}</button>`;
   }).join('');
+
+  // 둘 다 없으면 그룹 숨김
+  if (!recentHtml && !favHtml) {
+    $group.style.display = 'none';
+    $row.innerHTML = '';
+    return;
+  }
+
+  // 라벨 텍스트 — 즐겨찾기가 있으면 "즐겨찾기", 최근만 있으면 "최근 입력"
+  if ($label) {
+    const labelText = favorites.length ? '즐겨찾기' : '최근 입력';
+    $label.innerHTML = `${labelText} <span style="color:var(--text3); font-weight:400;">— 탭하면 폼이 채워져요</span>`;
+  }
+
+  $group.style.display = '';
+  $row.innerHTML = recentHtml + favHtml;
+}
+
+// 최근 입력 칩 탭 → 폼 프리필 (카테고리·결제수단·계좌만, 금액·메모 제외)
+function applyLastTx() {
+  const recent = lastTxValidParts(loadLastTxInput());
+  if (!recent) return;
+
+  // 계좌 먼저 (외화 모드 영향) — 살아있는 옵션일 때만
+  const $acc = document.getElementById('tx-account');
+  if (recent.accountId && [...$acc.options].some(o => o.value === recent.accountId)) {
+    $acc.value = recent.accountId;
+    applyTxFxMode();
+  }
+  // 카테고리
+  const $cat = document.getElementById('tx-category');
+  if (recent.category && [...$cat.options].some(o => o.value === recent.category)) {
+    $cat.value = recent.category;
+    updateTxCategoryHint();
+  }
+  // 결제수단 + paid 자동 (사용자가 토글 안 만졌을 때만)
+  const $pay = document.getElementById('tx-payment');
+  if (recent.payment && [...$pay.options].some(o => o.value === recent.payment)) {
+    $pay.value = recent.payment;
+    const payType = (settings?.payments.find(p => p.name === recent.payment))?.type || 'cash';
+    if (!paidTouchedByUser) setPaid(payType === 'cash', payType, false);
+  }
 }
 
 // 칩 탭 → 폼 프리필
@@ -15859,7 +15956,12 @@ function applyFavorite(favId) {
 
 // 칩 줄 위임 클릭
 document.getElementById('tx-fav-row').addEventListener('click', e => {
-  const btn = e.target.closest('.fav-chip');
+  // 최근 입력 칩 (v0.7-38) — 즐겨찾기와 분리 처리
+  if (e.target.closest('[data-recent-chip]')) {
+    applyLastTx();
+    return;
+  }
+  const btn = e.target.closest('.fav-chip[data-fav-id]');
   if (!btn) return;
   applyFavorite(btn.dataset.favId);
 });
@@ -16254,6 +16356,8 @@ document.getElementById('btn-tx-save').addEventListener('click', async () => {
     // v0.7-28 — 즐겨찾기 반영 (신규 거래일 때만; 편집은 대상 아님)
     if (!editingTxId) {
       await recordFavoriteOnSave({ category, payment, amount });
+      // v0.7-38 — 최근 입력 기억 (카테고리·결제수단·계좌만; 금액·메모 제외)
+      saveLastTxInput({ category, payment, accountId: acc?.id || null });
     }
 
     // v0.7-15 — closeOv가 처리 마커를 null로 만들기 전에 로컬 캡처
