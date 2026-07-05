@@ -3921,6 +3921,18 @@ html, body { overflow-x: hidden; }
 .imp-badge.dup     { background: rgba(251,191,36,.14); color: var(--amber); }
 .imp-badge.already { background: var(--bg4); color: var(--text3); }
 .imp-badge.skip    { background: var(--bg4); color: var(--text2); }
+.imp-badge.enrich  { background: rgba(79,143,255,.16); color: var(--accent); }
+.imp-merch-input {
+  width: 100%; font-size: 12.5px; padding: 4px 6px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px); color: var(--text);
+  box-sizing: border-box;
+}
+.imp-merch-input:focus { border-color: var(--accent); outline: none; }
+.imp-merch-sub {
+  font-size: 10.5px; color: var(--text3); margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .imp-excl-toggle {
   width: 100%; text-align: left; background: none; border: none;
   color: var(--text2); font-size: 12.5px; padding: 8px 4px; cursor: pointer;
@@ -5826,11 +5838,13 @@ html, body { overflow-x: hidden; }
           <div class="imp-src-badges">
             <span>KB국민카드</span><span>하나카드</span><span>현대카드</span>
             <span>카드 명세서</span><span>토스뱅크</span><span>케이뱅크</span>
+            <span>Npay 카드영수증</span><span>Npay 현금영수증</span>
           </div>
         </div>
         <div class="imp-note">
           · 은행 파일은 <b>체크카드 결제 건만</b> 자동 포함됩니다 (이체·입금 제외, 검토에서 개별 포함 가능)<br>
-          · 이미 가져온 거래와 수동 입력 거래는 중복 검사를 거칩니다 — <b>수동 입력이 우선</b>입니다
+          · 이미 가져온 거래와 수동 입력 거래는 중복 검사를 거칩니다 — <b>수동 입력이 우선</b>입니다<br>
+          · <b>Npay 영수증</b>은 새 거래를 만들지 않고, 카드 내역의 "네이버페이" 거래 <b>사용처를 실제 상품명으로 교체</b>합니다 (날짜+금액 매칭)
         </div>
         <div id="imp-hist-block" style="display:none;">
           <div class="imp-section-title">가져오기 이력</div>
@@ -17041,11 +17055,19 @@ function impNum(v) {
   return isNaN(n) ? 0 : n;
 }
 function impDate(v) {
-  const m = String(v || '').match(/(\d{4})\s*[.\-\/년]\s*(\d{1,2})\s*[.\-\/월]\s*(\d{1,2})/);
+  const s = String(v || '');
+  let m = s.match(/(\d{4})\s*[.\-\/년]\s*(\d{1,2})\s*[.\-\/월]\s*(\d{1,2})/);
+  if (!m) m = s.match(/^(\d{4})(\d{2})(\d{2})\d*$/);   // YYYYMMDDHHMMSS (Npay 현금영수증)
   if (!m) return null;
   const y = +m[1], mo = +m[2], d = +m[3];
   if (y < 2000 || y > 2100 || mo < 1 || mo > 12 || d < 1 || d > 31) return null;
   return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+// 집계형 가맹점 (쿠팡·네이버페이 등) — 결제 카테고리가 다양해서
+// 일괄 적용·가맹점 사전 학습에서 제외 (쿠팡이츠는 일반 가맹점 취급)
+function impIsAggregator(merchant) {
+  const n = impNorm(merchant);
+  return /네이버페이|naverpay|npay/.test(n) || (/^쿠팡/.test(n) && !/^쿠팡이츠/.test(n));
 }
 function impNorm(s) { return String(s || '').replace(/[^0-9A-Za-z가-힣]/g, '').toLowerCase(); }
 function impHash(str) {
@@ -17110,6 +17132,9 @@ function impHtmlToGrid(html) {
 // ── 어댑터 (설정 테이블 — 양식이 바뀌면 여기만 수정) ──
 //   sig: 헤더 행 감지 시그니처 (공백 제거 후 부분일치, 모두 만족해야 함)
 const IMP_ADAPTERS = [
+  // enrich: 새 거래가 아니라, 기존 "네이버페이" 결제 거래의 내용(사용처)을 실제 상품명으로 교체
+  { id: 'npay_card', label: 'Npay 카드영수증', bank: false, enrich: true, sig: ['카드사', '결제일자', '상품명', '승인금액'] },
+  { id: 'npay_cash', label: 'Npay 현금영수증', bank: true,  enrich: true, sig: ['발행일자', '발행방법', '상품명'] },
   { id: 'toss',    label: '토스뱅크',    bank: true,  sig: ['거래일시', '거래유형', '거래금액'] },
   { id: 'kbank',   label: '케이뱅크',    bank: true,  sig: ['거래일시', '거래구분', '출금금액'] },
   { id: 'kb',      label: 'KB국민카드',  bank: false, sig: ['이용일', '이용하신곳'] },
@@ -17143,7 +17168,33 @@ function impExtract(det, grid) {
   const body = grid.slice(headerIdx + 1);
   const out = { rows: [], excluded: [], cancelled: 0 };
 
-  if (adapter.id === 'toss') {
+  if (adapter.id === 'npay_card') {
+    // 네이버페이 카드영수증 — 결제일자·상품명·승인금액. 취소건은 상쇄/스킵
+    const iD = col('결제일자'), iM = col('상품명'), iA = col('승인금액'),
+          iX = col('취소금액'), iCo = col('카드사'), iNo = col('승인번호');
+    body.forEach(r => {
+      const date = impDate(r[iD]); if (!date) return;
+      const merchant = String(r[iM] || '').trim(); if (!merchant) return;
+      const amount = impNum(r[iA]) - (iX >= 0 ? impNum(r[iX]) : 0);
+      if (amount <= 0) { out.cancelled++; return; }
+      const co = iCo >= 0 ? String(r[iCo] || '').trim() : '';
+      out.rows.push({ date, merchant, amount,
+        cardName: co ? `네이버페이 (${co})` : '네이버페이',
+        npayKey: String(r[iNo] || '').trim() || `${date}|${amount}` });
+    });
+
+  } else if (adapter.id === 'npay_cash') {
+    // 네이버페이 현금영수증 — 발행일자(YYYYMMDDHHMMSS)·상품명·합계
+    const iD = col('발행일자'), iM = col('상품명'), iA = col('합계'), iNo = col('승인번호');
+    body.forEach(r => {
+      const date = impDate(r[iD]); if (!date) return;
+      const merchant = String(r[iM] || '').trim(); if (!merchant) return;
+      const amount = impNum(r[iA]); if (amount <= 0) return;
+      out.rows.push({ date, merchant, amount, cardName: '네이버페이 머니',
+        npayKey: String(r[iNo] || '').trim() || `${date}|${amount}` });
+    });
+
+  } else if (adapter.id === 'toss') {
     const iD = col('거래일시'), iM = col('적요'), iT = col('거래유형'), iA = col('거래금액');
     body.forEach(r => {
       const date = impDate(r[iD]); if (!date) return;
@@ -17306,7 +17357,7 @@ async function impHandleFiles(fileList) {
       const ex = impExtract(det, grid);
       if (!ex.rows.length && !ex.excluded.length) { errors.push(`${f.name} — 거래 행이 없습니다`); continue; }
       parsed.push({ name: f.name, source: det.adapter.id, label: det.adapter.label,
-                    bank: det.adapter.bank, ...ex });
+                    bank: det.adapter.bank, enrich: !!det.adapter.enrich, ...ex });
     } catch (e) {
       console.error('[import] parse fail', f.name, e);
       errors.push(`${f.name} — ${e.message || '파싱 실패'}`);
@@ -17317,6 +17368,7 @@ async function impHandleFiles(fileList) {
   if (!parsed.length) { impResetModal(); return; }
 
   // importId 부여 (파일 내 동일 거래 반복은 -2, -3 접미사로 구분)
+  // enrich 파일(Npay 영수증)은 승인번호 기반 enrichId 추가 — 같은 영수증 재적용 차단
   const allRows = [];
   parsed.forEach(pf => {
     const seen = {};
@@ -17324,6 +17376,7 @@ async function impHandleFiles(fileList) {
       const base = `${pf.source}|${r.date}|${impNorm(r.merchant)}|${r.amount}`;
       const n = (seen[base] = (seen[base] || 0) + 1);
       r.importId = 'im_' + impHash(base) + (n > 1 ? '-' + n : '');
+      if (pf.enrich) r.enrichId = 'np_' + impHash(`${pf.source}|${r.npayKey}`);
       r.source = pf.source;
       r.fileLabel = pf.label;
     };
@@ -17345,21 +17398,25 @@ async function impHandleFiles(fileList) {
     );
     snaps.forEach(s => s.forEach(d => {
       const t = d.data();
-      existDocs.push({ importId: t.importId || null, date: t.date, amount: t.amount, payment: t.payment });
+      existDocs.push({ id: d.id, importId: t.importId || null, enrichId: t.enrichId || null,
+        date: t.date, amount: t.amount, payment: t.payment,
+        memo: t.memo || '', category: t.category || '' });
     }));
   } catch (e) {
     console.error('[import] 기존 거래 로드 실패', e);
     showToast('기존 거래 로드 실패 — 중복 검사 없이 진행합니다');
   }
 
-  // 카테고리 제안 (가맹점 사전)
+  // 카테고리 제안 (가맹점 사전 — 집계형 가맹점은 제외)
   const mMap = settings.importMerchantMap || {};
+  const suggest = r => { if (!r.category && !impIsAggregator(r.merchant)) r.category = mMap[impNorm(r.merchant)] || ''; };
   parsed.forEach(pf => {
-    pf.rows.forEach(r => { r.category = mMap[impNorm(r.merchant)] || ''; });
-    pf.excluded.filter(x => x.promotable).forEach(r => { r.category = mMap[impNorm(r.merchant)] || ''; });
+    pf.rows.forEach(suggest);
+    pf.excluded.filter(x => x.promotable).forEach(suggest);
   });
 
   impState = { files: parsed, existDocs };
+  impMatchEnrich();
   impClassify();
 
   document.getElementById('imp-loading').style.display = 'none';
@@ -17377,6 +17434,40 @@ function impResolvePayment(cardName) {
   const map = { ...(settings.importCardMap || {}), ...((impState && impState.cardMapDraft) || {}) };
   return map[cardName] || '';
 }
+// ── Npay 영수증 → 기존 거래 매칭 (교체 대상 찾기) ──
+//   enrich:  날짜+금액이 같은 기존 거래 발견 → 사용처(memo) 교체 대상 (기본 ON)
+//   already: 같은 영수증(enrichId)으로 이미 교체됨 → 스킵
+//   nomatch: 대응 거래 없음 → 기본 OFF, 체크하면 새 거래로 저장 (카드 내역 가져오기 전이거나 포인트 결제 등)
+function impAggScore(d) {
+  if (impIsAggregator(d.memo || '')) return 2;   // memo가 "네이버페이"류면 최우선
+  if (d.importId) return 1;                       // 가져온 거래 우선
+  return 0;
+}
+function impMatchEnrich() {
+  const consumed = new Set();
+  impState.files.forEach(pf => {
+    if (!pf.enrich) return;
+    pf.rows.forEach(r => {
+      if (impState.existDocs.some(d => d.enrichId && d.enrichId === r.enrichId)) {
+        r.status = 'already'; return;               // 이 영수증으로 이미 교체됨
+      }
+      const cands = impState.existDocs
+        .filter(d => !consumed.has(d.id) && !d.enrichId && d.date === r.date && d.amount === r.amount)
+        .sort((a, b) => impAggScore(b) - impAggScore(a));
+      if (cands.length) {
+        const c = cands[0];
+        consumed.add(c.id);
+        r.status = 'enrich';
+        r.matchId = c.id;
+        r.matchMemo = c.memo || '(메모 없음)';
+        if (!r.category) r.category = c.category || '';
+      } else {
+        r.status = 'nomatch';
+      }
+    });
+  });
+}
+
 function impClassify() {
   const existIds = new Set(impState.existDocs.map(d => d.importId).filter(Boolean));
   const existKeys = new Map();
@@ -17386,6 +17477,7 @@ function impClassify() {
   });
   const batchKeys = new Set();   // 같은 배치 내 파일 간 교차 중복 (명세서+이용내역 동시 업로드)
   impState.files.forEach(pf => {
+    if (pf.enrich) return;   // Npay 영수증은 impMatchEnrich가 상태 결정
     const each = r => {
       const pay = impResolvePayment(r.cardName);
       const xKey = `${r.date}|${r.amount}|${impNorm(r.merchant)}`;
@@ -17405,7 +17497,7 @@ function impClassify() {
 function impEffInclude(r) {
   if (r.status === 'already') return false;
   if (r.userInclude !== undefined) return r.userInclude;
-  return r.status === 'new';
+  return r.status === 'new' || r.status === 'enrich';   // nomatch·dup·skip은 기본 OFF
 }
 
 // ── 검토 화면 렌더 ──
@@ -17429,22 +17521,33 @@ function impCatOptions(selected) {
 const IMP_BADGE = {
   new:     ['new', '신규'],
   dup:     ['dup', '중복 의심'],
-  already: ['already', '이미 가져옴'],
+  already: ['already', '이미 처리'],
   skip:    ['skip', '제외'],
+  enrich:  ['enrich', '교체'],
+  nomatch: ['skip', '매칭 없음'],
 };
 function impRowHtml(r, fi, kind, ri) {
   const inc = impEffInclude(r);
   const [cls, label] = IMP_BADGE[r.status] || IMP_BADGE.new;
   const dis = r.status === 'already' ? 'disabled' : '';
   const reason = r.reason ? ` title="${escapeHtml(r.reason)}"` : '';
+  const key = `${fi}|${kind}|${ri}`;
   const catCell = r.status === 'already'
     ? `<span style="color:var(--text3); font-size:11px;">—</span>`
-    : `<select data-imp-cat="${fi}|${kind}|${ri}" class="${inc && !r.category ? 'imp-missing' : ''}">${impCatOptions(r.category)}</select>`;
+    : `<select data-imp-cat="${key}" class="${inc && !r.category && r.status !== 'enrich' ? 'imp-missing' : ''}">${impCatOptions(r.category)}</select>`;
+  // 사용처 — 직접 수정 가능 (교체 행은 기존 메모 → 새 사용처 함께 표시)
+  const merchCell = r.status === 'already'
+    ? `<div class="imp-cell-merchant" title="${escapeHtml(r.merchant)}">${escapeHtml(r.merchant)}</div>`
+    : `<div class="imp-cell-merchant">
+         <input class="imp-merch-input" data-imp-merch="${key}" value="${escapeHtml(r.merchant)}" title="${escapeHtml(r.merchant)}">
+         ${r.status === 'enrich' ? `<div class="imp-merch-sub">기존: ${escapeHtml(r.matchMemo)}</div>` : ''}
+         ${r.reason ? `<div class="imp-merch-sub">${escapeHtml(r.reason)}</div>` : ''}
+       </div>`;
   return `
     <div class="imp-row ${inc ? '' : 'off'}"${reason}>
-      <input type="checkbox" data-imp-inc="${fi}|${kind}|${ri}" ${inc ? 'checked' : ''} ${dis}>
+      <input type="checkbox" data-imp-inc="${key}" ${inc ? 'checked' : ''} ${dis}>
       <div class="imp-cell-date">${r.date.slice(5).replace('-', '/')}</div>
-      <div class="imp-cell-merchant" title="${escapeHtml(r.merchant)}">${escapeHtml(r.merchant)}${r.reason ? ` <span style="color:var(--text3); font-size:10.5px;">· ${escapeHtml(r.reason)}</span>` : ''}</div>
+      ${merchCell}
       <div class="imp-cell-amt">${fmtAmount(r.amount)}</div>
       <div class="imp-cell-cat">${catCell}</div>
       <div class="imp-cell-badge"><span class="imp-badge ${cls}">${label}</span></div>
@@ -17452,9 +17555,12 @@ function impRowHtml(r, fi, kind, ri) {
 }
 
 function impRenderReview() {
-  // 매핑 블록 — 파일의 카드명 목록
+  // 매핑 블록 — 새 거래로 저장될 수 있는 행의 카드명만 (교체 행은 기존 거래를 수정하므로 매핑 불필요)
   const cardNames = [...new Set(
-    impState.files.flatMap(pf => pf.rows.concat(pf.excluded.filter(x => x.promotable)).map(r => r.cardName))
+    impState.files.flatMap(pf => {
+      const creatable = pf.enrich ? pf.rows.filter(r => r.status === 'nomatch') : pf.rows;
+      return creatable.concat(pf.excluded.filter(x => x.promotable)).map(r => r.cardName);
+    })
   )];
   impState.cardNames = cardNames;
   const savedMap = settings.importCardMap || {};
@@ -17478,13 +17584,19 @@ function impRenderReview() {
   impState.files.forEach((pf, fi) => {
     const promo = pf.excluded.filter(x => x.promotable);
     const info = pf.excluded.filter(x => !x.promotable);
-    const cnt = { new: 0, dup: 0, already: 0 };
+    const cnt = { new: 0, dup: 0, already: 0, enrich: 0, nomatch: 0 };
     pf.rows.forEach(r => cnt[r.status] !== undefined && cnt[r.status]++);
+    const meta = pf.enrich
+      ? `교체 ${cnt.enrich} / 매칭 없음 ${cnt.nomatch} / 이미 처리 ${cnt.already}${pf.cancelled ? ` / 취소 ${pf.cancelled}건` : ''}`
+      : `신규 ${cnt.new} / 중복 의심 ${cnt.dup} / 이미 가져옴 ${cnt.already}${pf.cancelled ? ` / 취소 상쇄 ${pf.cancelled}건` : ''}`;
     html += `
       <div class="imp-file-head">
         ${escapeHtml(pf.label)}
-        <span class="imp-file-meta">${escapeHtml(pf.name)} · 신규 ${cnt.new} / 중복 의심 ${cnt.dup} / 이미 가져옴 ${cnt.already}${pf.cancelled ? ` / 취소 상쇄 ${pf.cancelled}건` : ''}</span>
+        <span class="imp-file-meta">${escapeHtml(pf.name)} · ${meta}</span>
       </div>`;
+    if (pf.enrich && cnt.enrich) {
+      html += `<div class="imp-note" style="margin:0 0 6px;">교체 행은 새 거래를 만들지 않고, 매칭된 기존 거래의 사용처(메모)를 영수증 상품명으로 바꿉니다. 사용처는 직접 수정할 수 있어요.</div>`;
+    }
     html += pf.rows
       .map((r, ri) => ({ r, ri }))
       .sort((a, b) => b.r.date.localeCompare(a.r.date))
@@ -17505,21 +17617,29 @@ function impRenderReview() {
 }
 
 function impRenderSummary() {
-  let inc = 0, sum = 0, dupOff = 0, already = 0, missing = 0;
+  let inc = 0, sum = 0, enrich = 0, dupOff = 0, already = 0, missing = 0;
   impState.files.forEach(pf => {
     pf.rows.concat(pf.excluded.filter(x => x.promotable)).forEach(r => {
       if (r.status === 'already') { already++; return; }
-      if (impEffInclude(r)) { inc++; sum += r.amount; if (!r.category) missing++; }
+      if (impEffInclude(r)) {
+        if (r.status === 'enrich') { enrich++; return; }   // 교체는 신규 합계에서 제외
+        inc++; sum += r.amount;
+        if (!r.category) missing++;
+      }
       else if (r.status === 'dup') dupOff++;
     });
   });
   document.getElementById('imp-summary').innerHTML = `
-    <span>가져올 거래 <strong>${inc}건</strong></span>
-    <span>합계 <strong>${fmtAmount(sum)}원</strong></span>
+    ${inc ? `<span>신규 <strong>${inc}건</strong> · <strong>${fmtAmount(sum)}원</strong></span>` : ''}
+    ${enrich ? `<span>사용처 교체 <strong>${enrich}건</strong></span>` : ''}
     ${dupOff ? `<span>중복 스킵 <strong>${dupOff}건</strong></span>` : ''}
-    ${already ? `<span>이미 가져옴 <strong>${already}건</strong></span>` : ''}
-    ${missing ? `<span style="color:var(--red);">카테고리 미지정 <strong>${missing}건</strong></span>` : ''}`;
-  document.getElementById('btn-imp-save').textContent = `가져오기 ${inc}건`;
+    ${already ? `<span>이미 처리 <strong>${already}건</strong></span>` : ''}
+    ${missing ? `<span style="color:var(--red);">카테고리 미지정 <strong>${missing}건</strong></span>` : ''}
+    ${!inc && !enrich ? `<span>저장할 항목이 없습니다</span>` : ''}`;
+  const parts = [];
+  if (inc) parts.push(`신규 ${inc}`);
+  if (enrich) parts.push(`교체 ${enrich}`);
+  document.getElementById('btn-imp-save').textContent = parts.length ? `저장 (${parts.join(' · ')})` : '저장';
 }
 
 function impRowByKey(key) {
@@ -17536,26 +17656,38 @@ function impBindReviewEvents() {
       r.userInclude = cb.checked;
       cb.closest('.imp-row').classList.toggle('off', !cb.checked);
       const sel = cb.closest('.imp-row').querySelector('select[data-imp-cat]');
-      if (sel) sel.classList.toggle('imp-missing', cb.checked && !r.category);
+      if (sel) sel.classList.toggle('imp-missing', cb.checked && !r.category && r.status !== 'enrich');
       impRenderSummary();
     });
   });
-  // 카테고리 — 같은 가맹점 일괄 적용
+  // 사용처 직접 수정 — 저장 시 memo(가맹점명)로 기록됨
+  document.querySelectorAll('input[data-imp-merch]').forEach(inp => {
+    inp.addEventListener('change', () => {
+      const r = impRowByKey(inp.dataset.impMerch);
+      const v = inp.value.trim();
+      if (v) r.merchant = v;
+      else inp.value = r.merchant;   // 빈 값은 되돌림
+    });
+  });
+  // 카테고리 — 같은 가맹점 일괄 적용 (쿠팡·네이버페이 등 집계형 가맹점은 제외)
   document.querySelectorAll('select[data-imp-cat]').forEach(sel => {
     sel.addEventListener('change', () => {
       const r = impRowByKey(sel.dataset.impCat);
       r.category = sel.value;
       const norm = impNorm(r.merchant);
       let applied = 0;
-      impState.files.forEach(pf => {
-        pf.rows.concat(pf.excluded.filter(x => x.promotable)).forEach(o => {
-          if (o !== r && impNorm(o.merchant) === norm && o.category !== sel.value) {
-            o.category = sel.value; applied++;
-          }
+      if (!impIsAggregator(r.merchant)) {
+        impState.files.forEach(pf => {
+          pf.rows.concat(pf.excluded.filter(x => x.promotable)).forEach(o => {
+            if (o !== r && !impIsAggregator(o.merchant)
+                && impNorm(o.merchant) === norm && o.category !== sel.value) {
+              o.category = sel.value; applied++;
+            }
+          });
         });
-      });
+      }
       if (applied) { showToast(`같은 가맹점 ${applied}건에 함께 적용됨`); impRenderReview(); }
-      else { sel.classList.toggle('imp-missing', impEffInclude(r) && !r.category); impRenderSummary(); }
+      else { sel.classList.toggle('imp-missing', impEffInclude(r) && !r.category && r.status !== 'enrich'); impRenderSummary(); }
     });
   });
   // 제외 목록 토글
@@ -17580,20 +17712,22 @@ function impBindReviewEvents() {
 // ── 저장 ──
 async function impSave() {
   if (!impState) return;
-  const rows = [];
+  const toCreate = [], toEnrich = [];
   impState.files.forEach(pf => {
     pf.rows.concat(pf.excluded.filter(x => x.promotable)).forEach(r => {
-      if (impEffInclude(r)) rows.push(r);
+      if (!impEffInclude(r)) return;
+      if (r.status === 'enrich') toEnrich.push(r);
+      else toCreate.push(r);
     });
   });
-  if (!rows.length) { showToast('가져올 거래가 없습니다'); return; }
+  if (!toCreate.length && !toEnrich.length) { showToast('저장할 항목이 없습니다'); return; }
 
-  // 매핑 검증
+  // 매핑·카테고리 검증 — 신규 저장분만 (교체는 기존 거래를 수정하므로 불필요)
   const draft = impState.cardMapDraft || {};
-  const usedCards = [...new Set(rows.map(r => r.cardName))];
+  const usedCards = [...new Set(toCreate.map(r => r.cardName))];
   const unmapped = usedCards.filter(cn => !draft[cn]);
   if (unmapped.length) { showToast(`결제수단 매핑을 지정하세요 — ${unmapped[0]}`); return; }
-  const noCat = rows.filter(r => !r.category).length;
+  const noCat = toCreate.filter(r => !r.category).length;
   if (noCat) { showToast(`카테고리 미지정 ${noCat}건 — 지정 후 저장할 수 있습니다`); return; }
 
   const $btn = document.getElementById('btn-imp-save');
@@ -17607,7 +17741,7 @@ async function impSave() {
       if (draft[cn] !== '__new__') return;
       let name = cn.trim();
       if (payments.some(p => p.name === name)) { draft[cn] = name; return; }
-      const src = rows.find(r => r.cardName === cn)?.source;
+      const src = toCreate.find(r => r.cardName === cn)?.source;
       const bank = IMP_ADAPTERS.find(a => a.id === src)?.bank;
       const p = { name, type: bank ? 'cash' : 'card' };
       payments.push(p); newPays.push(p);
@@ -17623,10 +17757,12 @@ async function impSave() {
       return o;
     };
 
-    // writeBatch — 450개 단위 커밋
-    let batch = writeBatch(db), n = 0, total = 0;
+    // writeBatch — 450개 단위 커밋 (신규 set + 교체 update 혼합)
+    let batch = writeBatch(db), n = 0;
     const commits = [];
-    for (const r of rows) {
+    const bump = () => { n++; if (n >= 450) { commits.push(batch.commit()); batch = writeBatch(db); n = 0; } };
+
+    for (const r of toCreate) {
       const payment = draft[r.cardName];
       const pType = payType(payment);
       const paid = pType === 'card' ? paidCards : true;
@@ -17645,29 +17781,51 @@ async function impSave() {
         accountName: null,
         paid,
         paidAt: paid ? serverTimestamp() : null,
-        memo: r.merchant,                      // 원본 가맹점명 보존
+        memo: r.merchant,                      // 원본/수정된 가맹점명 보존
         importId: r.importId,
         importBatch: batchId,
         importSource: r.source,
+        enrichId: r.enrichId || null,          // Npay 매칭없음→신규 저장 시 재적용 차단
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       }));
-      n++; total++;
-      if (n >= 450) { commits.push(batch.commit()); batch = writeBatch(db); n = 0; }
+      bump();
+    }
+
+    // 교체 — 기존 거래의 사용처(memo)만 갱신, 카테고리는 지정했을 때만 변경
+    for (const r of toEnrich) {
+      const patch = {
+        memo: r.merchant,
+        enrichId: r.enrichId,
+        updatedAt: serverTimestamp(),
+      };
+      if (r.category) {
+        patch.category = r.category;
+        patch.flow = mapCategoryToFlow(r.category);
+      }
+      batch.update(pathTransaction(r.matchId), patch);
+      bump();
     }
     if (n > 0) commits.push(batch.commit());
     await Promise.all(commits);
 
-    // 가맹점→카테고리 사전 학습 + 카드 매핑 + 이력 저장
+    // 가맹점→카테고리 사전 학습 (신규 저장분만, 쿠팡·네이버페이 등 집계형 제외)
+    // Npay 영수증의 상품명은 일회성이라 학습하지 않음
     const mMap = { ...(settings.importMerchantMap || {}) };
-    rows.forEach(r => { const k = impNorm(r.merchant); if (k) mMap[k] = r.category; });
+    toCreate.forEach(r => {
+      if (r.enrichId) return;                      // Npay 영수증 행
+      if (impIsAggregator(r.merchant)) return;     // 집계형 가맹점
+      const k = impNorm(r.merchant);
+      if (k) mMap[k] = r.category;
+    });
     const cMap = { ...(settings.importCardMap || {}) };
     usedCards.forEach(cn => { cMap[cn] = draft[cn]; });
-    const yms = rows.map(r => r.date.slice(0, 7)).sort();
+    const yms = toCreate.concat(toEnrich).map(r => r.date.slice(0, 7)).sort();
     const hist = [{
       id: batchId,
       at: new Date().toISOString(),
-      count: total,
+      count: toCreate.length,
+      enriched: toEnrich.length,
       sources: [...new Set(impState.files.map(pf => pf.label))],
       ymMin: yms[0], ymMax: yms[yms.length - 1],
     }].concat(settings.importHistory || []).slice(0, 30);
@@ -17675,7 +17833,10 @@ async function impSave() {
     if (newPays.length) settingsPatch.payments = payments;
     await setDoc(pathFinanceSettings(), settingsPatch, { merge: true });
 
-    showToast(`✓ ${total}건 가져오기 완료${newPays.length ? ` · 결제수단 ${newPays.length}개 추가` : ''}`);
+    const parts = [];
+    if (toCreate.length) parts.push(`신규 ${toCreate.length}건`);
+    if (toEnrich.length) parts.push(`사용처 교체 ${toEnrich.length}건`);
+    showToast(`✓ ${parts.join(' · ')} 완료${newPays.length ? ` · 결제수단 ${newPays.length}개 추가` : ''}`);
     closeOv('ov-import');
 
     invalidateAnalysisYms();
@@ -17701,7 +17862,7 @@ function impRenderHistory() {
   document.getElementById('imp-hist-list').innerHTML = hist.map(h => `
     <div class="imp-hist-row">
       <div class="imp-hist-main">
-        <div>${h.sources.map(escapeHtml).join(' · ')} — <b>${h.count}건</b></div>
+        <div>${h.sources.map(escapeHtml).join(' · ')} — <b>${h.count}건</b>${h.enriched ? ` <span style="color:var(--text3);">+ 교체 ${h.enriched}건</span>` : ''}</div>
         <div class="imp-hist-sub">${h.ymMin === h.ymMax ? h.ymMin : `${h.ymMin} ~ ${h.ymMax}`} · ${String(h.at).slice(0, 16).replace('T', ' ')}</div>
       </div>
       <button class="btn-s" data-imp-del="${escapeHtml(h.id)}">배치 삭제</button>
@@ -17713,7 +17874,7 @@ function impRenderHistory() {
 async function impDeleteBatch(batchId) {
   const h = (settings.importHistory || []).find(x => x.id === batchId);
   if (!h) return;
-  if (!confirm(`${h.sources.join(' · ')} ${h.count}건 가져오기를 삭제할까요?\n수동 입력 거래는 건드리지 않습니다.`)) return;
+  if (!confirm(`${h.sources.join(' · ')} ${h.count}건 가져오기를 삭제할까요?\n수동 입력 거래는 건드리지 않습니다.${h.enriched ? `\n※ 사용처 교체 ${h.enriched}건은 기존 거래 수정이라 되돌리지 않습니다.` : ''}`)) return;
   try {
     const snap = await getDocs(query(pathTransactions(), where('importBatch', '==', batchId)));
     let batch = writeBatch(db), n = 0, total = 0;
