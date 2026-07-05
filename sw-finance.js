@@ -8,7 +8,7 @@
  * 캐시 이름은 Trading 앱과 분리.
  * ============================================================ */
 
-const CACHE_VERSION = 'v2';   // ← 이전 v1 캐시 강제 정리용
+const CACHE_VERSION = 'v3';   // ← v0.8-1 가져오기 기능 배포 (이전 캐시 강제 정리)
 const APP_CACHE     = `finance-app-${CACHE_VERSION}`;
 const CDN_CACHE     = `finance-cdn-${CACHE_VERSION}`;
 

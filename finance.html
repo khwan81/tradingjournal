@@ -3834,6 +3834,109 @@ html, body { overflow-x: hidden; }
 
   /* 필터 칩(.fchip) 모바일 스타일은 상단(입력 최소높이 예외 처리)에서 통합됨 */
 }
+
+/* ══════════════════════════════════════════════
+   v0.8-1 — 파일 가져오기 (Import)
+   ══════════════════════════════════════════════ */
+.modal-import { max-width: 680px; }
+.imp-drop {
+  border: 1.5px dashed var(--border2);
+  border-radius: var(--radius-lg);
+  padding: 28px 16px;
+  text-align: center;
+  color: var(--text2);
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.imp-drop:hover { border-color: var(--accent); background: var(--bg3); }
+.imp-drop .imp-drop-main { font-size: 15px; color: var(--text); margin-bottom: 6px; }
+.imp-drop .imp-drop-sub { font-size: 12px; line-height: 1.6; }
+.imp-src-badges { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; margin-top: 12px; }
+.imp-src-badges span {
+  font-size: 11px; padding: 2px 8px; border-radius: 999px;
+  background: var(--bg3); border: 1px solid var(--border); color: var(--text2);
+}
+.imp-section-title {
+  font-size: 12px; font-weight: 700; color: var(--text2);
+  margin: 16px 0 8px; letter-spacing: .02em;
+}
+.imp-hist-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border: 1px solid var(--border);
+  border-radius: var(--radius); margin-bottom: 6px;
+  font-size: 12.5px; background: var(--bg3);
+}
+.imp-hist-row .imp-hist-main { flex: 1; min-width: 0; }
+.imp-hist-row .imp-hist-sub { color: var(--text3); font-size: 11px; margin-top: 2px; }
+.imp-hist-row button { flex-shrink: 0; }
+/* 검토 단계 */
+.imp-summary {
+  display: flex; flex-wrap: wrap; gap: 6px 14px;
+  padding: 10px 12px; border-radius: var(--radius);
+  background: var(--bg3); border: 1px solid var(--border);
+  font-size: 12.5px; color: var(--text2); margin-bottom: 12px;
+}
+.imp-summary strong { color: var(--text); }
+.imp-map-row {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+}
+.imp-map-row .imp-map-name {
+  flex: 1; min-width: 0; font-size: 12.5px; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.imp-map-row select { width: 200px; flex-shrink: 0; }
+.imp-paid-row {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12.5px; color: var(--text2);
+  margin: 10px 0 4px; user-select: none; cursor: pointer;
+}
+.imp-file-head {
+  display: flex; align-items: center; gap: 8px;
+  margin: 14px 0 6px; font-size: 13px; font-weight: 700; color: var(--text);
+}
+.imp-file-head .imp-file-meta { font-weight: 400; font-size: 11.5px; color: var(--text3); }
+.imp-row {
+  display: grid;
+  grid-template-columns: 22px 42px minmax(0,1fr) 86px 138px 58px;
+  gap: 6px; align-items: center;
+  padding: 6px 4px; border-bottom: 1px solid var(--border);
+  font-size: 12.5px;
+}
+.imp-row:last-child { border-bottom: none; }
+.imp-row.off { opacity: .45; }
+.imp-row .imp-cell-date { color: var(--text2); font-family: var(--font-mono); font-size: 11.5px; }
+.imp-row .imp-cell-merchant { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.imp-row .imp-cell-amt { text-align: right; font-family: var(--font-mono); }
+.imp-row select {
+  width: 100%; font-size: 12px; padding: 4px 6px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px); color: var(--text);
+}
+.imp-row select.imp-missing { border-color: var(--red); }
+.imp-badge {
+  font-size: 10.5px; padding: 2px 6px; border-radius: 999px;
+  text-align: center; white-space: nowrap;
+}
+.imp-badge.new     { background: rgba(52,211,153,.14); color: var(--green); }
+.imp-badge.dup     { background: rgba(251,191,36,.14); color: var(--amber); }
+.imp-badge.already { background: var(--bg4); color: var(--text3); }
+.imp-badge.skip    { background: var(--bg4); color: var(--text2); }
+.imp-excl-toggle {
+  width: 100%; text-align: left; background: none; border: none;
+  color: var(--text2); font-size: 12.5px; padding: 8px 4px; cursor: pointer;
+}
+.imp-excl-toggle:hover { color: var(--text); }
+.imp-note { font-size: 11.5px; color: var(--text3); line-height: 1.6; margin-top: 8px; }
+@media (max-width: 700px) {
+  .imp-row {
+    grid-template-columns: 22px 40px minmax(0,1fr) 78px;
+    row-gap: 4px;
+  }
+  .imp-row .imp-cell-cat { grid-column: 2 / 4; }
+  .imp-row .imp-cell-badge { grid-column: 4 / 5; text-align: right; }
+  .imp-map-row select { width: 150px; }
+}
+
 </style>
 </head>
 <body>
@@ -3990,7 +4093,8 @@ html, body { overflow-x: hidden; }
       <button type="button" class="fchip" data-filter-pay="card">카드</button>
       <button type="button" class="fchip" data-filter-pay="cash">현금성</button>
       <!-- 우측 정렬 — margin-left:auto로 자동 분리 -->
-      <button class="btn-p filter-bar-action" id="btn-add-tx">+ 새 거래</button>
+      <button class="btn-s filter-bar-action" id="btn-import" title="카드·은행 파일 가져오기">📥 가져오기</button>
+      <button class="btn-p" id="btn-add-tx">+ 새 거래</button>
     </div>
 
     <div class="tx-table" id="tx-table">
@@ -5697,6 +5801,74 @@ html, body { overflow-x: hidden; }
     </div>
   </div>
 </div>
+
+<!-- ══════════════════════════════════════════════
+     파일 가져오기 모달 (v0.8-1)
+     ══════════════════════════════════════════════ -->
+<div class="ov" id="ov-import">
+  <div class="modal modal-import">
+    <div class="modal-head">
+      <h3 id="imp-modal-title">파일 가져오기</h3>
+      <button class="modal-close" data-close="ov-import">×</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- STEP 1 — 파일 선택 -->
+      <div id="imp-step-1">
+        <input type="file" id="imp-file-input" multiple
+               accept=".xls,.xlsx,.csv,.html" style="display:none;">
+        <div class="imp-drop" id="imp-drop">
+          <div class="imp-drop-main">📥 카드·은행 파일 선택</div>
+          <div class="imp-drop-sub">
+            카드사·은행 앱에서 다운로드한 이용내역/거래내역 파일 (여러 개 동시 선택 가능)<br>
+            암호가 걸린 엑셀은 열 수 없습니다 — 암호 없이 다운로드하세요
+          </div>
+          <div class="imp-src-badges">
+            <span>KB국민카드</span><span>하나카드</span><span>현대카드</span>
+            <span>카드 명세서</span><span>토스뱅크</span><span>케이뱅크</span>
+          </div>
+        </div>
+        <div class="imp-note">
+          · 은행 파일은 <b>체크카드 결제 건만</b> 자동 포함됩니다 (이체·입금 제외, 검토에서 개별 포함 가능)<br>
+          · 이미 가져온 거래와 수동 입력 거래는 중복 검사를 거칩니다 — <b>수동 입력이 우선</b>입니다
+        </div>
+        <div id="imp-hist-block" style="display:none;">
+          <div class="imp-section-title">가져오기 이력</div>
+          <div id="imp-hist-list"></div>
+        </div>
+      </div>
+
+      <!-- STEP 2 — 검토 -->
+      <div id="imp-step-2" style="display:none;">
+        <div class="imp-summary" id="imp-summary"></div>
+
+        <div id="imp-map-block" style="display:none;">
+          <div class="imp-section-title">결제수단 매핑 — 파일의 카드명을 내 결제수단에 연결</div>
+          <div id="imp-map-list"></div>
+        </div>
+
+        <label class="imp-paid-row">
+          <input type="checkbox" id="imp-paid-toggle">
+          카드 거래를 <b>결제완료(paid)</b>로 저장 — 이미 대금이 빠져나간 과거 내역이면 체크
+        </label>
+
+        <div id="imp-review"></div>
+      </div>
+
+      <!-- 파싱 중 -->
+      <div id="imp-loading" style="display:none; text-align:center; padding:32px 0; color:var(--text2); font-size:13px;">
+        파일 분석 중…
+      </div>
+
+    </div>
+    <div class="modal-foot">
+      <button class="btn-s" id="btn-imp-back" style="display:none;">← 파일 다시 선택</button>
+      <button class="btn-s" data-close="ov-import">취소</button>
+      <button class="btn-p" id="btn-imp-save" style="display:none;">가져오기</button>
+    </div>
+  </div>
+</div>
+
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
@@ -15881,7 +16053,6 @@ function renderFavoriteChips() {
     const amt = (f.defaultAmount != null && f.defaultAmount > 0)
       ? ` ${fmtAmount(f.defaultAmount)}원` : '';
     return `<button type="button" class="fav-chip" data-fav-id="${escapeHtml(f.id)}"
-      title="탭: 폼 채우기 · 길게 누르기/우클릭: 삭제"
       style="flex:0 0 auto; min-height:0; height:32px; padding:0 12px; font-size:13px;
       background:var(--bg3); color:var(--text); border:1px solid var(--border);
       border-radius:8px; white-space:nowrap; cursor:pointer;">${escapeHtml(label)}${escapeHtml(amt)}</button>`;
@@ -15896,11 +16067,8 @@ function renderFavoriteChips() {
 
   // 라벨 텍스트 — 즐겨찾기가 있으면 "즐겨찾기", 최근만 있으면 "최근 입력"
   if ($label) {
-    const hint = favorites.length
-      ? '— 탭해서 채우기 · 길게 눌러 삭제'
-      : '— 탭하면 폼이 채워져요';
     const labelText = favorites.length ? '즐겨찾기' : '최근 입력';
-    $label.innerHTML = `${labelText} <span style="color:var(--text3); font-weight:400;">${hint}</span>`;
+    $label.innerHTML = `${labelText} <span style="color:var(--text3); font-weight:400;">— 탭하면 폼이 채워져요</span>`;
   }
 
   $group.style.display = '';
@@ -15973,8 +16141,6 @@ function applyFavorite(favId) {
 
 // 칩 줄 위임 클릭
 document.getElementById('tx-fav-row').addEventListener('click', e => {
-  // 길게 눌러 삭제가 발동했으면 이 클릭은 무시 (프리필 방지)
-  if (favLongFired) { favLongFired = false; return; }
   // 최근 입력 칩 (v0.7-38) — 즐겨찾기와 분리 처리
   if (e.target.closest('[data-recent-chip]')) {
     applyLastTx();
@@ -15984,61 +16150,6 @@ document.getElementById('tx-fav-row').addEventListener('click', e => {
   if (!btn) return;
   applyFavorite(btn.dataset.favId);
 });
-
-// ── 즐겨찾기 삭제 (v0.7-39) — 칩 길게 누르기(모바일) / 우클릭(데스크탑) ──
-//   confirm 후 deleteDoc. onSnapshot이 favorites 갱신 + 칩 재렌더 담당.
-//   최근 입력 칩(data-recent-chip)은 doc이 아니라 localStorage라 대상 아님.
-let favPressTimer = null;
-let favLongFired = false;
-let favTouchX = 0, favTouchY = 0;
-function clearFavPress() {
-  if (favPressTimer) { clearTimeout(favPressTimer); favPressTimer = null; }
-}
-async function confirmDeleteFavorite(favId) {
-  const f = favorites.find(x => x.id === favId);
-  if (!f) return;
-  const label = f.label || f.categoryName || '즐겨찾기';
-  if (!confirm(`즐겨찾기 "${label}"을(를) 삭제할까요?\n\n이미 저장된 거래에는 영향이 없습니다.`)) return;
-  try {
-    await deleteDoc(pathFavorite(favId));
-    showToast('즐겨찾기를 삭제했어요');
-  } catch (e) {
-    console.error('[favorite] 삭제 실패', e);
-    showToast('삭제 실패: ' + (e.message || e.code));
-  }
-}
-(() => {
-  const $favRow = document.getElementById('tx-fav-row');
-  if (!$favRow) return;
-  // 모바일: 길게 누르기 (~550ms, 8px 이상 움직이면 취소 = 스크롤로 간주)
-  $favRow.addEventListener('touchstart', e => {
-    const btn = e.target.closest('.fav-chip[data-fav-id]');
-    if (!btn) return;
-    const t = e.touches[0];
-    favTouchX = t.clientX; favTouchY = t.clientY;
-    favLongFired = false;
-    clearFavPress();
-    favPressTimer = setTimeout(() => {
-      favLongFired = true;
-      confirmDeleteFavorite(btn.dataset.favId);
-    }, 550);
-  }, { passive: true });
-  $favRow.addEventListener('touchmove', e => {
-    if (!favPressTimer) return;
-    const t = e.touches[0];
-    if (Math.abs(t.clientX - favTouchX) > 8 || Math.abs(t.clientY - favTouchY) > 8) clearFavPress();
-  }, { passive: true });
-  $favRow.addEventListener('touchend', clearFavPress);
-  $favRow.addEventListener('touchcancel', clearFavPress);
-  // 데스크탑: 우클릭으로 삭제
-  $favRow.addEventListener('contextmenu', e => {
-    const btn = e.target.closest('.fav-chip[data-fav-id]');
-    if (!btn) return;
-    e.preventDefault();
-    favLongFired = true;   // 뒤따르는 click 프리필 방지
-    confirmDeleteFavorite(btn.dataset.favId);
-  });
-})();
 
 // ☆ 토글
 function setStar(on) {
@@ -16897,6 +17008,743 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
+
+// ══════════════════════════════════════════════════════
+// v0.8-1 — 파일 가져오기 (카드/은행 명세 Import)
+//   설계: 어댑터(설정 테이블) → 통일 행 → 중복 3분류 검토 → writeBatch 저장
+//   · importId  = 소스+날짜+가맹점+금액 해시 (재가져오기 자체 중복 차단)
+//   · importBatch = 가져오기 1회 단위 (이력에서 배치 삭제 가능)
+//   · 수동 입력 우선 — 같은 날짜+금액+결제수단 존재 시 기본 스킵(중복 의심)
+//   · 은행 파일은 체크카드 결제만 자동 포함 (화이트리스트), 나머지는 승격 가능
+//   · 가맹점→카테고리 사전(importMerchantMap)이 저장할 때마다 학습됨
+// ══════════════════════════════════════════════════════
+
+// ── SheetJS 지연 로드 (가져오기 첫 사용 시에만) ──
+let impSheetJsPromise = null;
+function loadSheetJS() {
+  if (window.XLSX) return Promise.resolve();
+  if (impSheetJsPromise) return impSheetJsPromise;
+  impSheetJsPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+    s.onload = resolve;
+    s.onerror = () => { impSheetJsPromise = null; reject(new Error('파서 라이브러리 로드 실패 — 네트워크를 확인하세요')); };
+    document.head.appendChild(s);
+  });
+  return impSheetJsPromise;
+}
+
+// ── 유틸 ──
+function impNum(v) {
+  if (v == null) return 0;
+  const n = parseFloat(String(v).replace(/[^\d.-]/g, ''));
+  return isNaN(n) ? 0 : n;
+}
+function impDate(v) {
+  const m = String(v || '').match(/(\d{4})\s*[.\-\/년]\s*(\d{1,2})\s*[.\-\/월]\s*(\d{1,2})/);
+  if (!m) return null;
+  const y = +m[1], mo = +m[2], d = +m[3];
+  if (y < 2000 || y > 2100 || mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+function impNorm(s) { return String(s || '').replace(/[^0-9A-Za-z가-힣]/g, '').toLowerCase(); }
+function impHash(str) {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
+
+// ── 파일 → 그리드 (2차원 배열) ──
+async function impFileToGrid(file) {
+  const buf = await file.arrayBuffer();
+  const u8 = new Uint8Array(buf);
+  const isCFB = u8[0] === 0xD0 && u8[1] === 0xCF;   // 구형 xls / 암호화 xlsx 컨테이너
+  const isZip = u8[0] === 0x50 && u8[1] === 0x4B;   // xlsx
+
+  if (!isCFB && !isZip) {
+    // HTML 위장 xls (현대카드 등) — 브라우저 DOMParser로 관대하게 파싱
+    let text;
+    try { text = new TextDecoder('utf-8', { fatal: true }).decode(u8); }
+    catch { text = new TextDecoder('euc-kr').decode(u8); }
+    if (/<table/i.test(text)) return impHtmlToGrid(text);
+    await loadSheetJS();
+    const wb = XLSX.read(text, { type: 'string' });
+    return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: '' });
+  }
+
+  await loadSheetJS();
+  let wb;
+  try {
+    wb = XLSX.read(buf, { type: 'array', codepage: 949 });
+  } catch (e) {
+    const msg = String(e && e.message || e);
+    if (/password|encrypt|ECMA-376/i.test(msg)) {
+      throw new Error('암호화된 엑셀입니다 — 은행 앱에서 암호 없이 다시 다운로드하거나, 엑셀에서 열어 암호 없이 재저장하세요');
+    }
+    throw e;
+  }
+  // 모든 시트를 이어붙임 (대부분 Sheet1만 데이터)
+  return wb.SheetNames.reduce((acc, n) => {
+    const g = XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: false, defval: '' });
+    return acc.concat(g, [[]]);
+  }, []);
+}
+function impHtmlToGrid(html) {
+  const dom = new DOMParser().parseFromString(html, 'text/html');
+  const grid = [];
+  dom.querySelectorAll('table').forEach(tb => {
+    tb.querySelectorAll('tr').forEach(tr => {
+      const row = [];
+      tr.querySelectorAll('th,td').forEach(td => {
+        row.push(td.textContent.replace(/\s+/g, ' ').trim());
+        const span = parseInt(td.getAttribute('colspan') || '1', 10);
+        for (let i = 1; i < span; i++) row.push('');
+      });
+      grid.push(row);
+    });
+    grid.push([]);
+  });
+  return grid;
+}
+
+// ── 어댑터 (설정 테이블 — 양식이 바뀌면 여기만 수정) ──
+//   sig: 헤더 행 감지 시그니처 (공백 제거 후 부분일치, 모두 만족해야 함)
+const IMP_ADAPTERS = [
+  { id: 'toss',    label: '토스뱅크',    bank: true,  sig: ['거래일시', '거래유형', '거래금액'] },
+  { id: 'kbank',   label: '케이뱅크',    bank: true,  sig: ['거래일시', '거래구분', '출금금액'] },
+  { id: 'kb',      label: 'KB국민카드',  bank: false, sig: ['이용일', '이용하신곳'] },
+  { id: 'hana',    label: '하나카드',    bank: false, sig: ['거래일자', '가맹점명', '이용금액'] },
+  { id: 'stmt',    label: '카드 명세서', bank: false, sig: ['이용일', '이용가맹점', '이용총액'] },
+  { id: 'hyundai', label: '현대카드',    bank: false, sig: ['이용일', '이용가맹점', '이용금액'] },
+];
+
+function impFindCol(headerRow, name) {
+  const target = name.replace(/\s+/g, '');
+  return headerRow.findIndex(c => String(c).replace(/\s+/g, '').includes(target));
+}
+
+// 그리드에서 어댑터 감지 + 헤더 행 위치
+function impDetect(grid) {
+  for (const ad of IMP_ADAPTERS) {
+    for (let i = 0; i < Math.min(grid.length, 60); i++) {
+      const row = grid[i] || [];
+      if (!row.length) continue;
+      if (ad.sig.every(s => impFindCol(row, s) >= 0)) return { adapter: ad, headerIdx: i, header: row };
+    }
+  }
+  return null;
+}
+
+// 그리드 → 통일 행 추출
+// 반환: { rows: [{date, merchant, amount, cardName}], excluded: [{..., reason, promotable}], cancelled: n }
+function impExtract(det, grid) {
+  const { adapter, headerIdx, header: H } = det;
+  const col = name => impFindCol(H, name);
+  const body = grid.slice(headerIdx + 1);
+  const out = { rows: [], excluded: [], cancelled: 0 };
+
+  if (adapter.id === 'toss') {
+    const iD = col('거래일시'), iM = col('적요'), iT = col('거래유형'), iA = col('거래금액');
+    body.forEach(r => {
+      const date = impDate(r[iD]); if (!date) return;
+      const amt = impNum(r[iA]); if (amt >= 0) return;   // 입금 제외
+      const type = String(r[iT] || '').trim();
+      const row = { date, merchant: String(r[iM] || '').trim(), amount: -amt, cardName: '토스뱅크 체크카드' };
+      if (!row.merchant) return;
+      if (type === '체크카드결제') out.rows.push(row);
+      else out.excluded.push({ ...row, reason: type || '기타', promotable: true });
+    });
+
+  } else if (adapter.id === 'kbank') {
+    const iD = col('거래일시'), iG = col('거래구분'), iO = col('출금금액'),
+          iM = col('적요내용'), iP = col('상대예금주');
+    body.forEach(r => {
+      const date = impDate(r[iD]); if (!date) return;
+      const outAmt = impNum(r[iO]); if (outAmt <= 0) return;   // 입금·0원 제외
+      const gu = String(r[iG] || '').trim();
+      const merchant = String(r[iM] || '').trim() || String(r[iP] || '').trim();
+      const row = { date, merchant, amount: outAmt, cardName: '케이뱅크 체크카드' };
+      if (!row.merchant) return;
+      if (gu.includes('체크')) out.rows.push(row);              // 체크카드만 화이트리스트
+      else out.excluded.push({ ...row, reason: gu || '기타', promotable: true });
+    });
+
+  } else if (adapter.id === 'kb') {
+    const iD = col('이용일'), iM = col('이용하신곳'), iA = col('국내이용금액'),
+          iF = col('해외이용금액'), iS = col('상태'), iC = col('이용카드명');
+    const normals = [], cancels = [];
+    body.forEach(r => {
+      const date = impDate(r[iD]); if (!date) return;
+      const merchant = String(r[iM] || '').trim();
+      if (!merchant || /^합\s*계|^소\s*계/.test(merchant)) return;
+      const amt = impNum(r[iA]);
+      const status = iS >= 0 ? String(r[iS] || '').trim() : '';
+      const cardName = iC >= 0 ? (String(r[iC] || '').trim() || 'KB국민카드') : 'KB국민카드';
+      if (status.includes('취소')) { cancels.push({ date, merchant, amount: amt, cardName }); return; }
+      if (amt > 0) { normals.push({ date, merchant, amount: amt, cardName }); return; }
+      const fx = iF >= 0 ? impNum(r[iF]) : 0;
+      if (fx > 0) out.excluded.push({ date, merchant, amount: 0, cardName,
+        reason: `해외 이용 $${fx} — 원화 확정액으로 수동 입력 필요`, promotable: false });
+    });
+    // 승인취소 쌍 제거 — 같은 가맹점+금액의 원거래와 상쇄
+    cancels.forEach(c => {
+      const idx = normals.findIndex(n => n.amount === c.amount && impNorm(n.merchant) === impNorm(c.merchant));
+      if (idx >= 0) { normals.splice(idx, 1); out.cancelled++; }
+      else out.excluded.push({ ...c, reason: '승인취소 — 집계에서 제외', promotable: false });
+    });
+    out.rows = normals;
+
+  } else if (adapter.id === 'hana') {
+    const iD = col('거래일자'), iM = col('가맹점명'), iA = col('이용금액'),
+          iH = col('할부'), iP = col('결제원금');
+    let curCard = '하나카드';
+    body.forEach(r => {
+      const c0 = String(r[0] || '').trim();
+      const date = impDate(r[iD]);
+      if (!date) {
+        // 카드 구분행 ("SK매직 하나카드 본인 4***") → 카드명 컨텍스트 갱신
+        if (c0 && c0.includes('카드') && !/소계|합계|내역/.test(c0)) {
+          curCard = c0.replace(/\s*[\d*].*$/, '').trim() || c0;
+        }
+        return;
+      }
+      const merchant = String(r[iM] || '').trim();
+      if (!merchant || /소계|합계/.test(merchant)) return;
+      const inst = iH >= 0 ? String(r[iH] || '').trim() : '';
+      const principal = iP >= 0 ? impNum(r[iP]) : 0;
+      const useAmt = impNum(r[iA]);
+      // 일시불 → 결제원금(즉시할인 반영), 할부 → 이용금액 전액 (발생주의)
+      const amount = (!inst || inst === '-') ? (principal > 0 ? principal : useAmt) : useAmt;
+      if (amount <= 0) return;
+      out.rows.push({ date, merchant, amount, cardName: curCard });
+    });
+
+  } else if (adapter.id === 'hyundai') {
+    const iD = col('이용일'), iM = col('이용가맹점'), iA = col('이용금액'), iC = col('이용카드');
+    body.forEach(r => {
+      const date = impDate(r[iD]); if (!date) return;
+      const merchant = String(r[iM] || '').trim();
+      if (!merchant || /소계|합계/.test(merchant)) return;
+      let amount = impNum(r[iA]);
+      if (amount <= 0) {
+        // 셀 밀림 대비 — 가맹점 오른쪽에서 첫 양수 스캔
+        for (let j = iM + 1; j <= iM + 4 && j < r.length; j++) {
+          const n = impNum(r[j]); if (n > 0) { amount = n; break; }
+        }
+      }
+      if (amount <= 0) return;
+      const cardName = iC >= 0 ? (String(r[iC] || '').trim() || '현대카드') : '현대카드';
+      out.rows.push({ date, merchant, amount, cardName });
+    });
+
+  } else if (adapter.id === 'stmt') {
+    // 이용총액형 명세서 —
+    //   할부(회차 있음): 이용총액 전액 (발생주의 — 매달 재등장해도 importId로 자동 스킵)
+    //   일시불: 이번 달 입금액 (즉시할인 반영된 실청구액), 없으면 이용총액
+    const iD = col('이용일'), iM = col('이용가맹점'), iT = col('이용총액'),
+          iCy = col('회차'), iP = col('이번달입금'), iC = col('이용카드');
+    body.forEach(r => {
+      const date = impDate(r[iD]); if (!date) return;
+      const merchant = String(r[iM] || '').trim();
+      if (!merchant || /소계|합계/.test(merchant)) return;
+      const cycle = iCy >= 0 ? impNum(r[iCy]) : 0;
+      const total = impNum(r[iT]);
+      let amount;
+      if (cycle >= 1 && total > 0) amount = total;                 // 할부
+      else {
+        amount = iP >= 0 ? impNum(r[iP]) : 0;                      // 일시불 실청구액
+        if (amount <= 0) amount = total;
+        if (amount <= 0) {
+          for (let j = iT + 1; j <= iT + 6 && j < r.length; j++) {
+            const n = impNum(r[j]); if (n > 0) { amount = n; break; }
+          }
+        }
+      }
+      if (amount <= 0) return;
+      const cardName = iC >= 0 ? (String(r[iC] || '').trim() || '카드') : '카드';
+      out.rows.push({ date, merchant, amount, cardName });
+    });
+  }
+
+  return out;
+}
+
+// ── 상태 ──
+let impState = null;   // { files, allRows, cardNames, existDocs, histBound }
+
+function impResetModal() {
+  impState = null;
+  document.getElementById('imp-step-1').style.display = '';
+  document.getElementById('imp-step-2').style.display = 'none';
+  document.getElementById('imp-loading').style.display = 'none';
+  document.getElementById('btn-imp-save').style.display = 'none';
+  document.getElementById('btn-imp-back').style.display = 'none';
+  document.getElementById('imp-file-input').value = '';
+  document.getElementById('imp-paid-toggle').checked = false;
+  impRenderHistory();
+}
+
+function openImportModal() {
+  impResetModal();
+  openOv('ov-import');
+}
+
+// ── 파일 선택 → 파싱 → 중복 검사 → 검토 화면 ──
+async function impHandleFiles(fileList) {
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+  document.getElementById('imp-step-1').style.display = 'none';
+  document.getElementById('imp-loading').style.display = '';
+
+  const parsed = [];
+  const errors = [];
+  for (const f of files) {
+    try {
+      const grid = await impFileToGrid(f);
+      const det = impDetect(grid);
+      if (!det) { errors.push(`${f.name} — 지원하는 양식을 찾지 못했습니다`); continue; }
+      const ex = impExtract(det, grid);
+      if (!ex.rows.length && !ex.excluded.length) { errors.push(`${f.name} — 거래 행이 없습니다`); continue; }
+      parsed.push({ name: f.name, source: det.adapter.id, label: det.adapter.label,
+                    bank: det.adapter.bank, ...ex });
+    } catch (e) {
+      console.error('[import] parse fail', f.name, e);
+      errors.push(`${f.name} — ${e.message || '파싱 실패'}`);
+    }
+  }
+  errors.forEach(m => showToast(m));
+
+  if (!parsed.length) { impResetModal(); return; }
+
+  // importId 부여 (파일 내 동일 거래 반복은 -2, -3 접미사로 구분)
+  const allRows = [];
+  parsed.forEach(pf => {
+    const seen = {};
+    const assign = r => {
+      const base = `${pf.source}|${r.date}|${impNorm(r.merchant)}|${r.amount}`;
+      const n = (seen[base] = (seen[base] || 0) + 1);
+      r.importId = 'im_' + impHash(base) + (n > 1 ? '-' + n : '');
+      r.source = pf.source;
+      r.fileLabel = pf.label;
+    };
+    pf.rows.forEach(assign);
+    pf.excluded.filter(x => x.promotable).forEach(assign);
+    pf.rows.forEach(r => allRows.push(r));
+  });
+
+  // 관련 월(ym)의 기존 거래 로드 — 중복 검사 기준
+  const ymSet = new Set();
+  parsed.forEach(pf => {
+    pf.rows.forEach(r => ymSet.add(r.date.slice(0, 7)));
+    pf.excluded.filter(x => x.promotable).forEach(r => ymSet.add(r.date.slice(0, 7)));
+  });
+  let existDocs = [];
+  try {
+    const snaps = await Promise.all(
+      [...ymSet].map(ym => getDocs(query(pathTransactions(), where('ym', '==', ym))))
+    );
+    snaps.forEach(s => s.forEach(d => {
+      const t = d.data();
+      existDocs.push({ importId: t.importId || null, date: t.date, amount: t.amount, payment: t.payment });
+    }));
+  } catch (e) {
+    console.error('[import] 기존 거래 로드 실패', e);
+    showToast('기존 거래 로드 실패 — 중복 검사 없이 진행합니다');
+  }
+
+  // 카테고리 제안 (가맹점 사전)
+  const mMap = settings.importMerchantMap || {};
+  parsed.forEach(pf => {
+    pf.rows.forEach(r => { r.category = mMap[impNorm(r.merchant)] || ''; });
+    pf.excluded.filter(x => x.promotable).forEach(r => { r.category = mMap[impNorm(r.merchant)] || ''; });
+  });
+
+  impState = { files: parsed, existDocs };
+  impClassify();
+
+  document.getElementById('imp-loading').style.display = 'none';
+  document.getElementById('imp-step-2').style.display = '';
+  document.getElementById('btn-imp-save').style.display = '';
+  document.getElementById('btn-imp-back').style.display = '';
+  impRenderReview();
+}
+
+// ── 중복 3분류 ──
+//   already: 같은 importId 존재 → 항상 스킵 (재가져오기)
+//   dup:     같은 날짜+금액+결제수단 존재 → 기본 스킵, 체크로 포함 (수동 우선)
+//   new:     기본 포함
+function impResolvePayment(cardName) {
+  const map = { ...(settings.importCardMap || {}), ...((impState && impState.cardMapDraft) || {}) };
+  return map[cardName] || '';
+}
+function impClassify() {
+  const existIds = new Set(impState.existDocs.map(d => d.importId).filter(Boolean));
+  const existKeys = new Map();
+  impState.existDocs.forEach(d => {
+    const k = `${d.date}|${d.amount}|${d.payment || ''}`;
+    existKeys.set(k, (existKeys.get(k) || 0) + 1);
+  });
+  const batchKeys = new Set();   // 같은 배치 내 파일 간 교차 중복 (명세서+이용내역 동시 업로드)
+  impState.files.forEach(pf => {
+    const each = r => {
+      const pay = impResolvePayment(r.cardName);
+      const xKey = `${r.date}|${r.amount}|${impNorm(r.merchant)}`;
+      if (existIds.has(r.importId)) r.status = 'already';
+      else if (existKeys.get(`${r.date}|${r.amount}|${pay}`) > 0) r.status = 'dup';
+      else if (batchKeys.has(xKey)) r.status = 'dup';
+      else r.status = 'new';
+      batchKeys.add(xKey);
+    };
+    pf.rows.forEach(each);
+    pf.excluded.filter(x => x.promotable).forEach(r => {
+      if (existIds.has(r.importId)) r.status = 'already';
+      else r.status = 'skip';   // 제외 기본 — 체크로 승격
+    });
+  });
+}
+function impEffInclude(r) {
+  if (r.status === 'already') return false;
+  if (r.userInclude !== undefined) return r.userInclude;
+  return r.status === 'new';
+}
+
+// ── 검토 화면 렌더 ──
+function impCatOptions(selected) {
+  const groups = [
+    ['수입', settings.categories.revenue],
+    ['고정지출', settings.categories.fixed],
+    ['변동지출', settings.categories.variable],
+  ];
+  let html = `<option value="">카테고리…</option>`;
+  groups.forEach(([label, arr]) => {
+    if (!arr || !arr.length) return;
+    html += `<optgroup label="${escapeHtml(label)}">`;
+    arr.forEach(name => {
+      html += `<option value="${escapeHtml(name)}"${name === selected ? ' selected' : ''}>${escapeHtml(name)}</option>`;
+    });
+    html += '</optgroup>';
+  });
+  return html;
+}
+const IMP_BADGE = {
+  new:     ['new', '신규'],
+  dup:     ['dup', '중복 의심'],
+  already: ['already', '이미 가져옴'],
+  skip:    ['skip', '제외'],
+};
+function impRowHtml(r, fi, kind, ri) {
+  const inc = impEffInclude(r);
+  const [cls, label] = IMP_BADGE[r.status] || IMP_BADGE.new;
+  const dis = r.status === 'already' ? 'disabled' : '';
+  const reason = r.reason ? ` title="${escapeHtml(r.reason)}"` : '';
+  const catCell = r.status === 'already'
+    ? `<span style="color:var(--text3); font-size:11px;">—</span>`
+    : `<select data-imp-cat="${fi}|${kind}|${ri}" class="${inc && !r.category ? 'imp-missing' : ''}">${impCatOptions(r.category)}</select>`;
+  return `
+    <div class="imp-row ${inc ? '' : 'off'}"${reason}>
+      <input type="checkbox" data-imp-inc="${fi}|${kind}|${ri}" ${inc ? 'checked' : ''} ${dis}>
+      <div class="imp-cell-date">${r.date.slice(5).replace('-', '/')}</div>
+      <div class="imp-cell-merchant" title="${escapeHtml(r.merchant)}">${escapeHtml(r.merchant)}${r.reason ? ` <span style="color:var(--text3); font-size:10.5px;">· ${escapeHtml(r.reason)}</span>` : ''}</div>
+      <div class="imp-cell-amt">${fmtAmount(r.amount)}</div>
+      <div class="imp-cell-cat">${catCell}</div>
+      <div class="imp-cell-badge"><span class="imp-badge ${cls}">${label}</span></div>
+    </div>`;
+}
+
+function impRenderReview() {
+  // 매핑 블록 — 파일의 카드명 목록
+  const cardNames = [...new Set(
+    impState.files.flatMap(pf => pf.rows.concat(pf.excluded.filter(x => x.promotable)).map(r => r.cardName))
+  )];
+  impState.cardNames = cardNames;
+  const savedMap = settings.importCardMap || {};
+  const draft = impState.cardMapDraft || (impState.cardMapDraft = {});
+  cardNames.forEach(cn => { if (draft[cn] === undefined) draft[cn] = savedMap[cn] || ''; });
+
+  const payOpts = sel => ['<option value="">선택…</option>']
+    .concat(settings.payments.map(p =>
+      `<option value="${escapeHtml(p.name)}"${p.name === sel ? ' selected' : ''}>${escapeHtml(p.name)} ${p.type === 'card' ? '(카드)' : '(현금성)'}</option>`))
+    .concat([`<option value="__new__"${sel === '__new__' ? ' selected' : ''}>➕ 이 이름으로 새 결제수단 등록</option>`])
+    .join('');
+  document.getElementById('imp-map-block').style.display = cardNames.length ? '' : 'none';
+  document.getElementById('imp-map-list').innerHTML = cardNames.map((cn, i) => `
+    <div class="imp-map-row">
+      <div class="imp-map-name" title="${escapeHtml(cn)}">${escapeHtml(cn)}</div>
+      <select class="select" data-imp-map="${i}">${payOpts(draft[cn])}</select>
+    </div>`).join('');
+
+  // 검토 리스트 — 파일별 그룹
+  let html = '';
+  impState.files.forEach((pf, fi) => {
+    const promo = pf.excluded.filter(x => x.promotable);
+    const info = pf.excluded.filter(x => !x.promotable);
+    const cnt = { new: 0, dup: 0, already: 0 };
+    pf.rows.forEach(r => cnt[r.status] !== undefined && cnt[r.status]++);
+    html += `
+      <div class="imp-file-head">
+        ${escapeHtml(pf.label)}
+        <span class="imp-file-meta">${escapeHtml(pf.name)} · 신규 ${cnt.new} / 중복 의심 ${cnt.dup} / 이미 가져옴 ${cnt.already}${pf.cancelled ? ` / 취소 상쇄 ${pf.cancelled}건` : ''}</span>
+      </div>`;
+    html += pf.rows
+      .map((r, ri) => ({ r, ri }))
+      .sort((a, b) => b.r.date.localeCompare(a.r.date))
+      .map(({ r, ri }) => impRowHtml(r, fi, 'r', ri)).join('');
+    if (promo.length) {
+      const open = !!pf._exclOpen;
+      html += `<button type="button" class="imp-excl-toggle" data-imp-excl="${fi}">
+        ${open ? '▾' : '▸'} 자동 제외 ${promo.length}건 (이체·출금 등) — 필요한 건만 체크해서 포함</button>`;
+      if (open) html += promo.map((r, ri) => impRowHtml(r, fi, 'x', ri)).join('');
+    }
+    if (info.length) {
+      html += `<div class="imp-note">ⓘ ${info.map(x => `${x.date.slice(5)} ${escapeHtml(x.merchant)} — ${escapeHtml(x.reason)}`).join('<br>ⓘ ')}</div>`;
+    }
+  });
+  document.getElementById('imp-review').innerHTML = html;
+  impRenderSummary();
+  impBindReviewEvents();
+}
+
+function impRenderSummary() {
+  let inc = 0, sum = 0, dupOff = 0, already = 0, missing = 0;
+  impState.files.forEach(pf => {
+    pf.rows.concat(pf.excluded.filter(x => x.promotable)).forEach(r => {
+      if (r.status === 'already') { already++; return; }
+      if (impEffInclude(r)) { inc++; sum += r.amount; if (!r.category) missing++; }
+      else if (r.status === 'dup') dupOff++;
+    });
+  });
+  document.getElementById('imp-summary').innerHTML = `
+    <span>가져올 거래 <strong>${inc}건</strong></span>
+    <span>합계 <strong>${fmtAmount(sum)}원</strong></span>
+    ${dupOff ? `<span>중복 스킵 <strong>${dupOff}건</strong></span>` : ''}
+    ${already ? `<span>이미 가져옴 <strong>${already}건</strong></span>` : ''}
+    ${missing ? `<span style="color:var(--red);">카테고리 미지정 <strong>${missing}건</strong></span>` : ''}`;
+  document.getElementById('btn-imp-save').textContent = `가져오기 ${inc}건`;
+}
+
+function impRowByKey(key) {
+  const [fi, kind, ri] = key.split('|');
+  const pf = impState.files[+fi];
+  const arr = kind === 'r' ? pf.rows : pf.excluded.filter(x => x.promotable);
+  return arr[+ri];
+}
+function impBindReviewEvents() {
+  // 포함 체크
+  document.querySelectorAll('[data-imp-inc]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const r = impRowByKey(cb.dataset.impInc);
+      r.userInclude = cb.checked;
+      cb.closest('.imp-row').classList.toggle('off', !cb.checked);
+      const sel = cb.closest('.imp-row').querySelector('select[data-imp-cat]');
+      if (sel) sel.classList.toggle('imp-missing', cb.checked && !r.category);
+      impRenderSummary();
+    });
+  });
+  // 카테고리 — 같은 가맹점 일괄 적용
+  document.querySelectorAll('select[data-imp-cat]').forEach(sel => {
+    sel.addEventListener('change', () => {
+      const r = impRowByKey(sel.dataset.impCat);
+      r.category = sel.value;
+      const norm = impNorm(r.merchant);
+      let applied = 0;
+      impState.files.forEach(pf => {
+        pf.rows.concat(pf.excluded.filter(x => x.promotable)).forEach(o => {
+          if (o !== r && impNorm(o.merchant) === norm && o.category !== sel.value) {
+            o.category = sel.value; applied++;
+          }
+        });
+      });
+      if (applied) { showToast(`같은 가맹점 ${applied}건에 함께 적용됨`); impRenderReview(); }
+      else { sel.classList.toggle('imp-missing', impEffInclude(r) && !r.category); impRenderSummary(); }
+    });
+  });
+  // 제외 목록 토글
+  document.querySelectorAll('[data-imp-excl]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const pf = impState.files[+btn.dataset.impExcl];
+      pf._exclOpen = !pf._exclOpen;
+      impRenderReview();
+    });
+  });
+  // 결제수단 매핑 변경 → 재분류 (사용자 체크 초기화 없이 상태만 갱신)
+  document.querySelectorAll('select[data-imp-map]').forEach(sel => {
+    sel.addEventListener('change', () => {
+      const cn = impState.cardNames[+sel.dataset.impMap];
+      impState.cardMapDraft[cn] = sel.value;
+      impClassify();
+      impRenderReview();
+    });
+  });
+}
+
+// ── 저장 ──
+async function impSave() {
+  if (!impState) return;
+  const rows = [];
+  impState.files.forEach(pf => {
+    pf.rows.concat(pf.excluded.filter(x => x.promotable)).forEach(r => {
+      if (impEffInclude(r)) rows.push(r);
+    });
+  });
+  if (!rows.length) { showToast('가져올 거래가 없습니다'); return; }
+
+  // 매핑 검증
+  const draft = impState.cardMapDraft || {};
+  const usedCards = [...new Set(rows.map(r => r.cardName))];
+  const unmapped = usedCards.filter(cn => !draft[cn]);
+  if (unmapped.length) { showToast(`결제수단 매핑을 지정하세요 — ${unmapped[0]}`); return; }
+  const noCat = rows.filter(r => !r.category).length;
+  if (noCat) { showToast(`카테고리 미지정 ${noCat}건 — 지정 후 저장할 수 있습니다`); return; }
+
+  const $btn = document.getElementById('btn-imp-save');
+  $btn.disabled = true;
+
+  try {
+    // '__new__' → 결제수단 자동 생성 (은행 소스는 현금성, 카드 소스는 카드)
+    const newPays = [];
+    const payments = [...settings.payments];
+    usedCards.forEach(cn => {
+      if (draft[cn] !== '__new__') return;
+      let name = cn.trim();
+      if (payments.some(p => p.name === name)) { draft[cn] = name; return; }
+      const src = rows.find(r => r.cardName === cn)?.source;
+      const bank = IMP_ADAPTERS.find(a => a.id === src)?.bank;
+      const p = { name, type: bank ? 'cash' : 'card' };
+      payments.push(p); newPays.push(p);
+      draft[cn] = name;
+    });
+
+    const payType = name => (payments.find(p => p.name === name)?.type) || 'cash';
+    const paidCards = document.getElementById('imp-paid-toggle').checked;
+    const batchId = 'imp_' + Date.now().toString(36);
+    const sanitize = obj => {
+      const o = {};
+      for (const [k, v] of Object.entries(obj)) o[k] = v === undefined ? null : v;
+      return o;
+    };
+
+    // writeBatch — 450개 단위 커밋
+    let batch = writeBatch(db), n = 0, total = 0;
+    const commits = [];
+    for (const r of rows) {
+      const payment = draft[r.cardName];
+      const pType = payType(payment);
+      const paid = pType === 'card' ? paidCards : true;
+      batch.set(doc(pathTransactions()), sanitize({
+        date: r.date,
+        ym: r.date.slice(0, 7),
+        amount: r.amount,
+        amountNative: null,
+        currency: 'KRW',
+        fxRate: null,
+        category: r.category,
+        flow: mapCategoryToFlow(r.category),
+        payment,
+        paymentType: pType,
+        accountId: null,
+        accountName: null,
+        paid,
+        paidAt: paid ? serverTimestamp() : null,
+        memo: r.merchant,                      // 원본 가맹점명 보존
+        importId: r.importId,
+        importBatch: batchId,
+        importSource: r.source,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }));
+      n++; total++;
+      if (n >= 450) { commits.push(batch.commit()); batch = writeBatch(db); n = 0; }
+    }
+    if (n > 0) commits.push(batch.commit());
+    await Promise.all(commits);
+
+    // 가맹점→카테고리 사전 학습 + 카드 매핑 + 이력 저장
+    const mMap = { ...(settings.importMerchantMap || {}) };
+    rows.forEach(r => { const k = impNorm(r.merchant); if (k) mMap[k] = r.category; });
+    const cMap = { ...(settings.importCardMap || {}) };
+    usedCards.forEach(cn => { cMap[cn] = draft[cn]; });
+    const yms = rows.map(r => r.date.slice(0, 7)).sort();
+    const hist = [{
+      id: batchId,
+      at: new Date().toISOString(),
+      count: total,
+      sources: [...new Set(impState.files.map(pf => pf.label))],
+      ymMin: yms[0], ymMax: yms[yms.length - 1],
+    }].concat(settings.importHistory || []).slice(0, 30);
+    const settingsPatch = { importMerchantMap: mMap, importCardMap: cMap, importHistory: hist };
+    if (newPays.length) settingsPatch.payments = payments;
+    await setDoc(pathFinanceSettings(), settingsPatch, { merge: true });
+
+    showToast(`✓ ${total}건 가져오기 완료${newPays.length ? ` · 결제수단 ${newPays.length}개 추가` : ''}`);
+    closeOv('ov-import');
+
+    invalidateAnalysisYms();
+    const $analysisTop = document.getElementById('tab-analysis');
+    if ($analysisTop?.classList.contains('active')) applyAnalysisPeriod();
+    // 가져온 최신 월로 이동
+    const ymMax = yms[yms.length - 1];
+    if (ymMax && ymMax !== currentMonth) { setMonth(ymMax); showToast(`${ymMax} 월로 이동했습니다`); }
+  } catch (e) {
+    console.error('[import] 저장 실패', e);
+    showToast('가져오기 실패: ' + (e.message || e.code));
+  } finally {
+    $btn.disabled = false;
+  }
+}
+
+// ── 가져오기 이력 + 배치 삭제 ──
+function impRenderHistory() {
+  const hist = settings.importHistory || [];
+  const $blk = document.getElementById('imp-hist-block');
+  if (!hist.length) { $blk.style.display = 'none'; return; }
+  $blk.style.display = '';
+  document.getElementById('imp-hist-list').innerHTML = hist.map(h => `
+    <div class="imp-hist-row">
+      <div class="imp-hist-main">
+        <div>${h.sources.map(escapeHtml).join(' · ')} — <b>${h.count}건</b></div>
+        <div class="imp-hist-sub">${h.ymMin === h.ymMax ? h.ymMin : `${h.ymMin} ~ ${h.ymMax}`} · ${String(h.at).slice(0, 16).replace('T', ' ')}</div>
+      </div>
+      <button class="btn-s" data-imp-del="${escapeHtml(h.id)}">배치 삭제</button>
+    </div>`).join('');
+  document.querySelectorAll('[data-imp-del]').forEach(btn => {
+    btn.addEventListener('click', () => impDeleteBatch(btn.dataset.impDel));
+  });
+}
+async function impDeleteBatch(batchId) {
+  const h = (settings.importHistory || []).find(x => x.id === batchId);
+  if (!h) return;
+  if (!confirm(`${h.sources.join(' · ')} ${h.count}건 가져오기를 삭제할까요?\n수동 입력 거래는 건드리지 않습니다.`)) return;
+  try {
+    const snap = await getDocs(query(pathTransactions(), where('importBatch', '==', batchId)));
+    let batch = writeBatch(db), n = 0, total = 0;
+    const commits = [];
+    snap.forEach(d => {
+      batch.delete(d.ref);
+      n++; total++;
+      if (n >= 450) { commits.push(batch.commit()); batch = writeBatch(db); n = 0; }
+    });
+    if (n > 0) commits.push(batch.commit());
+    await Promise.all(commits);
+    const hist = (settings.importHistory || []).filter(x => x.id !== batchId);
+    await setDoc(pathFinanceSettings(), { importHistory: hist }, { merge: true });
+    showToast(`✓ 가져오기 ${total}건 삭제됨`);
+    invalidateAnalysisYms();
+    const $analysisTop = document.getElementById('tab-analysis');
+    if ($analysisTop?.classList.contains('active')) applyAnalysisPeriod();
+    impRenderHistory();
+  } catch (e) {
+    console.error('[import] 배치 삭제 실패', e);
+    showToast('배치 삭제 실패: ' + (e.message || e.code));
+  }
+}
+
+// ── 이벤트 바인딩 ──
+document.getElementById('btn-import').addEventListener('click', openImportModal);
+document.getElementById('imp-drop').addEventListener('click', () => document.getElementById('imp-file-input').click());
+document.getElementById('imp-file-input').addEventListener('change', e => impHandleFiles(e.target.files));
+document.getElementById('btn-imp-back').addEventListener('click', impResetModal);
+document.getElementById('btn-imp-save').addEventListener('click', impSave);
+
 </script>
 </body>
 </html>
