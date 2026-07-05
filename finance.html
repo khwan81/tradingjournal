@@ -3415,6 +3415,16 @@ html, body { overflow-x: hidden; }
 }
 .tx-row .col-date { color: var(--text2); font-family: var(--font-mono); }
 .tx-row .col-cat  { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; }
+.tx-row .col-cat .cat-chip { flex-shrink: 0; }
+.tx-row .tx-memo  {
+  color: var(--text3);
+  font-size: 12px;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .tx-row .col-pay  { color: var(--text2); display: flex; align-items: center; gap: 6px; }
 .tx-row .col-acc  { color: var(--text2); font-size: 12px; }
 .tx-row .col-amt  {
@@ -15933,6 +15943,7 @@ function renderTransactions() {
           <div class="col-cat">
             <span class="cat-chip ${flow}">${escapeHtml(t.category || '미분류')}</span>
             ${processBadge}
+            ${t.memo ? `<span class="tx-memo" title="${escapeHtml(t.memo)}">${escapeHtml(t.memo)}</span>` : ''}
           </div>
           <div class="col-pay">
             <span class="mobile-meta">${mobileDate}</span>${escapeHtml(t.payment || '')}${dot}
