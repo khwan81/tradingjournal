@@ -5877,7 +5877,7 @@ html, body { overflow-x: hidden; }
     </div>
     <div class="modal-foot">
       <button class="btn-s" id="btn-imp-back" style="display:none;">← 파일 다시 선택</button>
-      <button class="btn-s" data-close="ov-import">취소</button>
+      <button class="btn-s" id="btn-imp-cancel">취소</button>
       <button class="btn-p" id="btn-imp-save" style="display:none;">가져오기</button>
     </div>
   </div>
@@ -17336,6 +17336,19 @@ function impResetModal() {
 }
 
 function openImportModal() {
+  // v0.8-3 — ×·배경 클릭으로 잘못 닫혀도 검토 상태(impState)는 보존됨.
+  //   다시 열면 검토 화면을 그대로 이어감. 폐기는 취소/파일 다시 선택 버튼만.
+  if (impState) {
+    document.getElementById('imp-step-1').style.display = 'none';
+    document.getElementById('imp-loading').style.display = 'none';
+    document.getElementById('imp-step-2').style.display = '';
+    document.getElementById('btn-imp-save').style.display = '';
+    document.getElementById('btn-imp-back').style.display = '';
+    impRenderReview();
+    openOv('ov-import');
+    showToast('진행 중이던 가져오기를 이어갑니다');
+    return;
+  }
   impResetModal();
   openOv('ov-import');
 }
@@ -17837,6 +17850,7 @@ async function impSave() {
     if (toCreate.length) parts.push(`신규 ${toCreate.length}건`);
     if (toEnrich.length) parts.push(`사용처 교체 ${toEnrich.length}건`);
     showToast(`✓ ${parts.join(' · ')} 완료${newPays.length ? ` · 결제수단 ${newPays.length}개 추가` : ''}`);
+    impState = null;   // 정상 저장 — 이어가기 상태 폐기
     closeOv('ov-import');
 
     invalidateAnalysisYms();
@@ -17903,7 +17917,17 @@ async function impDeleteBatch(batchId) {
 document.getElementById('btn-import').addEventListener('click', openImportModal);
 document.getElementById('imp-drop').addEventListener('click', () => document.getElementById('imp-file-input').click());
 document.getElementById('imp-file-input').addEventListener('change', e => impHandleFiles(e.target.files));
-document.getElementById('btn-imp-back').addEventListener('click', impResetModal);
+// 파일 다시 선택 — 검토 상태 폐기 (진행 중이면 확인)
+document.getElementById('btn-imp-back').addEventListener('click', () => {
+  if (impState && !confirm('검토 중인 내용을 버리고 파일을 다시 선택할까요?')) return;
+  impResetModal();
+});
+// 취소 — 폐기 후 닫기. (×·배경 클릭은 상태 보존 — 다시 열면 이어감)
+document.getElementById('btn-imp-cancel').addEventListener('click', () => {
+  if (impState && !confirm('검토 중인 내용을 버릴까요?\n(실수로 닫은 거라면 × 로 닫고 다시 가져오기를 누르면 이어갈 수 있어요)')) return;
+  impState = null;
+  closeOv('ov-import');
+});
 document.getElementById('btn-imp-save').addEventListener('click', impSave);
 
 </script>
