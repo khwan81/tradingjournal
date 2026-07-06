@@ -1646,7 +1646,7 @@ input[type=month]::-webkit-calendar-picker-indicator {
     <div class="fg2" style="margin-bottom:10px;">
       <div class="fgrp">
         <label class="flbl">계좌</label>
-        <select id="m-account" onchange="onAccountChange()"></select>
+        <select id="m-account" onchange="onAccountChange(true)"></select>
       </div>
       <div class="fgrp" style="position:relative;">
         <label class="flbl">종목</label>
@@ -3123,7 +3123,9 @@ window.closeDel = function() {
 };
 
 // ── 계좌 선택 연동 ────────────────────────────────────────────────────────────
-window.onAccountChange = function() {
+// userChanged=true : 사용자가 계좌 select를 직접 변경 → 시드를 설정값으로 항상 덮어씀
+// userChanged 없음 : 모달 열기 등 프로그램 호출 → 비어 있을 때만 기본값 채움 (수정 모드의 저장된 시드 보존)
+window.onAccountChange = function(userChanged) {
   const acctId = v('m-account');
   const acct   = accounts.find(a=>a.id===acctId);
   if (!acct) return;
@@ -3133,8 +3135,12 @@ window.onAccountChange = function() {
   const usdGrp    = ge('rate-usd-grp');
   if (tetherGrp) tetherGrp.style.display = market==='coin' ? '' : 'none';
   if (usdGrp)    usdGrp.style.display    = market==='us'   ? '' : 'none';
-  // 시드 기본값 채우기
-  if (!v('m-seed') && acct.seed) sv('m-seed', String(acct.seed));
+  // 시드 채우기: 계좌 변경 시 설정의 해당 계좌 시드값으로 자동 입력
+  if (userChanged) {
+    sv('m-seed', acct.seed ? String(acct.seed) : '');
+  } else if (!v('m-seed') && acct.seed) {
+    sv('m-seed', String(acct.seed));
+  }
   calcR();
   updateAutoN();
   updateModalGoalBox();
