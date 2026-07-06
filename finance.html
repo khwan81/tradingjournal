@@ -5147,6 +5147,19 @@ html, body { overflow-x: hidden; }
         <button class="btn-danger" id="btn-reset-open">전체 초기화</button>
       </div>
 
+      <!-- 자산결산 시작월 기준점 정리 (v0.9-2) -->
+      <div class="backup-card">
+        <div class="backup-info">
+          <div class="backup-info-title">📐 자산결산 시작월 기준점 정리</div>
+          <div class="backup-info-desc">
+            옛 방식(시작월에 실투입 원금 입력)으로 저장된 추적 계좌를 새 기준점 방식으로 정리합니다.<br>
+            시작월 원금 = 시작 잔고, 수익률 0%에서 출발. 기존 실투입 원금은<br>
+            "추적 전 실투입 원금(참고)"으로 옮겨 보존하고, 이후 월들은 체인 재계산됩니다.
+          </div>
+        </div>
+        <button class="btn-s" id="btn-fix-anchors">기준점 정리</button>
+      </div>
+
       <div class="backup-card backup-card-restore">
         <div class="backup-info">
           <div class="backup-info-title">백업 파일에서 복원</div>
@@ -6074,10 +6087,10 @@ html, body { overflow-x: hidden; }
         </label>
       </div>
 
-      <!-- 첫 결산 안내 -->
+      <!-- 첫 결산 안내 (v0.9-2 — 시작월 = 기준점) -->
       <div class="sv-info" id="sv-start-hint" style="display:none; margin-top: 0; margin-bottom: 12px;">
         <span class="info-icon">ⓘ</span>
-        <div>첫 결산입니다. 시작 시점의 <b>잔고</b>와 <b>원금</b>을 입력하세요. 입출금은 의미 없으므로 받지 않습니다.</div>
+        <div>첫 결산입니다. <b>시작 잔고가 곧 기준 원금</b>이 되어 수익률 0%에서 출발합니다. 추적 전 수익은 발생 월을 알 수 없어 시계열에 넣지 않습니다.</div>
       </div>
 
       <!-- 입력 필드 -->
@@ -6095,9 +6108,9 @@ html, body { overflow-x: hidden; }
         </div>
 
         <div class="form-group" id="sv-row-principal" style="display:none;">
-          <label class="form-label">원금 (시작 시점 누적 원금)</label>
+          <label class="form-label">추적 전 실투입 원금 <span style="color:var(--text3);">(선택 · 참고용)</span></label>
           <input type="text" class="input" inputmode="decimal" id="sv-input-principal" placeholder="0">
-          <div class="form-hint">잔고와 원금의 차이가 시작 시점 평가손익이 됩니다</div>
+          <div class="form-hint">수익률 계산에는 쓰지 않고, 자산결산에 "전체 누적 (추적 전 포함)" 참고 표기로만 사용합니다</div>
         </div>
 
         <div class="form-group">
@@ -6115,6 +6128,7 @@ html, body { overflow-x: hidden; }
         <div class="pv-row"><span class="pv-label">새 원금</span><span class="pv-val" id="sv-pv-principal">0</span></div>
         <div class="pv-row"><span class="pv-label">월수익</span><span class="pv-val" id="sv-pv-mret">0</span></div>
         <div class="pv-row full"><span class="pv-label">누적수익률</span><span class="pv-val" id="sv-pv-cumret">0%</span></div>
+        <div class="pv-row full" id="sv-pv-pretrack-row" style="display:none;"><span class="pv-label">전체 누적 (추적 전 포함 · 참고)</span><span class="pv-val" id="sv-pv-pretrack">—</span></div>
       </div>
     </div>
     <div class="modal-foot">
@@ -11552,9 +11566,17 @@ function svBuildRow(acc, doc) {
     : '<span style="color:var(--text3);">—</span>';
 
   const cumCls = cumRate > 0 ? 'pos' : (cumRate < 0 ? 'neg' : '');
-  const cumCell = cumRate != null
+  let cumCell = cumRate != null
     ? `<span class="${cumCls}">${fmtSignedPct(cumRate)}</span>`
     : '<span style="color:var(--text3);">—</span>';
+
+  // v0.9-2 — 참고: 추적 전 실투입 원금 대비 전체 누적 (수익률 계산과 무관한 표기)
+  const preTrack = Number(acc.preTrackPrincipal) || 0;
+  if (preTrack > 0 && doc && balKrw > 0) {
+    const totalCum = balKrw - preTrack;
+    const totalRate = totalCum / preTrack;
+    cumCell += `<div class="sv-cell-fx-sub" title="추적 전 실투입 원금 ${fmtNum(preTrack)} 대비 (참고)">전체 ${fmtSignedPct(totalRate)}</div>`;
+  }
 
   return `
     <div class="sv-row">
@@ -13166,21 +13188,13 @@ function openSavingsModal(accId) {
   // - deposit
   const $dep = document.getElementById('sv-input-deposit');
   $dep.value = doc?.deposit != null ? doc.deposit : '';
-  // - principal (첫 결산일 때만 의미)
-  //   외화 계좌는 원자값 입력 칸이므로 principalNative를 prefill,
-  //   KRW 계좌는 principal(KRW) 그대로
-  //   기존 데이터(v0.7-5c 이전)에 principalNative 없으면 fxRate로 역산
+  // - 추적 전 실투입 원금 (v0.9-2 — 참고 필드, 계좌 마스터에서)
+  //   외화 계좌는 원자값 입력 칸이므로 native를 prefill
   const $prn = document.getElementById('sv-input-principal');
   if (isFx) {
-    let prefillNative = doc?.principalNative;
-    if (prefillNative == null && doc?.principal != null && doc?.fxRate) {
-      prefillNative = doc.principal / doc.fxRate;
-      // 깨끗한 숫자로 — 소수 2자리 반올림
-      prefillNative = Math.round(prefillNative * 100) / 100;
-    }
-    $prn.value = prefillNative != null ? prefillNative : '';
+    $prn.value = acc.preTrackPrincipalNative != null ? acc.preTrackPrincipalNative : '';
   } else {
-    $prn.value = doc?.principal != null ? doc.principal : '';
+    $prn.value = acc.preTrackPrincipal != null ? acc.preTrackPrincipal : '';
   }
   // - memo
   document.getElementById('sv-input-memo').value = doc?.memo || '';
@@ -13241,14 +13255,18 @@ function svUpdatePreview() {
 
   // 자동계산
   let principal, principalNative, mret, cumRet, cumRate;
+  let preTrackKrw = 0, preTrackNative = 0;
   if (isFirst) {
-    // 사용자가 입력한 원금 (외화면 USD, 비외화면 KRW)
-    const prnKrw = Math.round(prnN * useRate);
-    principal       = prnKrw;
-    principalNative = isFx ? prnN : prnKrw;
-    mret      = balKrw - prnKrw;   // 시작 시점 평가손익
-    cumRet    = mret;
-    cumRate   = principal > 0 ? cumRet / principal : 0;
+    // v0.9-2 — 시작월 = 기준점: 시작 잔고를 그대로 원금으로 박제, 수익 0에서 출발.
+    //   (옛 방식: 실투입 원금 입력 → 과거 누적 수익이 첫 달 수익으로 몰려 차트 붕괴)
+    principal       = balKrw;
+    principalNative = isFx ? balN : balKrw;
+    mret      = 0;
+    cumRet    = 0;
+    cumRate   = 0;
+    // 입력칸은 참고용 "추적 전 실투입 원금" — 수익률 계산에 사용하지 않음
+    preTrackKrw    = Math.round(prnN * useRate);
+    preTrackNative = isFx ? prnN : preTrackKrw;
   } else if (prev) {
     const prevBalKrw = Number(prev.balanceKrw) || 0;
     const prevPrn    = Number(prev.principal) || 0;
@@ -13290,6 +13308,19 @@ function svUpdatePreview() {
   $cum.textContent = fmtSignedPct(cumRate);
   $cum.className = 'pv-val ' + (cumRate > 0 ? 'green' : (cumRate < 0 ? 'red' : ''));
 
+  // v0.9-2 — 참고: 전체 누적 (추적 전 실투입 원금 대비)
+  const $ptRow = document.getElementById('sv-pv-pretrack-row');
+  if (isFirst && preTrackKrw > 0 && balKrw > 0) {
+    const totalCum = balKrw - preTrackKrw;
+    const totalRate = totalCum / preTrackKrw;
+    const $pt = document.getElementById('sv-pv-pretrack');
+    $pt.textContent = `${fmtSigned(totalCum)} (${fmtSignedPct(totalRate)})`;
+    $pt.className = 'pv-val ' + (totalCum > 0 ? 'green' : (totalCum < 0 ? 'red' : ''));
+    $ptRow.style.display = '';
+  } else {
+    $ptRow.style.display = 'none';
+  }
+
   // 저장 시 쓸 값들을 dataset에 박아둠
   const $body = document.getElementById('ov-savings');
   if ($body) {
@@ -13302,6 +13333,8 @@ function svUpdatePreview() {
     $body.dataset.calcCumRate      = cumRate;
     $body.dataset.calcFxRate       = useRate;
     $body.dataset.calcIsFirst      = isFirst ? '1' : '0';
+    $body.dataset.calcPreTrack       = preTrackKrw;      // v0.9-2
+    $body.dataset.calcPreTrackNative = preTrackNative;   // v0.9-2
   }
 }
 
@@ -13394,6 +13427,23 @@ async function saveSavingsEntry() {
     if (!existing) data.createdAt = serverTimestamp();
 
     await setDoc(pathMonthlyDoc(ym, accId), data, { merge: true });
+
+    // v0.9-2 — 첫 결산이면 "추적 전 실투입 원금" 참고값을 계좌 마스터에 저장
+    //   (monthly가 아닌 마스터에 두는 이유: 시작월 도큐먼트는 몇 달 지나면 메모리에 없어
+    //    자산결산 참고 표기를 못 그림. 마스터는 항상 구독 중)
+    if (isFirst) {
+      const preTrack       = Number($body.dataset.calcPreTrack) || 0;
+      const preTrackNative = Number($body.dataset.calcPreTrackNative) || 0;
+      const curPre = Number(acc.preTrackPrincipal) || 0;
+      if (preTrack !== curPre) {
+        try {
+          await updateDoc(pathAccount(accId), {
+            preTrackPrincipal:       preTrack > 0 ? preTrack : null,
+            preTrackPrincipalNative: preTrack > 0 ? preTrackNative : null,
+          });
+        } catch (e2) { console.error('[sv] preTrack 마스터 저장 실패', e2); }
+      }
+    }
 
     // v0.7-4 — 과거 월 수정이면 그 이후 월들 자동 재계산
     // 미래 월 도큐먼트가 있는지 검사 (이 계좌의 monthly 도큐먼트 중 ym > 저장ym)
@@ -13533,6 +13583,92 @@ async function recalculateChain(accountId, startFromYm) {
   if (writes > 0) await batch.commit();
   return writes;
 }
+
+// ──────────────────────────────────────────────────────
+// v0.9-2 — 시작월 기준점 정리 (1회성 마이그레이션)
+// ──────────────────────────────────────────────────────
+// 옛 방식: 첫 결산에 실투입 원금 입력 → monthlyReturn = 잔고 − 원금 (과거 누적 수익이
+//          첫 달 수익으로 계상되어 월수익 차트 스파이크 + 누적수익률이 높게 시작)
+// 새 방식: 시작월 원금 = 시작 잔고, 수익 0에서 출발 (기준점).
+//          옛 실투입 원금은 계좌 마스터 preTrackPrincipal(참고)로 보존.
+// 대상: isStart=true인데 principal !== balanceKrw (또는 monthlyReturn !== 0)인 도큐먼트.
+async function fixStartAnchors() {
+  if (!currentUid) return;
+  if (!confirm(
+    '자산결산 시작월을 기준점 방식으로 정리합니다.\n\n' +
+    '· 시작월 원금 = 시작 잔고, 월수익/누적 0에서 출발\n' +
+    '· 기존 실투입 원금은 "추적 전 실투입 원금(참고)"으로 보존\n' +
+    '· 이후 월들의 누적값은 자동 재계산\n\n' +
+    '진행 전 백업을 권장합니다. 계속할까요?'
+  )) return;
+
+  const $btn = document.getElementById('btn-fix-anchors');
+  $btn.disabled = true;
+  const orig = $btn.textContent;
+  $btn.textContent = '정리 중…';
+
+  try {
+    // 모든 monthly에서 isStart 도큐먼트 수집 (마스터 삭제된 계좌 포함 — 박제값으로 처리)
+    const snap = await getDocs(pathMonthly());
+    const starts = [];
+    snap.forEach(d => { const v = d.data(); if (v.isStart) starts.push({ id: d.id, ...v }); });
+
+    let fixedN = 0, chainN = 0;
+    for (const s of starts) {
+      const balKrw = Number(s.balanceKrw) || 0;
+      const prn    = Number(s.principal) || 0;
+      const mret   = Number(s.monthlyReturn) || 0;
+      const needsFix = (prn !== balKrw) || (mret !== 0);
+      if (!needsFix) continue;
+
+      const isFx = s.currency && s.currency !== 'KRW';
+      const balNative = Number(s.balance) || 0;
+
+      // 1) 시작월 도큐먼트를 기준점으로
+      await updateDoc(pathMonthlyDoc(s.ym, s.accountId), {
+        principal:       balKrw,
+        principalNative: isFx ? balNative : balKrw,
+        monthlyReturn:   0,
+        cumReturn:       0,
+        cumReturnRate:   0,
+        updatedAt:       serverTimestamp(),
+      });
+
+      // 2) 옛 실투입 원금을 마스터 참고 필드로 보존 (마스터가 살아있고, 아직 비어 있을 때만)
+      const acc = accounts.find(a => a.id === s.accountId);
+      if (acc && prn > 0 && prn !== balKrw && !(Number(acc.preTrackPrincipal) > 0)) {
+        const prnNative = s.principalNative != null
+          ? Number(s.principalNative)
+          : (isFx && s.fxRate ? Math.round(prn / Number(s.fxRate) * 100) / 100 : prn);
+        try {
+          await updateDoc(pathAccount(s.accountId), {
+            preTrackPrincipal:       prn,
+            preTrackPrincipalNative: prnNative,
+          });
+        } catch (e2) { console.error('[fixAnchors] preTrack 보존 실패', s.accountId, e2); }
+      }
+
+      // 3) 이후 월 체인 재계산 (전체 재구성)
+      chainN += await recalculateChain(s.accountId, null);
+      fixedN++;
+    }
+
+    if (fixedN === 0) {
+      showToast('정리할 시작월이 없습니다 — 이미 기준점 방식입니다');
+    } else {
+      showToast(`시작월 ${fixedN}개 정리 · 이후 ${chainN}개월 재계산 완료`);
+      invalidateReturnsCache();
+      if (isReturnsVisible()) renderReturns();
+    }
+  } catch (e) {
+    console.error('[fixAnchors] 실패', e);
+    showToast('정리 실패: ' + (e.message || e.code));
+  } finally {
+    $btn.disabled = false;
+    $btn.textContent = orig;
+  }
+}
+document.getElementById('btn-fix-anchors').addEventListener('click', fixStartAnchors);
 
 // 삭제
 async function deleteSavingsEntry() {
