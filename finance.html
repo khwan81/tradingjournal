@@ -7215,6 +7215,22 @@ document.getElementById('tx-tag').addEventListener('change', () => {
 // 날짜 변경 → 기간 자동 매칭 재평가 (select를 안 만졌을 때만)
 document.getElementById('tx-date').addEventListener('change', autoSuggestTxTag);
 
+// v0.9-1 — 거래 모달 카테고리 "＋ 새 카테고리…" 인라인 생성 (이벤트와 동일 패턴)
+//   먼저 등록된 리스너라 hint/draft 리스너보다 앞서 값을 원복함
+let lastTxCategoryValue = '';
+let catModalReturnToTx = false;   // 카테고리 모달이 거래 모달에서 열렸는지
+document.getElementById('tx-category').addEventListener('change', () => {
+  const $sel = document.getElementById('tx-category');
+  if ($sel.value === '__new_cat__') {
+    $sel.value = lastTxCategoryValue;   // 원복 — 저장되면 새 카테고리로 다시 선택됨
+    // 기본 분류 추정: 현재 선택된 카테고리의 그룹, 없으면 변동지출
+    const g = lastTxCategoryValue ? mapCategoryToFlow(lastTxCategoryValue) : 'variable';
+    openCategoryModal(g === 'revenue' ? 'revenue' : g === 'fixed' ? 'fixed' : 'variable', null, { returnToTx: true });
+    return;
+  }
+  lastTxCategoryValue = $sel.value;
+});
+
 // 이벤트 모달 버튼
 document.getElementById('btn-tag-save').addEventListener('click', saveTag);
 document.getElementById('btn-tag-delete').addEventListener('click', deleteTag);
@@ -8613,7 +8629,14 @@ function prevYm(ym) {
 }
 
 // 모달 열기/닫기
-function openOv(id) { document.getElementById(id).classList.add('show'); }
+// v0.9-1 — 모달 위 모달 스태킹: 나중에 연 오버레이가 항상 위에 오도록 z-index 증가
+//   (ov-category가 DOM상 ov-tx보다 앞이라, 거래 모달에서 카테고리 모달을 열면 뒤에 깔리는 문제 방지)
+let ovZCounter = 100;
+function openOv(id) {
+  const el = document.getElementById(id);
+  el.style.zIndex = String(++ovZCounter);
+  el.classList.add('show');
+}
 function closeOv(id) {
   document.getElementById(id).classList.remove('show');
   // v0.7-15 — 거래 모달이 닫히면 경조사 처리 마커도 해제 (저장 핸들러에서 이미 사용했으면 null)
@@ -8824,7 +8847,8 @@ document.getElementById('btn-add-account').addEventListener('click', () => openA
 // ──────────────────────────────────────────────────────
 let editingCategory = null; // { group, name }
 
-function openCategoryModal(group = 'revenue', name = null) {
+function openCategoryModal(group = 'revenue', name = null, opts = {}) {
+  catModalReturnToTx = !!opts.returnToTx;   // v0.9-1 — 거래 모달에서 열림
   editingCategory = name ? { group, name } : null;
   const isEdit = !!name;
   document.getElementById('cat-modal-title').textContent = isEdit ? '카테고리 편집' : '카테고리 추가';
@@ -8874,6 +8898,15 @@ document.getElementById('btn-cat-save').addEventListener('click', async () => {
     await setDoc(pathFinanceSettings(), { ...settings, categories: cats }, { merge: false });
     closeOv('ov-category');
     showToast(editingCategory ? '카테고리가 수정되었습니다' : '카테고리가 추가되었습니다');
+
+    // v0.9-1 — 거래 모달의 "＋ 새 카테고리…"에서 열었다면 select에 방금 만든 카테고리 반영
+    // (onSnapshot 도착 전이라 로컬 settings에 먼저 반영 — 스냅샷이 같은 값으로 확정함)
+    if (catModalReturnToTx) {
+      if (settings) settings.categories = cats;
+      rebuildTxCategoryOptions(name);
+      lastTxCategoryValue = name;
+    }
+    catModalReturnToTx = false;
   } catch (e) {
     console.error(e);
     showToast('저장 실패');
@@ -17224,10 +17257,12 @@ async function recordFavoriteOnSave(savedData) {
 const TX_DRAFT_KEY = 'txDraft';
 function saveTxDraft() {
   if (editingTxId) return;          // 편집 모드는 대상 아님
+  const rawCat = document.getElementById('tx-category').value;
+  const rawTag = document.getElementById('tx-tag').value;
   const draft = {
     date:        document.getElementById('tx-date').value,
     amount:      document.getElementById('tx-amount').value,
-    category:    document.getElementById('tx-category').value,
+    category:    rawCat === '__new_cat__' ? '' : rawCat,   // v0.9-1 — 인라인 생성 센티널 제외
     payment:     document.getElementById('tx-payment').value,
     accountId:   document.getElementById('tx-account').value,
     fxNative:    document.getElementById('tx-fx-native').value,
@@ -17235,7 +17270,7 @@ function saveTxDraft() {
     paid:        document.getElementById('tx-paid-toggle').classList.contains('on'),
     paidTouched: paidTouchedByUser,
     memo:        document.getElementById('tx-memo').value,
-    tagId:       document.getElementById('tx-tag').value || '',   // v0.9
+    tagId:       rawTag === '__new__' ? '' : rawTag,   // v0.9
     tagTouched:  tagTouchedByUser,
   };
   try { localStorage.setItem(TX_DRAFT_KEY, JSON.stringify(draft)); } catch (e) {}
@@ -17335,6 +17370,7 @@ function openTxModal(id = null) {
 
   // 카테고리 옵션 빌드
   rebuildTxCategoryOptions(tx?.category);
+  lastTxCategoryValue = document.getElementById('tx-category').value;   // v0.9-1 — 원복 기준점 동기화
   // 결제수단 옵션 빌드
   rebuildTxPaymentOptions(tx?.payment);
   // 계좌 옵션 빌드
@@ -17379,6 +17415,8 @@ function openTxModal(id = null) {
   if (!isEdit) restoreTxDraft();
   // v0.9 — 복원된 날짜 기준으로 이벤트 자동 매칭 재평가 (직접 고른 값은 유지)
   if (!isEdit) autoSuggestTxTag();
+  // v0.9-1 — 복원된 카테고리로 원복 기준점 재동기화
+  lastTxCategoryValue = document.getElementById('tx-category').value;
 
   openOv('ov-tx');
   setTimeout(() => document.getElementById('tx-amount').focus(), 50);
@@ -17404,6 +17442,7 @@ function rebuildTxCategoryOptions(selected) {
     });
     html += '</optgroup>';
   });
+  html += '<option value="__new_cat__">＋ 새 카테고리…</option>';   // v0.9-1 — 인라인 생성
   $sel.innerHTML = html;
   // 기본 선택: 첫 가능한 항목
   if (!selected) {
@@ -17588,7 +17627,8 @@ document.getElementById('btn-tx-save').addEventListener('click', async () => {
   const date = document.getElementById('tx-date').value;
   const amountRaw = document.getElementById('tx-amount').value.replace(/[^\d]/g, '');
   const amount = parseInt(amountRaw, 10);
-  const category = document.getElementById('tx-category').value;
+  const rawCatVal = document.getElementById('tx-category').value;
+  const category = rawCatVal === '__new_cat__' ? '' : rawCatVal;   // v0.9-1 — 센티널 방어
   const payment = document.getElementById('tx-payment').value;
   const accountId = document.getElementById('tx-account').value || null;
   const memo = document.getElementById('tx-memo').value.trim() || null;
