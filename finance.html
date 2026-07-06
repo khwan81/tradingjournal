@@ -3425,6 +3425,278 @@ html, body { overflow-x: hidden; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ── 같은 날 같은 사용처 그룹 행 ── */
+.tx-row.tx-group { cursor: pointer; }
+.tx-row.tx-group:hover { background: var(--bg3); }
+.tx-row.tx-group .tx-memo { flex: 0 1 auto; color: var(--text2); }
+.tx-row .tx-count {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text2);
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  padding: 1px 6px;
+  line-height: 1.4;
+}
+.tx-row .tx-group-catmore {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--text3);
+}
+.tx-row .tx-group-chevron {
+  display: inline-block;
+  color: var(--text3);
+  font-size: 10px;
+  transition: transform .15s;
+  transform: rotate(-90deg);   /* 접힘: ▸ 방향 */
+}
+.tx-row.tx-group.open .tx-group-chevron { transform: rotate(0deg); }
+/* 하위 행 — 기본 숨김, 그룹 펼침 시 표시 */
+.tx-row.tx-child { display: none; background: var(--bg); }
+.tx-row.tx-child.open { display: grid; }
+.tx-row.tx-child .col-cat { position: relative; padding-left: 14px; }
+.tx-row.tx-child .col-cat::before {
+  content: '└';
+  position: absolute;
+  left: 0;
+  color: var(--text3);
+  font-size: 11px;
+}
+
+/* ── 이벤트(태그) — v0.9 ── */
+.tag-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+/* 거래 행 이벤트 칩 */
+.tx-row .tx-tag-chip {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--text2);
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  padding: 1px 7px;
+  max-width: 110px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tx-row .tx-tag-chip .tag-dot { width: 6px; height: 6px; }
+
+/* 이벤트 목록 행 (분석 카드 + 현황 카드 공용) */
+.tag-list-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 4px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.tag-list-row:last-of-type { border-bottom: none; }
+.tag-list-row:hover { background: var(--bg3); }
+.tag-list-row.archived { opacity: .55; }
+.tag-list-main { flex: 1; min-width: 0; }
+.tag-list-name {
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tag-list-period {
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  margin-top: 2px;
+}
+.tag-list-amt {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+.tag-ongoing {
+  font-size: 9px;
+  color: var(--green);
+  background: var(--green-bg);
+  border-radius: 99px;
+  padding: 1px 6px;
+  flex-shrink: 0;
+}
+.tag-archived-mark {
+  font-size: 9px;
+  color: var(--text3);
+  background: var(--bg3);
+  border-radius: 99px;
+  padding: 1px 6px;
+  flex-shrink: 0;
+}
+.tag-archived-toggle {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 7px;
+  font-size: 11px;
+  color: var(--text3);
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.tag-archived-toggle:hover { color: var(--text2); background: var(--bg3); }
+
+/* 드릴다운 */
+.tag-drill-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  padding: 4px 0 10px;
+}
+.tag-drill-total {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+.tag-drill-cnt { font-size: 11px; color: var(--text3); }
+
+/* 예산 진행바 */
+.tag-budget-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 10px;
+}
+.tag-budget-row.slim { margin: 5px 0 0; }
+.tag-budget-bar {
+  flex: 1;
+  height: 5px;
+  background: var(--bg3);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.tag-budget-fill {
+  height: 100%;
+  background: var(--green);
+  border-radius: 99px;
+  transition: width .2s;
+}
+.tag-budget-fill.warn { background: var(--amber); }
+.tag-budget-fill.over { background: var(--red); }
+.tag-budget-label {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text3);
+}
+.tag-budget-label.warn { color: var(--amber); }
+.tag-budget-label.over { color: var(--red); }
+
+/* 카테고리 브레이크다운 */
+.tag-cat-list { margin: 4px 0 10px; }
+.tag-cat-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 90px;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 12px;
+}
+.tag-cat-name {
+  color: var(--text2);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tag-cat-bar {
+  height: 5px;
+  background: var(--bg3);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.tag-cat-fill { height: 100%; border-radius: 99px; opacity: .8; }
+.tag-cat-amt {
+  text-align: right;
+  font-family: var(--font-mono);
+  color: var(--text2);
+}
+.tag-refund-line {
+  font-size: 11px;
+  color: var(--green);
+  margin: -4px 0 10px;
+}
+
+/* 드릴다운 거래 목록 */
+.tag-tx-list {
+  border-top: 1px solid var(--border);
+  max-height: 320px;
+  overflow-y: auto;
+}
+.tag-tx-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.tag-tx-row:last-child { border-bottom: none; }
+.tag-tx-row:hover { background: var(--bg3); }
+.tag-tx-date {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  color: var(--text3);
+}
+.tag-tx-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--text2);
+}
+.tag-tx-amt {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  color: var(--red);
+}
+.tag-tx-amt.income { color: var(--green); }
+
+/* 이벤트 모달 — 색상 스와치 */
+.tag-color-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.tag-swatch {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+}
+.tag-swatch.on {
+  border-color: var(--text);
+  box-shadow: 0 0 0 2px var(--bg2);
+}
+.tag-archived-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text2);
+  cursor: pointer;
+  line-height: 1.5;
+}
+.tag-archived-label input { margin-top: 2px; }
 .tx-row .col-pay  { color: var(--text2); display: flex; align-items: center; gap: 6px; }
 .tx-row .col-acc  { color: var(--text2); font-size: 12px; }
 .tx-row .col-amt  {
@@ -4517,6 +4789,20 @@ html, body { overflow-x: hidden; }
           이번 달 비용 거래가 없습니다
         </div>
       </div>
+
+      <!-- 이벤트 지출 (v0.9) — 이벤트별 합계 목록 → 탭하면 드릴다운 (카테고리 브레이크다운 + 거래 목록).
+           금액은 분석 기간과 무관하게 항상 이벤트 전체 기간 기준. 이벤트가 없으면 카드 자체 숨김 -->
+      <div class="dash-card" id="dash-tags-card" style="display:none;">
+        <div class="dash-card-head">
+          <div class="dash-card-title">🧳 이벤트 지출</div>
+          <div class="dash-card-head-right">
+            <button type="button" class="btn-s" id="btn-dash-tags-back" style="display:none;">← 전체</button>
+            <div class="dash-card-sub" id="dash-tags-sub">—</div>
+            <button type="button" class="btn-s" id="btn-dash-tags-add">+ 이벤트</button>
+          </div>
+        </div>
+        <div id="dash-tags-body"></div>
+      </div>
     </div>
   </div>
   <!-- /tab-dashboard subtab -->
@@ -4600,6 +4886,15 @@ html, body { overflow-x: hidden; }
         <div id="dash-events-body">
           <div class="dash-placeholder" style="padding:24px 16px;">로딩 중…</div>
         </div>
+      </div>
+
+      <!-- 진행 중 이벤트 (v0.9) — 오늘이 기간 안인 이벤트의 누적 사용액. 없으면 숨김 -->
+      <div class="dash-card" id="dash-ongoing-tags-card" style="display:none;">
+        <div class="dash-card-head">
+          <div class="dash-card-title">🧳 진행 중 이벤트</div>
+          <div class="dash-card-sub">탭하면 상세</div>
+        </div>
+        <div id="dash-ongoing-tags-body"></div>
       </div>
     </div>
   </div>
@@ -5031,6 +5326,13 @@ html, body { overflow-x: hidden; }
             <div class="reset-option-body">
               <div class="reset-option-title">즐겨찾기 <span class="reset-count" id="rsc-favorites">…</span></div>
               <div class="reset-option-desc">자주 쓰는 거래 템플릿</div>
+            </div>
+          </label>
+          <label class="reset-option">
+            <input type="checkbox" class="reset-check" data-key="tags">
+            <div class="reset-option-body">
+              <div class="reset-option-title">이벤트 <span class="reset-count" id="rsc-tags">…</span></div>
+              <div class="reset-option-desc">일시적 이벤트(태그) 마스터 — 거래의 이벤트 표시가 사라집니다</div>
             </div>
           </label>
         </div>
@@ -5592,6 +5894,15 @@ html, body { overflow-x: hidden; }
           <label class="form-label">메모 <span style="color:var(--text3);">(선택)</span></label>
           <input class="input" id="tx-memo" placeholder="예: 점심 동료 분담" autocomplete="off">
         </div>
+
+        <!-- 이벤트 (v0.9) — 일시적 이벤트에 이 거래를 붙임. 날짜가 기간 안이면 자동 매칭 -->
+        <div class="form-group">
+          <label class="form-label">이벤트 <span style="color:var(--text3);">(선택)</span></label>
+          <select class="select" id="tx-tag">
+            <option value="">없음</option>
+          </select>
+          <div class="form-hint" id="tx-tag-hint" style="display:none;"></div>
+        </div>
       </form>
     </div>
     <div class="modal-foot">
@@ -5599,6 +5910,54 @@ html, body { overflow-x: hidden; }
       <button class="btn-s" id="btn-tx-star" title="이 거래를 즐겨찾기로 등록" aria-pressed="false" style="display:none; min-width:42px; padding:0;">☆</button>
       <button class="btn-s" data-close="ov-tx">취소</button>
       <button class="btn-p" id="btn-tx-save">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 이벤트 모달 (v0.9) — 일시적 이벤트(태그) 생성/편집 -->
+<div class="ov" id="ov-tag">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="tag-modal-title">새 이벤트</h3>
+      <button class="modal-close" data-close="ov-tag">×</button>
+    </div>
+    <div class="modal-body">
+      <form onsubmit="return false;">
+        <div class="form-group">
+          <label class="form-label">이름</label>
+          <input class="input" id="tag-name" placeholder="예: 오사카 여행" autocomplete="off">
+        </div>
+        <div class="form-row cols-2 form-group">
+          <div>
+            <label class="form-label">시작일</label>
+            <input class="input" type="date" id="tag-start">
+          </div>
+          <div>
+            <label class="form-label">종료일 <span style="color:var(--text3);">(선택)</span></label>
+            <input class="input" type="date" id="tag-end">
+          </div>
+        </div>
+        <div class="form-hint" style="margin-top:-6px; margin-bottom:12px;">종료일을 비우면 "진행중" — 기간 안의 새 거래에 자동으로 붙습니다</div>
+        <div class="form-group">
+          <label class="form-label">예산 <span style="color:var(--text3);">(선택)</span></label>
+          <input class="input" type="text" inputmode="numeric" id="tag-budget" placeholder="0" style="text-align:right; font-family: var(--font-mono);">
+        </div>
+        <div class="form-group">
+          <label class="form-label">색상</label>
+          <div class="tag-color-row" id="tag-color-row"></div>
+        </div>
+        <div class="form-group" id="tag-archived-row" style="display:none;">
+          <label class="tag-archived-label">
+            <input type="checkbox" id="tag-archived">
+            보관 — 목록·자동 매칭에서 숨김 (집계는 "보관된 이벤트 보기"로 확인 가능)
+          </label>
+        </div>
+      </form>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-danger grow" id="btn-tag-delete" style="display:none;">삭제</button>
+      <button class="btn-s" data-close="ov-tag">취소</button>
+      <button class="btn-p" id="btn-tag-save">저장</button>
     </div>
   </div>
 </div>
@@ -6038,6 +6397,7 @@ function activateSubtab($topPane, subtab) {
     renderDashTrkChart();       // v0.7-9 — 추적자산 추이 (기간형)
     renderDashCatExpenseChart(); // v0.7-22 — 카테고리별 지출 추이
     renderDashExpenseChart();
+    renderDashTagsCard();       // v0.9 — 이벤트 지출 (이벤트 전체 기간 기준)
   }
 
   // v0.7-7 — 수익률 서브탭 진입 시 렌더
@@ -6068,6 +6428,7 @@ function renderStatusAll() {
   renderDashAssetsChart();
   renderDashTrkCard();
   renderDashEventsCard();
+  renderStatusTagsCard();   // v0.9 — 진행 중 이벤트
 }
 
 // v0.7 — 대시보드 가시성 검사 헬퍼
@@ -6117,6 +6478,7 @@ let bgBudgets = [];             // 예산 탭에서 보고 있는 월의 예산 
 let bgTransactions = [];        // 예산 탭의 같은 월 거래 (실제 사용액 계산)
 let txTabBudgets = [];          // 거래내역 탭의 currentMonth 예산 (알림바용)
 let filterFlows = new Set(); // 활성 flow 필터: 'revenue'|'fixed'|'variable'
+let txExpandedGroups = new Set(); // 펼친 사용처 그룹 키 ("YYYY-MM-DD|메모|방향") — 재렌더에도 유지
 let filterPays  = new Set(); // 활성 결제상태 필터: 'unpaid'|'card'|'cash'
 let editingRecurringId = null; // 반복지출 모달 편집 중인 id
 let unsubAccounts = null;
@@ -6125,6 +6487,11 @@ let unsubSettings = null;
 let unsubTransactions = null;
 let unsubRecurring = null;
 let unsubEvents = null;          // v0.6+ 경조사
+let unsubTags = null;            // v0.9 이벤트(태그)
+let tagsMasters = [];            // v0.9 — 이벤트 마스터 목록
+let tagTxCache = new Map();      // v0.9 — 이벤트별 거래 캐시 (tagId → txs[]). 거래 변경 시 무효화
+let dashTagDrillId = null;       // v0.9 — 이벤트 카드 드릴다운 대상 (null=목록)
+let dashTagsShowArchived = false; // v0.9 — 보관된 이벤트 포함 여부
 let unsubFavorites = null;       // v0.7-28 즐겨찾기 거래
 let unsubPlTransactions = null;     // 손익 탭 거래 구독
 let unsubBgBudgets = null;          // 예산 탭 예산 구독 (v0.4)
@@ -6174,6 +6541,9 @@ const pathRecurring = () => collection(db, `users/${currentUid}/finance/config/r
 const pathRecurringItem = id => doc(db, `users/${currentUid}/finance/config/recurring/${id}`);
 const pathEvents = () => collection(db, `users/${currentUid}/finance/config/events`);   // v0.6
 const pathEvent = id => doc(db, `users/${currentUid}/finance/config/events/${id}`);     // v0.6
+// v0.9 — 이벤트(태그): 일시적 이벤트별 지출 집계. 경조사(events)와 별개 컬렉션.
+const pathTags = () => collection(db, `users/${currentUid}/finance/config/tags`);
+const pathTag  = id => doc(db, `users/${currentUid}/finance/config/tags/${id}`);
 const pathBudgets = () => collection(db, `users/${currentUid}/finance/config/budgets`);   // v0.4
 const pathBudget = id => doc(db, `users/${currentUid}/finance/config/budgets/${id}`);     // v0.4
 
@@ -6319,6 +6689,7 @@ async function loadAll() {
   // 반복지출 마스터 구독
   subscribeRecurring();
   subscribeEvents();   // v0.6 경조사
+  subscribeTags();     // v0.9 이벤트(태그)
   subscribeFavorites();   // v0.7-28 즐겨찾기 거래
 
   // 거래내역 탭 — 예산 알림바용 (v0.4 A7)
@@ -6396,6 +6767,469 @@ function subscribeEvents() {
     err => { console.error('events subscribe error', err); showToast('경조사 로드 실패'); }
   );
 }
+
+// ══════════════════════════════════════════════════════
+// 이벤트(태그) — v0.9
+//   일시적 이벤트(여행/이사 등)에 거래를 붙여 "얼마 썼나"를 집계.
+//   카테고리와 직교하는 축 — 손익/예산/KPI 계산에는 관여하지 않음.
+//   컬렉션: tags/{id} = { name, startDate, endDate(null=진행중), budget(null 가능),
+//                          color, archived, createdAt, updatedAt }
+//   거래에는 tagId 하나만 박음 (마스터 live 참조 — 삭제되면 칩만 사라짐)
+// ══════════════════════════════════════════════════════
+
+const TAG_COLORS = ['#5b8def', '#ef6c4d', '#34d399', '#a78bfa', '#fbbf24', '#f472b6', '#22d3ee', '#84cc16'];
+
+function subscribeTags() {
+  if (unsubTags) { unsubTags(); unsubTags = null; }
+  if (!currentUid) return;
+  unsubTags = onSnapshot(
+    pathTags(),
+    snap => {
+      tagsMasters = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // 정렬: 진행 중 먼저, 그 다음 시작일 내림차순 (최근 이벤트 위)
+      tagsMasters.sort((a, b) => {
+        const aOn = tagIsOngoing(a) ? 0 : 1;
+        const bOn = tagIsOngoing(b) ? 0 : 1;
+        if (aOn !== bOn) return aOn - bOn;
+        return String(b.startDate || '').localeCompare(String(a.startDate || ''));
+      });
+      renderTransactions();                       // 거래 행 이벤트 칩 갱신
+      if (isDashboardVisible()) renderDashTagsCard();
+      if (isStatusVisible())    renderStatusTagsCard();
+    },
+    err => { console.error('tags subscribe error', err); showToast('이벤트 로드 실패'); }
+  );
+}
+
+// ── 헬퍼 ──────────────────────────────────────────────
+function tagById(id) { return id ? tagsMasters.find(t => t.id === id) : null; }
+
+function tagSafeColor(tag) {
+  const c = tag?.color;
+  return (typeof c === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(c)) ? c : TAG_COLORS[0];
+}
+
+// 날짜가 이벤트 기간 안인가 (보관 이벤트 제외)
+function tagCoversDate(tag, dateStr) {
+  if (!tag || tag.archived) return false;
+  if (!dateStr || !tag.startDate) return false;
+  if (dateStr < tag.startDate) return false;
+  if (tag.endDate && dateStr > tag.endDate) return false;
+  return true;
+}
+
+// 오늘이 기간 안인가 (현황 카드용)
+function tagIsOngoing(tag) {
+  const d = new Date();
+  const today = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  return tagCoversDate(tag, today);
+}
+
+function tagPeriodLabel(tag) {
+  const f = s => s ? s.slice(2).replace(/-/g, '.') : '';
+  return `${f(tag.startDate)} ~ ${tag.endDate ? f(tag.endDate) : '진행중'}`;
+}
+
+// 이벤트별 거래 로드 (캐시) — 월 경계와 무관하게 그 이벤트 전체 기간
+async function loadTagTxs(tagId) {
+  if (tagTxCache.has(tagId)) return tagTxCache.get(tagId);
+  if (!currentUid) return [];
+  try {
+    const snap = await getDocs(query(pathTransactions(), where('tagId', '==', tagId)));
+    const txs = [];
+    snap.forEach(d => txs.push({ id: d.id, ...d.data() }));
+    txs.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    tagTxCache.set(tagId, txs);
+    return txs;
+  } catch (e) {
+    console.error('[tags] 거래 로드 실패', e);
+    return [];
+  }
+}
+
+// 이벤트 집계 — 지출 합 − 수입(환불) 합 = 실사용액
+function tagSummarize(txs) {
+  let spent = 0, refund = 0;
+  const byCat = new Map();
+  for (const t of txs) {
+    const amt = Number(t.amount) || 0;
+    if (txFlow(t) === 'revenue') { refund += amt; continue; }
+    spent += amt;
+    const cat = t.category || '미분류';
+    byCat.set(cat, (byCat.get(cat) || 0) + amt);
+  }
+  return { spent, refund, net: spent - refund, count: txs.length, byCat };
+}
+
+// ── 분석 → 대시보드: 이벤트 지출 카드 ──────────────────
+async function renderDashTagsCard() {
+  const $card = document.getElementById('dash-tags-card');
+  const $body = document.getElementById('dash-tags-body');
+  const $back = document.getElementById('btn-dash-tags-back');
+  const $sub  = document.getElementById('dash-tags-sub');
+  if (!$card || !$body) return;
+
+  if (!tagsMasters.length) { $card.style.display = 'none'; dashTagDrillId = null; return; }
+  $card.style.display = '';
+
+  // 드릴 대상이 삭제됐으면 목록으로 복귀
+  if (dashTagDrillId && !tagById(dashTagDrillId)) dashTagDrillId = null;
+
+  // ═══ 드릴다운 모드 ═══
+  if (dashTagDrillId) {
+    const tag = tagById(dashTagDrillId);
+    $back.style.display = '';
+    $sub.textContent = tagPeriodLabel(tag);
+    $body.innerHTML = '<div class="empty-state" style="padding:20px;">집계 중…</div>';
+    const txs = await loadTagTxs(tag.id);
+    if (dashTagDrillId !== tag.id) return;   // 로딩 중 상태 변경 안전망
+    const s = tagSummarize(txs);
+    const color = tagSafeColor(tag);
+
+    // 요약 줄
+    let html = `
+      <div class="tag-drill-summary">
+        <span class="tag-dot" style="background:${color}"></span>
+        <strong>${escapeHtml(tag.name)}</strong>
+        <span class="tag-drill-total">${fmtAmount(s.net)}원 <span class="tag-drill-cnt">· ${s.count}건</span></span>
+        <button type="button" class="btn-s" id="btn-tag-drill-edit">편집</button>
+      </div>`;
+
+    // 예산 진행바
+    const budget = Number(tag.budget) || 0;
+    if (budget > 0) {
+      const pct = Math.min(999, Math.round(s.net / budget * 100));
+      const tone = pct > 100 ? 'over' : pct >= 80 ? 'warn' : '';
+      html += `
+        <div class="tag-budget-row">
+          <div class="tag-budget-bar"><div class="tag-budget-fill ${tone}" style="width:${Math.min(100, pct)}%"></div></div>
+          <span class="tag-budget-label ${tone}">${pct}% / 예산 ${fmtAmount(budget)}</span>
+        </div>`;
+    }
+
+    // 카테고리 브레이크다운
+    if (s.byCat.size) {
+      const max = Math.max(...s.byCat.values());
+      const rows = [...s.byCat.entries()].sort((a, b) => b[1] - a[1]).map(([cat, amt]) => `
+        <div class="tag-cat-row">
+          <span class="tag-cat-name">${escapeHtml(cat)}</span>
+          <div class="tag-cat-bar"><div class="tag-cat-fill" style="width:${Math.round(amt / max * 100)}%; background:${color}"></div></div>
+          <span class="tag-cat-amt">${fmtAmount(amt)}</span>
+        </div>`).join('');
+      html += `<div class="tag-cat-list">${rows}</div>`;
+    }
+    if (s.refund > 0) {
+      html += `<div class="tag-refund-line">수입/환불 −${fmtAmount(s.refund)} 반영됨</div>`;
+    }
+
+    // 거래 목록
+    if (txs.length) {
+      html += `<div class="tag-tx-list">` + txs.map(t => {
+        const isIn = txFlow(t) === 'revenue';
+        const label = (t.memo && t.memo.trim()) ? t.memo.trim() : (t.category || '미분류');
+        return `
+          <div class="tag-tx-row" data-tag-tx="${escapeHtml(t.id)}">
+            <span class="tag-tx-date">${String(t.date || '').slice(5).replace('-', '/')}</span>
+            <span class="tag-tx-label">${escapeHtml(label)}</span>
+            <span class="tag-tx-amt ${isIn ? 'income' : ''}">${isIn ? '+' : '-'}${fmtAmount(t.amount)}</span>
+          </div>`;
+      }).join('') + `</div>`;
+    } else {
+      html += `<div class="empty-state" style="padding:16px;">이 이벤트에 붙은 거래가 없습니다 — 거래 입력 시 이벤트를 선택하세요</div>`;
+    }
+
+    $body.innerHTML = html;
+    document.getElementById('btn-tag-drill-edit')?.addEventListener('click', () => openTagModal(tag.id));
+    // 거래 행 탭 → 편집 모달 (현재 월 거래일 때만 — 다른 달 거래는 안내)
+    $body.querySelectorAll('[data-tag-tx]').forEach(row => {
+      row.addEventListener('click', () => {
+        const id = row.dataset.tagTx;
+        if (transactions.some(t => t.id === id)) openTxModal(id);
+        else showToast('다른 달 거래 — 그 달로 이동 후 편집하세요');
+      });
+    });
+    return;
+  }
+
+  // ═══ 목록 모드 ═══
+  $back.style.display = 'none';
+  $sub.textContent = '이벤트 전체 기간 기준';
+  const archivedN = tagsMasters.filter(t => t.archived).length;
+  const list = tagsMasters.filter(t => !t.archived || dashTagsShowArchived);
+
+  if (!list.length) {
+    $body.innerHTML = `<div class="empty-state" style="padding:20px;">이벤트가 없습니다 — 우상단 "+ 이벤트"로 시작하세요</div>`;
+    return;
+  }
+  $body.innerHTML = '<div class="empty-state" style="padding:20px;">집계 중…</div>';
+
+  const rows = await Promise.all(list.map(async tag => {
+    const s = tagSummarize(await loadTagTxs(tag.id));
+    const color = tagSafeColor(tag);
+    const budget = Number(tag.budget) || 0;
+    let budgetHtml = '';
+    if (budget > 0) {
+      const pct = Math.round(s.net / budget * 100);
+      const tone = pct > 100 ? 'over' : pct >= 80 ? 'warn' : '';
+      budgetHtml = `
+        <div class="tag-budget-row slim">
+          <div class="tag-budget-bar"><div class="tag-budget-fill ${tone}" style="width:${Math.min(100, pct)}%"></div></div>
+          <span class="tag-budget-label ${tone}">${pct}%</span>
+        </div>`;
+    }
+    const ongoing = tagIsOngoing(tag) ? '<span class="tag-ongoing">진행중</span>' : '';
+    const archived = tag.archived ? '<span class="tag-archived-mark">보관됨</span>' : '';
+    return `
+      <div class="tag-list-row${tag.archived ? ' archived' : ''}" data-tag-row="${escapeHtml(tag.id)}">
+        <span class="tag-dot" style="background:${color}"></span>
+        <div class="tag-list-main">
+          <div class="tag-list-name">${escapeHtml(tag.name)} ${ongoing}${archived}</div>
+          <div class="tag-list-period">${tagPeriodLabel(tag)} · ${s.count}건</div>
+          ${budgetHtml}
+        </div>
+        <span class="tag-list-amt">${fmtAmount(s.net)}</span>
+      </div>`;
+  }));
+  if (dashTagDrillId) return;   // 로딩 중 드릴 진입 시 덮어쓰기 방지
+
+  let html = rows.join('');
+  if (archivedN > 0) {
+    html += `<button type="button" class="tag-archived-toggle" id="btn-tags-archived-toggle">
+      ${dashTagsShowArchived ? '▾ 보관된 이벤트 숨기기' : `▸ 보관된 이벤트 ${archivedN}개 보기`}</button>`;
+  }
+  $body.innerHTML = html;
+
+  $body.querySelectorAll('[data-tag-row]').forEach(row => {
+    row.addEventListener('click', () => {
+      dashTagDrillId = row.dataset.tagRow;
+      renderDashTagsCard();
+    });
+  });
+  document.getElementById('btn-tags-archived-toggle')?.addEventListener('click', () => {
+    dashTagsShowArchived = !dashTagsShowArchived;
+    renderDashTagsCard();
+  });
+}
+
+// ── 현황 탭: 진행 중 이벤트 카드 ───────────────────────
+async function renderStatusTagsCard() {
+  const $card = document.getElementById('dash-ongoing-tags-card');
+  const $body = document.getElementById('dash-ongoing-tags-body');
+  if (!$card || !$body) return;
+
+  const ongoing = tagsMasters.filter(tagIsOngoing);
+  if (!ongoing.length) { $card.style.display = 'none'; return; }
+  $card.style.display = '';
+  $body.innerHTML = '<div class="empty-state" style="padding:16px;">집계 중…</div>';
+
+  const rows = await Promise.all(ongoing.map(async tag => {
+    const s = tagSummarize(await loadTagTxs(tag.id));
+    const budget = Number(tag.budget) || 0;
+    const budgetStr = budget > 0 ? ` / ${fmtAmount(budget)}` : '';
+    return `
+      <div class="tag-list-row" data-status-tag="${escapeHtml(tag.id)}">
+        <span class="tag-dot" style="background:${tagSafeColor(tag)}"></span>
+        <div class="tag-list-main">
+          <div class="tag-list-name">${escapeHtml(tag.name)}</div>
+          <div class="tag-list-period">${tagPeriodLabel(tag)}</div>
+        </div>
+        <span class="tag-list-amt">누적 ${fmtAmount(s.net)}${budgetStr}</span>
+      </div>`;
+  }));
+  $body.innerHTML = rows.join('');
+  // 탭하면 분석 대시보드의 그 이벤트 드릴다운으로 이동
+  $body.querySelectorAll('[data-status-tag]').forEach(row => {
+    row.addEventListener('click', () => {
+      dashTagDrillId = row.dataset.statusTag;
+      switchTab('analysis', 'dashboard');
+    });
+  });
+}
+
+// ── 이벤트 모달 (ov-tag) ───────────────────────────────
+let editingTagId = null;
+let selectedTagColor = TAG_COLORS[0];
+let tagModalReturnToTx = false;   // 거래 모달의 "+ 새 이벤트"에서 열렸는지
+
+function renderTagColorRow() {
+  const $row = document.getElementById('tag-color-row');
+  $row.innerHTML = TAG_COLORS.map(c =>
+    `<button type="button" class="tag-swatch${c === selectedTagColor ? ' on' : ''}" data-tag-color="${c}" style="background:${c}" aria-label="색상 ${c}"></button>`
+  ).join('');
+  $row.querySelectorAll('[data-tag-color]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedTagColor = btn.dataset.tagColor;
+      renderTagColorRow();
+    });
+  });
+}
+
+function openTagModal(id = null, opts = {}) {
+  editingTagId = id;
+  tagModalReturnToTx = !!opts.returnToTx;
+  const tag = id ? tagById(id) : null;
+
+  document.getElementById('tag-modal-title').textContent = tag ? '이벤트 편집' : '새 이벤트';
+  document.getElementById('tag-name').value   = tag?.name || '';
+  document.getElementById('tag-start').value  = tag?.startDate || (tagModalReturnToTx ? (document.getElementById('tx-date')?.value || '') : '');
+  document.getElementById('tag-end').value    = tag?.endDate || '';
+  document.getElementById('tag-budget').value = tag?.budget ? fmtAmount(tag.budget) : '';
+  selectedTagColor = tag ? tagSafeColor(tag) : TAG_COLORS[tagsMasters.length % TAG_COLORS.length];
+  renderTagColorRow();
+
+  const $archRow = document.getElementById('tag-archived-row');
+  $archRow.style.display = tag ? '' : 'none';
+  document.getElementById('tag-archived').checked = !!tag?.archived;
+  document.getElementById('btn-tag-delete').style.display = tag ? 'inline-flex' : 'none';
+
+  openOv('ov-tag');
+  setTimeout(() => document.getElementById('tag-name').focus(), 50);
+}
+
+async function saveTag() {
+  const name  = document.getElementById('tag-name').value.trim();
+  const start = document.getElementById('tag-start').value;
+  const end   = document.getElementById('tag-end').value || null;
+  const budgetRaw = document.getElementById('tag-budget').value.replace(/[^\d]/g, '');
+  const budget = budgetRaw ? parseInt(budgetRaw, 10) : null;
+
+  if (!name)  { showToast('이벤트 이름을 입력하세요'); return; }
+  if (!start) { showToast('시작일을 입력하세요'); return; }
+  if (end && end < start) { showToast('종료일이 시작일보다 빠릅니다'); return; }
+
+  const data = {
+    name,
+    startDate: start,
+    endDate: end,
+    budget,
+    color: selectedTagColor,
+    archived: editingTagId ? document.getElementById('tag-archived').checked : false,
+    updatedAt: serverTimestamp(),
+  };
+
+  try {
+    let savedId = editingTagId;
+    if (editingTagId) {
+      await updateDoc(pathTag(editingTagId), data);
+      showToast('이벤트가 수정되었습니다');
+    } else {
+      data.createdAt = serverTimestamp();
+      const ref = await addDoc(pathTags(), data);
+      savedId = ref.id;
+      showToast('이벤트가 추가되었습니다');
+    }
+    closeOv('ov-tag');
+
+    // 거래 모달의 "+ 새 이벤트"에서 열었다면 select에 방금 만든 이벤트 반영
+    if (tagModalReturnToTx && savedId) {
+      // onSnapshot 도착 전이라 로컬 목록에 임시 반영 후 select 채움
+      if (!tagById(savedId)) tagsMasters.unshift({ id: savedId, ...data });
+      fillTxTagSelect(savedId);
+      tagTouchedByUser = true;
+    }
+    tagModalReturnToTx = false;
+  } catch (e) {
+    console.error('[tag] 저장 실패', e);
+    showToast('저장 실패: ' + (e.message || e.code));
+  }
+}
+
+async function deleteTag() {
+  if (!editingTagId) return;
+  const tag = tagById(editingTagId);
+  if (!confirm(`"${tag?.name || '이벤트'}"를 삭제하시겠습니까?\n\n붙어 있던 거래는 그대로 남고, 이벤트 표시만 사라집니다.\n(집계를 나중에 다시 보려면 삭제 대신 "보관"을 쓰세요)`)) return;
+  try {
+    await deleteDoc(pathTag(editingTagId));
+    tagTxCache.delete(editingTagId);
+    if (dashTagDrillId === editingTagId) dashTagDrillId = null;
+    closeOv('ov-tag');
+    showToast('이벤트가 삭제되었습니다');
+  } catch (e) {
+    console.error('[tag] 삭제 실패', e);
+    showToast('삭제 실패: ' + (e.message || e.code));
+  }
+}
+
+// ── 거래 모달: 이벤트 select ───────────────────────────
+let tagTouchedByUser = false;   // 사용자가 이벤트 select를 직접 만졌는지 (자동 매칭 중지)
+
+function fillTxTagSelect(selectedId = '') {
+  const $sel = document.getElementById('tx-tag');
+  if (!$sel) return;
+  const active = tagsMasters.filter(t => !t.archived);
+  let html = '<option value="">없음</option>';
+  for (const t of active) {
+    html += `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)}</option>`;
+  }
+  // 편집 중 거래가 보관된 이벤트를 달고 있으면 그 항목도 노출 (값 보존)
+  if (selectedId && !active.some(t => t.id === selectedId)) {
+    const t = tagById(selectedId);
+    if (t) html += `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)} (보관됨)</option>`;
+  }
+  html += '<option value="__new__">＋ 새 이벤트…</option>';
+  $sel.innerHTML = html;
+  $sel.value = (selectedId && [...$sel.options].some(o => o.value === selectedId)) ? selectedId : '';
+  updateTxTagHint();
+}
+
+// 날짜 기반 자동 매칭 — 사용자가 select를 직접 만지기 전까지만 (새 거래 모드 한정)
+function autoSuggestTxTag() {
+  if (tagTouchedByUser || editingTxId) return;
+  const $sel = document.getElementById('tx-tag');
+  if (!$sel) return;
+  const date = document.getElementById('tx-date').value;
+  const match = tagsMasters.find(t => tagCoversDate(t, date));
+  $sel.value = match ? match.id : '';
+  updateTxTagHint(match ? 'auto' : null);
+}
+
+function updateTxTagHint(mode = null) {
+  const $hint = document.getElementById('tx-tag-hint');
+  if (!$hint) return;
+  const $sel = document.getElementById('tx-tag');
+  const tag = tagById($sel?.value);
+  if (mode === 'auto' && tag) {
+    $hint.textContent = `기간 자동 매칭 — ${tag.name} (${tagPeriodLabel(tag)})`;
+    $hint.style.display = '';
+  } else if (tag) {
+    $hint.textContent = tagPeriodLabel(tag);
+    $hint.style.display = '';
+  } else {
+    $hint.textContent = '';
+    $hint.style.display = 'none';
+  }
+}
+
+// ── 이벤트 관련 바인딩 (v0.9) ──────────────────────────
+// 거래 모달: 이벤트 select 직접 조작 → 자동 매칭 중지. "+ 새 이벤트…"는 이벤트 모달로
+document.getElementById('tx-tag').addEventListener('change', () => {
+  const $sel = document.getElementById('tx-tag');
+  if ($sel.value === '__new__') {
+    $sel.value = '';                       // 임시값 원복 (저장 후 새 이벤트로 다시 채움)
+    openTagModal(null, { returnToTx: true });
+    return;
+  }
+  tagTouchedByUser = true;
+  updateTxTagHint();
+});
+// 날짜 변경 → 기간 자동 매칭 재평가 (select를 안 만졌을 때만)
+document.getElementById('tx-date').addEventListener('change', autoSuggestTxTag);
+
+// 이벤트 모달 버튼
+document.getElementById('btn-tag-save').addEventListener('click', saveTag);
+document.getElementById('btn-tag-delete').addEventListener('click', deleteTag);
+// 예산 입력 — 콤마 포매팅
+document.getElementById('tag-budget').addEventListener('input', e => {
+  const raw = e.target.value.replace(/[^\d]/g, '');
+  e.target.value = raw ? Number(raw).toLocaleString('en-US') : '';
+});
+
+// 분석 대시보드 카드 버튼
+document.getElementById('btn-dash-tags-add').addEventListener('click', () => openTagModal(null));
+document.getElementById('btn-dash-tags-back').addEventListener('click', () => {
+  dashTagDrillId = null;
+  renderDashTagsCard();
+});
 
 // 즐겨찾기 거래 구독 (v0.7-28)
 // 모델: users/{uid}/finance/config/favorites/{favId}
@@ -7031,6 +7865,7 @@ function unsubscribeAll() {
   if (unsubBgTransactions) { unsubBgTransactions(); unsubBgTransactions = null; } // v0.4
   if (unsubTxTabBudgets) { unsubTxTabBudgets(); unsubTxTabBudgets = null; }       // v0.4 A7
   if (unsubEvents) { unsubEvents(); unsubEvents = null; }                         // v0.6
+  if (unsubTags) { unsubTags(); unsubTags = null; }                               // v0.9
   if (unsubFavorites) { unsubFavorites(); unsubFavorites = null; }                // v0.7-28
   if (unsubMonthly) { unsubMonthly(); unsubMonthly = null; }                      // v0.7-3b
   if (unsubMonthlyPrev) { unsubMonthlyPrev(); unsubMonthlyPrev = null; }          // v0.7-3b
@@ -7043,6 +7878,9 @@ function unsubscribeAll() {
   transactions = [];
   recurringMasters = [];
   eventsMasters = [];    // v0.6
+  tagsMasters = [];      // v0.9
+  tagTxCache.clear();    // v0.9
+  dashTagDrillId = null; // v0.9
   favorites = [];        // v0.7-28
   allUnpaidTxs = [];
   plTransactions = [];   // A2
@@ -8869,6 +9707,7 @@ async function downloadBackup() {
       eventsSnap,
       budgetsSnap,
       favoritesSnap,
+      tagsSnap,
     ] = await Promise.all([
       getDoc(pathAccountsSettings()),
       getDocs(pathAccountsItems()),
@@ -8882,6 +9721,7 @@ async function downloadBackup() {
       getDocs(pathEvents()),
       getDocs(pathBudgets()),
       getDocs(pathFavorites()),
+      getDocs(pathTags()),
     ]);
 
     const sharedAccountsItems = [];
@@ -8917,6 +9757,10 @@ async function downloadBackup() {
     const favorites = [];
     favoritesSnap.forEach(d => favorites.push({ id: d.id, ...d.data() }));
 
+    // v0.9 — 이벤트(태그)
+    const tags = [];
+    tagsSnap.forEach(d => tags.push({ id: d.id, ...d.data() }));
+
     const payload = {
       app: 'finance',
       schemaVersion: 3,
@@ -8938,6 +9782,8 @@ async function downloadBackup() {
         budgets,
         // v0.7-28 추가 (옵셔널 — 옛 백업엔 없음)
         favorites,
+        // v0.9 추가 (옵셔널) — 이벤트(태그)
+        tags,
       },
     };
 
@@ -9086,7 +9932,7 @@ function validateBackupPayload(p) {
 
   // v3 추가 필드: 있으면 배열, 없거나 누락은 빈 배열로 간주 (호환)
   if (p.schemaVersion === 3) {
-    for (const k of ['monthly', 'monthlyLiab', 'dividends', 'events', 'budgets', 'favorites']) {
+    for (const k of ['monthly', 'monthlyLiab', 'dividends', 'events', 'budgets', 'favorites', 'tags']) {
       if (k in d && !Array.isArray(d[k])) return `${k}는 배열이어야 합니다`;
     }
   }
@@ -9294,7 +10140,7 @@ async function openResetModal() {
   document.querySelectorAll('.reset-check').forEach(cb => { cb.checked = false; });
 
   // 카운트 placeholder
-  ['transactions','monthly','monthlyLiab','dividends','budgets','recurring','events','accounts','liabilities']
+  ['transactions','monthly','monthlyLiab','dividends','budgets','recurring','events','accounts','liabilities','favorites','tags']
     .forEach(k => {
       const el = document.getElementById('rsc-' + k);
       if (el) { el.textContent = '…'; el.classList.remove('has-data'); }
@@ -9306,7 +10152,7 @@ async function openResetModal() {
   try {
     const [
       txSnap, monthlySnap, snapSnap, monthlyLiabSnap, divSnap,
-      budgetsSnap, recurringSnap, eventsSnap, accountsSnap, favoritesSnap
+      budgetsSnap, recurringSnap, eventsSnap, accountsSnap, favoritesSnap, tagsSnap
     ] = await Promise.all([
       getDocs(pathTransactions()),
       getDocs(pathMonthly()),
@@ -9318,6 +10164,7 @@ async function openResetModal() {
       getDocs(pathEvents()),
       getDocs(pathAccountsItems()),
       getDocs(pathFavorites()),
+      getDocs(pathTags()),
     ]);
 
     // 부채 마스터/휴지통 카운트는 현재 메모리상의 settings에서 — 별도 fetch 불필요
@@ -9335,6 +10182,7 @@ async function openResetModal() {
       events:       eventsSnap.size,
       accounts:     accountsSnap.size,
       favorites:    favoritesSnap.size,
+      tags:         tagsSnap.size,      // v0.9
       liabilities:  liabTotal,
       _snapshots:   snapSnap.size,  // 내부용 — monthly에 합쳐서 표시
     };
@@ -9425,6 +10273,7 @@ async function executeReset() {
       { key: 'recurring',    label: '반복지출',   ref: pathRecurring() },
       { key: 'events',       label: '경조사',     ref: pathEvents() },
       { key: 'favorites',    label: '즐겨찾기',   ref: pathFavorites() },
+      { key: 'tags',         label: '이벤트',     ref: pathTags() },
       { key: 'accounts',     label: '계좌 마스터', ref: pathAccountsItems() },
     ];
 
@@ -9553,8 +10402,9 @@ async function executeRestore() {
     const wEvents   = await writeAllToCollection(pathEvents(),      d.events      || [], 'id');
     const wBudgets  = await writeAllToCollection(pathBudgets(),     d.budgets     || [], 'ym');
     const wFav      = await writeAllToCollection(pathFavorites(),   d.favorites   || [], 'id');   // v0.7-28
+    const wTags     = await writeAllToCollection(pathTags(),        d.tags        || [], 'id');   // v0.9
     setRestoreStep(2, 'done',
-      `✓ 데이터 복원 (거래 ${wTx} · 결산 ${wMonthly} · 부채 ${wLiab} · 배당 ${wDiv} · 경조사 ${wEvents} · 예산 ${wBudgets} · 반복 ${wRec} · 즐겨찾기 ${wFav})`
+      `✓ 데이터 복원 (거래 ${wTx} · 결산 ${wMonthly} · 부채 ${wLiab} · 배당 ${wDiv} · 경조사 ${wEvents} · 예산 ${wBudgets} · 반복 ${wRec} · 즐겨찾기 ${wFav} · 이벤트 ${wTags})`
     );
 
     // 3. 마무리 — 페이지 새로고침으로 모든 구독 상태 깨끗이 정리
@@ -10949,6 +11799,10 @@ function invalidateAnalysisYms() {
   invalidateReturnsCache();
   // v0.7-12 2단계 — 거래 캐시도 같이 무효화
   analysisTxCache = null;
+  // v0.9 — 이벤트별 거래 캐시 무효화 + 보이는 카드 즉시 갱신
+  tagTxCache.clear();
+  if (isDashboardVisible()) renderDashTagsCard();
+  if (isStatusVisible())    renderStatusTagsCard();
 }
 
 // ─── 분석 탭 거래 캐시 (v0.7-12 2단계) ─────────
@@ -15910,51 +16764,152 @@ function renderTransactions() {
   const dates = Object.keys(groups).sort().reverse();
   const dayKor = ['일','월','화','수','목','금','토'];
 
+  // ── 한 거래 행 HTML (child=true면 그룹 하위 행) ──
+  const txRowHtml = (t, mm, dd, opts = {}) => {
+    const flow = txFlow(t);
+    const isIncome = flow === 'revenue';
+    const sign = isIncome ? '+' : '-';
+    const amtCls = isIncome ? 'income' : 'expense';
+    const unpaid = !t.paid && t.paymentType === 'card';
+    const dot = unpaid ? '<span class="pay-dot" title="미결제"></span>' : '';
+    const acc = t.accountName ? escapeHtml(t.accountName) : '—';
+    const mobileDate = `${mm}/${dd}`;
+    // 외화 거래면 원본 표시 + KRW 환산 (v0.2-4)
+    const isFx = t.currency && t.currency !== 'KRW' && t.amountNative != null;
+    const nativeLabel = isFx ? fmtFxNative(t.amountNative, t.currency) : '';
+    const amtCell = isFx
+      ? `${sign}${fmtAmount(t.amount)}<div class="fx-native">${nativeLabel}</div>`
+      : `${sign}${fmtAmount(t.amount)}`;
+    // v0.7-15 — 경조사 처리 거래 표시 (실수 삭제 방지)
+    const processEv = t.eventProcessId
+      ? eventsMasters.find(e => e.id === t.eventProcessId)
+      : null;
+    const processBadge = processEv
+      ? `<span class="cat-chip process-mark" title="${escapeHtml(processEv.title)} 처리 거래">🎀 처리</span>`
+      : '';
+    const memoSpan = t.memo
+      ? `<span class="tx-memo" title="${escapeHtml(t.memo)}">${escapeHtml(t.memo)}</span>`
+      : '';
+    // v0.9 — 이벤트 칩 (마스터가 살아있을 때만)
+    const rowTag = tagById(t.tagId);
+    const tagChip = rowTag
+      ? `<span class="tx-tag-chip" title="이벤트: ${escapeHtml(rowTag.name)}"><span class="tag-dot" style="background:${tagSafeColor(rowTag)}"></span>${escapeHtml(rowTag.name)}</span>`
+      : '';
+
+    const isChild = !!opts.child;
+    const childCls  = isChild ? ' tx-child' : '';
+    const openCls   = (isChild && opts.open) ? ' open' : '';
+    const parentAttr = isChild ? ` data-parent="${escapeHtml(opts.parentKey)}"` : '';
+
+    return `
+      <div class="tx-row${childCls}${openCls}" data-tx-id="${escapeHtml(t.id)}"${parentAttr}>
+        <div class="col-date">${mm}/${dd}</div>
+        <div class="col-cat">
+          <span class="cat-chip ${flow}">${escapeHtml(t.category || '미분류')}</span>
+          ${processBadge}
+          ${memoSpan}
+          ${tagChip}
+        </div>
+        <div class="col-pay">
+          <span class="mobile-meta">${mobileDate}</span>${escapeHtml(t.payment || '')}${dot}
+        </div>
+        <div class="col-acc">${acc}</div>
+        <div class="col-amt ${amtCls}">${amtCell}</div>
+        <div class="col-actions">
+          <button type="button" data-edit-tx="${escapeHtml(t.id)}" aria-label="편집">⋯</button>
+        </div>
+      </div>
+    `;
+  };
+
+  // ── 그룹 헤더 행 HTML (같은 날 같은 사용처 N건 합산) ──
+  const txGroupRowHtml = (txs, gkey, mm, dd, open) => {
+    const dir = txFlow(txs[0]) === 'revenue' ? 'in' : 'out';
+    const isIncome = dir === 'in';
+    const sign = isIncome ? '+' : '-';
+    const amtCls = isIncome ? 'income' : 'expense';
+    const sum = txs.reduce((s, t) => s + (Number(t.amount) || 0), 0);
+    const anyUnpaid = txs.some(t => !t.paid && t.paymentType === 'card');
+    const dot = anyUnpaid ? '<span class="pay-dot" title="미결제 포함"></span>' : '';
+    const memo = (txs[0].memo || '').trim();
+    const mobileDate = `${mm}/${dd}`;
+
+    // 카테고리 — 전부 같으면 그 칩, 섞였으면 첫 칩 + "외 N"
+    const cats = [...new Set(txs.map(t => t.category || '미분류'))];
+    const flow = txFlow(txs[0]);
+    const catExtra = cats.length > 1
+      ? `<span class="tx-group-catmore">외 ${cats.length - 1}</span>` : '';
+
+    // 결제수단/계좌 — 전부 같으면 표시, 섞였으면 N종
+    const pays = [...new Set(txs.map(t => t.payment || ''))].filter(Boolean);
+    const payLabel = pays.length === 1 ? escapeHtml(pays[0]) : `${pays.length}종`;
+    const accs = [...new Set(txs.map(t => t.accountName || ''))].filter(Boolean);
+    const accLabel = accs.length === 0 ? '—' : accs.length === 1 ? escapeHtml(accs[0]) : `${accs.length}개`;
+
+    // v0.9 — 전 건이 같은 이벤트일 때만 그룹 행에 이벤트 칩
+    const tagIds = [...new Set(txs.map(t => t.tagId || null))];
+    const groupTag = (tagIds.length === 1 && tagIds[0]) ? tagById(tagIds[0]) : null;
+    const groupTagChip = groupTag
+      ? `<span class="tx-tag-chip" title="이벤트: ${escapeHtml(groupTag.name)}"><span class="tag-dot" style="background:${tagSafeColor(groupTag)}"></span>${escapeHtml(groupTag.name)}</span>`
+      : '';
+
+    return `
+      <div class="tx-row tx-group${open ? ' open' : ''}" data-group-key="${escapeHtml(gkey)}"
+           role="button" aria-expanded="${open}" title="${txs.length}건 — 눌러서 개별 내역 보기">
+        <div class="col-date">${mm}/${dd}</div>
+        <div class="col-cat">
+          <span class="cat-chip ${flow}">${escapeHtml(cats[0])}</span>
+          ${catExtra}
+          <span class="tx-memo" title="${escapeHtml(memo)}">${escapeHtml(memo)}</span>
+          <span class="tx-count">×${txs.length}</span>
+          ${groupTagChip}
+        </div>
+        <div class="col-pay">
+          <span class="mobile-meta">${mobileDate}</span>${payLabel}${dot}
+        </div>
+        <div class="col-acc">${accLabel}</div>
+        <div class="col-amt ${amtCls}">${sign}${fmtAmount(sum)}</div>
+        <div class="col-actions">
+          <span class="tx-group-chevron" aria-hidden="true">▾</span>
+        </div>
+      </div>
+    `;
+  };
+
   const rowsHtml = dates.map(d => {
     const [, mm, dd] = d.split('-');
     const dt = new Date(d);
     const dayLabel = `${parseInt(mm,10)}월 ${parseInt(dd,10)}일 (${dayKor[dt.getDay()]})`;
-    const rows = groups[d].map(t => {
-      const flow = txFlow(t);
-      const isIncome = flow === 'revenue';
-      const sign = isIncome ? '+' : '-';
-      const amtCls = isIncome ? 'income' : 'expense';
-      const unpaid = !t.paid && t.paymentType === 'card';
-      const dot = unpaid ? '<span class="pay-dot" title="미결제"></span>' : '';
-      const acc = t.accountName ? escapeHtml(t.accountName) : '—';
-      const mobileDate = `${mm}/${dd}`;
-      // 외화 거래면 원본 표시 + KRW 환산 (v0.2-4)
-      const isFx = t.currency && t.currency !== 'KRW' && t.amountNative != null;
-      const nativeLabel = isFx ? fmtFxNative(t.amountNative, t.currency) : '';
-      const amtCell = isFx
-        ? `${sign}${fmtAmount(t.amount)}<div class="fx-native">${nativeLabel}</div>`
-        : `${sign}${fmtAmount(t.amount)}`;
-      // v0.7-15 — 경조사 처리 거래 표시 (실수 삭제 방지)
-      const processEv = t.eventProcessId
-        ? eventsMasters.find(e => e.id === t.eventProcessId)
-        : null;
-      const processBadge = processEv
-        ? `<span class="cat-chip process-mark" title="${escapeHtml(processEv.title)} 처리 거래">🎀 처리</span>`
-        : '';
 
-      return `
-        <div class="tx-row" data-tx-id="${escapeHtml(t.id)}">
-          <div class="col-date">${mm}/${dd}</div>
-          <div class="col-cat">
-            <span class="cat-chip ${flow}">${escapeHtml(t.category || '미분류')}</span>
-            ${processBadge}
-            ${t.memo ? `<span class="tx-memo" title="${escapeHtml(t.memo)}">${escapeHtml(t.memo)}</span>` : ''}
-          </div>
-          <div class="col-pay">
-            <span class="mobile-meta">${mobileDate}</span>${escapeHtml(t.payment || '')}${dot}
-          </div>
-          <div class="col-acc">${acc}</div>
-          <div class="col-amt ${amtCls}">${amtCell}</div>
-          <div class="col-actions">
-            <button type="button" data-edit-tx="${escapeHtml(t.id)}" aria-label="편집">⋯</button>
-          </div>
-        </div>
-      `;
+    // 같은 날 같은 사용처(메모) 버킷 — 메모 있는 거래끼리, 수입/지출 방향이 같을 때만
+    const buckets = new Map();   // "메모|방향" → txs[]
+    for (const t of groups[d]) {
+      const memoKey = (t.memo || '').trim();
+      if (!memoKey) continue;
+      const dir = txFlow(t) === 'revenue' ? 'in' : 'out';
+      const key = `${memoKey}|${dir}`;
+      if (!buckets.has(key)) buckets.set(key, []);
+      buckets.get(key).push(t);
+    }
+
+    // 원래 순서를 유지하며 렌더 — 2건 이상 버킷은 그룹 행 + 하위 행, 나머지는 단독 행
+    const renderedKeys = new Set();
+    const rows = groups[d].map(t => {
+      const memoKey = (t.memo || '').trim();
+      const dir = txFlow(t) === 'revenue' ? 'in' : 'out';
+      const key = memoKey ? `${memoKey}|${dir}` : null;
+      const bucket = key ? buckets.get(key) : null;
+
+      if (!bucket || bucket.length < 2) {
+        return txRowHtml(t, mm, dd);              // 단독 행
+      }
+      if (renderedKeys.has(key)) return '';       // 이미 그룹으로 출력됨
+      renderedKeys.add(key);
+
+      const gkey = `${d}|${key}`;
+      const open = txExpandedGroups.has(gkey);
+      const children = bucket.map(c => txRowHtml(c, mm, dd, { child: true, open, parentKey: gkey })).join('');
+      return txGroupRowHtml(bucket, gkey, mm, dd, open) + children;
     }).join('');
     return `<div class="tx-day-head">${dayLabel}</div>${rows}`;
   }).join('');
@@ -15970,6 +16925,19 @@ function renderTransactions() {
   // 행 자체도 클릭 가능
   $t.querySelectorAll('.tx-row[data-tx-id]').forEach(row => {
     row.addEventListener('click', () => openTxModal(row.dataset.txId));
+  });
+  // 그룹 행 클릭 — 하위 행 접기/펼치기 (재렌더 없이 DOM 토글, 상태는 Set에 보존)
+  $t.querySelectorAll('.tx-row.tx-group').forEach(row => {
+    row.addEventListener('click', () => {
+      const k = row.dataset.groupKey;
+      const willOpen = !txExpandedGroups.has(k);
+      if (willOpen) txExpandedGroups.add(k); else txExpandedGroups.delete(k);
+      row.classList.toggle('open', willOpen);
+      row.setAttribute('aria-expanded', String(willOpen));
+      $t.querySelectorAll('.tx-row.tx-child').forEach(c => {
+        if (c.dataset.parent === k) c.classList.toggle('open', willOpen);
+      });
+    });
   });
 }
 
@@ -16267,6 +17235,8 @@ function saveTxDraft() {
     paid:        document.getElementById('tx-paid-toggle').classList.contains('on'),
     paidTouched: paidTouchedByUser,
     memo:        document.getElementById('tx-memo').value,
+    tagId:       document.getElementById('tx-tag').value || '',   // v0.9
+    tagTouched:  tagTouchedByUser,
   };
   try { localStorage.setItem(TX_DRAFT_KEY, JSON.stringify(draft)); } catch (e) {}
 }
@@ -16320,6 +17290,16 @@ function restoreTxDraft() {
 
   // 메모
   if (d.memo !== undefined) document.getElementById('tx-memo').value = d.memo;
+
+  // 이벤트 (v0.9) — 사용자가 직접 골랐던 값 복원 (자동 매칭 값은 openTxModal이 다시 계산)
+  if (d.tagTouched && d.tagId !== undefined) {
+    const $tag = document.getElementById('tx-tag');
+    if (d.tagId === '' || [...$tag.options].some(o => o.value === d.tagId)) {
+      $tag.value = d.tagId;
+      tagTouchedByUser = true;
+      updateTxTagHint();
+    }
+  }
 }
 
 
@@ -16383,6 +17363,11 @@ function openTxModal(id = null) {
   // 메모
   document.getElementById('tx-memo').value = tx?.memo || '';
 
+  // v0.9 — 이벤트 select: 편집이면 그 거래의 tagId, 새 거래면 날짜 기간 자동 매칭
+  tagTouchedByUser = isEdit;   // 편집 모드는 자동 매칭이 값을 덮지 않도록 잠금
+  fillTxTagSelect(tx?.tagId || '');
+  if (!isEdit) autoSuggestTxTag();
+
   // v0.7-28 — 즐겨찾기 상태 초기화 + 칩 줄 렌더
   //   ☆ 버튼은 새 거래 모드에서만 노출 (편집 모드는 숨김)
   setStar(false);
@@ -16392,6 +17377,8 @@ function openTxModal(id = null) {
 
   // v0.7-38 — 새 거래 모드면 입력 중 닫혔던 임시저장 복원 (기본값 위에 덮어씀)
   if (!isEdit) restoreTxDraft();
+  // v0.9 — 복원된 날짜 기준으로 이벤트 자동 매칭 재평가 (직접 고른 값은 유지)
+  if (!isEdit) autoSuggestTxTag();
 
   openOv('ov-tx');
   setTimeout(() => document.getElementById('tx-amount').focus(), 50);
@@ -16540,7 +17527,7 @@ document.getElementById('tx-fx-rate').addEventListener('blur', e => {
 
 // v0.7-38 — 입력할 때마다 임시저장 (새 거래 모드에서만; saveTxDraft 내부에서 편집 모드 가드)
 ['input', 'change'].forEach(evt => {
-  ['tx-date', 'tx-amount', 'tx-category', 'tx-payment', 'tx-account', 'tx-fx-native', 'tx-fx-rate', 'tx-memo']
+  ['tx-date', 'tx-amount', 'tx-category', 'tx-payment', 'tx-account', 'tx-fx-native', 'tx-fx-rate', 'tx-memo', 'tx-tag']
     .forEach(id => document.getElementById(id).addEventListener(evt, saveTxDraft));
 });
 // 결제완료 토글도 백업 (기존 토글 핸들러 뒤에 등록 → 변경된 상태 캡처)
@@ -16605,6 +17592,8 @@ document.getElementById('btn-tx-save').addEventListener('click', async () => {
   const payment = document.getElementById('tx-payment').value;
   const accountId = document.getElementById('tx-account').value || null;
   const memo = document.getElementById('tx-memo').value.trim() || null;
+  const tagSelVal = document.getElementById('tx-tag').value;
+  const tagId = (tagSelVal && tagSelVal !== '__new__') ? tagSelVal : null;   // v0.9 이벤트
   const paid = document.getElementById('tx-paid-toggle').classList.contains('on');
 
   // 외화 모드 판정 — 선택된 계좌의 currency 기준
@@ -16646,6 +17635,7 @@ document.getElementById('btn-tx-save').addEventListener('click', async () => {
     paid,
     paidAt: paid ? serverTimestamp() : null,
     memo,
+    tagId,   // v0.9 — 이벤트(태그)
     updatedAt: serverTimestamp(),
   };
 
