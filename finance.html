@@ -1254,7 +1254,7 @@ html, body { overflow-x: hidden; }
 .alert-stack-toggle:hover {
   background: var(--bg3);
   color: var(--text);
-  border-color: rgba(255,255,255,0.18);
+  border-color: var(--border2);              /* v0.9-9 (#8) */
 }
 .alert-stack-toggle .ast-dots {
   display: inline-flex;
@@ -1372,6 +1372,17 @@ html, body { overflow-x: hidden; }
   cursor: pointer; flex-shrink: 0;
 }
 .dash-ctrl-toggle:hover, .dash-ctrl-toggle.open { color: var(--text); border-color: var(--text3); }
+.pl-policy-toggle {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--text2); margin: -4px 0 12px 2px; cursor: pointer;
+}
+.pl-policy-toggle input { accent-color: var(--accent); }
+/* v0.9-10 — 공용 확인 모달 */
+.modal-confirm { max-width: 420px; }
+/* v0.9-9 — 거래 검색 바 */
+.tx-search-bar { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; }
+.tx-search-input { flex: 1; min-width: 0; font-size: 13px; padding: 7px 10px; }
+.tx-search-cat { width: auto; max-width: 40%; font-size: 12px; padding: 7px 8px; }
 /* v0.9-8 (D7) — 손익표 기타 접기 */
 .pl-more-toggle { cursor: pointer; }
 .pl-more-toggle .pl-name { color: var(--text3); font-size: 12px; }
@@ -2968,7 +2979,7 @@ html, body { overflow-x: hidden; }
   flex: 1;
   align-self: end;
   margin-bottom: 5px;
-  border-bottom: 1px dotted rgba(255, 255, 255, 0.10);
+  border-bottom: 1px dotted var(--border2);   /* v0.9-9 (#8) — 예산 리더 점선 */
   min-width: 20px;
 }
 .bg-row[data-leader="1"] .bg-cat { flex: 0 0 auto; order: 1; overflow: visible; }
@@ -3347,7 +3358,7 @@ html, body { overflow-x: hidden; }
   padding: 12px 16px;
   font-size: 13px;
   align-items: center;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  border-bottom: 1px solid var(--border);   /* v0.9-9 (#8) — 라이트 테마 대응 토큰화 */
 }
 .tx-row:last-child { border-bottom: none; }
 .tx-row.header {
@@ -3678,9 +3689,9 @@ html, body { overflow-x: hidden; }
   font-size: 11px;
   color: var(--text2);
   padding: 8px 16px;
-  background: rgba(255,255,255,0.02);
+  background: var(--bg3);                    /* v0.9-9 (#8) */
   font-family: var(--font-mono);
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  border-bottom: 1px solid var(--border);
 }
 
 .tx-legend {
@@ -4332,6 +4343,16 @@ html, body { overflow-x: hidden; }
       <button class="btn-p" id="btn-add-tx">+ 새 거래</button>
     </div>
 
+    <!-- v0.9-9 — 거래 검색·카테고리 필터·CSV (가져오기 후 월 100건+ 대응) -->
+    <div class="tx-search-bar" id="tx-search-bar">
+      <input class="input tx-search-input" id="tx-search" type="search"
+             placeholder="🔍 사용처·메모·결제수단·계좌 검색" autocomplete="off">
+      <select class="select tx-search-cat" id="tx-search-cat">
+        <option value="">전체 카테고리</option>
+      </select>
+      <button type="button" class="btn-s" id="btn-tx-csv" title="현재 보이는 거래를 CSV로 저장">CSV</button>
+    </div>
+
     <div class="tx-table" id="tx-table">
       <div class="tx-row empty">로딩 중…</div>
     </div>
@@ -4511,6 +4532,11 @@ html, body { overflow-x: hidden; }
         <span class="info-icon">ⓘ</span>
         <div>—</div>
       </div>
+      <!-- v0.9-9 (#5) — 경조사 처리 거래 제외 토글 (손익표·추세·트리맵·카테고리 추이에 적용) -->
+      <label class="pl-policy-toggle">
+        <input type="checkbox" id="pl-excl-evtproc">
+        <span>🎀 경조사 처리 거래 제외 — 행사비를 매달 적립으로만 계상 (이중 계상 방지)</span>
+      </label>
 
       <!-- v0.7-12L — 손익 추세 미니차트 (단일월에는 숨김) -->
       <div id="pl-trend-card" class="dash-card" style="margin-bottom: 14px; display: none;">
@@ -5710,6 +5736,23 @@ html, body { overflow-x: hidden; }
   </div>
 </div>
 
+<!-- ── 모달: 공용 확인/알림 (v0.9-10 — confirm()/alert() 대체) ── -->
+<div class="ov" id="ov-confirm">
+  <div class="modal modal-confirm">
+    <div class="modal-head">
+      <h3 id="confirm-title">확인</h3>
+      <button class="modal-close" data-close="ov-confirm">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="confirm-msg" style="white-space:pre-line; font-size:13px; color:var(--text); line-height:1.55;"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-s" id="btn-confirm-cancel">취소</button>
+      <button class="btn-p" id="btn-confirm-ok">확인</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── 모달: 반복지출 과거 중복 검사 (v0.9-7 D11) ── -->
 <div class="ov" id="ov-recdup">
   <div class="modal">
@@ -6311,9 +6354,11 @@ function showApp() {
 //   - subtab 생략 시: 그 톱탭의 현재 활성 서브탭 유지 (없으면 첫 서브탭)
 function switchTab(name, subtab) {
   // 1) 톱탭 활성화
-  document.querySelectorAll('.tab').forEach(t =>
-    t.classList.toggle('active', t.dataset.tab === name)
-  );
+  document.querySelectorAll('.tab').forEach(t => {
+    const on = t.dataset.tab === name;
+    t.classList.toggle('active', on);
+    t.setAttribute('aria-selected', String(on));   // v0.9-9 — 접근성
+  });
   document.querySelectorAll('.tab-content').forEach(c =>
     c.classList.toggle('active', c.id === `tab-${name}`)
   );
@@ -6354,9 +6399,11 @@ function switchTab(name, subtab) {
 // 단일 톱탭 영역 내에서 서브탭 활성화
 function activateSubtab($topPane, subtab) {
   if (!$topPane || !subtab) return;
-  $topPane.querySelectorAll(':scope > .subtab-bar .subtab, :scope > .subtab-bar .subtab-list .subtab').forEach(b =>
-    b.classList.toggle('active', b.dataset.subtab === subtab)
-  );
+  $topPane.querySelectorAll(':scope > .subtab-bar .subtab, :scope > .subtab-bar .subtab-list .subtab').forEach(b => {
+    const on = b.dataset.subtab === subtab;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', String(on));   // v0.9-9 — 접근성
+  });
   $topPane.querySelectorAll(':scope > .subtab-content').forEach(c =>
     c.classList.toggle('active', c.id === `tab-${subtab}`)
   );
@@ -6635,6 +6682,7 @@ async function loadAll() {
       renderLiabilitiesTrash();
       renderLastBackupInfo();  // 마지막 백업 시각 표시 (v0.3-1)
       renderTransactions(); // 카테고리/결제수단 라벨 색상이 settings에 의존
+      rebuildTxSearchCatOptions();   // v0.9-9 — 검색 바 카테고리 옵션 (선택 보존)
       renderBsBody();       // 부채 마스터가 BS에 들어가니 갱신
       renderDashKpi();      // v0.5 B2 — flow 결정에 settings 의존
       renderEventAccountSelect();   // v0.6 — eventSavingAccountId 선택 표시
@@ -7106,7 +7154,7 @@ async function saveTag() {
 async function deleteTag() {
   if (!editingTagId) return;
   const tag = tagById(editingTagId);
-  if (!confirm(`"${tag?.name || '이벤트'}"를 삭제하시겠습니까?\n\n붙어 있던 거래는 그대로 남고, 이벤트 표시만 사라집니다.\n(집계를 나중에 다시 보려면 삭제 대신 "보관"을 쓰세요)`)) return;
+  if (!await appConfirm(`"${tag?.name || '이벤트'}"를 삭제하시겠습니까?\n\n붙어 있던 거래는 그대로 남고, 이벤트 표시만 사라집니다.\n(집계를 나중에 다시 보려면 삭제 대신 "보관"을 쓰세요)`)) return;
   try {
     await deleteDoc(pathTag(editingTagId));
     tagTxCache.delete(editingTagId);
@@ -7578,7 +7626,7 @@ async function renderPlBody() {
     fromYm = returnsCurrentRange.fromYm;
     toYm   = returnsCurrentRange.toYm;
     $body.innerHTML = '<div class="pl-placeholder">손익 데이터 로딩 중…</div>';
-    txList = await loadAnalysisTransactions(fromYm, toYm);
+    txList = applyPlPolicy(await loadAnalysisTransactions(fromYm, toYm));   // v0.9-9 (#5)
     modeLabel = (fromYm === toYm) ? fromYm : `${fromYm} ~ ${toYm}`;
   } else {
     // fallback — 글로벌 월
@@ -7592,7 +7640,7 @@ async function renderPlBody() {
   const monthSpan  = monthsBetween(fromYm, toYm);
   const prevToYm   = shiftYm(fromYm, -1);
   const prevFromYm = shiftYm(prevToYm, -(monthSpan - 1));
-  const prevTxList = await loadAnalysisTransactions(prevFromYm, prevToYm);
+  const prevTxList = applyPlPolicy(await loadAnalysisTransactions(prevFromYm, prevToYm));   // v0.9-9 (#5)
   const prevLabel  = (prevFromYm === prevToYm) ? prevFromYm : `${prevFromYm} ~ ${prevToYm}`;
   // v0.7-23 — 비교 기간이 통째로 비어 있으면 델타 표시 자체를 생략
   //           (모든 행이 "신규"로 도배되는 무의미한 출력 방지)
@@ -8157,7 +8205,7 @@ document.getElementById('btn-at-save').addEventListener('click', async () => {
   // 다른 그룹에 같은 이름이 있으면 confirm
   const otherTier = newTier === 'current' ? 'nonCurrent' : 'current';
   if (next[otherTier].includes(newName)) {
-    if (!confirm(`"${newName}"이(가) 이미 ${otherTier === 'current' ? '유동' : '비유동'} 자산에도 있습니다. 그래도 추가할까요?`)) return;
+    if (!await appConfirm(`"${newName}"이(가) 이미 ${otherTier === 'current' ? '유동' : '비유동'} 자산에도 있습니다. 그래도 추가할까요?`)) return;
   }
 
   next[newTier].push(newName);
@@ -8181,7 +8229,7 @@ document.getElementById('btn-at-delete').addEventListener('click', async () => {
   const usedBy = findAccountsUsingAssetType(tier, name);
   if (usedBy.length > 0) {
     const names = usedBy.map(a => `• ${a.name}`).join('\n');
-    alert(
+    await appAlert(
       `"${name}" 삭제 불가\n\n` +
       `다음 ${usedBy.length}개 계좌가 이 종류를 사용 중입니다:\n\n${names}\n\n` +
       `먼저 이 계좌들의 자산 종류를 다른 항목으로 변경하거나\n계좌를 삭제한 후 다시 시도하세요.`
@@ -8189,7 +8237,7 @@ document.getElementById('btn-at-delete').addEventListener('click', async () => {
     return;
   }
 
-  if (!confirm(`"${name}" 자산 종류를 삭제하시겠습니까?`)) return;
+  if (!await appConfirm(`"${name}" 자산 종류를 삭제하시겠습니까?`)) return;
 
   const enums = sharedSettings?.categoriesEnum || DEFAULT_CATEGORIES_ENUM;
   const next = {
@@ -8475,7 +8523,7 @@ async function purgeAccount(id) {
   if (!id) return;
   const a = accounts.find(x => x.id === id);
   if (!a) return;
-  if (!confirm(`"${a.name}"을(를) 휴지통에서 영구 삭제할까요?\n\n관련 거래·결산 데이터는 보존되며,\n재무상태표에서 (해지·마스터 삭제됨)으로 계속 표시됩니다.\n\n복원은 불가능합니다.`)) return;
+  if (!await appConfirm(`"${a.name}"을(를) 휴지통에서 영구 삭제할까요?\n\n관련 거래·결산 데이터는 보존되며,\n재무상태표에서 (해지·마스터 삭제됨)으로 계속 표시됩니다.\n\n복원은 불가능합니다.`)) return;
   try {
     await deleteDoc(pathAccount(id));
     showToast('영구 삭제 완료');
@@ -8594,7 +8642,7 @@ async function purgeLiability(id) {
   const idx = trash.findIndex(l => l.id === id);
   if (idx < 0) return;
   const lb = trash[idx];
-  if (!confirm(`"${lb.name}"을(를) 휴지통에서 영구 삭제할까요?\n\n과거 스냅샷에 기록된 잔액은 그대로 보존되며,\n재무상태표에서 (완납·마스터 삭제됨)으로 계속 표시됩니다.\n\n복원은 불가능합니다.`)) return;
+  if (!await appConfirm(`"${lb.name}"을(를) 휴지통에서 영구 삭제할까요?\n\n과거 스냅샷에 기록된 잔액은 그대로 보존되며,\n재무상태표에서 (완납·마스터 삭제됨)으로 계속 표시됩니다.\n\n복원은 불가능합니다.`)) return;
   trash.splice(idx, 1);
   try {
     await setDoc(pathFinanceSettings(), {
@@ -8642,9 +8690,64 @@ function closeOv(id) {
   document.getElementById(id).classList.remove('show');
   // v0.7-15 — 거래 모달이 닫히면 경조사 처리 마커도 해제 (저장 핸들러에서 이미 사용했으면 null)
   if (id === 'ov-tx') pendingProcessEventId = null;
+  // v0.9-10 — 확인 모달이 확인 버튼 외 경로(×, ESC)로 닫히면 "취소"로 resolve
+  if (id === 'ov-confirm' && _confirmResolve) {
+    const r = _confirmResolve; _confirmResolve = null; r(false);
+  }
 }
+
+// ── v0.9-10 — 공용 확인/알림 모달 (native confirm()/alert() 대체) ──────
+// 사용: if (!(await appConfirm('메시지'))) return;   /   await appAlert('메시지');
+// 파괴적 액션(삭제·영구·버리기 문구)은 자동으로 빨간 버튼 + 적절한 라벨.
+let _confirmResolve = null;
+
+function appConfirm(message, opts = {}) {
+  return new Promise(resolve => {
+    // 이미 열려 있으면 기존 것을 취소 처리 (중첩 방지)
+    if (_confirmResolve) { const r = _confirmResolve; _confirmResolve = null; r(false); }
+    _confirmResolve = resolve;
+
+    const msg = String(message ?? '');
+    const destructive = opts.danger ?? /(삭제|영구|버리|되돌릴 수 없|복원.*불가)/.test(msg);
+    const okLabel = opts.okLabel || (opts.alertOnly ? '확인' : (destructive ? (/삭제/.test(msg) ? '삭제' : '진행') : '확인'));
+
+    document.getElementById('confirm-title').textContent = opts.title || (opts.alertOnly ? '알림' : '확인');
+    document.getElementById('confirm-msg').textContent = msg;
+    const $ok = document.getElementById('btn-confirm-ok');
+    $ok.textContent = okLabel;
+    $ok.className = (destructive && !opts.alertOnly) ? 'btn-danger' : 'btn-p';
+    document.getElementById('btn-confirm-cancel').style.display = opts.alertOnly ? 'none' : '';
+    openOv('ov-confirm');
+    setTimeout(() => $ok.focus(), 30);
+  });
+}
+
+function appAlert(message, opts = {}) {
+  return appConfirm(message, { ...opts, alertOnly: true }).then(() => undefined);
+}
+
+document.getElementById('btn-confirm-ok').addEventListener('click', () => {
+  const r = _confirmResolve; _confirmResolve = null;   // closeOv 훅이 false로 덮지 않도록 먼저 비움
+  closeOv('ov-confirm');
+  if (r) r(true);
+});
+document.getElementById('btn-confirm-cancel').addEventListener('click', () => {
+  const r = _confirmResolve; _confirmResolve = null;
+  closeOv('ov-confirm');
+  if (r) r(false);
+});
 document.querySelectorAll('[data-close]').forEach(el => {
   el.addEventListener('click', () => closeOv(el.dataset.close));
+});
+
+// v0.9-9 (#9) — ESC로 최상단 모달 닫기 (입력 중에도 동작; 임시저장이 값을 보존)
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  const opens = [...document.querySelectorAll('.ov.show')];
+  if (!opens.length) return;
+  const top = opens.reduce((a, b) =>
+    (parseInt(b.style.zIndex || 0, 10) > parseInt(a.style.zIndex || 0, 10)) ? b : a);
+  closeOv(top.id);
 });
 // 오버레이 바깥 클릭으로 닫기
 document.querySelectorAll('.ov').forEach(ov => {
@@ -8826,7 +8929,7 @@ document.getElementById('btn-acc-delete').addEventListener('click', async () => 
   if (!editingAccountId) return;
   const a = accounts.find(x => x.id === editingAccountId);
   if (!a) return;
-  if (!confirm(`"${a.name}" 계좌를 삭제하시겠습니까?\n\n관련 거래·결산 데이터는 보존되며,\n재무상태표에서 (비활성/해지)로 계속 표시됩니다.\n휴지통에서 복원 가능합니다.`)) return;
+  if (!await appConfirm(`"${a.name}" 계좌를 삭제하시겠습니까?\n\n관련 거래·결산 데이터는 보존되며,\n재무상태표에서 (비활성/해지)로 계속 표시됩니다.\n휴지통에서 복원 가능합니다.`)) return;
   try {
     await setDoc(pathAccount(editingAccountId), {
       ...a,
@@ -8916,7 +9019,7 @@ document.getElementById('btn-cat-save').addEventListener('click', async () => {
 
 document.getElementById('btn-cat-delete').addEventListener('click', async () => {
   if (!editingCategory) return;
-  if (!confirm(`"${editingCategory.name}" 카테고리를 삭제하시겠습니까?`)) return;
+  if (!await appConfirm(`"${editingCategory.name}" 카테고리를 삭제하시겠습니까?`)) return;
   const cats = {
     revenue:  [...(settings?.categories?.revenue  || [])],
     fixed:    [...(settings?.categories?.fixed    || [])],
@@ -9021,7 +9124,7 @@ document.getElementById('btn-pay-save').addEventListener('click', async () => {
 document.getElementById('btn-pay-delete').addEventListener('click', async () => {
   if (editingPaymentIdx == null) return;
   const p = settings.payments[editingPaymentIdx];
-  if (!confirm(`"${p.name}" 결제수단을 삭제하시겠습니까?`)) return;
+  if (!await appConfirm(`"${p.name}" 결제수단을 삭제하시겠습니까?`)) return;
   const list = [...settings.payments];
   list.splice(editingPaymentIdx, 1);
   try {
@@ -9139,7 +9242,7 @@ document.getElementById('btn-liab-delete').addEventListener('click', async () =>
   const idx = list.findIndex(l => l.id === editingLiabId);
   if (idx < 0) return;
   const lb = list[idx];
-  if (!confirm(`"${lb.name}" 부채를 삭제할까요?\n\n과거 스냅샷의 잔액은 그대로 보존되어\n재무상태표에 계속 표시됩니다.\n\n실수로 삭제했다면 설정 탭의\n"최근 삭제됨"에서 복원할 수 있습니다.`)) return;
+  if (!await appConfirm(`"${lb.name}" 부채를 삭제할까요?\n\n과거 스냅샷의 잔액은 그대로 보존되어\n재무상태표에 계속 표시됩니다.\n\n실수로 삭제했다면 설정 탭의\n"최근 삭제됨"에서 복원할 수 있습니다.`)) return;
 
   // 마스터에서 제거 → 휴지통에 deletedAt 박아서 push
   list.splice(idx, 1);
@@ -9538,6 +9641,21 @@ async function runRecurringDupScan() {
   }
 }
 
+// v0.9-9 (#5) — 경조사 처리 거래 제외 토글
+{
+  const $t = document.getElementById('pl-excl-evtproc');
+  if ($t) {
+    $t.checked = plExclEvtProc;
+    $t.addEventListener('change', () => {
+      plExclEvtProc = $t.checked;
+      try { localStorage.setItem('finPlExclEvtProc', plExclEvtProc ? '1' : '0'); } catch (e) {}
+      renderPlBody();
+      if (isDashboardVisible()) { renderDashCatExpenseChart(); renderDashExpenseChart(); }
+      showToast(plExclEvtProc ? '경조사 처리 거래를 손익·분석에서 제외합니다' : '경조사 처리 거래를 다시 포함합니다');
+    });
+  }
+}
+
 // v0.9-8 (D5) — 분석 카드 컨트롤 접기 토글 (정적 버튼 — 1회 바인딩)
 document.querySelectorAll('.dash-ctrl-toggle').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -9553,7 +9671,7 @@ document.getElementById('btn-recdup-delete').addEventListener('click', async () 
   const ids = [...$body.querySelectorAll('.recdup-check:checked')]
     .map(cb => recDupPairs[Number(cb.dataset.recdup)]?.gen?.id).filter(Boolean);
   if (!ids.length) return;
-  if (!confirm(`생성분 거래 ${ids.length}건을 삭제할까요?\n가져오기 거래는 그대로 유지됩니다.`)) return;
+  if (!await appConfirm(`생성분 거래 ${ids.length}건을 삭제할까요?\n가져오기 거래는 그대로 유지됩니다.`)) return;
   try {
     const CHUNK = 450;
     for (let i = 0; i < ids.length; i += CHUNK) {
@@ -9721,7 +9839,7 @@ document.getElementById('btn-rec-delete').addEventListener('click', async () => 
   if (!editingRecurringId) return;
   const rec = recurringMasters.find(r => r.id === editingRecurringId);
   if (!rec) return;
-  if (!confirm(`"${rec.name}" 반복지출 관찰 항목을 삭제할까요?\n\n거래 데이터에는 영향이 없습니다.\n일시 중단이라면 종료 월만 설정하는 것도 방법입니다.`)) return;
+  if (!await appConfirm(`"${rec.name}" 반복지출 관찰 항목을 삭제할까요?\n\n거래 데이터에는 영향이 없습니다.\n일시 중단이라면 종료 월만 설정하는 것도 방법입니다.`)) return;
 
   try {
     await deleteDoc(pathRecurringItem(editingRecurringId));
@@ -9941,7 +10059,7 @@ document.getElementById('btn-event-delete').addEventListener('click', async () =
   if (!editingEventId) return;
   const ev = eventsMasters.find(e => e.id === editingEventId);
   if (!ev) return;
-  if (!confirm(`"${ev.title}" 경조사를 삭제할까요?`)) return;
+  if (!await appConfirm(`"${ev.title}" 경조사를 삭제할까요?`)) return;
   try {
     await deleteDoc(pathEvent(editingEventId));
     closeOv('ov-event');
@@ -10904,9 +11022,12 @@ function renderEventBar() {
   // v0.7-15 — 행사월 처리 모드
   //   이번 달이 행사월이고 아직 처리 안 된(lastDoneYm != today) 경조사가 있으면
   //   알림바를 "처리 모드"로 전환: 메시지/CTA 변경 + data-mode="process".
-  const pendingProcess = eventsMasters.filter(ev =>
+  // v0.9-9 (#6) — 처리 모드는 실제 오늘이 속한 달에서만.
+  // 과거/미래 월로 이동해 보고 있을 때 "처리하기"가 뜨면 lastDoneYm이 엉뚱한 월로 박힘.
+  const isRealToday = currentMonth === currentYm();
+  const pendingProcess = isRealToday ? eventsMasters.filter(ev =>
     parseInt(ev.recurMonth, 10) === curM && ev.lastDoneYm !== today
-  );
+  ) : [];
 
   if (pendingProcess.length > 0) {
     // 처리 모드 — 다건이면 합계 표시, 단건이면 행사명 표시
@@ -11247,7 +11368,11 @@ function renderBsBody() {
         curKrw = Number(doc.balanceKrw) || 0;
       }
     }
-    const prevKrw = prevDoc ? (Number(prevDoc.balanceKrw) || 0) : null;
+    // v0.9-9 (#4) — 외화 행 델타는 전월 원자값 × 현재 환율 (환율 고정 → 수량 변화만 표시)
+    let prevKrw = prevDoc ? (Number(prevDoc.balanceKrw) || 0) : null;
+    if (prevDoc && isFx && curFxRate > 0 && Number.isFinite(Number(prevDoc.balance))) {
+      prevKrw = Math.round(Number(prevDoc.balance) * curFxRate);
+    }
     assetRows[tier].push({
       key: a.id,
       name: a.name,
@@ -11281,7 +11406,10 @@ function renderBsBody() {
       curKrw = Number(doc.balanceKrw) || 0;
     }
     const prevDoc = findMonthlyDoc(doc.accountId, prevYm(currentMonth));
-    const prevKrw = prevDoc ? (Number(prevDoc.balanceKrw) || 0) : null;
+    let prevKrw = prevDoc ? (Number(prevDoc.balanceKrw) || 0) : null;
+    if (prevDoc && isFx && curFxRate > 0 && Number.isFinite(Number(prevDoc.balance))) {
+      prevKrw = Math.round(Number(prevDoc.balance) * curFxRate);   // v0.9-9 (#4)
+    }
     // 메타 결정:
     //   - 마스터에 있고 deletedAt → "(휴지통)"
     //   - 마스터에 있고 active=false → "(비활성)"
@@ -11387,7 +11515,7 @@ function renderBsBody() {
   const debtRatio = totalAssets > 0 ? (totalLiab / totalAssets) * 100 : 0;
 
   // 이전 달 집계 (MoM 비교용)
-  const prevTotals = computeTotals(monthlyPrevDocs, monthlyLiabPrevDocs, prevYm(currentMonth));   // v0.9-5 — 전월 귀속 미지급금 포함
+  const prevTotals = computeTotals(monthlyPrevDocs, monthlyLiabPrevDocs, prevYm(currentMonth), { revalueFx: true });   // v0.9-5 미지급금 / v0.9-9 (#4) 전월도 현재 환율로 — MoM에서 환율 변동 제거
   const dAssets = prevTotals ? (totalAssets - prevTotals.totalAssets) : null;
   const dLiab   = prevTotals ? (totalLiab   - prevTotals.totalLiab)   : null;
   const dNet    = prevTotals ? (net         - prevTotals.net)         : null;
@@ -11453,16 +11581,32 @@ function debtRatioTone(pct, hasAssets = true) {
 // 이전 달 스냅샷에서 합계 계산
 // v0.7-5d — 임의 시점의 자산/부채 집계 (monthly / monthly_liab 도큐먼트 배열을 인수로 받음)
 // v0.9-5 — ym을 주면 그 달 귀속 카드 미지급금을 유동부채에 포함 (숫자 한 벌 — 전 화면 단일 정의)
-function computeTotals(monDocs, monLiabDocs, ym) {
+// v0.9-9 (#4) — revalueFx: 외화 도큐먼트를 현재 환율로 재환산 (BS 본문과 같은 기준).
+//   기본값: ym이 현재 월이면 자동 재환산 (BS 표시 원칙 = "현 시점 환산은 현재만").
+//   전월과의 MoM 비교 시 호출자가 { revalueFx: true }로 전월도 재환산 → 델타에서 환율 변동 제거.
+//   과거 월(추이 차트)은 박제 balanceKrw 유지 (시점성).
+function computeTotals(monDocs, monLiabDocs, ym, opts = {}) {
   let curAssets = 0, nonAssets = 0, curLiab = 0, nonLiab = 0;
   let hasAny = false;
+
+  const revalue = opts.revalueFx != null ? !!opts.revalueFx : (ym === currentMonth);
+  const fxRates = (sharedSettings && sharedSettings.fxRates) || {};
+  const krwOf = (doc, fallbackCurrency) => {
+    const base = Number(doc.balanceKrw) || 0;
+    if (!revalue) return base;
+    const cur = doc.currency || fallbackCurrency || 'KRW';
+    if (cur === 'KRW') return base;
+    const native = Number(doc.balance);
+    const rate = Number(fxRates[cur] || 0);
+    return (Number.isFinite(native) && rate > 0) ? Math.round(native * rate) : base;
+  };
 
   const aMap = new Map(accounts.map(a => [a.id, a]));
   for (const doc of (monDocs || [])) {
     hasAny = true;
     const a = aMap.get(doc.accountId);
     const tier = (a ? a.financeType : doc.financeType) === 'nonCurrent' ? 'noncurrent' : 'current';
-    const krw = Number(doc.balanceKrw) || 0;
+    const krw = krwOf(doc, a?.currency);
     if (tier === 'current') curAssets += krw;
     else                    nonAssets += krw;
   }
@@ -11474,7 +11618,7 @@ function computeTotals(monDocs, monLiabDocs, ym) {
     hasAny = true;
     const l = lMap.get(doc.liabKey);
     const tier = (l ? l.type : doc.type) === 'nonCurrent' ? 'noncurrent' : 'current';
-    const krw = Number(doc.balanceKrw) || 0;
+    const krw = krwOf(doc, null);
     if (tier === 'current') curLiab += krw;
     else                    nonLiab += krw;
   }
@@ -12115,6 +12259,17 @@ function invalidateAnalysisYms() {
   tagTxCache.clear();
   if (isDashboardVisible()) renderDashTagsCard();
   if (isStatusVisible())    renderStatusTagsCard();
+}
+
+// ─── v0.9-9 (#5) — 경조사 이중 계상 정책 ─────────
+// 적립 거래(경조사 카테고리, 매달)와 처리 거래(eventProcessId, 행사 때) 둘 다 지출이라
+// 연간 손익에서 행사비가 ~2배로 잡힘. 토글 ON이면 손익·분석(손익표/추세/트리맵/카테고리 추이)에서
+// 처리 거래를 제외 → 행사비는 매달 적립으로만 계상 (발생주의 배분).
+// 거래 탭 KPI·예산·현황 순이익은 현금 관리 성격이라 그대로 포함 (거래 리스트에도 항상 표시).
+let plExclEvtProc = localStorage.getItem('finPlExclEvtProc') === '1';
+function applyPlPolicy(list) {
+  if (!plExclEvtProc) return list || [];
+  return (list || []).filter(t => !t.eventProcessId);
 }
 
 // ─── 분석 탭 거래 캐시 (v0.7-12 2단계) ─────────
@@ -12904,7 +13059,7 @@ function renderDividendsChart() {
   const colAccent = css.getPropertyValue('--accent').trim() || '#4f8fff';
   const colText2  = css.getPropertyValue('--text2').trim()  || '#8b909e';
   const colText3  = css.getPropertyValue('--text3').trim()  || '#555b6a';
-  const colBorder = 'rgba(255,255,255,0.07)';
+  const colBorder = (css.getPropertyValue('--border') || '').trim() || 'rgba(255,255,255,0.07)';   // v0.9-9 (#8)
 
   dividendsChart = new Chart(ctx, {
     type: 'bar',
@@ -13314,7 +13469,7 @@ async function deleteDividend() {
   if (!editingDividendId || !currentUid) return;
   const d = dividends.find(x => x.id === editingDividendId);
   if (!d) return;
-  if (!confirm(`${d.date} ${d.symbol} 배당 기록을 삭제할까요?`)) return;
+  if (!await appConfirm(`${d.date} ${d.symbol} 배당 기록을 삭제할까요?`)) return;
 
   const $btn = document.getElementById('btn-dv-delete');
   $btn.disabled = true;
@@ -13603,7 +13758,7 @@ async function saveSavingsEntry() {
   if (!acc) { showToast('계좌 정보 없음'); return; }
 
   const balN = numUnComma(document.getElementById('sv-input-balance').value);
-  if (balN === 0 && !confirm('잔고가 0입니다. 그대로 저장할까요?')) return;
+  if (balN === 0 && !await appConfirm('잔고가 0입니다. 그대로 저장할까요?')) return;
 
   // 미리보기에서 계산한 값을 dataset에서 회수
   const $body = document.getElementById('ov-savings');
@@ -13842,7 +13997,7 @@ async function deleteSavingsEntry() {
   if (!editingSavingsKey || !currentUid) return;
   const { ym, accId } = parseMonthlyKey(editingSavingsKey);
   const acc = accounts.find(a => a.id === accId);
-  if (!confirm(`${acc?.name || accId}의 ${ym} 결산을 삭제할까요?\n이후 월의 누적 수익률 계산이 어긋날 수 있습니다.`)) return;
+  if (!await appConfirm(`${acc?.name || accId}의 ${ym} 결산을 삭제할까요?\n이후 월의 누적 수익률 계산이 어긋날 수 있습니다.`)) return;
 
   const $btn = document.getElementById('btn-sv-delete');
   $btn.disabled = true;
@@ -14145,7 +14300,7 @@ async function copyBudgetsFromPrevMonth() {
   // 이번 달에 이미 예산이 있으면 확인
   const hasExisting = bgBudgets.length > 0;
   if (hasExisting) {
-    if (!confirm(
+    if (!await appConfirm(
       `${currentMonth}에 이미 예산이 ${bgBudgets.length}개 설정되어 있습니다.\n\n` +
       `전월(${prev})에서 복사하면 같은 카테고리의 기존 값을 덮어씁니다.\n\n계속하시겠습니까?`
     )) return;
@@ -14229,8 +14384,8 @@ async function copyBudgetsFromPrevMonth() {
       console.log('[budget copy] 스킵된 항목', skipped);
       // 사용자에게 무엇이 빠졌는지 별도 알림
       const names = skipped.map(s => s.category).join(', ');
-      setTimeout(() => {
-        alert(
+      setTimeout(async () => {
+        await appAlert(
           `다음 카테고리는 현재 마스터에 없어 복사에서 제외되었습니다:\n\n${names}\n\n` +
           `필요하면 설정 → 카테고리에서 다시 추가한 후, 예산 탭에서 개별 설정하세요.`
         );
@@ -14298,7 +14453,7 @@ function renderDashKpi() {
     $nw.classList.add(cur.net > 0 ? 'green' : cur.net < 0 ? 'red' : 'muted');
 
     // MoM (전월 대비)
-    const prev = computeTotals(monthlyPrevDocs, monthlyLiabPrevDocs, prevYm(currentMonth));
+    const prev = computeTotals(monthlyPrevDocs, monthlyLiabPrevDocs, prevYm(currentMonth), { revalueFx: true });   // v0.9-9 (#4)
     resetCls($nwSub);
     if (prev && prev.net !== 0) {
       const delta = cur.net - prev.net;
@@ -15182,7 +15337,7 @@ function getDashChartTokens() {
   return {
     text:   (css.getPropertyValue('--text2').trim()   || '#8b909e'),
     text3:  (css.getPropertyValue('--text3').trim()   || '#555b6a'),
-    grid:   'rgba(255,255,255,0.07)',
+    grid:   (css.getPropertyValue('--border').trim()   || 'rgba(255,255,255,0.07)'),   // v0.9-9 (#8)
     tooltipBg: 'rgba(20,22,28,0.95)',
   };
 }
@@ -15331,7 +15486,7 @@ async function renderDashCatExpenseChart() {
     let ymList;
     if (returnsCurrentRange) {
       const { fromYm, toYm } = returnsCurrentRange;
-      txData = await loadAnalysisTransactions(fromYm, toYm);
+      txData = applyPlPolicy(await loadAnalysisTransactions(fromYm, toYm));   // v0.9-9 (#5)
       ymList = buildYmList(fromYm, toYm);
       modeLabel = (fromYm === toYm) ? fromYm : `${fromYm} ~ ${toYm}`;
     } else {
@@ -15339,7 +15494,7 @@ async function renderDashCatExpenseChart() {
       ymList = analysisPeriodYms(6, currentMonth);
       const fromYm = ymList[0];
       const toYm   = ymList[ymList.length - 1];
-      txData = await loadAnalysisTransactions(fromYm, toYm);
+      txData = applyPlPolicy(await loadAnalysisTransactions(fromYm, toYm));   // v0.9-9 (#5)
       modeLabel = `${fromYm} ~ ${toYm}`;
     }
 
@@ -15539,7 +15694,7 @@ async function renderDashExpenseChart() {
     let modeLabel;
     if (returnsCurrentRange) {
       const { fromYm, toYm } = returnsCurrentRange;
-      txData = await loadAnalysisTransactions(fromYm, toYm);
+      txData = applyPlPolicy(await loadAnalysisTransactions(fromYm, toYm));   // v0.9-9 (#5)
       modeLabel = (fromYm === toYm) ? fromYm : `${fromYm} ~ ${toYm}`;
     } else {
       txData = transactions;
@@ -16200,7 +16355,7 @@ document.getElementById('btn-bg-save').addEventListener('click', async () => {
 document.getElementById('btn-bg-delete').addEventListener('click', async () => {
   if (!editingBudget || !editingBudget.existing) return;
   const { ym, flow, category } = editingBudget;
-  if (!confirm(`"${category}" 카테고리의 ${ym} 예산을 삭제하시겠습니까?`)) return;
+  if (!await appConfirm(`"${category}" 카테고리의 ${ym} 예산을 삭제하시겠습니까?`)) return;
 
   const id = budgetDocId(ym, flow, category);
   try {
@@ -16760,7 +16915,7 @@ async function deleteBalanceSnapshot() {
     showToast('삭제할 잔액 데이터가 없습니다');
     return;
   }
-  if (!confirm(`${ym} 잔액 데이터를 모두 삭제할까요?\n자산 ${assetCount}건 + 부채 ${liabCount}건`)) return;
+  if (!await appConfirm(`${ym} 잔액 데이터를 모두 삭제할까요?\n자산 ${assetCount}건 + 부채 ${liabCount}건`)) return;
 
   const $btn = document.getElementById('btn-bal-delete');
   $btn.disabled = true;
@@ -16883,8 +17038,15 @@ async function autoUpdateFx(manual) {
 function applyFilters(list) {
   const noFlow = filterFlows.size === 0;
   const noPay  = filterPays.size === 0;
-  if (noFlow && noPay) return list;
+  const q = normKey(txSearchQuery);   // v0.9-9 — 텍스트 검색 (정규화 부분 일치)
+  if (noFlow && noPay && !q && !txSearchCat) return list;
   return list.filter(t => {
+    // v0.9-9 — 카테고리 필터 + 텍스트 검색
+    if (txSearchCat && (t.category || '') !== txSearchCat) return false;
+    if (q) {
+      const hay = normKey(`${t.memo || ''} ${t.category || ''} ${t.payment || ''} ${t.accountName || ''}`);
+      if (!hay.includes(q)) return false;
+    }
     if (!noFlow) {
       if (!filterFlows.has(txFlow(t))) return false;
     }
@@ -16901,6 +17063,72 @@ function applyFilters(list) {
   });
 }
 
+// ── v0.9-9 — 거래 검색·카테고리 필터 상태 ─────────────
+let txSearchQuery = '';
+let txSearchCat = '';
+
+function rebuildTxSearchCatOptions() {
+  const $sel = document.getElementById('tx-search-cat');
+  if (!$sel || !settings) return;
+  const prevVal = $sel.value;
+  const groups = [
+    ['수입',    settings.categories?.revenue || []],
+    ['고정지출', settings.categories?.fixed || []],
+    ['변동지출', settings.categories?.variable || []],
+  ];
+  let html = '<option value="">전체 카테고리</option>';
+  for (const [label, arr] of groups) {
+    if (!arr.length) continue;
+    html += `<optgroup label="${escapeHtml(label)}">` +
+      arr.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('') +
+      '</optgroup>';
+  }
+  $sel.innerHTML = html;
+  if ([...$sel.options].some(o => o.value === prevVal)) $sel.value = prevVal;
+  else { $sel.value = ''; txSearchCat = ''; }
+}
+
+{
+  const $q = document.getElementById('tx-search');
+  const $c = document.getElementById('tx-search-cat');
+  let debounce = null;
+  $q?.addEventListener('input', () => {
+    clearTimeout(debounce);
+    debounce = setTimeout(() => { txSearchQuery = $q.value.trim(); renderTransactions(); }, 150);
+  });
+  $c?.addEventListener('change', () => { txSearchCat = $c.value; renderTransactions(); });
+}
+
+// v0.9-9 — 현재 월·현재 필터 기준 CSV 내보내기 (BOM 포함 — 엑셀 한글 대응)
+document.getElementById('btn-tx-csv')?.addEventListener('click', () => {
+  const rows = applyFilters(transactions)
+    .slice()
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  if (!rows.length) { showToast('내보낼 거래가 없습니다'); return; }
+  const esc = v => {
+    const sv = String(v ?? '');
+    return /[",\n]/.test(sv) ? `"${sv.replace(/"/g, '""')}"` : sv;
+  };
+  const flowKor = f => f === 'revenue' ? '수입' : f === 'fixed' ? '고정지출' : f === 'variable' ? '변동지출' : f;
+  const header = ['날짜','분류','카테고리','금액','결제수단','계좌','결제여부','메모','이벤트'];
+  const lines = [header.join(',')];
+  for (const t of rows) {
+    lines.push([
+      t.date, flowKor(txFlow(t)), t.category || '', Number(t.amount) || 0,
+      t.payment || '', t.accountName || '',
+      (t.paymentType === 'card' && !t.paid) ? '미결제' : '결제',
+      t.memo || '', tagById(t.tagId)?.name || '',
+    ].map(esc).join(','));
+  }
+  const blob = new Blob(['\ufeff' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `transactions_${currentMonth}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  showToast(`거래 ${rows.length}건 CSV 저장`);
+});
+
 // ──────────────────────────────────────────────────────
 // 거래 렌더링
 // ──────────────────────────────────────────────────────
@@ -16914,7 +17142,7 @@ function renderTransactions() {
     return;
   }
   if (!filtered.length) {
-    $t.innerHTML = '<div class="tx-row empty">필터에 해당하는 거래가 없습니다</div>';
+    $t.innerHTML = `<div class="tx-row empty">${txSearchQuery || txSearchCat ? '검색·필터에 해당하는 거래가 없습니다' : '필터에 해당하는 거래가 없습니다'}</div>`;
     return;
   }
   const header = `
@@ -16944,7 +17172,8 @@ function renderTransactions() {
     const unpaid = !t.paid && t.paymentType === 'card';
     const dot = unpaid ? '<span class="pay-dot" title="미결제"></span>' : '';
     const acc = t.accountName ? escapeHtml(t.accountName) : '—';
-    const mobileDate = `${mm}/${dd}`;
+    // v0.9-9 — 모바일에서는 col-acc가 숨겨지므로 날짜 옆에 계좌 병기
+    const mobileDate = t.accountName ? `${mm}/${dd} · ${escapeHtml(t.accountName)}` : `${mm}/${dd}`;
     // 외화 거래면 원본 표시 + KRW 환산 (v0.2-4)
     const isFx = t.currency && t.currency !== 'KRW' && t.amountNative != null;
     const nativeLabel = isFx ? fmtFxNative(t.amountNative, t.currency) : '';
@@ -17003,7 +17232,8 @@ function renderTransactions() {
     const anyUnpaid = txs.some(t => !t.paid && t.paymentType === 'card');
     const dot = anyUnpaid ? '<span class="pay-dot" title="미결제 포함"></span>' : '';
     const memo = (txs[0].memo || '').trim();
-    const mobileDate = `${mm}/${dd}`;
+    const accName0 = txs[0]?.accountName;
+    const mobileDate = accName0 ? `${mm}/${dd} · ${escapeHtml(accName0)}` : `${mm}/${dd}`;   // v0.9-9
 
     // 카테고리 — 전부 같으면 그 칩, 섞였으면 첫 칩 + "외 N"
     const cats = [...new Set(txs.map(t => t.category || '미분류'))];
@@ -17151,9 +17381,10 @@ let editingTxId = null;
 let txStarOn = false;          // ☆ 토글 상태 (저장 시 즐겨찾기 upsert 여부)
 let appliedFavoriteId = null;  // 칩으로 프리필한 즐겨찾기 id (저장 시 useCount +1)
 
-// 즐겨찾기 → 거래 폼 키 (중복 판정용): 카테고리|결제수단|금액
-function favKey(categoryName, paymentName, amount) {
-  return `${categoryName || ''}|${paymentName || ''}|${amount == null ? '' : amount}`;
+// 즐겨찾기 → 거래 폼 키 (중복 판정용) — v0.9-9 (#9): 금액 제외.
+// 금액이 키에 있으면 같은 카테고리·결제수단이라도 금액이 다를 때마다 칩이 증식함.
+function favKey(categoryName, paymentName) {
+  return `${categoryName || ''}|${paymentName || ''}`;
 }
 
 // ── 최근 입력 기억 (v0.7-38) ──────────────────────────
@@ -17345,9 +17576,9 @@ document.getElementById('btn-tx-star').addEventListener('click', () => setStar(!
 async function recordFavoriteOnSave(savedData) {
   const { category, payment, amount, accountId, accountName, memo } = savedData;
   if (!category || !payment) return;
-  const key = favKey(category, payment, amount);
+  const key = favKey(category, payment);
 
-  const existing = favorites.find(f => favKey(f.categoryName, f.paymentName, f.defaultAmount) === key);
+  const existing = favorites.find(f => favKey(f.categoryName, f.paymentName) === key);
 
   try {
     if (txStarOn) {
@@ -17355,6 +17586,7 @@ async function recordFavoriteOnSave(savedData) {
         // 기존 즐겨찾기 — useCount만 +1. 계좌·메모는 비어있을 때만 보강(기존 값 보존)
         const patch = {
           useCount: (Number(existing.useCount) || 0) + 1,
+          defaultAmount: amount ?? existing.defaultAmount ?? null,   // v0.9-9 — 최신 금액으로 갱신
           updatedAt: serverTimestamp(),
         };
         if (existing.accountId == null && accountId != null) {
@@ -17385,7 +17617,7 @@ async function recordFavoriteOnSave(savedData) {
     } else if (appliedFavoriteId) {
       // 칩으로 프리필한 거래를 그대로 저장 → 사용 1회로 카운트
       const applied = favorites.find(f => f.id === appliedFavoriteId);
-      if (applied && favKey(applied.categoryName, applied.paymentName, applied.defaultAmount) === key) {
+      if (applied && favKey(applied.categoryName, applied.paymentName) === key) {
         await updateDoc(pathFavorite(applied.id), {
           useCount: (Number(applied.useCount) || 0) + 1,
           updatedAt: serverTimestamp(),
@@ -17840,7 +18072,11 @@ document.getElementById('btn-tx-save').addEventListener('click', async () => {
     currency,
     fxRate,
     category,
-    flow: mapCategoryToFlow(category),
+    // v0.9-9 (#7) — 편집 시 카테고리가 그대로면 기존 flow 박제 유지
+    // (마스터에서 삭제된 카테고리의 fixed→variable 변질 방지)
+    flow: (origTx && origTx.category === category && origTx.flow)
+      ? origTx.flow
+      : mapCategoryToFlow(category),
     payment,
     paymentType: payObj?.type || 'cash',
     accountId: acc?.id || null,
@@ -17937,7 +18173,7 @@ document.getElementById('btn-tx-delete').addEventListener('click', async () => {
       `삭제하면 사이클이 미처리 상태로 돌아가고, 다시 처리해야 합니다.\n\n` +
       `계속하시겠습니까?`;
   }
-  if (!confirm(confirmMsg)) return;
+  if (!await appConfirm(confirmMsg)) return;
 
   try {
     await deleteDoc(pathTransaction(editingTxId));
@@ -18145,7 +18381,7 @@ onAuthStateChanged(auth, async user => {
 
       // 강제 마이그레이션 재실행 (플래그 지우고 onSnapshot이 다시 발화시키도록)
       async resetMigration() {
-        if (!confirm('마이그레이션 플래그를 지우고 다시 실행할까요?')) return;
+        if (!await appConfirm('마이그레이션 플래그를 지우고 다시 실행할까요?')) return;
         const s = { ...settings };
         delete s.liabilitiesMigratedAt;
         await setDoc(pathFinanceSettings(), s, { merge: false });
@@ -19102,7 +19338,7 @@ function impRenderHistory() {
 async function impDeleteBatch(batchId) {
   const h = (settings.importHistory || []).find(x => x.id === batchId);
   if (!h) return;
-  if (!confirm(`${h.sources.join(' · ')} ${h.count}건 가져오기를 삭제할까요?\n수동 입력 거래는 건드리지 않습니다.${h.enriched ? `\n※ 사용처 교체 ${h.enriched}건은 기존 거래 수정이라 되돌리지 않습니다.` : ''}`)) return;
+  if (!await appConfirm(`${h.sources.join(' · ')} ${h.count}건 가져오기를 삭제할까요?\n수동 입력 거래는 건드리지 않습니다.${h.enriched ? `\n※ 사용처 교체 ${h.enriched}건은 기존 거래 수정이라 되돌리지 않습니다.` : ''}`)) return;
   try {
     const snap = await getDocs(query(pathTransactions(), where('importBatch', '==', batchId)));
     let batch = writeBatch(db), n = 0, total = 0;
@@ -19132,13 +19368,13 @@ document.getElementById('btn-import').addEventListener('click', openImportModal)
 document.getElementById('imp-drop').addEventListener('click', () => document.getElementById('imp-file-input').click());
 document.getElementById('imp-file-input').addEventListener('change', e => impHandleFiles(e.target.files));
 // 파일 다시 선택 — 검토 상태 폐기 (진행 중이면 확인)
-document.getElementById('btn-imp-back').addEventListener('click', () => {
-  if (impState && !confirm('검토 중인 내용을 버리고 파일을 다시 선택할까요?')) return;
+document.getElementById('btn-imp-back').addEventListener('click', async () => {
+  if (impState && !await appConfirm('검토 중인 내용을 버리고 파일을 다시 선택할까요?')) return;
   impResetModal();
 });
 // 취소 — 폐기 후 닫기. (×·배경 클릭은 상태 보존 — 다시 열면 이어감)
-document.getElementById('btn-imp-cancel').addEventListener('click', () => {
-  if (impState && !confirm('검토 중인 내용을 버릴까요?\n(실수로 닫은 거라면 × 로 닫고 다시 가져오기를 누르면 이어갈 수 있어요)')) return;
+document.getElementById('btn-imp-cancel').addEventListener('click', async () => {
+  if (impState && !await appConfirm('검토 중인 내용을 버릴까요?\n(실수로 닫은 거라면 × 로 닫고 다시 가져오기를 누르면 이어갈 수 있어요)')) return;
   impState = null;
   closeOv('ov-import');
 });
