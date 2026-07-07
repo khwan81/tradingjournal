@@ -1093,7 +1093,7 @@ html, body { overflow-x: hidden; }
  *    HTML 호환을 위해 별도 alias로 함께 매핑.
  */
 .alert-bar,
-.unpaid-bar, .recurring-bar, .budget-bar, .event-bar {
+.unpaid-bar, .budget-bar, .event-bar {
   display: none;
   align-items: center;
   justify-content: space-between;
@@ -1107,7 +1107,7 @@ html, body { overflow-x: hidden; }
   color: var(--text);
 }
 .alert-bar.show,
-.unpaid-bar.show, .recurring-bar.show, .budget-bar.show, .event-bar.show {
+.unpaid-bar.show, .budget-bar.show, .event-bar.show {
   display: flex;
 }
 
@@ -1116,7 +1116,7 @@ html, body { overflow-x: hidden; }
   background: rgba(251, 191, 36, 0.10);
   border-color: rgba(251, 191, 36, 0.32);
 }
-.alert-bar[data-tone="info"], .recurring-bar {
+.alert-bar[data-tone="info"] {
   background: rgba(79, 143, 255, 0.10);
   border-color: rgba(79, 143, 255, 0.32);
 }
@@ -1136,7 +1136,6 @@ html, body { overflow-x: hidden; }
 /* 좌측 (아이콘 + 텍스트) */
 .alert-left,
 .unpaid-bar .ub-left,
-.recurring-bar .rb-left,
 .budget-bar .bb-left,
 .event-bar .eb-left {
   display: flex; align-items: center; gap: 8px;
@@ -1144,7 +1143,6 @@ html, body { overflow-x: hidden; }
 }
 .alert-icon,
 .unpaid-bar .ub-icon,
-.recurring-bar .rb-icon,
 .budget-bar .bb-icon,
 .event-bar .eb-icon {
   /* v0.7-13 — 이모지 제거 후 색상 dot으로 통일 */
@@ -1157,13 +1155,11 @@ html, body { overflow-x: hidden; }
   line-height: 1;
 }
 .unpaid-bar    .ub-icon { background: var(--amber); }
-.recurring-bar .rb-icon { background: var(--accent); }
 .budget-bar    .bb-icon { background: var(--amber); }
 .budget-bar.severe .bb-icon { background: var(--red); }
 .event-bar     .eb-icon { background: #ec4899; }
 .alert-text,
 .unpaid-bar .ub-text,
-.recurring-bar .rb-text,
 .budget-bar .bb-text,
 .event-bar .eb-text {
   color: var(--text2);
@@ -1172,7 +1168,6 @@ html, body { overflow-x: hidden; }
 
 /* 강조 숫자 — 톤별 컬러 */
 .unpaid-bar .ub-amt    { color: var(--amber); font-weight: 600; }
-.recurring-bar .rb-count { color: var(--accent); font-weight: 600; }
 .budget-bar .bb-strong { color: var(--amber); font-weight: 600; }
 .budget-bar.severe .bb-strong { color: var(--red); }
 .event-bar .eb-strong { color: #ec4899; font-weight: 600; }
@@ -1180,35 +1175,12 @@ html, body { overflow-x: hidden; }
 /* CTA 버튼 — 톤별 outline 통일 (시각 무게 일관) */
 .alert-cta,
 .unpaid-bar .ub-cta,
-.recurring-bar .rb-cta,
-.budget-bar .bb-cta,
-.event-bar .eb-cta {
-  border-radius: 6px;
-  height: var(--btn-h-sm);
-  padding: 0 var(--btn-px-sm);
-  font-size: var(--btn-fs-sm);
-  font-weight: 500;
-  font-family: var(--font);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background .15s;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
 .unpaid-bar .ub-cta {
   background: transparent;
   color: var(--amber);
   border: 1px solid rgba(251, 191, 36, 0.45);
 }
 .unpaid-bar .ub-cta:hover { background: rgba(251, 191, 36, 0.10); }
-.recurring-bar .rb-cta {
-  background: transparent;
-  color: var(--accent);
-  border: 1px solid rgba(79, 143, 255, 0.45);
-}
-.recurring-bar .rb-cta:hover { background: rgba(79, 143, 255, 0.10); }
-.recurring-bar .rb-cta:disabled { opacity: 0.5; cursor: not-allowed; }
 .budget-bar .bb-cta {
   background: transparent;
   color: var(--amber);
@@ -1230,20 +1202,14 @@ html, body { overflow-x: hidden; }
 /* 모바일 — 세로 스택 */
 @media (max-width: 640px) {
   .alert-bar,
-  .unpaid-bar, .recurring-bar, .budget-bar, .event-bar {
+  .unpaid-bar, .budget-bar, .event-bar {
     flex-direction: column;
     align-items: stretch;
     gap: 8px;
   }
   .alert-cta,
   .unpaid-bar .ub-cta,
-  .recurring-bar .rb-cta,
-  .budget-bar .bb-cta,
-  .event-bar .eb-cta {
-    width: 100%;
-    text-align: center;
   }
-}
 
 /* v0.7-16 — 알림 스택 (도배 방지)
  *   거래 탭 상단의 알림바 4개를 우선순위 정렬해서 1개씩만 표시 (모바일)
@@ -1350,6 +1316,52 @@ html, body { overflow-x: hidden; }
   font-family: var(--font);
 }
 .rec-row .actions button:hover { background: var(--bg3); color: var(--text); }
+
+/* v0.9-7 — 반복지출 워치리스트 뷰 */
+.rec-summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 12px 16px; margin-bottom: 12px;
+}
+.rec-summary-label { font-size: 11px; color: var(--text2); margin-bottom: 4px; }
+.rec-summary-value { font-size: 20px; font-weight: 500; font-family: var(--font-mono); color: var(--text); }
+.rec-summary-unit  { font-size: 12px; color: var(--text3); margin-left: 2px; }
+.rec-summary-right { text-align: right; }
+.rec-summary-sub   { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.rec-summary-sub .red   { color: var(--red); }
+.rec-summary-sub .green { color: var(--green); }
+.rec-status-line { margin-top: 6px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rec-status { font-size: 12px; font-family: var(--font-mono); }
+.rec-status.paid    { color: var(--green); }
+.rec-status.pending { color: var(--amber); }
+.rec-status .red   { color: var(--red); }
+.rec-status .green { color: var(--green); }
+.rec-quick-add { padding: 2px 10px; font-size: 11px; }
+.rec-inactive { margin-top: 10px; }
+.rec-inactive summary { font-size: 12px; color: var(--text3); cursor: pointer; padding: 6px 0; }
+.rec-suggest {
+  margin-top: 14px; border: 1px dashed var(--border); border-radius: var(--radius);
+  padding: 12px 14px; background: rgba(79, 143, 255, 0.04);
+}
+.rec-suggest-title { font-size: 12px; color: var(--text); margin-bottom: 8px; font-weight: 600; }
+.rec-suggest-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 0; }
+.rec-suggest-row + .rec-suggest-row { border-top: 1px solid var(--border); }
+.rec-suggest-info { min-width: 0; }
+.rec-suggest-name { font-size: 13px; color: var(--text); display: block; }
+.rec-suggest-meta { font-size: 11px; color: var(--text3); }
+.rec-tools { margin-top: 14px; text-align: right; }
+.recdup-row {
+  display: flex; gap: 10px; align-items: flex-start; padding: 10px 0;
+  border-bottom: 1px solid var(--border); cursor: pointer;
+}
+.recdup-row:last-child { border-bottom: none; }
+.recdup-info { min-width: 0; }
+.recdup-line { font-size: 12px; color: var(--text2); margin-bottom: 2px; }
+.recdup-tag {
+  display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 4px; margin-right: 6px;
+}
+.recdup-tag.gen { background: rgba(245, 158, 11, 0.15); color: var(--amber); }
+.recdup-tag.imp { background: rgba(52, 211, 153, 0.15); color: var(--green); }
 
 /* ── 경조사 (v0.6) ── */
 /* 적립 계좌 선택 바 */
@@ -4261,14 +4273,7 @@ html, body { overflow-x: hidden; }
           <button type="button" class="ub-cta" id="btn-bulk-open">일괄결제 처리</button>
         </div>
 
-        <!-- 반복지출 알림바 (v0.2-3) -->
-        <div class="recurring-bar alert-item" id="recurring-bar">
-          <div class="rb-left">
-            <span class="rb-icon" aria-hidden="true"></span>
-            <span class="rb-text">이번 달 미생성 반복지출 <span class="rb-count" id="recurring-count">0</span>건</span>
-          </div>
-          <button type="button" class="rb-cta" id="btn-recurring-generate">일괄 생성</button>
-        </div>
+        <!-- v0.9-7 — 반복지출 알림바 제거 (자동 생성 폐기 — 가져오기와 이중 계상 방지, 반복지출은 계획 탭의 관찰 뷰로) -->
 
         <!-- 예산 알림바 (v0.4 A7) -->
         <div class="budget-bar alert-item" id="budget-bar">
@@ -5618,14 +5623,19 @@ html, body { overflow-x: hidden; }
           <label class="form-label">이름</label>
           <input class="input" id="rec-name" placeholder="예: 넷플릭스, 월세, 보험료" autocomplete="off">
         </div>
+        <div class="form-group">
+          <label class="form-label">매칭 키워드 <span style="color:var(--text3);">(선택 — 쉼표로 여러 개)</span></label>
+          <input class="input" id="rec-keywords" placeholder="비우면 이름으로 매칭" autocomplete="off">
+          <div class="form-hint">거래의 사용처·메모에 이 단어가 들어 있으면 "이번 달 결제됨"으로 인식합니다 (대소문자·공백 무시)</div>
+        </div>
         <div class="form-row cols-2 form-group">
           <div>
-            <label class="form-label">금액</label>
+            <label class="form-label">기준 금액</label>
             <input class="input" type="text" inputmode="numeric" id="rec-amount" placeholder="0" style="text-align:right; font-family: var(--font-mono);">
           </div>
           <div>
-            <label class="form-label">매월 며칠</label>
-            <input class="input" type="number" id="rec-day" min="1" max="31" placeholder="15">
+            <label class="form-label">보통 결제일 <span style="color:var(--text3);">(선택)</span></label>
+            <input class="input" type="number" id="rec-day" min="1" max="31" placeholder="원탭 입력 날짜">
           </div>
         </div>
         <div class="form-group">
@@ -5663,6 +5673,27 @@ html, body { overflow-x: hidden; }
       <button class="btn-danger grow" id="btn-rec-delete" style="display:none;">삭제</button>
       <button class="btn-s" data-close="ov-recurring">취소</button>
       <button class="btn-p" id="btn-rec-save">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 모달: 반복지출 과거 중복 검사 (v0.9-7 D11) ── -->
+<div class="ov" id="ov-recdup">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>과거 생성분 중복 검사</h3>
+      <button class="modal-close" data-close="ov-recdup">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-hint" style="margin-bottom:10px;">
+        예전 "일괄 생성"으로 만들어진 거래와 가져오기 거래가 같은 달·같은 결제수단·유사 금액으로
+        겹치는 쌍을 찾습니다. 체크된 <b>생성분</b>이 삭제 대상입니다 (실거래인 가져오기분은 유지 권장).
+      </div>
+      <div id="recdup-body"><div class="dash-placeholder" style="padding:20px;">검사 중…</div></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-s" data-close="ov-recdup">닫기</button>
+      <button class="btn-danger" id="btn-recdup-delete" style="display:none;">선택 삭제</button>
     </div>
   </div>
 </div>
@@ -6641,7 +6672,6 @@ function subscribeRecurring() {
         return String(a.name).localeCompare(String(b.name), 'ko');
       });
       renderRecurringList();
-      renderRecurringBar();
     },
     err => { console.error('recurring subscribe error', err); showToast('반복지출 로드 실패'); }
   );
@@ -7237,7 +7267,7 @@ function subscribeTransactions() {
         return bt - at;
       });
       renderTransactions();
-      renderRecurringBar();
+      renderRecurringList();   // v0.9-7 — 매칭 상태(결제됨/대기)가 거래에 의존
       renderBudgetBar();   // v0.4 A7
       renderEventBar();    // v0.6 — 경조사 적립 부족 알림
       renderDashKpi();     // v0.5 B2 — 가벼우니 항상
@@ -9081,155 +9111,389 @@ function isRecurringActiveInYm(rec, ym) {
   return true;
 }
 
-// 현재 달(currentMonth)에 미생성인 반복지출 목록
-function getRecurringPendingForCurrentMonth() {
-  const pending = [];
-  for (const rec of recurringMasters) {
-    if (!isRecurringActiveInYm(rec, currentMonth)) continue;
-    // 이미 생성된 거래가 있는지 확인 (recurringRef 일치 + ym 일치)
-    const exists = transactions.some(tx => tx.recurringRef === rec.id);
-    if (!exists) pending.push(rec);
-  }
-  return pending;
+// v0.9-7 — 자동 생성 기능 폐기 (getRecurringPendingForCurrentMonth / renderRecurringBar /
+// generateRecurringForCurrentMonth 제거). 이유: 매달 카드내역 가져오기 운영과 이중 계상 —
+// 생성분(설정 날짜·금액)과 실거래(실제 승인일·금액)가 중복 감지(날짜+금액+결제수단)를 통과함.
+// 반복지출 마스터는 "매칭 규칙(워치리스트)"으로 역할 변경 — renderRecurringList 참고.
+
+// ── 계획>반복지출: 워치리스트 뷰 (v0.9-7 — D9 절충 모델) ──────────
+// 마스터 = 매칭 규칙. 매달 실거래(가져오기 포함)에서 매칭된 건을 찾아 상태만 보여줌.
+//   • 상단 요약: 이번 달 매칭 합계 + 전월 대비
+//   • 항목 행: ✓ 결제됨(날짜·금액·전월 변동) / ⏳ 대기 → [입력] 원탭 프리필 (D10)
+//   • 하단: 자동 감지 제안 (최근 6개월 패턴 → [등록]) + 과거 중복 검사 (D11)
+
+const normKey = v => String(v || '').toLowerCase().replace(/\s+/g, '');
+
+function recKeywordsOf(rec) {
+  const kws = (rec.matchKeywords && rec.matchKeywords.length) ? rec.matchKeywords : [rec.name];
+  return kws.map(normKey).filter(Boolean);
 }
 
-// ── 알림바 렌더 ──────────────────────────────────────
-function renderRecurringBar() {
-  const $bar = document.getElementById('recurring-bar');
-  if (!$bar) return;
-  const pending = getRecurringPendingForCurrentMonth();
-  if (pending.length === 0) {
-    $bar.classList.remove('show');
-    syncAlertStack();
-    return;
-  }
-  document.getElementById('recurring-count').textContent = pending.length;
-  $bar.classList.add('show');
-  syncAlertStack();
+// 해당 마스터에 매칭되는 거래들 (사용처/메모 부분 일치)
+function matchRecurringTxs(rec, txList) {
+  const kws = recKeywordsOf(rec);
+  if (!kws.length) return [];
+  return (txList || []).filter(t => {
+    const m = normKey(t.memo);
+    if (!m) return false;
+    return kws.some(k => m.includes(k));
+  });
 }
 
-// ── 일괄 생성 ─────────────────────────────────────────
-async function generateRecurringForCurrentMonth() {
-  const pending = getRecurringPendingForCurrentMonth();
-  if (pending.length === 0) return;
-
-  const $btn = document.getElementById('btn-recurring-generate');
-  const orig = $btn.textContent;
-  $btn.disabled = true;
-  $btn.textContent = '⏳ 생성 중…';
-
+// 전월 거래 캐시 (반복지출 뷰 전용 — 분석 캐시를 오염시키지 않음)
+let recPrevTxCache = null;   // { ym, txList }
+async function loadRecPrevTxs(ym) {
+  if (recPrevTxCache?.ym === ym) return recPrevTxCache.txList;
   try {
-    const batch = writeBatch(db);
-    const [y, m] = currentMonth.split('-').map(Number);
-    const lastDay = new Date(y, m, 0).getDate(); // 이번 달 마지막 날
-
-    for (const rec of pending) {
-      // dayOfMonth가 이번 달 마지막보다 크면 마지막 날로 clamp (예: 31일 설정인데 2월)
-      const day = Math.min(rec.dayOfMonth || 1, lastDay);
-      const date = `${currentMonth}-${String(day).padStart(2, '0')}`;
-      const payObj = settings?.payments?.find(p => p.name === rec.payment);
-      const acc = rec.accountId ? accounts.find(a => a.id === rec.accountId) : null;
-      const paid = (payObj?.type || 'cash') === 'cash'; // 현금성은 즉시 결제, 카드는 미결제
-
-      const data = {
-        date,
-        ym: currentMonth,
-        amount: rec.amount,
-        amountNative: null,
-        currency: 'KRW',
-        fxRate: null,
-        category: rec.category,
-        flow: mapCategoryToFlow(rec.category),
-        payment: rec.payment,
-        paymentType: payObj?.type || 'cash',
-        accountId: acc?.id || null,
-        accountName: acc?.name || null,
-        paid,
-        paidAt: paid ? serverTimestamp() : null,
-        memo: rec.memo || null,
-        recurringRef: rec.id,  // 핵심: 어느 반복지출에서 생성됐는지
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      };
-
-      const newDocRef = doc(pathTransactions());
-      batch.set(newDocRef, data);
-    }
-
-    await batch.commit();
-    showToast(`반복지출 ${pending.length}건 생성 완료`);
-
-    // v0.7-12 2단계 — 거래 변경 시 분석 캐시 무효화
-    invalidateAnalysisYms();
-    const $analysisTop = document.getElementById('tab-analysis');
-    if ($analysisTop?.classList.contains('active')) applyAnalysisPeriod();
-  } catch (e) {
-    console.error('[recurring generate] error', e);
-    showToast('생성 실패: ' + (e.message || e.code));
-  } finally {
-    $btn.disabled = false;
-    $btn.textContent = orig;
-  }
+    const snap = await getDocs(query(pathTransactions(), where('ym', '==', ym)));
+    const txList = [];
+    snap.forEach(d => txList.push({ id: d.id, ...d.data() }));
+    recPrevTxCache = { ym, txList };
+    return txList;
+  } catch (e) { console.error('recurring prev fetch', e); return []; }
 }
 
-document.getElementById('btn-recurring-generate').addEventListener('click', generateRecurringForCurrentMonth);
-
-// ── 설정 탭: 마스터 리스트 렌더 ───────────────────────
 function renderRecurringList() {
   const $l = document.getElementById('recurring-list');
   if (!$l) return;
+
+  const today = currentMonth;
+  const actives = recurringMasters.filter(r => isRecurringActiveInYm(r, today));
+  const inactives = recurringMasters.filter(r => !isRecurringActiveInYm(r, today));
+
   if (!recurringMasters.length) {
-    $l.innerHTML = '<div class="chip-empty" style="text-align:center; padding:24px 0;">아직 등록된 반복지출이 없습니다</div>';
+    $l.innerHTML = `
+      <div class="chip-empty" style="text-align:center; padding:24px 0;">
+        등록된 반복지출이 없습니다<br>
+        <span style="font-size:11px;color:var(--text3);">우상단 "+ 반복지출 추가" — 또는 아래 자동 감지 제안에서 등록하세요</span>
+      </div>
+      <div id="rec-suggest-wrap"></div>
+      <div class="rec-tools"><button type="button" class="btn-s" id="btn-rec-dupscan">🔍 과거 생성분 중복 검사</button></div>`;
+    bindRecurringListEvents($l);
+    loadRecurringExtras();
     return;
   }
-  // 글로벌 월 기준 — 사용자가 보고 있는 월 기준으로 진행/종료/예정 판단
-  const today = currentMonth;
-  $l.innerHTML = recurringMasters.map(rec => {
-    const isActive = isRecurringActiveInYm(rec, today);
-    const ended = rec.validTo && rec.validTo < today;
-    const notYet = rec.validFrom && rec.validFrom > today;
-    let badge;
-    if (ended)       badge = '<span class="badge ended">종료됨</span>';
-    else if (notYet) badge = '<span class="badge">예정</span>';
-    else if (isActive) badge = '<span class="badge active">진행 중</span>';
-    else             badge = '<span class="badge">비활성</span>';
 
-    const period = rec.validTo
-      ? `${rec.validFrom} ~ ${rec.validTo}`
-      : `${rec.validFrom} ~ 진행 중`;
+  // ── 이번 달 상태 계산 ──
+  let paidSum = 0;
+  const rows = actives.map(rec => {
+    const matched = matchRecurringTxs(rec, transactions)
+      .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    const tx = matched[0] || null;
+    const matchedSum = matched.reduce((sm, t) => sm + (Number(t.amount) || 0), 0);
+    if (tx) paidSum += matchedSum;
+    return { rec, tx, matched, matchedSum };
+  });
+  const pendingCount = rows.filter(r => !r.tx).length;
 
+  // ── 요약 카드 (전월 비교는 async로 채움) ──
+  let html = `
+    <div class="rec-summary" id="rec-summary">
+      <div>
+        <div class="rec-summary-label">이번 달 반복지출</div>
+        <div class="rec-summary-value">${fmtKoAmount(paidSum)}<span class="rec-summary-unit">원</span></div>
+      </div>
+      <div class="rec-summary-right">
+        <div class="rec-summary-sub" id="rec-summary-mom">전월 비교 중…</div>
+        <div class="rec-summary-sub">${rows.length}건 관찰 · ${pendingCount ? `대기 ${pendingCount}건` : '모두 결제됨'}</div>
+      </div>
+    </div>`;
+
+  // ── 항목 행 ──
+  html += rows.map(({ rec, tx, matched, matchedSum }) => {
+    let statusHtml;
+    if (tx) {
+      const day = String(tx.date || '').slice(8, 10).replace(/^0/, '');
+      const diff = matchedSum - (Number(rec.amount) || 0);
+      const diffStr = diff !== 0
+        ? ` <span class="${diff > 0 ? 'red' : 'green'}" style="font-size:10px;">기준 대비 ${diff > 0 ? '+' : '−'}${fmtAmount(Math.abs(diff))}</span>`
+        : '';
+      const multi = matched.length > 1 ? ` <span style="color:var(--text3);font-size:10px;">(${matched.length}건 합)</span>` : '';
+      statusHtml = `<span class="rec-status paid">✓ ${day}일 · ${fmtAmount(matchedSum)}원${multi}${diffStr}</span>`;
+    } else {
+      const dayHint = rec.dayOfMonth ? ` <span style="color:var(--text3);font-size:10px;">보통 ${rec.dayOfMonth}일</span>` : '';
+      statusHtml = `
+        <span class="rec-status pending">⏳ 이번 달 아직 없음${dayHint}</span>
+        <button type="button" class="btn-s rec-quick-add" data-rec-quick="${escapeHtml(rec.id)}">입력</button>`;
+    }
     return `
     <div class="rec-row">
       <div class="rec-main">
         <div class="rec-name-wrap">
           <span class="rec-name">${escapeHtml(rec.name)}</span>
-          ${badge}
+          <span class="rec-amount">기준 ${fmtAmount(rec.amount)}원</span>
         </div>
         <div class="rec-meta">
-          <span class="rec-amount">${fmtAmount(rec.amount)}원</span>
-          <span class="dot">·</span>
-          매월 ${rec.dayOfMonth}일
-          <span class="dot">·</span>
           ${escapeHtml(rec.category)}
-          <span class="dot">·</span>
-          ${escapeHtml(rec.payment)}
-          <br>
-          <span style="color:var(--text3);">${escapeHtml(period)}</span>
+          <span class="dot">·</span>${escapeHtml(rec.payment)}
           ${rec.memo ? `<span class="dot">·</span>${escapeHtml(rec.memo)}` : ''}
         </div>
+        <div class="rec-status-line" data-rec-status="${escapeHtml(rec.id)}">${statusHtml}</div>
       </div>
       <div class="actions">
         <button type="button" data-edit-rec="${escapeHtml(rec.id)}" aria-label="편집">⋯</button>
       </div>
     </div>`;
   }).join('');
+
+  // ── 비활성(예정/종료) 접힌 목록 ──
+  if (inactives.length) {
+    html += `<details class="rec-inactive"><summary>예정·종료 항목 ${inactives.length}건</summary>` +
+      inactives.map(rec => {
+        const ended = rec.validTo && rec.validTo < today;
+        const badge = ended ? '<span class="badge ended">종료됨</span>' : '<span class="badge">예정</span>';
+        const period = rec.validTo ? `${rec.validFrom} ~ ${rec.validTo}` : `${rec.validFrom} ~`;
+        return `
+        <div class="rec-row">
+          <div class="rec-main">
+            <div class="rec-name-wrap"><span class="rec-name">${escapeHtml(rec.name)}</span>${badge}</div>
+            <div class="rec-meta">${fmtAmount(rec.amount)}원 <span class="dot">·</span> ${escapeHtml(period)}</div>
+          </div>
+          <div class="actions"><button type="button" data-edit-rec="${escapeHtml(rec.id)}" aria-label="편집">⋯</button></div>
+        </div>`;
+      }).join('') + `</details>`;
+  }
+
+  html += `<div id="rec-suggest-wrap"></div>
+    <div class="rec-tools"><button type="button" class="btn-s" id="btn-rec-dupscan">🔍 과거 생성분 중복 검사</button></div>`;
+
+  $l.innerHTML = html;
+  bindRecurringListEvents($l);
+  loadRecurringExtras();   // 전월 비교 + 자동 감지 (async)
+}
+
+function bindRecurringListEvents($l) {
   $l.querySelectorAll('[data-edit-rec]').forEach(el => {
     el.addEventListener('click', () => openRecurringModal(el.dataset.editRec));
   });
+  // D10 — 원탭 입력: 프리필된 새 거래 모달
+  $l.querySelectorAll('[data-rec-quick]').forEach(el => {
+    el.addEventListener('click', () => {
+      const rec = recurringMasters.find(r => r.id === el.dataset.recQuick);
+      if (!rec) return;
+      const [y, m] = currentMonth.split('-').map(Number);
+      const lastDay = new Date(y, m, 0).getDate();
+      const day = Math.min(rec.dayOfMonth || new Date().getDate(), lastDay);
+      openTxModal(null, {
+        date: `${currentMonth}-${String(day).padStart(2, '0')}`,
+        amount: rec.amount,
+        category: rec.category,
+        payment: rec.payment,
+        accountId: rec.accountId || null,
+        memo: rec.name,   // 이름을 메모로 → 저장 즉시 워치리스트에 매칭됨
+      });
+    });
+  });
+  $l.querySelector('#btn-rec-dupscan')?.addEventListener('click', runRecurringDupScan);
 }
 
+// ── async 확장: 전월 비교 + 자동 감지 제안 ─────────────
+let recDetectCache = null;   // { key, txList } — 최근 6개월 (현재월 제외 5개월 fetch)
+
+async function loadRecurringExtras() {
+  const $l = document.getElementById('recurring-list');
+  if (!$l) return;
+  const forYm = currentMonth;
+
+  // 1) 전월 비교
+  const prev = prevYm(forYm);
+  const prevTxs = await loadRecPrevTxs(prev);
+  if (currentMonth !== forYm) return;   // 그 사이 월 이동 — 무시
+  const $mom = document.getElementById('rec-summary-mom');
+  if ($mom) {
+    const actives = recurringMasters.filter(r => isRecurringActiveInYm(r, forYm));
+    let curSum = 0, prevSum = 0;
+    for (const rec of actives) {
+      curSum  += matchRecurringTxs(rec, transactions).reduce((sm, t) => sm + (Number(t.amount) || 0), 0);
+      prevSum += matchRecurringTxs(rec, prevTxs).reduce((sm, t) => sm + (Number(t.amount) || 0), 0);
+    }
+    if (prevSum > 0) {
+      const d = curSum - prevSum;
+      const sign = d > 0 ? '+' : d < 0 ? '−' : '';
+      $mom.innerHTML = d === 0
+        ? `전월과 동일 (${fmtKoAmount(prevSum)}원)`
+        : `전월 ${fmtKoAmount(prevSum)}원 → <span class="${d > 0 ? 'red' : 'green'}">${sign}${fmtKoAmount(Math.abs(d))}</span>`;
+    } else {
+      $mom.textContent = '전월 매칭 없음';
+    }
+  }
+
+  // 2) 자동 감지 제안 (D9)
+  await renderRecurringSuggestions();
+}
+
+async function renderRecurringSuggestions() {
+  const $wrap = document.getElementById('rec-suggest-wrap');
+  if (!$wrap) return;
+  const forYm = currentMonth;
+
+  // 최근 6개월 = 이전 5개월 fetch + 현재월(구독 중)
+  const ymList = recentYmList(6, forYm);
+  const priorYms = ymList.slice(0, -1);
+  const key = priorYms.join(',');
+  let priorTxs;
+  if (recDetectCache?.key === key) {
+    priorTxs = recDetectCache.txList;
+  } else {
+    try {
+      const snap = await getDocs(query(pathTransactions(), where('ym', 'in', priorYms)));
+      priorTxs = [];
+      snap.forEach(d => priorTxs.push({ id: d.id, ...d.data() }));
+      recDetectCache = { key, txList: priorTxs };
+    } catch (e) { console.error('recurring detect fetch', e); return; }
+  }
+  if (currentMonth !== forYm) return;
+
+  const all = [...priorTxs, ...transactions];
+  // 지출 + 메모 있는 거래를 정규화 메모로 그룹핑
+  const groups = new Map();   // key → { label, byYm: Map(ym → [amounts]) }
+  for (const t of all) {
+    if (t.flow !== 'fixed' && t.flow !== 'variable') continue;
+    const k = normKey(t.memo);
+    if (!k || k.length < 2) continue;
+    if (!groups.has(k)) groups.set(k, { label: t.memo, byYm: new Map() });
+    const g = groups.get(k);
+    if (!g.byYm.has(t.ym)) g.byYm.set(t.ym, []);
+    g.byYm.get(t.ym).push({ amount: Number(t.amount) || 0, category: t.category, payment: t.payment });
+  }
+
+  // 이미 등록된 마스터에 매칭되는 그룹 제외
+  const registeredKws = recurringMasters.flatMap(recKeywordsOf);
+
+  const suggestions = [];
+  for (const [k, g] of groups) {
+    if (registeredKws.some(kw => k.includes(kw) || kw.includes(k))) continue;
+    const months = [...g.byYm.keys()];
+    if (months.length < 3) continue;   // 6개월 중 3개월 이상 등장
+    // 월별 합계의 중앙값 + 안정성 (중앙값 ±20% 안에 드는 달이 3개월 이상)
+    const monthSums = months.map(ym => g.byYm.get(ym).reduce((sm, x) => sm + x.amount, 0)).sort((a, b) => a - b);
+    const median = monthSums[Math.floor(monthSums.length / 2)];
+    if (median <= 0) continue;
+    const stable = monthSums.filter(v => Math.abs(v - median) <= median * 0.2).length;
+    if (stable < 3) continue;
+    const recent = g.byYm.get(months.sort().at(-1))[0];
+    suggestions.push({ key: k, label: g.label, median, months: months.length, category: recent.category, payment: recent.payment });
+  }
+  suggestions.sort((a, b) => b.median - a.median);
+  const top = suggestions.slice(0, 8);
+
+  if (!top.length) { $wrap.innerHTML = ''; return; }
+
+  $wrap.innerHTML = `
+    <div class="rec-suggest">
+      <div class="rec-suggest-title">반복 패턴 감지 <span style="color:var(--text3);font-weight:400;">— 최근 6개월 기준, 등록하면 위 목록에서 관찰</span></div>
+      ${top.map((sg, i) => `
+        <div class="rec-suggest-row">
+          <div class="rec-suggest-info">
+            <span class="rec-suggest-name">${escapeHtml(sg.label)}</span>
+            <span class="rec-suggest-meta">약 ${fmtAmount(sg.median)}원 × ${sg.months}개월 · ${escapeHtml(sg.category || '')}</span>
+          </div>
+          <button type="button" class="btn-s" data-rec-suggest="${i}">등록</button>
+        </div>`).join('')}
+    </div>`;
+
+  $wrap.querySelectorAll('[data-rec-suggest]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const sg = top[Number(btn.dataset.recSuggest)];
+      if (!sg) return;
+      openRecurringModal(null, {
+        name: sg.label, keyword: sg.label, amount: sg.median,
+        category: sg.category, payment: sg.payment,
+      });
+    });
+  });
+}
+
+// ── D11: 과거 생성분 ↔ 가져오기 중복 1회성 검사 (v0.9-7) ──────────
+let recDupPairs = [];   // [{ gen, imp }]
+
+async function runRecurringDupScan() {
+  openOv('ov-recdup');
+  const $body = document.getElementById('recdup-body');
+  const $del  = document.getElementById('btn-recdup-delete');
+  $del.style.display = 'none';
+  $body.innerHTML = '<div class="dash-placeholder" style="padding:20px;">검사 중…</div>';
+
+  try {
+    // 1) 과거 생성분 (recurringRef 보유 거래 — 전 월)
+    const genSnap = await getDocs(query(pathTransactions(), where('recurringRef', '>', '')));
+    const genTxs = [];
+    genSnap.forEach(d => genTxs.push({ id: d.id, ...d.data() }));
+    if (!genTxs.length) {
+      $body.innerHTML = '<div class="dash-placeholder" style="padding:20px;">과거 생성분이 없습니다 — 중복 걱정 없음 👍</div>';
+      return;
+    }
+
+    // 2) 그 월들의 가져오기 거래 fetch ('in' 30개 제한 청크)
+    const yms = [...new Set(genTxs.map(t => t.ym).filter(Boolean))];
+    const impTxs = [];
+    for (let i = 0; i < yms.length; i += 30) {
+      const snap = await getDocs(query(pathTransactions(), where('ym', 'in', yms.slice(i, i + 30))));
+      snap.forEach(d => {
+        const t = { id: d.id, ...d.data() };
+        if (t.importId) impTxs.push(t);
+      });
+    }
+
+    // 3) 쌍 찾기 — 같은 ym + 같은 결제수단 + 금액 차 ≤ max(1,000원, 10%)
+    const usedImp = new Set();
+    recDupPairs = [];
+    for (const g of genTxs) {
+      const gAmt = Number(g.amount) || 0;
+      const tol = Math.max(1000, gAmt * 0.1);
+      const cand = impTxs.find(t =>
+        !usedImp.has(t.id) && t.ym === g.ym && t.payment === g.payment &&
+        Math.abs((Number(t.amount) || 0) - gAmt) <= tol);
+      if (cand) { usedImp.add(cand.id); recDupPairs.push({ gen: g, imp: cand }); }
+    }
+
+    if (!recDupPairs.length) {
+      $body.innerHTML = `<div class="dash-placeholder" style="padding:20px;">생성분 ${genTxs.length}건 검사 — 겹치는 가져오기 거래 없음 👍</div>`;
+      return;
+    }
+
+    $body.innerHTML = recDupPairs.map((pr, i) => `
+      <label class="recdup-row">
+        <input type="checkbox" class="recdup-check" data-recdup="${i}" checked>
+        <div class="recdup-info">
+          <div class="recdup-line"><span class="recdup-tag gen">생성분</span> ${escapeHtml(pr.gen.date || pr.gen.ym)} · ${fmtAmount(pr.gen.amount)}원 · ${escapeHtml(pr.gen.category || '')} ${pr.gen.memo ? '· ' + escapeHtml(pr.gen.memo) : ''}</div>
+          <div class="recdup-line"><span class="recdup-tag imp">가져옴</span> ${escapeHtml(pr.imp.date || pr.imp.ym)} · ${fmtAmount(pr.imp.amount)}원 · ${escapeHtml(pr.imp.memo || '')}</div>
+        </div>
+      </label>`).join('');
+    $del.style.display = 'inline-flex';
+    $del.textContent = `선택 삭제 (${recDupPairs.length})`;
+    $body.querySelectorAll('.recdup-check').forEach(cb => cb.addEventListener('change', () => {
+      const n = $body.querySelectorAll('.recdup-check:checked').length;
+      $del.textContent = `선택 삭제 (${n})`;
+      $del.style.display = n ? 'inline-flex' : 'none';
+    }));
+  } catch (e) {
+    console.error('[recdup] scan error', e);
+    $body.innerHTML = '<div class="dash-placeholder" style="padding:20px;">검사 실패 — 콘솔을 확인하세요</div>';
+  }
+}
+
+document.getElementById('btn-recdup-delete').addEventListener('click', async () => {
+  const $body = document.getElementById('recdup-body');
+  const ids = [...$body.querySelectorAll('.recdup-check:checked')]
+    .map(cb => recDupPairs[Number(cb.dataset.recdup)]?.gen?.id).filter(Boolean);
+  if (!ids.length) return;
+  if (!confirm(`생성분 거래 ${ids.length}건을 삭제할까요?\n가져오기 거래는 그대로 유지됩니다.`)) return;
+  try {
+    const CHUNK = 450;
+    for (let i = 0; i < ids.length; i += CHUNK) {
+      const batch = writeBatch(db);
+      for (const id of ids.slice(i, i + CHUNK)) batch.delete(pathTransaction(id));
+      await batch.commit();
+    }
+    showToast(`중복 생성분 ${ids.length}건 삭제됨`);
+    invalidateAnalysisYms();
+    closeOv('ov-recdup');
+  } catch (e) { console.error(e); showToast('삭제 실패'); }
+});
+
 // ── 모달 ─────────────────────────────────────────────
-function openRecurringModal(id = null) {
+function openRecurringModal(id = null, prefill = null) {
   if (!settings) return;
   const hasCats = (settings.categories.revenue.length + settings.categories.fixed.length + settings.categories.variable.length) > 0;
   const hasPays = settings.payments.length > 0;
@@ -9248,15 +9512,19 @@ function openRecurringModal(id = null) {
   document.getElementById('rec-modal-title').textContent = isEdit ? '반복지출 편집' : '반복지출 추가';
   document.getElementById('btn-rec-delete').style.display = isEdit ? 'inline-flex' : 'none';
 
-  document.getElementById('rec-name').value = rec?.name || '';
-  document.getElementById('rec-amount').value = rec ? fmtAmount(rec.amount) : '';
-  document.getElementById('rec-day').value = rec?.dayOfMonth || 1;
+  document.getElementById('rec-name').value = rec?.name || prefill?.name || '';
+  document.getElementById('rec-keywords').value = rec?.matchKeywords?.length
+    ? rec.matchKeywords.join(', ')
+    : (prefill?.keyword || '');
+  document.getElementById('rec-amount').value = rec ? fmtAmount(rec.amount)
+    : (prefill?.amount ? fmtAmount(prefill.amount) : '');
+  document.getElementById('rec-day').value = rec?.dayOfMonth || prefill?.dayOfMonth || '';
   document.getElementById('rec-memo').value = rec?.memo || '';
   document.getElementById('rec-valid-from').value = rec?.validFrom || currentYm();
   document.getElementById('rec-valid-to').value = rec?.validTo || '';
 
-  rebuildRecCategoryOptions(rec?.category);
-  rebuildRecPaymentOptions(rec?.payment);
+  rebuildRecCategoryOptions(rec?.category || prefill?.category);
+  rebuildRecPaymentOptions(rec?.payment || prefill?.payment);
   rebuildRecAccountOptions(rec?.accountId);
 
   openOv('ov-recurring');
@@ -9315,9 +9583,14 @@ document.getElementById('rec-amount').addEventListener('input', e => {
 // 저장
 document.getElementById('btn-rec-save').addEventListener('click', async () => {
   const name = document.getElementById('rec-name').value.trim();
+  const keywordsRaw = document.getElementById('rec-keywords').value.trim();
+  const matchKeywords = keywordsRaw
+    ? keywordsRaw.split(',').map(k => k.trim()).filter(Boolean)
+    : [];
   const amountRaw = document.getElementById('rec-amount').value.replace(/[^\d]/g, '');
   const amount = parseInt(amountRaw, 10);
-  const dayOfMonth = parseInt(document.getElementById('rec-day').value, 10);
+  const dayRaw = document.getElementById('rec-day').value;
+  const dayOfMonth = dayRaw ? parseInt(dayRaw, 10) : null;   // v0.9-7 — 선택 (원탭 입력 날짜 힌트)
   const category = document.getElementById('rec-category').value;
   const payment = document.getElementById('rec-payment').value;
   const accountId = document.getElementById('rec-account').value || null;
@@ -9327,7 +9600,7 @@ document.getElementById('btn-rec-save').addEventListener('click', async () => {
 
   if (!name)        { showToast('이름을 입력하세요'); return; }
   if (!amount || amount <= 0) { showToast('금액을 입력하세요'); return; }
-  if (!dayOfMonth || dayOfMonth < 1 || dayOfMonth > 31) { showToast('1~31 사이의 날짜를 입력하세요'); return; }
+  if (dayOfMonth != null && (dayOfMonth < 1 || dayOfMonth > 31)) { showToast('결제일은 1~31 사이여야 합니다'); return; }
   if (!category)    { showToast('카테고리를 선택하세요'); return; }
   if (!payment)     { showToast('결제수단을 선택하세요'); return; }
   if (!validFrom)   { showToast('시작 월을 선택하세요'); return; }
@@ -9338,6 +9611,7 @@ document.getElementById('btn-rec-save').addEventListener('click', async () => {
 
   const data = {
     name,
+    matchKeywords,   // v0.9-7 — 워치리스트 매칭 규칙 (비면 이름으로 매칭)
     amount,
     dayOfMonth,
     category,
@@ -9372,7 +9646,7 @@ document.getElementById('btn-rec-delete').addEventListener('click', async () => 
   if (!editingRecurringId) return;
   const rec = recurringMasters.find(r => r.id === editingRecurringId);
   if (!rec) return;
-  if (!confirm(`"${rec.name}" 반복지출을 삭제할까요?\n\n이미 생성된 거래는 그대로 유지됩니다.\n앞으로 새 거래는 생성되지 않습니다.\n\n진행 중인 항목을 보존하려면 종료 월만 설정하는 것도 방법입니다.`)) return;
+  if (!confirm(`"${rec.name}" 반복지출 관찰 항목을 삭제할까요?\n\n거래 데이터에는 영향이 없습니다.\n일시 중단이라면 종료 월만 설정하는 것도 방법입니다.`)) return;
 
   try {
     await deleteDoc(pathRecurringItem(editingRecurringId));
@@ -10385,8 +10659,7 @@ function setMonth(ym) {
 
   // 즉시 헤더/렌더 갱신 (구독 콜백 도착 전에 화면 일관성 유지)
   renderBsHeader();
-  renderRecurringBar();
-  renderRecurringList();   // 글로벌 월 기준 뱃지(진행 중/종료 등) 재계산
+  renderRecurringList();   // 글로벌 월 기준 매칭 상태·뱃지 재계산
   renderEventsList();      // v0.6 — 글로벌 월 기준 '이번 달 처리됨' 등 재계산
   renderEventBar();        // v0.6 — 글로벌 월 기준 적립 부족 재계산
   // 글로벌 월 변경 시 트리맵 drill-down 상태 리셋 (다른 월에 그 카테고리가 없을 수 있음)
@@ -10638,7 +10911,6 @@ function alertItemPriority($item) {
     return $item.dataset.mode === 'process' ? 2 : 6;
   }
   if (id === 'unpaid-bar')    return 3;
-  if (id === 'recurring-bar') return 4;
   return 99;
 }
 
@@ -10648,7 +10920,6 @@ function alertItemTone($item) {
   if (id === 'budget-bar')    return $item.classList.contains('severe') ? 'danger' : 'warn';
   if (id === 'event-bar')     return 'pink';
   if (id === 'unpaid-bar')    return 'amber';
-  if (id === 'recurring-bar') return 'info';
   return 'info';
 }
 
@@ -11758,6 +12029,9 @@ async function loadAnalysisYms(force = false) {
 }
 
 function invalidateAnalysisYms() {
+  // v0.9-7 — 반복지출 뷰 캐시도 함께 무효화 (가져오기·수정·삭제 반영)
+  recPrevTxCache = null;
+  recDetectCache = null;
   analysisAllYms = null;
   invalidateReturnsCache();
   // v0.7-12 2단계 — 거래 캐시도 같이 무효화
@@ -17138,7 +17412,7 @@ function restoreTxDraft() {
 }
 
 
-function openTxModal(id = null) {
+function openTxModal(id = null, prefill = null) {
   // 사전조건 검증
   if (!settings) return;
   const hasCats = (settings.categories.revenue.length + settings.categories.fixed.length + settings.categories.variable.length) > 0;
@@ -17213,6 +17487,21 @@ function openTxModal(id = null) {
 
   // v0.7-38 — 새 거래 모드면 입력 중 닫혔던 임시저장 복원 (기본값 위에 덮어씀)
   if (!isEdit) restoreTxDraft();
+
+  // v0.9-7 (D10) — 반복지출 원탭 입력 프리필 (임시저장보다 우선)
+  if (!isEdit && prefill) {
+    if (prefill.date)   document.getElementById('tx-date').value = prefill.date;
+    if (prefill.amount) document.getElementById('tx-amount').value = fmtAmount(prefill.amount);
+    if (prefill.category) rebuildTxCategoryOptions(prefill.category);
+    if (prefill.payment)  rebuildTxPaymentOptions(prefill.payment);
+    if (prefill.accountId != null) rebuildTxAccountOptions(prefill.accountId || null);
+    if (prefill.memo != null) document.getElementById('tx-memo').value = prefill.memo;
+    lastTxCategoryValue = document.getElementById('tx-category').value;
+    const pObj = settings.payments.find(pp => pp.name === document.getElementById('tx-payment').value);
+    const pType = pObj?.type || 'cash';
+    setPaid(pType === 'cash', pType, /*touchedByUser=*/false);
+    applyTxFxMode();
+  }
   // v0.9 — 복원된 날짜 기준으로 이벤트 자동 매칭 재평가 (직접 고른 값은 유지)
   if (!isEdit) autoSuggestTxTag();
   // v0.9-1 — 복원된 카테고리로 원복 기준점 재동기화
@@ -17459,6 +17748,13 @@ document.getElementById('btn-tx-save').addEventListener('click', async () => {
 
   const payObj = settings.payments.find(p => p.name === payment);
 
+  // v0.9-7 (버그 #7) — 편집 시 이미 결제된 거래의 paidAt 보존.
+  // 새로 기록하는 경우는 미결제→결제 전환 또는 신규 거래뿐.
+  const origTx = editingTxId ? transactions.find(x => x.id === editingTxId) : null;
+  const paidAtVal = paid
+    ? ((origTx?.paid && origTx.paidAt) ? origTx.paidAt : serverTimestamp())
+    : null;
+
   const data = {
     date,
     ym: date.slice(0, 7),
@@ -17473,7 +17769,7 @@ document.getElementById('btn-tx-save').addEventListener('click', async () => {
     accountId: acc?.id || null,
     accountName: acc?.name || null,
     paid,
-    paidAt: paid ? serverTimestamp() : null,
+    paidAt: paidAtVal,
     memo,
     tagId,   // v0.9 — 이벤트(태그)
     updatedAt: serverTimestamp(),
