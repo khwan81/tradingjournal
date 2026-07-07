@@ -29,6 +29,11 @@
 }
 </script>
 
+<!-- 웹폰트 (v0.9-4 정리 — @import가 style 내 다른 규칙 뒤에 있어 무시되던 버그 수정) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500&display=swap">
+
 <!-- Chart.js 4.4.1 (v0.5 대시보드 차트) -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <!-- chartjs-chart-treemap 3.1.0 — Chart.js v4 지원 -->
@@ -129,8 +134,6 @@ html[data-theme="light"] {
 html[data-theme="light"] .bg-row:hover { background: rgba(0,0,0,0.03); }
 html[data-theme="light"] .subtab:hover { border-color: rgba(0,0,0,0.14); }
 html[data-theme="light"] .toggle.on::after { background: #fff; }
-
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500&display=swap');
 
 body {
   font-family: var(--font);
@@ -788,10 +791,10 @@ html, body { overflow-x: hidden; }
   color: var(--text3);
 }
 .backup-last.stale {
-  color: #fbbf24;        /* 노란 톤 — 7일 이상 경과 */
+  color: var(--amber);        /* 노란 톤 — 7일 이상 경과 */
 }
 .backup-last.never {
-  color: #fbbf24;        /* 한 번도 안 한 경우도 동일 톤 */
+  color: var(--amber);        /* 한 번도 안 한 경우도 동일 톤 */
 }
 
 /* 복원 카드 (v0.3-1) — 백업 카드 사이 간격 */
@@ -845,7 +848,7 @@ html, body { overflow-x: hidden; }
   line-height: 1.55;
   background: rgba(245, 158, 11, 0.08);
   border: 1px solid rgba(245, 158, 11, 0.28);
-  color: #fbbf24;
+  color: var(--amber);
   margin-bottom: 10px;
 }
 .restore-warn-danger {
@@ -996,33 +999,39 @@ html, body { overflow-x: hidden; }
 /* .tx-header는 v0.7-20에서 제거됨 (새 거래 버튼은 필터 바 우측으로 흡수) */
 
 /* KPI 카드 */
-.kpi-grid {
+.kpi-grid, .dash-kpi-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 10px;
   margin-bottom: 14px;
 }
-.kpi-card {
+.dash-kpi-grid { grid-template-columns: repeat(4, 1fr); } /* 현황 KPI는 4열 */
+.kpi-card, .dash-kpi-card {
   background: var(--bg2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 14px 16px;
 }
-.kpi-card .label {
+.kpi-card .label, .dash-kpi-label {
   font-size: 11px; color: var(--text2); margin-bottom: 6px;
 }
-.kpi-card .value {
+.kpi-card .value, .dash-kpi-value {
   font-size: 20px; font-weight: 500;
   font-family: var(--font-mono);
   color: var(--text);
   line-height: 1.2;
 }
-.kpi-card .value.green { color: var(--green); }
-.kpi-card .value.red   { color: var(--red); }
+.kpi-card .value.green, .dash-kpi-value.green { color: var(--green); }
+.kpi-card .value.red,   .dash-kpi-value.red   { color: var(--red); }
+.kpi-card .value.amber, .dash-kpi-value.amber { color: var(--amber); }
 .kpi-card .value.muted { color: var(--text2); }
-.kpi-card .sub {
+.dash-kpi-value.muted  { color: var(--text3); }
+.kpi-card .sub, .dash-kpi-sub {
   font-size: 11px; color: var(--text3); margin-top: 4px;
 }
+.kpi-card .sub.green, .dash-kpi-sub.green { color: var(--green); }
+.kpi-card .sub.red,   .dash-kpi-sub.red   { color: var(--red); }
+.kpi-card .sub.amber, .dash-kpi-sub.amber { color: var(--amber); }
 /* MoM (전월 대비) — bs-kpi의 부가 라인 흡수 */
 .kpi-card .bs-mom {
   font-size: 11px;
@@ -1149,7 +1158,7 @@ html, body { overflow-x: hidden; }
 }
 .unpaid-bar    .ub-icon { background: var(--amber); }
 .recurring-bar .rb-icon { background: var(--accent); }
-.budget-bar    .bb-icon { background: #fbbf24; }
+.budget-bar    .bb-icon { background: var(--amber); }
 .budget-bar.severe .bb-icon { background: var(--red); }
 .event-bar     .eb-icon { background: #ec4899; }
 .alert-text,
@@ -1164,7 +1173,7 @@ html, body { overflow-x: hidden; }
 /* 강조 숫자 — 톤별 컬러 */
 .unpaid-bar .ub-amt    { color: var(--amber); font-weight: 600; }
 .recurring-bar .rb-count { color: var(--accent); font-weight: 600; }
-.budget-bar .bb-strong { color: #fbbf24; font-weight: 600; }
+.budget-bar .bb-strong { color: var(--amber); font-weight: 600; }
 .budget-bar.severe .bb-strong { color: var(--red); }
 .event-bar .eb-strong { color: #ec4899; font-weight: 600; }
 
@@ -1202,7 +1211,7 @@ html, body { overflow-x: hidden; }
 .recurring-bar .rb-cta:disabled { opacity: 0.5; cursor: not-allowed; }
 .budget-bar .bb-cta {
   background: transparent;
-  color: #fbbf24;
+  color: var(--amber);
   border: 1px solid rgba(245, 158, 11, 0.45);
 }
 .budget-bar .bb-cta:hover { background: rgba(245, 158, 11, 0.10); }
@@ -1291,7 +1300,7 @@ html, body { overflow-x: hidden; }
 }
 .alert-stack-toggle .ast-dot.amber  { background: var(--amber); }
 .alert-stack-toggle .ast-dot.info   { background: var(--accent); }
-.alert-stack-toggle .ast-dot.warn   { background: #fbbf24; }
+.alert-stack-toggle .ast-dot.warn   { background: var(--amber); }
 .alert-stack-toggle .ast-dot.danger { background: var(--red); }
 .alert-stack-toggle .ast-dot.pink   { background: #ec4899; }
 .alert-stack-toggle .ast-caret {
@@ -1397,7 +1406,7 @@ html, body { overflow-x: hidden; }
 }
 .event-row .badge.upcoming {
   background: rgba(245, 158, 11, 0.12);
-  color: #fbbf24;
+  color: var(--amber);
 }
 .event-row .badge.yearly {
   background: rgba(79, 143, 255, 0.12);
@@ -1606,7 +1615,6 @@ html, body { overflow-x: hidden; }
 
 /* ── 자산결산 (v0.7-3b) ── */
 /* .sv-header는 v0.7-17에서 서브탭바 우측 액션으로 흡수됨 */
-/* .sv-asof는 v0.7-18에서 시각적으로 제거됨 (id만 보존) */
 /* v0.7-13 — .info-note (의미 명확화)
  *   "정보성 안내문" — 아이콘 + 짧은 설명 + 옵션 링크 패턴.
  *   기존 .sv-info를 흡수. 결산/배당/수익률/손익 등 여러 곳에서 사용. */
@@ -2006,7 +2014,6 @@ html, body { overflow-x: hidden; }
    배당 탭 (v0.7-8)
    ───────────────────────────────────────────────────── */
 /* .dv-header는 v0.7-17에서 서브탭바 우측 액션으로 흡수됨 */
-/* .dv-asof는 v0.7-18에서 시각적으로 제거됨 (id만 보존) */
 
 /* .dv-card / .dv-card-head / -title / -sub 는 위 .card 시스템(bar 패턴)에 흡수됨 (v0.7-13) */
 .dv-select {
@@ -2347,46 +2354,13 @@ html, body { overflow-x: hidden; }
 /* (.dash-placeholder는 .empty-state로 통합 — v0.7-13) */
 
 /* 대시보드 KPI 그리드 (B2) */
-.dash-kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  margin-bottom: 14px;
-}
+/* v0.9-4 정리 — .dash-kpi-* 선언은 위 .kpi-card 블록에 그룹핑됨 (중복 CSS 제거).
+   마크업 통합(.kpi-card로 클래스 교체)은 현황 탭 개편 시 진행 */
 @media (max-width: 700px) {
   .dash-kpi-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
-.dash-kpi-card {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 14px 16px;
-}
-.dash-kpi-label {
-  font-size: 11px;
-  color: var(--text2);
-  margin-bottom: 6px;
-}
-.dash-kpi-value {
-  font-size: 20px;
-  font-weight: 500;
-  font-family: var(--font-mono);
-  color: var(--text);
-}
-.dash-kpi-value.green  { color: var(--green); }
-.dash-kpi-value.red    { color: var(--red); }
-.dash-kpi-value.amber  { color: #fbbf24; }
-.dash-kpi-value.muted  { color: var(--text3); }
-.dash-kpi-sub {
-  font-size: 11px;
-  color: var(--text3);
-  margin-top: 4px;
-}
-.dash-kpi-sub.green { color: var(--green); }
-.dash-kpi-sub.red   { color: var(--red); }
-.dash-kpi-sub.amber { color: #fbbf24; }
 
 /* 대시보드 차트 카드 (B3) */
 /* .dash-card / .dash-card-head / -title / -sub 는 위 .card 시스템에 흡수됨 (v0.7-13) */
@@ -2625,7 +2599,7 @@ html, body { overflow-x: hidden; }
 
 .dash-trk-summary {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);   /* v0.9-6 — 3 stat */
   gap: 10px;
   margin-bottom: 14px;
 }
@@ -2659,63 +2633,11 @@ html, body { overflow-x: hidden; }
 }
 
 /* 카테고리별 미니바 (소계 표시) */
-.dash-trk-cats {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.dash-trk-cat-row {
-  display: grid;
-  grid-template-columns: 1fr 1.8fr 1fr;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 4px;
-  font-size: 11.5px;
-}
-.dash-trk-cat-name {
-  display: flex; align-items: center; gap: 6px;
-  color: var(--text);
-}
-.dash-trk-cat-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  flex-shrink: 0;
-}
-.dash-trk-cat-dot.cat-cash      { background: var(--acat-cash); }
-.dash-trk-cat-dot.cat-emergency { background: var(--acat-emergency); }
-.dash-trk-cat-dot.cat-trading   { background: var(--acat-trading); }
-.dash-trk-cat-dot.cat-longterm  { background: var(--acat-longterm); }
-.dash-trk-cat-dot.cat-pension   { background: var(--acat-pension); }
-.dash-trk-cat-dot.cat-other     { background: var(--text3); }
-.dash-trk-cat-bar {
-  position: relative;
-  height: 6px;
-  background: var(--bg);
-  border-radius: 3px;
-  overflow: hidden;
-}
-.dash-trk-cat-bar-fill {
-  position: absolute;
-  inset: 0;
-  border-radius: 3px;
-  transition: width 0.2s ease;
-}
-.dash-trk-cat-amount {
-  font-family: var(--font-mono);
-  text-align: right;
-  color: var(--text2);
-  font-size: 11px;
-}
+/* v0.9-6 (D2·D4) — 카테고리 바(.dash-trk-cats 계열) CSS 제거: 구성 정보는 자산 도넛으로 단일화 */
 
 /* 모바일 */
 @media (max-width: 700px) {
-  .dash-trk-summary { grid-template-columns: 1fr 1fr; }
-  .dash-trk-cat-row {
-    grid-template-columns: 1fr 1fr;
-    gap: 4px 10px;
-  }
-  .dash-trk-cat-name { grid-column: 1; }
-  .dash-trk-cat-amount { grid-column: 2; }
-  .dash-trk-cat-bar { grid-column: 1 / -1; }
+  .dash-trk-summary { grid-template-columns: repeat(3, 1fr); gap: 6px; }
 }
 
 /* 대시보드 경조사 카드 (v0.6 C2) */
@@ -3005,7 +2927,7 @@ html, body { overflow-x: hidden; }
 .bg-actual { color: var(--text); }
 .bg-budget { color: var(--text3); }
 .bg-empty   { color: var(--text3); font-style: italic; font-size: 11px; }
-.bg-no-budget { color: #fbbf24; font-size: 11px; margin-left: 4px; }
+.bg-no-budget { color: var(--amber); font-size: 11px; margin-left: 4px; }
 
 /* v0.7-14 — 예산 미설정/없음 행에 점선 leader (시인성)
  *   예산 있는 행(진행률바 있음)은 영향 없음. data-leader="1" 행에만 적용. */
@@ -3031,7 +2953,7 @@ html, body { overflow-x: hidden; }
   font-family: var(--font-mono);
 }
 .bg-pct.ok    { color: var(--green); }
-.bg-pct.warn  { color: #fbbf24; }
+.bg-pct.warn  { color: var(--amber); }
 .bg-pct.over  { color: var(--red); }
 
 /* 진행률 바 */
@@ -3048,7 +2970,7 @@ html, body { overflow-x: hidden; }
   transition: width 0.3s ease;
 }
 .bg-bar-fill.ok    { background: var(--green); }
-.bg-bar-fill.warn  { background: #fbbf24; }
+.bg-bar-fill.warn  { background: var(--amber); }
 .bg-bar-fill.over  { background: var(--red); }
 
 /* 예산 모달 컨텍스트 (v0.4 A4) */
@@ -4416,7 +4338,6 @@ html, body { overflow-x: hidden; }
 
     <div class="subtab-content active" id="tab-balance">
       <!-- v0.7-18 — asOf 라인은 시각적으로 숨김. id는 JS 호환 위해 보존 -->
-      <span class="bs-asof" id="bs-asof" style="display:none;"></span>
 
       <div id="bs-body">
         <div class="bs-placeholder">
@@ -4428,7 +4349,6 @@ html, body { overflow-x: hidden; }
     <!-- 자산결산 서브탭 (v0.7-3b) -->
     <div class="subtab-content" id="tab-savings">
       <!-- v0.7-18 — asOf 라인은 시각적으로 숨김. id는 JS 호환 위해 보존 -->
-      <span class="sv-asof" id="sv-asof" style="display:none;"></span>
 
       <!-- KPI 3개 -->
       <div class="kpi-grid">
@@ -4462,7 +4382,6 @@ html, body { overflow-x: hidden; }
     <!-- 배당 서브탭 (v0.7-8 / v0.7-8b에서 결산 탭으로 이동) -->
     <div class="subtab-content" id="tab-dividends">
       <!-- v0.7-18 — asOf 라인은 시각적으로 숨김. id는 JS 호환 위해 보존 -->
-      <span class="dv-asof" id="dv-asof" style="display:none;"></span>
 
       <!-- KPI 3 -->
       <div class="kpi-grid">
@@ -4671,7 +4590,6 @@ html, body { overflow-x: hidden; }
   <!-- 대시보드 서브탭 (v0.5 B1 + B2 / v0.7 분석 탭 안으로 이동 / v0.7-11 시점형 위젯은 현황 탭으로 분리 / v0.7-19 헤더 제거) -->
   <div class="subtab-content" id="tab-dashboard">
     <!-- v0.7-19 — 헤더 라인 제거. id는 JS 호환 위해 hidden span으로 보존 -->
-    <span id="dash-asof" style="display:none;"></span>
 
     <div id="dash-body">
       <!-- 순자산 추이 12개월 (B3 / v0.7-23 — 시리즈 토글 칩 추가) -->
@@ -4812,8 +4730,6 @@ html, body { overflow-x: hidden; }
   <!-- ═══ 현황 탭 (v0.7-11 / v0.7-18 헤더 제거) — 시점형 위젯 모음 ═══ -->
   <div class="tab-content" id="tab-status">
     <!-- v0.7-18 — 헤더 라인 제거. id는 JS 호환 위해 hidden span으로 보존 -->
-    <span id="status-title" style="display:none;"></span>
-    <span id="status-asof"  style="display:none;"></span>
 
     <!-- 4 KPI -->
     <div class="dash-kpi-grid">
@@ -4866,10 +4782,6 @@ html, body { overflow-x: hidden; }
             <a href="#" class="dash-card-link" id="dash-trk-goto">자세히</a>
           </div>
         </div>
-        <!-- 카테고리 필터 칩 (v0.7-9c) — KPI/카테고리바에 적용. 추이 차트는 대시보드로 이동했지만 같은 필터 공유 -->
-        <div class="dash-trk-filter" id="dash-trk-filter">
-          <!-- chips inserted dynamically -->
-        </div>
         <div class="dash-trk-body" id="dash-trk-body">
           <div class="dash-chart-empty" id="dash-trk-empty">
             추적 자산 결산이 없습니다 — 결산 탭의 <a href="#" id="dash-trk-link">자산결산</a>에서 입력하세요
@@ -4877,8 +4789,8 @@ html, body { overflow-x: hidden; }
         </div>
       </div>
 
-      <!-- 경조사 카드 (v0.6 C2) -->
-      <div class="dash-card">
+      <!-- 경조사 카드 (v0.6 C2) — v0.9-6(D3): 이번 달 볼 일 없으면 카드 자체 숨김 -->
+      <div class="dash-card" id="dash-events-card" style="display:none;">
         <div class="dash-card-head">
           <div class="dash-card-title">경조사</div>
           <div class="dash-card-sub" id="dash-events-sub">—</div>
@@ -5147,18 +5059,7 @@ html, body { overflow-x: hidden; }
         <button class="btn-danger" id="btn-reset-open">전체 초기화</button>
       </div>
 
-      <!-- 자산결산 시작월 기준점 정리 (v0.9-2) -->
-      <div class="backup-card">
-        <div class="backup-info">
-          <div class="backup-info-title">📐 자산결산 시작월 기준점 정리</div>
-          <div class="backup-info-desc">
-            옛 방식(시작월에 실투입 원금 입력)으로 저장된 추적 계좌를 새 기준점 방식으로 정리합니다.<br>
-            시작월 원금 = 시작 잔고, 수익률 0%에서 출발. 기존 실투입 원금은<br>
-            "추적 전 실투입 원금(참고)"으로 옮겨 보존하고, 이후 월들은 체인 재계산됩니다.
-          </div>
-        </div>
-        <button class="btn-s" id="btn-fix-anchors">기준점 정리</button>
-      </div>
+      <!-- 자산결산 시작월 기준점 정리 (v0.9-2) — 1회성 도구, 정리 완료 후 v0.9-3에서 UI 제거 -->
 
       <div class="backup-card backup-card-restore">
         <div class="backup-info">
@@ -6429,15 +6330,7 @@ function activateSubtab($topPane, subtab) {
 
 // v0.7-11 — 현황 탭 전체 렌더 (시점형 위젯 모음)
 function renderStatusAll() {
-  // 헤더의 currentMonth 갱신
-  const $title = document.getElementById('status-title');
-  if ($title) $title.textContent = `현황 · ${currentMonth}`;
-  const $asof = document.getElementById('status-asof');
-  if ($asof) {
-    const now = new Date();
-    const pad = n => String(n).padStart(2, '0');
-    $asof.textContent = `as of ${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-  }
+  // v0.9-4 정리 — status-title/status-asof hidden span 갱신 코드 제거 (v0.7-18 이후 죽은 표시)
   renderDashKpi();
   renderDashAssetsChart();
   renderDashTrkCard();
@@ -6578,7 +6471,7 @@ const pathFavorite = id => doc(db, `users/${currentUid}/finance/config/favorites
 
 // monthly 도큐먼트 id 만들기 / 쪼개기
 function monthlyKeyFor(ym, accId)      { return `${ym}__${accId}`; }
-function monthlyLiabKeyFor(ym, liabKey){ return `${ym}__${liabKey}`; }
+// v0.9-4 정리 — monthlyLiabKeyFor(호출처 없는 데드 코드) 제거
 function parseMonthlyKey(id) {
   // 'YYYY-MM__accId' → { ym, accId }. accId에는 더블언더스코어가 없다고 전제.
   const i = id.indexOf('__');
@@ -6725,7 +6618,6 @@ async function loadAll() {
   subscribeBgTransactions();
 
   // 대시보드/현황 — KPI는 가벼우니 즉시. 차트는 탭 진입 시 그림 (v0.7-11)
-  renderDashHeader();
   renderDashKpi();
   renderDashEventsCard();   // v0.6 — 가벼운 렌더라 즉시
 
@@ -10621,6 +10513,10 @@ function subscribeUnpaid() {
         if (t.paymentType === 'card') allUnpaidTxs.push(t);
       });
       renderUnpaidBar();
+      // v0.9-5 — 순자산/부채가 발생월 귀속 미지급금을 포함하므로, 결제 처리·과거 월 미결제 변경 시 함께 갱신
+      renderBsHeader();     // BS 본문 + KPI (내부에서 renderBsBody 호출, DOM 가드 있음)
+      renderDashKpi();      // 현황 KPI (가벼움)
+      if (isDashboardVisible()) renderDashNetworthChart();   // 순자산 추이
     },
     err => { console.error('unpaid subscribe error', err); }
   );
@@ -10955,16 +10851,7 @@ function renderBsHeader() {
   const $ymLabel = document.getElementById('bs-ym-label');
   if ($ymLabel) $ymLabel.textContent = currentMonth;
 
-  // v0.7-5d — asOf는 monthly 도큐먼트 중 가장 최근 것 사용
-  let latestAsOf = null;
-  for (const d of monthlyDocs) {
-    if (d.asOf && (!latestAsOf || d.asOf > latestAsOf)) latestAsOf = d.asOf;
-  }
-  for (const d of monthlyLiabDocs) {
-    if (d.asOf && (!latestAsOf || d.asOf > latestAsOf)) latestAsOf = d.asOf;
-  }
-  document.getElementById('bs-asof').textContent =
-    latestAsOf ? `(asOf ${latestAsOf})` : '';
+  // v0.9-4 정리 — bs-asof 갱신 루프 제거 (v0.7-18에서 숨긴 span에만 쓰던 죽은 계산)
 
   // 버튼 텍스트: 현재 월에 monthly 데이터 있으면 "잔액 수정", 없으면 "잔액 입력"
   const hasData = monthlyDocs.length > 0 || monthlyLiabDocs.length > 0;
@@ -10981,7 +10868,7 @@ function renderBsBody() {
   // monthly 데이터 + 카드 미지급금이 모두 없으면 placeholder
   const hasMonthly     = monthlyDocs.length > 0;
   const hasMonthlyLiab = monthlyLiabDocs.length > 0;
-  const cardUnpaidPre = calcCardUnpaidTotal();
+  const cardUnpaidPre = calcCardUnpaidForYm(currentMonth);   // v0.9-5 — 발생월 귀속
   if (!hasMonthly && !hasMonthlyLiab && cardUnpaidPre <= 0) {
     $body.innerHTML = `<div class="bs-placeholder">${currentMonth} 잔액 입력 없음 — 우상단 "잔액 입력" 버튼으로 시작</div>`;
     return;
@@ -11123,9 +11010,10 @@ function renderBsBody() {
     });
   }
 
-  // 자동 카드 미지급금 (변화 추적 불가 → delta null)
-  const cardUnpaid = calcCardUnpaidTotal();
+  // 자동 카드 미지급금 — v0.9-5: 발생월 귀속 (해당 ym분만). 전월분과 비교해 델타도 표시
+  const cardUnpaid = calcCardUnpaidForYm(currentMonth);
   if (cardUnpaid > 0) {
+    const cardUnpaidPrev = calcCardUnpaidForYm(prevYm(currentMonth));
     liabRows.current.push({
       key: '__card_unpaid__',
       name: '카드 미지급금',
@@ -11134,8 +11022,8 @@ function renderBsBody() {
       filled: true,
       krw: cardUnpaid,
       auto: true,
-      prevKrw: null,
-      delta: null,
+      prevKrw: cardUnpaidPrev > 0 ? cardUnpaidPrev : null,
+      delta: cardUnpaidPrev > 0 ? cardUnpaid - cardUnpaidPrev : null,
       deleted: false,
     });
   }
@@ -11153,7 +11041,7 @@ function renderBsBody() {
   const debtRatio = totalAssets > 0 ? (totalLiab / totalAssets) * 100 : 0;
 
   // 이전 달 집계 (MoM 비교용)
-  const prevTotals = computeTotals(monthlyPrevDocs, monthlyLiabPrevDocs);
+  const prevTotals = computeTotals(monthlyPrevDocs, monthlyLiabPrevDocs, prevYm(currentMonth));   // v0.9-5 — 전월 귀속 미지급금 포함
   const dAssets = prevTotals ? (totalAssets - prevTotals.totalAssets) : null;
   const dLiab   = prevTotals ? (totalLiab   - prevTotals.totalLiab)   : null;
   const dNet    = prevTotals ? (net         - prevTotals.net)         : null;
@@ -11179,9 +11067,9 @@ function renderBsBody() {
       </div>
       <div class="kpi-card">
         <div class="label">부채비율</div>
-        <div class="value ${debtRatio > 100 ? 'red' : debtRatio > 50 ? 'muted' : 'green'}">${debtRatio.toFixed(1)}%</div>
+        <div class="value ${debtRatioTone(debtRatio, totalAssets > 0).cls}">${debtRatio.toFixed(1)}%</div>
         ${renderKpiRatioMom(debtRatio, prevTotals)}
-        <div class="sub">총부채 ${fmtNum(totalLiab)}</div>
+        <div class="sub">총부채 ${fmtNum(totalLiab)} · ${debtRatioTone(debtRatio, totalAssets > 0).label}</div>
       </div>
     </div>
 
@@ -11200,9 +11088,26 @@ function renderBsBody() {
   `;
 }
 
+// v0.9-5 (A안) — 카드 미지급금 발생월 귀속: 그 ym에 발생했고 현재 미결제인 카드 거래 합.
+// allUnpaidTxs는 월 무관 전체 구독(subscribeUnpaid) 중이라 과거/현재 어느 ym이든 계산 가능.
+// 한계(합의됨): "현재 미결제" 기준이라 나중에 결제하면 과거 월 값도 0이 됨 (완전한 시점 재구성은 paidAt 필요 — 버그 #7과 얽혀 범위 외)
+function calcCardUnpaidForYm(ym) {
+  if (!ym) return 0;
+  return allUnpaidTxs.reduce((s, t) => s + (t.ym === ym ? (Number(t.amount) || 0) : 0), 0);
+}
+
+// v0.9-5 — 부채비율 색/판정 단일 기준 (버그 #3 통일 — 현황 기준 채택: ≥70 위험 / ≥40 주의 / 미만 안정)
+function debtRatioTone(pct, hasAssets = true) {
+  if (!hasAssets)   return { cls: 'muted', label: '자산 없음' };
+  if (pct >= 70)    return { cls: 'red',   label: '위험' };
+  if (pct >= 40)    return { cls: 'amber', label: '주의' };
+  return { cls: 'green', label: '안정' };
+}
+
 // 이전 달 스냅샷에서 합계 계산
 // v0.7-5d — 임의 시점의 자산/부채 집계 (monthly / monthly_liab 도큐먼트 배열을 인수로 받음)
-function computeTotals(monDocs, monLiabDocs) {
+// v0.9-5 — ym을 주면 그 달 귀속 카드 미지급금을 유동부채에 포함 (숫자 한 벌 — 전 화면 단일 정의)
+function computeTotals(monDocs, monLiabDocs, ym) {
   let curAssets = 0, nonAssets = 0, curLiab = 0, nonLiab = 0;
   let hasAny = false;
 
@@ -11226,6 +11131,13 @@ function computeTotals(monDocs, monLiabDocs) {
     const krw = Number(doc.balanceKrw) || 0;
     if (tier === 'current') curLiab += krw;
     else                    nonLiab += krw;
+  }
+
+  // v0.9-5 — 발생월 귀속 카드 미지급금 (유동부채)
+  const cardUnpaid = calcCardUnpaidForYm(ym);
+  if (cardUnpaid > 0) {
+    hasAny = true;
+    curLiab += cardUnpaid;
   }
 
   if (!hasAny) return null;
@@ -11445,10 +11357,6 @@ function findMonthlyLiabDoc(liabKey, ym) {
 function renderSavings() {
   const $body = document.getElementById('sv-body');
   if (!$body) return;
-
-  // asOf 표시
-  const $asof = document.getElementById('sv-asof');
-  if ($asof) $asof.textContent = `${currentMonth} 결산`;
 
   // 추적 자산만 필터 (마스터 활성).
   // 자산결산은 "현재 운용 중인 추적 자산"의 라이브 화면이라
@@ -12555,7 +12463,6 @@ function isDividendsVisible() {
 
 // ─── 렌더 ────────────────────────────────────
 function renderDividends() {
-  renderDividendsAsOf();
   renderDividendsKpi();
   renderDividendsChart();
   renderDividendsSymbolBreakdown();
@@ -12563,12 +12470,7 @@ function renderDividends() {
   renderDividendsList();
 }
 
-function renderDividendsAsOf() {
-  const $asof = document.getElementById('dv-asof');
-  if (!$asof) return;
-  const total = dividends.length;
-  $asof.textContent = total > 0 ? `${total}건 기록됨` : '배당 기록 없음';
-}
+// v0.9-4 정리 — renderDividendsAsOf 제거 (숨긴 dv-asof에만 쓰던 죽은 표시 코드)
 
 function renderDividendsKpi() {
   const $m = document.getElementById('dv-kpi-month');
@@ -13584,91 +13486,7 @@ async function recalculateChain(accountId, startFromYm) {
   return writes;
 }
 
-// ──────────────────────────────────────────────────────
-// v0.9-2 — 시작월 기준점 정리 (1회성 마이그레이션)
-// ──────────────────────────────────────────────────────
-// 옛 방식: 첫 결산에 실투입 원금 입력 → monthlyReturn = 잔고 − 원금 (과거 누적 수익이
-//          첫 달 수익으로 계상되어 월수익 차트 스파이크 + 누적수익률이 높게 시작)
-// 새 방식: 시작월 원금 = 시작 잔고, 수익 0에서 출발 (기준점).
-//          옛 실투입 원금은 계좌 마스터 preTrackPrincipal(참고)로 보존.
-// 대상: isStart=true인데 principal !== balanceKrw (또는 monthlyReturn !== 0)인 도큐먼트.
-async function fixStartAnchors() {
-  if (!currentUid) return;
-  if (!confirm(
-    '자산결산 시작월을 기준점 방식으로 정리합니다.\n\n' +
-    '· 시작월 원금 = 시작 잔고, 월수익/누적 0에서 출발\n' +
-    '· 기존 실투입 원금은 "추적 전 실투입 원금(참고)"으로 보존\n' +
-    '· 이후 월들의 누적값은 자동 재계산\n\n' +
-    '진행 전 백업을 권장합니다. 계속할까요?'
-  )) return;
-
-  const $btn = document.getElementById('btn-fix-anchors');
-  $btn.disabled = true;
-  const orig = $btn.textContent;
-  $btn.textContent = '정리 중…';
-
-  try {
-    // 모든 monthly에서 isStart 도큐먼트 수집 (마스터 삭제된 계좌 포함 — 박제값으로 처리)
-    const snap = await getDocs(pathMonthly());
-    const starts = [];
-    snap.forEach(d => { const v = d.data(); if (v.isStart) starts.push({ id: d.id, ...v }); });
-
-    let fixedN = 0, chainN = 0;
-    for (const s of starts) {
-      const balKrw = Number(s.balanceKrw) || 0;
-      const prn    = Number(s.principal) || 0;
-      const mret   = Number(s.monthlyReturn) || 0;
-      const needsFix = (prn !== balKrw) || (mret !== 0);
-      if (!needsFix) continue;
-
-      const isFx = s.currency && s.currency !== 'KRW';
-      const balNative = Number(s.balance) || 0;
-
-      // 1) 시작월 도큐먼트를 기준점으로
-      await updateDoc(pathMonthlyDoc(s.ym, s.accountId), {
-        principal:       balKrw,
-        principalNative: isFx ? balNative : balKrw,
-        monthlyReturn:   0,
-        cumReturn:       0,
-        cumReturnRate:   0,
-        updatedAt:       serverTimestamp(),
-      });
-
-      // 2) 옛 실투입 원금을 마스터 참고 필드로 보존 (마스터가 살아있고, 아직 비어 있을 때만)
-      const acc = accounts.find(a => a.id === s.accountId);
-      if (acc && prn > 0 && prn !== balKrw && !(Number(acc.preTrackPrincipal) > 0)) {
-        const prnNative = s.principalNative != null
-          ? Number(s.principalNative)
-          : (isFx && s.fxRate ? Math.round(prn / Number(s.fxRate) * 100) / 100 : prn);
-        try {
-          await updateDoc(pathAccount(s.accountId), {
-            preTrackPrincipal:       prn,
-            preTrackPrincipalNative: prnNative,
-          });
-        } catch (e2) { console.error('[fixAnchors] preTrack 보존 실패', s.accountId, e2); }
-      }
-
-      // 3) 이후 월 체인 재계산 (전체 재구성)
-      chainN += await recalculateChain(s.accountId, null);
-      fixedN++;
-    }
-
-    if (fixedN === 0) {
-      showToast('정리할 시작월이 없습니다 — 이미 기준점 방식입니다');
-    } else {
-      showToast(`시작월 ${fixedN}개 정리 · 이후 ${chainN}개월 재계산 완료`);
-      invalidateReturnsCache();
-      if (isReturnsVisible()) renderReturns();
-    }
-  } catch (e) {
-    console.error('[fixAnchors] 실패', e);
-    showToast('정리 실패: ' + (e.message || e.code));
-  } finally {
-    $btn.disabled = false;
-    $btn.textContent = orig;
-  }
-}
-document.getElementById('btn-fix-anchors').addEventListener('click', fixStartAnchors);
+// v0.9-2의 fixStartAnchors(시작월 기준점 정리)는 1회성 마이그레이션 완료 후 v0.9-3에서 제거됨
 
 // 삭제
 async function deleteSavingsEntry() {
@@ -14101,14 +13919,7 @@ document.getElementById('bg-modal-cat-select')?.addEventListener('change', () =>
 // ──────────────────────────────────────────────────────
 // B1: 빈 본문 + as-of 표시. B2부터 KPI 추가.
 
-function renderDashHeader() {
-  // 현재 시각을 as-of로 표시
-  const $asof = document.getElementById('dash-asof');
-  if (!$asof) return;
-  const now = new Date();
-  const pad = n => String(n).padStart(2, '0');
-  $asof.textContent = `as of ${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-}
+// v0.9-4 정리 — renderDashHeader 제거 (v0.7-18에서 숨긴 dash-asof에만 쓰던 죽은 표시 코드)
 
 // (v0.5 B3에서 renderDashBody 제거 — 차트 카드를 덮어쓰던 placeholder 함수였음)
 
@@ -14128,51 +13939,38 @@ function renderDashKpi() {
   // 헬퍼: 클래스 초기화
   const resetCls = (el) => el.classList.remove('green', 'red', 'amber', 'muted');
 
-  // v0.7-5d — monthly 기반 집계
-  const cur = computeTotals(monthlyDocs, monthlyLiabDocs);
+  // v0.7-5d — monthly 기반 집계 / v0.9-5 — 발생월 귀속 미지급금 포함 (BS와 숫자 한 벌)
+  const cur = computeTotals(monthlyDocs, monthlyLiabDocs, currentMonth);
   if (cur) {
     // 순자산
     resetCls($nw);
-    const netStr = (cur.net >= 0 ? '+' : '−') + fmtAmount(Math.abs(cur.net));
+    const netStr = (cur.net >= 0 ? '+' : '−') + fmtKoAmount(Math.abs(cur.net));
     $nw.textContent = netStr;
     $nw.classList.add(cur.net > 0 ? 'green' : cur.net < 0 ? 'red' : 'muted');
 
     // MoM (전월 대비)
-    const prev = computeTotals(monthlyPrevDocs, monthlyLiabPrevDocs);
+    const prev = computeTotals(monthlyPrevDocs, monthlyLiabPrevDocs, prevYm(currentMonth));
     resetCls($nwSub);
     if (prev && prev.net !== 0) {
       const delta = cur.net - prev.net;
       const pct = (delta / Math.abs(prev.net)) * 100;
       const sign = delta > 0 ? '+' : delta < 0 ? '−' : '';
-      $nwSub.textContent = `${sign}${fmtAmount(Math.abs(delta))} (${sign}${Math.abs(pct).toFixed(1)}%) MoM`;
+      $nwSub.textContent = `${sign}${fmtKoAmount(Math.abs(delta))} (${sign}${Math.abs(pct).toFixed(1)}%) MoM`;
       $nwSub.classList.add(delta > 0 ? 'green' : delta < 0 ? 'red' : 'muted');
     } else {
       $nwSub.textContent = `${currentMonth} 기준`;
     }
 
-    // 부채비율
+    // 부채비율 — v0.9-5: debtRatioTone 단일 기준
     resetCls($debt);
     const dr = cur.totalAssets > 0 ? (cur.totalLiab / cur.totalAssets) * 100 : 0;
     $debt.textContent = `${dr.toFixed(1)}%`;
-    let drLabel;
-    if (cur.totalAssets <= 0) {
-      $debt.classList.add('muted');
-      drLabel = '자산 없음';
-    } else if (dr >= 70) {
-      $debt.classList.add('red');
-      drLabel = '위험';
-    } else if (dr >= 40) {
-      $debt.classList.add('amber');
-      drLabel = '주의';
-    } else {
-      $debt.classList.add('green');
-      drLabel = '안정';
-    }
+    const tone = debtRatioTone(dr, cur.totalAssets > 0);
+    $debt.classList.add(tone.cls);
+    const drLabel = tone.label;
     resetCls($debtSub);
-    $debtSub.textContent = `자산 ${fmtAmount(cur.totalAssets)} · ${drLabel}`;
-    if (drLabel === '위험') $debtSub.classList.add('red');
-    else if (drLabel === '주의') $debtSub.classList.add('amber');
-    else if (drLabel === '안정') $debtSub.classList.add('green');
+    $debtSub.textContent = `자산 ${fmtKoAmount(cur.totalAssets)} · ${drLabel}`;
+    $debtSub.classList.add(tone.cls);
   } else {
     resetCls($nw);    $nw.classList.add('muted');     $nw.textContent = '—';
     resetCls($nwSub);                                 $nwSub.textContent = `${currentMonth} 잔액 없음`;
@@ -14199,7 +13997,7 @@ function renderDashKpi() {
     $net.textContent = '0';
     $netSub.textContent = `${currentMonth} 거래 없음`;
   } else {
-    const netStr = (monthNet >= 0 ? '+' : '−') + fmtAmount(Math.abs(monthNet));
+    const netStr = (monthNet >= 0 ? '+' : '−') + fmtKoAmount(Math.abs(monthNet));
     $net.textContent = netStr;
     if (monthNet > 0) { $net.classList.add('green'); $netSub.textContent = `흑자 · ${currentMonth}`; $netSub.classList.add('green'); }
     else if (monthNet < 0) { $net.classList.add('red'); $netSub.textContent = `적자 · ${currentMonth}`; $netSub.classList.add('red'); }
@@ -14228,7 +14026,7 @@ function renderDashKpi() {
     if (pct > 100)      { $bud.classList.add('red');   $budSub.classList.add('red');   label = '초과'; }
     else if (pct >= 80) { $bud.classList.add('amber'); $budSub.classList.add('amber'); label = '임박'; }
     else                { $bud.classList.add('green'); $budSub.classList.add('green'); label = '여유'; }
-    $budSub.textContent = `${fmtAmount(expense)} / ${fmtAmount(expenseBudget)} · ${label}`;
+    $budSub.textContent = `${fmtKoAmount(expense)} / ${fmtKoAmount(expenseBudget)} · ${label}`;
   }
 }
 
@@ -14302,7 +14100,7 @@ async function renderDashNetworthChart() {
     const netData   = [];
     let validCount = 0;
     for (const ym of ymList) {
-      const t = computeTotals(monByYm.get(ym) || [], monLiabByYm.get(ym) || []);
+      const t = computeTotals(monByYm.get(ym) || [], monLiabByYm.get(ym) || [], ym);   // v0.9-5 — 월별 귀속 미지급금 포함
       if (t) {
         assetData.push(t.totalAssets);
         liabData.push(t.totalLiab);
@@ -14611,23 +14409,20 @@ function renderDashAssetsChart() {
 //   • 선택 카테고리만 KPI/카테고리바/추이 차트에 합산
 //   • 세션 동안 유지, 페이지 리로드 시 "전체"로 리셋
 
-// 필터 상태: null이면 "전체" (모든 카테고리). Set이면 선택된 카테고리 집합.
-let trkFilterCats = null;
-// 카드가 한 번 그려진 이후 가용 카테고리 목록 (칩 렌더에 사용)
-let trkAvailableCats = [];
-
+// v0.9-6 (D2·D4) — 추적자산 카드 다이어트:
+//   • 3 stat 한 줄(총 평가액 / 이번달 수익 / 누적 수익률)만 표시 — 축약 표기(fmtKoAmount)
+//   • 카테고리 바·필터 칩 제거 → 구성은 자산 도넛, 상세는 결산>자산결산("자세히" 링크)에 위임
+//   • 분석 대시보드 추이 차트의 필터(trkChartFilterCats)는 원래부터 별도 상태라 영향 없음
 function renderDashTrkCard() {
-  const $body   = document.getElementById('dash-trk-body');
-  const $filter = document.getElementById('dash-trk-filter');
-  const $sub    = document.getElementById('dash-trk-sub');
+  const $body = document.getElementById('dash-trk-body');
+  const $sub  = document.getElementById('dash-trk-sub');
   if (!$body) return;
 
   // monthlyDocs 중 추적 자산만 (박제 trackPerformance=true).
   // 마스터에서 비활성된 계좌도 그 월 결산이 있으면 포함 (시점성).
-  const trkDocsAll = (monthlyDocs || []).filter(d => d.trackPerformance);
+  const trkDocs = (monthlyDocs || []).filter(d => d.trackPerformance);
 
-  if (trkDocsAll.length === 0) {
-    // 빈 상태 — 안내만 표시, 필터도 비움
+  if (trkDocs.length === 0) {
     $body.innerHTML = `
       <div class="dash-chart-empty">
         ${currentMonth} 추적 자산 결산이 없습니다 — 결산 탭의 <a href="#" data-trk-goto>자산결산</a>에서 입력하세요
@@ -14636,39 +14431,7 @@ function renderDashTrkCard() {
       e.preventDefault();
       switchTab('closing', 'savings');
     });
-    if ($filter) $filter.innerHTML = '';
-    trkAvailableCats = [];
     if ($sub) $sub.textContent = `${currentMonth} · 결산 없음`;
-    return;
-  }
-
-  // 데이터에 등장하는 카테고리 목록 (정해진 순서 + 기타)
-  const presentCats = new Set();
-  for (const d of trkDocsAll) presentCats.add(d.assetsCategory || '기타');
-  trkAvailableCats = [
-    ...DEFAULT_ASSET_CATEGORIES.filter(c => presentCats.has(c)),
-    ...[...presentCats].filter(c => !DEFAULT_ASSET_CATEGORIES.includes(c)).sort(),
-  ];
-
-  // 필터 상태 보정 — 데이터에 없는 카테고리는 제거, 비면 null(전체)로
-  if (trkFilterCats) {
-    const valid = new Set([...trkFilterCats].filter(c => trkAvailableCats.includes(c)));
-    trkFilterCats = valid.size === 0 ? null : valid;
-  }
-
-  // 칩바 렌더
-  renderTrkFilterChips();
-
-  // 필터 적용
-  const trkDocs = trkFilterCats
-    ? trkDocsAll.filter(d => trkFilterCats.has(d.assetsCategory || '기타'))
-    : trkDocsAll;
-
-  if (trkDocs.length === 0) {
-    // 필터로 모두 걸러진 케이스 (보정으로 일반적이지 않지만 안전망)
-    $body.innerHTML = `
-      <div class="dash-chart-empty">선택된 카테고리에 해당하는 결산이 없습니다</div>`;
-    if ($sub) $sub.textContent = `${currentMonth}`;
     return;
   }
 
@@ -14682,138 +14445,29 @@ function renderDashTrkCard() {
   }
   const cumRate = principalSum > 0 ? cumReturnSum / principalSum : 0;
 
-  // 카테고리별 합산 (필터 적용된 docs 기준)
-  const byCat = new Map();
-  for (const d of trkDocs) {
-    const cat = d.assetsCategory || '기타';
-    const cur = byCat.get(cat) || { sum: 0, count: 0 };
-    cur.sum   += Number(d.balanceKrw) || 0;
-    cur.count += 1;
-    byCat.set(cat, cur);
-  }
-  const orderedCats = [
-    ...DEFAULT_ASSET_CATEGORIES.filter(c => byCat.has(c)),
-    ...[...byCat.keys()].filter(c => !DEFAULT_ASSET_CATEGORIES.includes(c)).sort(),
-  ];
-  const maxSum = Math.max(...[...byCat.values()].map(v => v.sum), 1);
+  const signKo = x => (x > 0 ? '+' : x < 0 ? '−' : '') + fmtKoAmount(Math.abs(x));
+  const clsOf  = x => x > 0 ? 'green' : (x < 0 ? 'red' : 'muted');
 
-  const cumRateCls = cumRate > 0 ? 'green' : (cumRate < 0 ? 'red' : 'muted');
-  const cumSumCls  = cumReturnSum > 0 ? 'green' : (cumReturnSum < 0 ? 'red' : 'muted');
-  const mretCls    = mretSum > 0 ? 'green' : (mretSum < 0 ? 'red' : 'muted');
-
-  let html = `
+  $body.innerHTML = `
     <div class="dash-trk-summary">
       <div class="dash-trk-stat">
         <div class="dash-trk-stat-label">총 평가액</div>
-        <div class="dash-trk-stat-value">${fmtNum(totalKrw)}</div>
+        <div class="dash-trk-stat-value">${fmtKoAmount(totalKrw)}</div>
         <div class="dash-trk-stat-sub">${trkDocs.length}개 계좌</div>
       </div>
       <div class="dash-trk-stat">
-        <div class="dash-trk-stat-label">누적 원금</div>
-        <div class="dash-trk-stat-value">${fmtNum(principalSum)}</div>
-        <div class="dash-trk-stat-sub">${currentMonth} 기준</div>
+        <div class="dash-trk-stat-label">이번달 수익</div>
+        <div class="dash-trk-stat-value ${clsOf(mretSum)}">${signKo(mretSum)}</div>
+        <div class="dash-trk-stat-sub">${currentMonth}</div>
       </div>
       <div class="dash-trk-stat">
         <div class="dash-trk-stat-label">누적 수익률</div>
-        <div class="dash-trk-stat-value ${cumRateCls}">${fmtSignedPct(cumRate)}</div>
-        <div class="dash-trk-stat-sub">${currentMonth} 기준</div>
+        <div class="dash-trk-stat-value ${clsOf(cumRate)}">${fmtSignedPct(cumRate)}</div>
+        <div class="dash-trk-stat-sub ${clsOf(cumReturnSum)}">누적 ${signKo(cumReturnSum)}</div>
       </div>
-      <div class="dash-trk-stat">
-        <div class="dash-trk-stat-label">누적 수익</div>
-        <div class="dash-trk-stat-value ${cumSumCls}">${fmtSigned(cumReturnSum)}</div>
-        <div class="dash-trk-stat-sub ${mretCls}">이번달 ${fmtSigned(mretSum)}</div>
-      </div>
-    </div>
+    </div>`;
 
-    <div class="dash-trk-cats">`;
-
-  for (const cat of orderedCats) {
-    const v = byCat.get(cat);
-    const pct = totalKrw > 0 ? (v.sum / totalKrw) * 100 : 0;
-    const widthPct = (v.sum / maxSum) * 100;
-    const catColorVar = svCatColorVar(cat);
-    html += `
-      <div class="dash-trk-cat-row">
-        <div class="dash-trk-cat-name">
-          <span class="dash-trk-cat-dot ${svCatClass(cat)}"></span>
-          ${escapeHtml(cat)}
-          <span style="font-size:10px;color:var(--text3);">(${v.count})</span>
-        </div>
-        <div class="dash-trk-cat-bar">
-          <div class="dash-trk-cat-bar-fill" style="width:${widthPct.toFixed(1)}%;background:${catColorVar};opacity:0.7;"></div>
-        </div>
-        <div class="dash-trk-cat-amount">
-          ${fmtNum(v.sum)} <span style="color:var(--text3);">(${pct.toFixed(1)}%)</span>
-        </div>
-      </div>`;
-  }
-
-  html += `</div>`;
-  $body.innerHTML = html;
-
-  // 필터 sub 표기 — "전체" 또는 선택된 카테고리 수
-  if ($sub) {
-    if (trkFilterCats) {
-      const n = trkFilterCats.size;
-      const total = trkAvailableCats.length;
-      $sub.textContent = `${currentMonth} · ${n}/${total} 카테고리`;
-    } else {
-      $sub.textContent = `${currentMonth}`;
-    }
-  }
-}
-
-// 필터 칩 렌더 (트랜시버 — 데이터 변화에 맞춰 매번 재구성)
-function renderTrkFilterChips() {
-  const $filter = document.getElementById('dash-trk-filter');
-  if (!$filter) return;
-  if (trkAvailableCats.length === 0) {
-    $filter.innerHTML = '';
-    return;
-  }
-
-  // "전체" 활성 = trkFilterCats === null
-  const allActive = trkFilterCats === null;
-  let html = `<button type="button" class="fchip ${allActive ? 'active' : ''}" data-trk-cat="__all__">전체</button>`;
-
-  for (const cat of trkAvailableCats) {
-    const active = trkFilterCats ? trkFilterCats.has(cat) : true;
-    html += `<button type="button" class="fchip ${active ? 'active' : ''}" data-trk-cat="${escapeHtml(cat)}">
-      <span class="chip-dot ${svCatClass(cat)}"></span>${escapeHtml(cat)}
-    </button>`;
-  }
-  $filter.innerHTML = html;
-
-  // 클릭 핸들러 — 위임 대신 직접 바인딩 (요소가 매번 재생성됨)
-  $filter.querySelectorAll('[data-trk-cat]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const cat = btn.dataset.trkCat;
-      if (cat === '__all__') {
-        trkFilterCats = null;
-      } else {
-        // 현재 상태에서 토글
-        if (trkFilterCats === null) {
-          // "전체" 상태에서 한 칩 클릭 → 그 카테고리 하나만 선택 vs 그것만 제외
-          // UX: 한 칩 클릭 = "이것만 보기" 가 직관적
-          trkFilterCats = new Set([cat]);
-        } else {
-          const next = new Set(trkFilterCats);
-          if (next.has(cat)) next.delete(cat);
-          else next.add(cat);
-          // 비면 자동으로 "전체"로
-          if (next.size === 0 || next.size === trkAvailableCats.length) {
-            trkFilterCats = null;
-          } else {
-            trkFilterCats = next;
-          }
-        }
-      }
-      // 카드는 즉시 재렌더 (현황 탭에서 클릭하므로 보임)
-      renderDashTrkCard();
-      // 추이 차트는 대시보드에 있음 — 활성일 때만 (v0.7-11)
-      if (isDashboardVisible()) renderDashTrkChart();
-    });
-  });
+  if ($sub) $sub.textContent = `${currentMonth}`;
 }
 
 // 카테고리 → CSS 변수 색상 (바 채우기용)
@@ -14839,8 +14493,8 @@ function svCatColorVar(cat) {
 //
 // 데이터: monthly 도큐먼트 (balanceKrw / principal / cumReturn / cumReturnRate)
 //
-// v0.7-22 — 카테고리 필터는 차트 전용 상태(trkChartFilterCats)를 가짐.
-//           현황 탭 추적자산 카드의 trkFilterCats와 분리되어 양쪽이 서로 영향을 안 줌.
+// v0.7-22 — 카테고리 필터는 차트 전용 상태(trkChartFilterCats).
+// v0.9-6 — 현황 카드의 필터는 제거됨(D2). 이 차트 필터가 유일한 추적자산 카테고리 필터.
 let dashTrkChart = null;
 let trkShowPrin = true;       // 원금 비교선 표시 (체크박스 상태)
 let trkShowFill = true;       // v0.7-23 — 스택 모드 영역 채우기 (체크박스 상태)
@@ -15781,6 +15435,7 @@ initDashExpenseFlowToggle();
 // 이번 달 적립 필요액 + 임박 경조사 목록
 // 적립 계좌 잔액과는 비교 안 함 (사용자 결정 — 단순 표시)
 function renderDashEventsCard() {
+  const $card = document.getElementById('dash-events-card');
   const $body = document.getElementById('dash-events-body');
   const $sub  = document.getElementById('dash-events-sub');
   if (!$body) return;
@@ -15788,19 +15443,16 @@ function renderDashEventsCard() {
   const today = currentMonth;
   const [, curMonth] = today.split('-').map(Number);
 
-  // 빈 케이스
-  if (eventsMasters.length === 0) {
-    $body.innerHTML = `
-      <div class="dash-placeholder" style="padding:24px 16px;">
-        등록된 경조사가 없습니다<br>
-        <span class="hint">설정 → 경조사에서 추가하세요</span>
-      </div>`;
-    if ($sub) $sub.textContent = `${today}`;
-    return;
-  }
-
   // 이번 달 발생 행사 (E1용)
   const thisMonthEvents = eventsMasters.filter(ev => parseInt(ev.recurMonth, 10) === curMonth);
+
+  // v0.9-6 (D3) — 이번 달 볼 일(행사·적립 권장)이 없으면 카드 전면 숨김.
+  // 개별 진도·마스터 관리는 계획>경조사에서. 마스터 0건도 동일하게 숨김.
+  let saveTotalPre = 0;
+  for (const ev of eventsMasters) saveTotalPre += eventThisMonthRecommend(ev, today);
+  const hasBusiness = thisMonthEvents.length > 0 || saveTotalPre > 0;
+  if ($card) $card.style.display = hasBusiness ? '' : 'none';
+  if (!hasBusiness) return;
 
   // E1 — 이번 달 행사 카드 (v0.7-15: 처리 액션은 거래 탭 알림바에서, 여기는 상태 표시만)
   let e1Html = '';
@@ -16237,9 +15889,8 @@ function parseNum(s) {
 }
 
 // 자동 카드 미지급금 계산 (paid=false card 거래 전체 합)
-function calcCardUnpaidTotal() {
-  return allUnpaidTxs.reduce((s, t) => s + (Number(t.amount) || 0), 0);
-}
+// v0.9-5 정리 — calcCardUnpaidTotal(전 월 합산) 제거. BS/현황/추이는 calcCardUnpaidForYm(발생월 귀속) 사용,
+// 전체 미결제 합계는 거래 탭 알림바(renderUnpaidBar)만 자체 합산 (그곳은 "지금 갚을 총액"이 맞는 유일한 곳)
 
 // ── 잔액 입력 임시저장(draft) — 환율 수정/배경 클릭/앱 종료 시 입력값 보존 ──
 const BAL_DRAFT_KEY = 'balDraft';
@@ -16474,7 +16125,7 @@ function buildBalanceRows() {
     isFx: false,
     isTracked: false,
     native: '',
-    krw: calcCardUnpaidTotal(),
+    krw: calcCardUnpaidForYm(balModalYm || currentMonth),   // v0.9-5 — 발생월 귀속
   });
 
   return rows;
@@ -17110,9 +16761,22 @@ function renderTransactions() {
   });
 }
 
+// v0.9-4 정리 — fmtNum과 중복이던 포맷터를 래퍼로 흡수 (절대값+반올림 시맨틱 유지, 호출부 무변경)
 function fmtAmount(n) {
+  return fmtNum(Math.abs(Math.round(Number(n) || 0)));
+}
+
+// v0.9-6 (D1·B안) — 한글 복합 축약: 1억 100만 / 1,200만 / 9,500 식.
+// 현황 KPI·추적 요약 전용 (부호는 호출자가 붙임 — fmtAmount와 같은 규약).
+// 만 단위 반올림이라 ±5천원 오차 허용 — 정확한 값은 결산 탭이 원본.
+function fmtKoAmount(n) {
   const v = Math.abs(Math.round(Number(n) || 0));
-  return v.toLocaleString('en-US');
+  if (v < 10000) return fmtNum(v);
+  let eok = Math.floor(v / 100000000);
+  let man = Math.round((v % 100000000) / 10000);
+  if (man >= 10000) { eok += 1; man = 0; }   // 반올림 자리올림 (9,999.6만 → 1억)
+  if (eok > 0) return man > 0 ? `${fmtNum(eok)}억 ${fmtNum(man)}만` : `${fmtNum(eok)}억`;
+  return `${fmtNum(man)}만`;
 }
 
 // 외화 native 포맷 — 통화 기호 + 콤마 (소수 두 자리까지)
