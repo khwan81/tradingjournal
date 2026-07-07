@@ -1363,6 +1363,20 @@ html, body { overflow-x: hidden; }
 .recdup-tag.gen { background: rgba(245, 158, 11, 0.15); color: var(--amber); }
 .recdup-tag.imp { background: rgba(52, 211, 153, 0.15); color: var(--green); }
 
+/* v0.9-8 (D5) — 분석 카드 컨트롤 접기 */
+.dash-ctrl { display: none; }
+.dash-ctrl.open { display: block; }
+.dash-ctrl-toggle {
+  background: transparent; border: 1px solid var(--border); color: var(--text3);
+  border-radius: 6px; width: 26px; height: 22px; font-size: 12px; line-height: 1;
+  cursor: pointer; flex-shrink: 0;
+}
+.dash-ctrl-toggle:hover, .dash-ctrl-toggle.open { color: var(--text); border-color: var(--text3); }
+/* v0.9-8 (D7) — 손익표 기타 접기 */
+.pl-more-toggle { cursor: pointer; }
+.pl-more-toggle .pl-name { color: var(--text3); font-size: 12px; }
+.pl-more-toggle:hover .pl-name { color: var(--text2); }
+
 /* ── 경조사 (v0.6) ── */
 /* 적립 계좌 선택 바 */
 .event-account-bar {
@@ -4368,7 +4382,7 @@ html, body { overflow-x: hidden; }
           <div class="sub" id="sv-kpi-mret-sub">—</div>
         </div>
         <div class="kpi-card">
-          <div class="label">누적수익률</div>
+          <div class="label">누적수익률 (결산)</div>
           <div class="value" id="sv-kpi-cumret">—</div>
           <div class="sub" id="sv-kpi-cumret-sub">—</div>
         </div>
@@ -4523,7 +4537,7 @@ html, body { overflow-x: hidden; }
       <!-- KPI 3 -->
       <div class="kpi-grid">
         <div class="kpi-card">
-          <div class="label">기간 수익률</div>
+          <div class="label">기간 수익률 (MD)</div>
           <div class="value" id="rt-kpi-rate">—</div>
           <div class="sub"   id="rt-kpi-rate-sub">—</div>
         </div>
@@ -4586,7 +4600,7 @@ html, body { overflow-x: hidden; }
 
       <div class="sv-info">
         <span class="info-icon">ⓘ</span>
-        <div>Modified Dietz 방식 — 기간 내 입출금을 절반 가중한 평균원금 대비 수익률. <a href="#" id="rt-help-link">자세히</a></div>
+        <div>Modified Dietz 방식 — 기간 내 입출금을 절반 가중한 평균원금 대비 수익률. 결산 탭의 누적수익률(월결산 합산)과는 계산 방식이 달라 값이 다를 수 있습니다. <a href="#" id="rt-help-link">자세히</a></div>
       </div>
     </div>
 
@@ -4601,8 +4615,13 @@ html, body { overflow-x: hidden; }
       <div class="dash-card">
         <div class="dash-card-head">
           <div class="dash-card-title">순자산 추이</div>
-          <div class="dash-card-sub" id="dash-networth-sub">최근 12개월</div>
+          <div class="dash-card-head-right">
+            <div class="dash-card-sub" id="dash-networth-sub">최근 12개월</div>
+            <button type="button" class="dash-ctrl-toggle" data-ctrl-for="dash-ctrl-networth" title="차트 옵션">⚙</button>
+          </div>
         </div>
+        <!-- v0.9-8 (D5) — 컨트롤은 ⚙ 뒤로 접힘 -->
+        <div class="dash-ctrl" id="dash-ctrl-networth">
         <!-- 시리즈 토글 칩바 — 자산/부채/순자산 켜고 끄기 -->
         <div class="dash-series-filter" id="dash-networth-filter">
           <button type="button" class="fchip active" data-nw-series="asset">
@@ -4615,6 +4634,7 @@ html, body { overflow-x: hidden; }
             <span class="chip-dot" style="background:#4f8fff;"></span>순자산
           </button>
         </div>
+        </div><!-- /dash-ctrl -->
         <div class="dash-chart-wrap">
           <canvas id="dash-networth-chart"></canvas>
         </div>
@@ -4629,8 +4649,12 @@ html, body { overflow-x: hidden; }
       <div class="dash-card">
         <div class="dash-card-head">
           <div class="dash-card-title">추적자산 추이</div>
-          <div class="dash-card-sub" id="dash-trk-chart-sub">최근 12개월</div>
+          <div class="dash-card-head-right">
+            <div class="dash-card-sub" id="dash-trk-chart-sub">최근 12개월</div>
+            <button type="button" class="dash-ctrl-toggle" data-ctrl-for="dash-ctrl-trk" title="차트 옵션">⚙</button>
+          </div>
         </div>
+        <div class="dash-ctrl" id="dash-ctrl-trk">
         <!-- 측정 토글 + 원금 비교선 + 영역 토글 (v0.7-23) -->
         <div class="dash-trk-tools">
           <div class="dash-trk-measure">
@@ -4653,6 +4677,7 @@ html, body { overflow-x: hidden; }
         <div class="dash-trk-filter" id="dash-trk-chart-filter">
           <!-- chips inserted dynamically -->
         </div>
+        </div><!-- /dash-ctrl -->
         <div class="dash-chart-wrap">
           <canvas id="dash-trk-chart"></canvas>
         </div>
@@ -4665,8 +4690,12 @@ html, body { overflow-x: hidden; }
       <div class="dash-card">
         <div class="dash-card-head">
           <div class="dash-card-title">카테고리별 지출 추이</div>
-          <div class="dash-card-sub" id="dash-cat-exp-sub">—</div>
+          <div class="dash-card-head-right">
+            <div class="dash-card-sub" id="dash-cat-exp-sub">—</div>
+            <button type="button" class="dash-ctrl-toggle" data-ctrl-for="dash-ctrl-catexp" title="차트 옵션">⚙</button>
+          </div>
         </div>
+        <div class="dash-ctrl" id="dash-ctrl-catexp">
         <!-- flow 토글 (v0.7-22) — 변동 기본 -->
         <div class="dash-trk-tools">
           <div class="dash-trk-measure">
@@ -4679,6 +4708,7 @@ html, body { overflow-x: hidden; }
         <div class="dash-cat-filter" id="dash-cat-exp-filter">
           <!-- chips inserted dynamically -->
         </div>
+        </div><!-- /dash-ctrl -->
         <div class="dash-chart-wrap">
           <canvas id="dash-cat-exp-chart"></canvas>
         </div>
@@ -4695,8 +4725,10 @@ html, body { overflow-x: hidden; }
           <div class="dash-card-head-right">
             <button type="button" class="btn-s" id="btn-dash-expense-back" style="display:none;">← 돌아가기</button>
             <div class="dash-card-sub" id="dash-expense-sub">—</div>
+            <button type="button" class="dash-ctrl-toggle" data-ctrl-for="dash-ctrl-treemap" title="차트 옵션">⚙</button>
           </div>
         </div>
+        <div class="dash-ctrl" id="dash-ctrl-treemap">
         <!-- flow 토글 (v0.7-24) — 전체 기본. 변경 시 drill-down 자동 해제 -->
         <div class="dash-trk-tools">
           <div class="dash-trk-measure">
@@ -4705,6 +4737,7 @@ html, body { overflow-x: hidden; }
             <button type="button" class="seg-btn"        data-exp-tm-flow="variable">변동</button>
           </div>
         </div>
+        </div><!-- /dash-ctrl -->
         <div class="dash-treemap-wrap">
           <canvas id="dash-expense-chart"></canvas>
         </div>
@@ -7648,22 +7681,42 @@ async function renderPlBody() {
     const totalStr = total === 0 ? '0' : `${sign}${fmtAmount(total)}`;
     const totalDelta = buildDelta(total, prevTotal, deltaType);
 
-    let rowsHtml;
-    if (cats.length === 0) {
-      rowsHtml = `<div class="pl-row empty"><span class="pl-name">—</span><span class="pl-amt">—</span><span class="pl-delta-cell"></span></div>`;
-    } else {
-      rowsHtml = cats.map(cat => {
-        const amt     = sums[flow].get(cat) || 0;
-        const prevAmt = prev.sums[flow].get(cat) || 0;
-        const amtStr = amt === 0 ? '0' : `${sign}${fmtAmount(amt)}`;
-        const rowDelta = buildDelta(amt, prevAmt, deltaType);
-        return `
+    // v0.9-8 (D7) — 금액 상위 5개만 기본 표시, 나머지는 "기타 N개" 접힌 묶음으로
+    const PL_TOP_N = 5;
+    const rowOf = cat => {
+      const amt     = sums[flow].get(cat) || 0;
+      const prevAmt = prev.sums[flow].get(cat) || 0;
+      const amtStr = amt === 0 ? '0' : `${sign}${fmtAmount(amt)}`;
+      const rowDelta = buildDelta(amt, prevAmt, deltaType);
+      return `
           <div class="pl-row">
             <span class="pl-name">${escapeHtml(cat)}</span>
             <span class="pl-amt">${amtStr}</span>
             <span class="pl-delta-cell">${rowDelta}</span>
           </div>`;
-      }).join('');
+    };
+
+    let rowsHtml;
+    if (cats.length === 0) {
+      rowsHtml = `<div class="pl-row empty"><span class="pl-name">—</span><span class="pl-amt">—</span><span class="pl-delta-cell"></span></div>`;
+    } else if (cats.length <= PL_TOP_N + 1) {
+      rowsHtml = cats.map(rowOf).join('');
+    } else {
+      const ranked = [...cats].sort((a, b) =>
+        ((sums[flow].get(b) || 0) - (sums[flow].get(a) || 0)) ||
+        ((prev.sums[flow].get(b) || 0) - (prev.sums[flow].get(a) || 0)));
+      const visCats  = ranked.slice(0, PL_TOP_N);
+      const restCats = ranked.slice(PL_TOP_N);
+      const restSum     = restCats.reduce((sm, c) => sm + (sums[flow].get(c) || 0), 0);
+      const restPrevSum = restCats.reduce((sm, c) => sm + (prev.sums[flow].get(c) || 0), 0);
+      const restStr = restSum === 0 ? '0' : `${sign}${fmtAmount(restSum)}`;
+      rowsHtml = visCats.map(rowOf).join('') + `
+          <div class="pl-row pl-more-toggle" data-pl-more data-count="${restCats.length}">
+            <span class="pl-name"><span class="pl-more-label">기타 ${restCats.length}개 펼치기 ▾</span></span>
+            <span class="pl-amt">${restStr}</span>
+            <span class="pl-delta-cell">${buildDelta(restSum, restPrevSum, deltaType)}</span>
+          </div>
+          <div class="pl-rest" style="display:none;">${restCats.map(rowOf).join('')}</div>`;
     }
 
     return `
@@ -7701,6 +7754,18 @@ async function renderPlBody() {
       </div>
     </div>
   `;
+
+  // v0.9-8 (D7) — "기타 N개" 접기/펼치기
+  $body.querySelectorAll('[data-pl-more]').forEach(el => {
+    el.addEventListener('click', () => {
+      const $rest = el.nextElementSibling;
+      if (!$rest) return;
+      const open = $rest.style.display === 'none';
+      $rest.style.display = open ? '' : 'none';
+      const $lbl = el.querySelector('.pl-more-label');
+      if ($lbl) $lbl.textContent = open ? `기타 ${el.dataset.count}개 접기 ▴` : `기타 ${el.dataset.count}개 펼치기 ▾`;
+    });
+  });
 
   // v0.7-12L — 손익 추세 미니차트 (단일월에선 숨김)
   renderPlTrendChart(txList, fromYm, toYm);
@@ -9472,6 +9537,16 @@ async function runRecurringDupScan() {
     $body.innerHTML = '<div class="dash-placeholder" style="padding:20px;">검사 실패 — 콘솔을 확인하세요</div>';
   }
 }
+
+// v0.9-8 (D5) — 분석 카드 컨트롤 접기 토글 (정적 버튼 — 1회 바인딩)
+document.querySelectorAll('.dash-ctrl-toggle').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const $t = document.getElementById(btn.dataset.ctrlFor);
+    if (!$t) return;
+    const open = $t.classList.toggle('open');
+    btn.classList.toggle('open', open);
+  });
+});
 
 document.getElementById('btn-recdup-delete').addEventListener('click', async () => {
   const $body = document.getElementById('recdup-body');
@@ -15365,14 +15440,16 @@ async function renderDashCatExpenseChart() {
       },
     });
 
-    // 10) 서브 라벨
+    // 10) 서브 라벨 — v0.9-8 (D6): 결론(합계·1위 카테고리)을 문장으로 먼저
     if ($sub) {
       const totalSum = drawCats.reduce((s, c) => s + c.total, 0);
       const flowLabel = catExpFlow === 'fixed' ? '고정' : catExpFlow === 'variable' ? '변동' : '전체';
       const filterInfo = catExpFilter
         ? ` · ${drawCats.length}/${cats.length} 카테고리`
         : (cats.length > CAT_EXP_TOP_N ? ` · 상위 ${CAT_EXP_TOP_N}/${cats.length}` : '');
-      $sub.textContent = `${modeLabel} · ${flowLabel} · ${fmtAmount(totalSum)}${filterInfo}`;
+      const top = drawCats[0];
+      const topStr = (top && drawCats.length > 1) ? ` · 1위 ${top.cat} ${fmtKoAmount(top.total)}` : '';
+      $sub.textContent = `${flowLabel} 합계 ${fmtKoAmount(totalSum)}${topStr}${filterInfo}`;
     }
   } catch (e) {
     console.error('[dashboard] cat-expense chart error', e);
