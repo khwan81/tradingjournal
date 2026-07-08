@@ -7,7 +7,7 @@
 
 <!-- PWA -->
 <link rel="manifest" href="/tradingjournal/manifest-finance.json">
-<meta name="theme-color" content="#0d0f12">
+<meta name="theme-color" content="#1b1a18">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -45,29 +45,30 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:        #0d0f12;
-  --bg2:       #13161b;
-  --bg3:       #1a1e25;
-  --bg4:       #222830;
-  --border:    rgba(255,255,255,0.07);
-  --border2:   rgba(255,255,255,0.13);
-  --text:      #e8eaf0;
-  --text2:     #8b909e;
-  --text3:     #555b6a;
-  --accent:    #4f8fff;
-  --accent2:   #3a72e8;
-  --green:     #34d399;
-  --green-bg:  rgba(52,211,153,0.1);
-  --red:       #f87171;
-  --red-bg:    rgba(248,113,113,0.1);
-  --amber:     #fbbf24;
-  --amber-bg:  rgba(251,191,36,0.1);
-  /* v0.7 — 자산결산 카테고리 컬러 (assetsCategory: 현금/비상금/트레이딩/장기투자/연금) */
-  --acat-cash:      #60a5fa;  /* 현금     — 파랑 */
-  --acat-emergency: #a78bfa;  /* 비상금   — 보라 */
-  --acat-trading:   #f472b6;  /* 트레이딩 — 핑크 */
-  --acat-longterm:  #34d399;  /* 장기투자 — 초록 */
-  --acat-pension:   #fbbf24;  /* 연금     — 황색 */
+  /* v0.9-13 — 시안 A "웜 차콜": 블루라이트 제거, 순검정·순백 회피, 뮤트 시맨틱 컬러 */
+  --bg:        #1b1a18;
+  --bg2:       #22211e;
+  --bg3:       #2a2825;
+  --bg4:       #33312d;
+  --border:    rgba(255,250,240,0.08);
+  --border2:   rgba(255,250,240,0.14);
+  --text:      #e5e1d8;
+  --text2:     #9b968c;
+  --text3:     #6b665d;
+  --accent:    #8fa8d4;
+  --accent2:   #7591c2;
+  --green:     #8fbb96;
+  --green-bg:  color-mix(in srgb, var(--green) 12%, transparent);
+  --red:       #d98a80;
+  --red-bg:    color-mix(in srgb, var(--red) 12%, transparent);
+  --amber:     #d0a955;
+  --amber-bg:  color-mix(in srgb, var(--amber) 12%, transparent);
+  /* v0.7 — 자산결산 카테고리 컬러 (웜 뮤트 톤으로 재조정) */
+  --acat-cash:      #86a7d9;  /* 현금     — 뮤트 블루 */
+  --acat-emergency: #a99bd1;  /* 비상금   — 뮤트 보라 */
+  --acat-trading:   #cf8fae;  /* 트레이딩 — 뮤트 로즈 */
+  --acat-longterm:  #8fbb96;  /* 장기투자 — 세이지 */
+  --acat-pension:   #d0a955;  /* 연금     — 뮤트 앰버 */
   --radius-sm: 6px;
   --radius:    10px;
   --radius-lg: 14px;
@@ -109,28 +110,29 @@
 
 /* ── 라이트 테마 (data-theme="light") ── */
 html[data-theme="light"] {
-  --bg:        #f4f5f7;
-  --bg2:       #ffffff;
-  --bg3:       #eef0f3;
-  --bg4:       #e2e5ea;
-  --border:    rgba(0,0,0,0.08);
-  --border2:   rgba(0,0,0,0.14);
-  --text:      #1a1d23;
-  --text2:     #5c6373;
-  --text3:     #9298a6;
-  --accent:    #2f6fe0;
-  --accent2:   #2560c8;
-  --green:     #0f9d6f;
-  --green-bg:  rgba(15,157,111,0.10);
-  --red:       #e0524d;
-  --red-bg:    rgba(224,82,77,0.10);
-  --amber:     #c8870f;
-  --amber-bg:  rgba(200,135,15,0.12);
-  --acat-cash:      #3b82f6;
-  --acat-emergency: #8b5cf6;
-  --acat-trading:   #ec4899;
-  --acat-longterm:  #10b981;
-  --acat-pension:   #d97706;
+  /* v0.9-13 — 시안 C "페이퍼 크림": 순백 대신 크림, 순검정 대신 잉크 — 전자책 종이 질감 */
+  --bg:        #f6f4ee;
+  --bg2:       #fffdf7;
+  --bg3:       #efece3;
+  --bg4:       #e7e3d7;
+  --border:    rgba(60,55,45,0.12);
+  --border2:   rgba(60,55,45,0.20);
+  --text:      #3a3733;
+  --text2:     #6f6a62;
+  --text3:     #9b958a;
+  --accent:    #39619f;
+  --accent2:   #2d4f86;
+  --green:     #3d7d58;
+  --green-bg:  color-mix(in srgb, var(--green) 11%, transparent);
+  --red:       #b3554e;
+  --red-bg:    color-mix(in srgb, var(--red) 11%, transparent);
+  --amber:     #96700f;
+  --amber-bg:  color-mix(in srgb, var(--amber) 12%, transparent);
+  --acat-cash:      #3f6cae;
+  --acat-emergency: #6f5fae;
+  --acat-trading:   #b05a86;
+  --acat-longterm:  #3d7d58;
+  --acat-pension:   #96700f;
 }
 /* 라이트 모드 — 흰색 오버레이 hover가 안 보이므로 어두운 오버레이로 보정 */
 html[data-theme="light"] .bg-row:hover { background: rgba(0,0,0,0.03); }
@@ -560,7 +562,7 @@ html, body { overflow-x: hidden; }
 }
 .btn-danger {
   background: transparent;
-  border-color: rgba(248,113,113,0.4);
+  border-color: color-mix(in srgb, var(--red) 40%, transparent);
   color: var(--red);
 }
 .btn-danger:hover { background: var(--red-bg); }
@@ -629,7 +631,7 @@ html, body { overflow-x: hidden; }
 }
 .badge.current   { background: var(--green-bg); color: var(--green); }
 .badge.noncurrent { background: rgba(167,139,250,0.12); color: #c4b5fd; }
-.badge.tracked   { background: rgba(79,143,255,0.12); color: #93c5fd; font-size: 11px; }
+.badge.tracked   { background: color-mix(in srgb, var(--accent) 12%, transparent); color: #93c5fd; font-size: 11px; }
 .badge.inactive  { background: var(--bg4); color: var(--text3); }
 
 /* 카테고리/결제수단 칩 */
@@ -652,17 +654,17 @@ html, body { overflow-x: hidden; }
 .chip.revenue {
   background: var(--green-bg);
   color: var(--green);
-  border-color: rgba(52,211,153,0.25);
+  border-color: color-mix(in srgb, var(--green) 25%, transparent);
 }
 .chip.fixed {
   background: var(--amber-bg);
   color: var(--amber);
-  border-color: rgba(251,191,36,0.25);
+  border-color: color-mix(in srgb, var(--amber) 25%, transparent);
 }
 .chip.variable {
   background: var(--red-bg);
   color: var(--red);
-  border-color: rgba(248,113,113,0.25);
+  border-color: color-mix(in srgb, var(--red) 25%, transparent);
 }
 .chip-empty {
   font-size: 12px;
@@ -694,7 +696,7 @@ html, body { overflow-x: hidden; }
   font-weight: 500;
   letter-spacing: 0.3px;
 }
-.liab-row .badge.noncurrent { background: rgba(251, 191, 36, 0.15); color: var(--amber); }
+.liab-row .badge.noncurrent { background: color-mix(in srgb, var(--amber) 15%, transparent); color: var(--amber); }
 .liab-row .actions button {
   background: transparent;
   border: none;
@@ -758,8 +760,8 @@ html, body { overflow-x: hidden; }
   border-radius: 4px;
   font-family: var(--font);
 }
-.trash-row .actions button.restore:hover { background: rgba(79,143,255,0.12); color: var(--accent); border-color: var(--accent); }
-.trash-row .actions button.purge:hover { background: rgba(248,113,113,0.12); color: var(--red); border-color: var(--red); }
+.trash-row .actions button.restore:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); border-color: var(--accent); }
+.trash-row .actions button.purge:hover { background: color-mix(in srgb, var(--red) 12%, transparent); color: var(--red); border-color: var(--red); }
 
 /* ── 데이터 관리 (v0.2-2) ── */
 .backup-card {
@@ -849,8 +851,8 @@ html, body { overflow-x: hidden; }
   border-radius: 6px;
   font-size: 12px;
   line-height: 1.55;
-  background: rgba(245, 158, 11, 0.08);
-  border: 1px solid rgba(245, 158, 11, 0.28);
+  background: color-mix(in srgb, var(--amber) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--amber) 28%, transparent);
   color: var(--amber);
   margin-bottom: 10px;
 }
@@ -1116,16 +1118,16 @@ html, body { overflow-x: hidden; }
 
 /* tone — 톤별 배경/보더 */
 .alert-bar[data-tone="amber"], .unpaid-bar {
-  background: rgba(251, 191, 36, 0.10);
-  border-color: rgba(251, 191, 36, 0.32);
+  background: color-mix(in srgb, var(--amber) 10%, transparent);
+  border-color: color-mix(in srgb, var(--amber) 32%, transparent);
 }
 .alert-bar[data-tone="info"] {
-  background: rgba(79, 143, 255, 0.10);
-  border-color: rgba(79, 143, 255, 0.32);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 32%, transparent);
 }
 .alert-bar[data-tone="warn"], .budget-bar {
-  background: rgba(245, 158, 11, 0.08);
-  border-color: rgba(245, 158, 11, 0.32);
+  background: color-mix(in srgb, var(--amber) 8%, transparent);
+  border-color: color-mix(in srgb, var(--amber) 32%, transparent);
 }
 .alert-bar[data-tone="danger"], .budget-bar.severe {
   background: rgba(239, 68, 68, 0.08);
@@ -1181,15 +1183,15 @@ html, body { overflow-x: hidden; }
 .unpaid-bar .ub-cta {
   background: transparent;
   color: var(--amber);
-  border: 1px solid rgba(251, 191, 36, 0.45);
+  border: 1px solid color-mix(in srgb, var(--amber) 45%, transparent);
 }
-.unpaid-bar .ub-cta:hover { background: rgba(251, 191, 36, 0.10); }
+.unpaid-bar .ub-cta:hover { background: color-mix(in srgb, var(--amber) 10%, transparent); }
 .budget-bar .bb-cta {
   background: transparent;
   color: var(--amber);
-  border: 1px solid rgba(245, 158, 11, 0.45);
+  border: 1px solid color-mix(in srgb, var(--amber) 45%, transparent);
 }
-.budget-bar .bb-cta:hover { background: rgba(245, 158, 11, 0.10); }
+.budget-bar .bb-cta:hover { background: color-mix(in srgb, var(--amber) 10%, transparent); }
 .budget-bar.severe .bb-cta {
   color: var(--red);
   border-color: rgba(239, 68, 68, 0.45);
@@ -1300,11 +1302,11 @@ html, body { overflow-x: hidden; }
   font-weight: 500;
 }
 .rec-row .badge.ended {
-  background: rgba(248, 113, 113, 0.12);
+  background: color-mix(in srgb, var(--red) 12%, transparent);
   color: var(--red);
 }
 .rec-row .badge.active {
-  background: rgba(52, 211, 153, 0.12);
+  background: color-mix(in srgb, var(--green) 12%, transparent);
   color: var(--green);
 }
 .rec-row .actions { display: flex; gap: 4px; flex-shrink: 0; }
@@ -1378,7 +1380,7 @@ html, body { overflow-x: hidden; }
 .rec-inactive summary { font-size: 12px; color: var(--text3); cursor: pointer; padding: 6px 0; }
 .rec-suggest {
   margin-top: 14px; border: 1px dashed var(--border); border-radius: var(--radius);
-  padding: 12px 14px; background: rgba(79, 143, 255, 0.04);
+  padding: 12px 14px; background: color-mix(in srgb, var(--accent) 4%, transparent);
 }
 .rec-suggest-title { font-size: 12px; color: var(--text); margin-bottom: 8px; font-weight: 600; }
 .rec-suggest-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 0; }
@@ -1397,8 +1399,8 @@ html, body { overflow-x: hidden; }
 .recdup-tag {
   display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 4px; margin-right: 6px;
 }
-.recdup-tag.gen { background: rgba(245, 158, 11, 0.15); color: var(--amber); }
-.recdup-tag.imp { background: rgba(52, 211, 153, 0.15); color: var(--green); }
+.recdup-tag.gen { background: color-mix(in srgb, var(--amber) 15%, transparent); color: var(--amber); }
+.recdup-tag.imp { background: color-mix(in srgb, var(--green) 15%, transparent); color: var(--green); }
 
 /* v0.9-8 (D5) — 분석 카드 컨트롤 접기 */
 .dash-ctrl { display: none; }
@@ -1475,15 +1477,15 @@ html, body { overflow-x: hidden; }
   font-weight: 500;
 }
 .event-row .badge.done {
-  background: rgba(52, 211, 153, 0.12);
+  background: color-mix(in srgb, var(--green) 12%, transparent);
   color: var(--green);
 }
 .event-row .badge.upcoming {
-  background: rgba(245, 158, 11, 0.12);
+  background: color-mix(in srgb, var(--amber) 12%, transparent);
   color: var(--amber);
 }
 .event-row .badge.yearly {
-  background: rgba(79, 143, 255, 0.12);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
   color: var(--accent);
 }
 .event-row .actions { display: flex; gap: 4px; flex-shrink: 0; }
@@ -1618,8 +1620,8 @@ html, body { overflow-x: hidden; }
 
 /* ── 거래 모달 외화 입력 (v0.2-4) ── */
 .fx-section {
-  background: rgba(79, 143, 255, 0.06);
-  border: 1px solid rgba(79, 143, 255, 0.25);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
   border-radius: 8px;
   padding: 10px 12px 12px;
   margin: 6px 0 14px;
@@ -1647,7 +1649,7 @@ html, body { overflow-x: hidden; }
 .fx-preview {
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px dashed rgba(79, 143, 255, 0.25);
+  border-top: 1px dashed color-mix(in srgb, var(--accent) 25%, transparent);
   font-size: 12px;
   color: var(--text2);
   text-align: right;
@@ -1696,8 +1698,8 @@ html, body { overflow-x: hidden; }
 .sv-info {
   display: flex; gap: 8px; align-items: flex-start;
   padding: 9px 12px;
-  background: rgba(79,143,255,0.07);
-  border: 1px solid rgba(79,143,255,0.18);
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent);
   border-radius: 6px;
   margin-top: 14px;
   font-size: 12px;
@@ -1797,9 +1799,9 @@ html, body { overflow-x: hidden; }
   font-weight: 500;
   vertical-align: middle;
 }
-.sv-badge.start { background: rgba(79,143,255,0.15); color: var(--accent); }
+.sv-badge.start { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
 .sv-badge.fx    { background: rgba(139,144,158,0.18); color: var(--text2); }
-.sv-badge.missing { background: rgba(248,113,113,0.15); color: var(--red); }
+.sv-badge.missing { background: color-mix(in srgb, var(--red) 15%, transparent); color: var(--red); }
 
 /* 빈 카테고리 */
 .sv-empty {
@@ -1862,7 +1864,7 @@ html, body { overflow-x: hidden; }
 }
 .rt-preset:hover { background: var(--bg3); color: var(--text); }
 .rt-preset.active {
-  background: rgba(79,143,255,0.12);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
   border-color: var(--accent);
   color: var(--accent);
 }
@@ -1961,7 +1963,7 @@ html, body { overflow-x: hidden; }
 .rt-cmp-card:hover { background: var(--bg3); border-color: var(--border); }
 .rt-cmp-card.active {
   border-color: var(--accent);
-  background: rgba(79,143,255,0.06);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
 }
 .rt-cmp-label {
   font-size: 11px;
@@ -2729,8 +2731,8 @@ html, body { overflow-x: hidden; }
   margin-bottom: 12px;
 }
 .dash-event-summary-card.highlight {
-  background: rgba(245, 158, 11, 0.06);
-  border-color: rgba(245, 158, 11, 0.3);
+  background: color-mix(in srgb, var(--amber) 6%, transparent);
+  border-color: color-mix(in srgb, var(--amber) 30%, transparent);
 }
 .dash-event-summary-title {
   font-size: 12px;
@@ -3177,7 +3179,7 @@ html, body { overflow-x: hidden; }
   margin-left: 6px;
   font-size: 10.5px;
   padding: 1px 5px;
-  background: rgba(79, 143, 255, 0.16);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
   color: var(--accent);
   border-radius: 3px;
   vertical-align: middle;
@@ -3342,7 +3344,7 @@ html, body { overflow-x: hidden; }
   margin-left: 6px;
   font-size: 10.5px;
   padding: 1px 5px;
-  background: rgba(79, 143, 255, 0.16);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
   color: var(--accent);
   border-radius: 3px;
   vertical-align: middle;
@@ -3759,8 +3761,8 @@ html, body { overflow-x: hidden; }
   border-radius: 8px;
 }
 .paid-row.unpaid {
-  background: rgba(251,191,36,0.05);
-  border-color: rgba(251,191,36,0.2);
+  background: color-mix(in srgb, var(--amber) 5%, transparent);
+  border-color: color-mix(in srgb, var(--amber) 20%, transparent);
 }
 .paid-row .paid-label .main { font-size: 13px; }
 .paid-row .paid-label .sub  { font-size: 11.5px; color: var(--text3); margin-top: 2px; }
@@ -4195,11 +4197,11 @@ html, body { overflow-x: hidden; }
   font-size: 11px; padding: 2px 6px; border-radius: 999px;
   text-align: center; white-space: nowrap;
 }
-.imp-badge.new     { background: rgba(52,211,153,.14); color: var(--green); }
-.imp-badge.dup     { background: rgba(251,191,36,.14); color: var(--amber); }
+.imp-badge.new     { background: color-mix(in srgb, var(--green) 14%, transparent); color: var(--green); }
+.imp-badge.dup     { background: color-mix(in srgb, var(--amber) 14%, transparent); color: var(--amber); }
 .imp-badge.already { background: var(--bg4); color: var(--text3); }
 .imp-badge.skip    { background: var(--bg4); color: var(--text2); }
-.imp-badge.enrich  { background: rgba(79,143,255,.16); color: var(--accent); }
+.imp-badge.enrich  { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
 .imp-merch-input {
   width: 100%; font-size: 12.5px; padding: 4px 6px;
   background: var(--bg3); border: 1px solid var(--border);
@@ -4238,7 +4240,7 @@ html, body { overflow-x: hidden; }
       var t = localStorage.getItem('appTheme') || 'dark';
       document.documentElement.setAttribute('data-theme', t);
       var meta = document.querySelector('meta[name="theme-color"]');
-      if (meta) meta.setAttribute('content', t === 'light' ? '#f4f5f7' : '#0d0f12');
+      if (meta) meta.setAttribute('content', t === 'light' ? '#f6f4ee' : '#1b1a18');
     } catch (e) {}
   })();
 </script>
@@ -4688,13 +4690,13 @@ html, body { overflow-x: hidden; }
         <!-- 시리즈 토글 칩바 — 자산/부채/순자산 켜고 끄기 -->
         <div class="dash-series-filter" id="dash-networth-filter">
           <button type="button" class="fchip active" data-nw-series="asset">
-            <span class="chip-dot" style="background:#34d399;"></span>자산
+            <span class="chip-dot" style="background:var(--green);"></span>자산
           </button>
           <button type="button" class="fchip active" data-nw-series="liab">
             <span class="chip-dot" style="background:#ef4444;"></span>부채
           </button>
           <button type="button" class="fchip active" data-nw-series="net">
-            <span class="chip-dot" style="background:#4f8fff;"></span>순자산
+            <span class="chip-dot" style="background:var(--accent);"></span>순자산
           </button>
         </div>
         </div><!-- /dash-ctrl -->
@@ -6831,7 +6833,7 @@ function subscribeEvents() {
 //   거래에는 tagId 하나만 박음 (마스터 live 참조 — 삭제되면 칩만 사라짐)
 // ══════════════════════════════════════════════════════
 
-const TAG_COLORS = ['#5b8def', '#ef6c4d', '#34d399', '#a78bfa', '#fbbf24', '#f472b6', '#22d3ee', '#84cc16'];
+const TAG_COLORS = ['#7d9bd1', '#cf8a72', '#8fbb96', '#a99bd1', '#d0a955', '#cf8fae', '#7db3bd', '#a3b578'];   // v0.9-13 — 뮤트 (기존 태그는 저장된 색 유지)
 
 function subscribeTags() {
   if (unsubTags) { unsubTags(); unsubTags = null; }
@@ -14754,12 +14756,12 @@ initNetworthSeriesToggle();
 let dashAssetsChart = null;
 
 // 자산 종류별 고정 색상 팔레트 (유동은 따뜻한 톤, 비유동은 차가운 톤)
-const ASSET_COLORS = {
-  current: [    // 유동 자산 — 그린/시안 계열
-    '#34d399', '#22c55e', '#10b981', '#06b6d4', '#0ea5e9', '#84cc16',
+const ASSET_COLORS = {   // v0.9-13 — 웜 뮤트 톤 재조정
+  current: [    // 유동 자산 — 세이지/틸 계열
+    '#8fbb96', '#7fae84', '#6f9e8c', '#7aa9ad', '#7fa3c0', '#a3b578',
   ],
-  nonCurrent: [ // 비유동 자산 — 블루/퍼플 계열
-    '#4f8fff', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899',
+  nonCurrent: [ // 비유동 자산 — 뮤트 블루/퍼플 계열
+    '#8fa8d4', '#9a97cf', '#a99bd1', '#b393c7', '#c08fbf', '#cf8fae',
   ],
 };
 
@@ -15363,12 +15365,12 @@ let dashExpenseFlow = 'all';          // v0.7-24 — flow 토글 (all | fixed | 
 
 // 카테고리 그룹별 색상 팔레트 — flow별로 톤 구분
 // 고정비: 블루/퍼플 (안정적), 변동비: 그린/시안 (활동적)
-const EXPENSE_TREEMAP_COLORS = {
+const EXPENSE_TREEMAP_COLORS = {   // v0.9-13 — 웜 뮤트 톤 재조정
   fixed: [
-    '#4f8fff', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899',
+    '#8fa8d4', '#9a97cf', '#a99bd1', '#b393c7', '#c08fbf', '#cf8fae',
   ],
   variable: [
-    '#34d399', '#22c55e', '#10b981', '#06b6d4', '#0ea5e9', '#84cc16',
+    '#8fbb96', '#7fae84', '#6f9e8c', '#7aa9ad', '#7fa3c0', '#a3b578',
   ],
 };
 
@@ -15378,17 +15380,17 @@ const EXPENSE_TREEMAP_COLORS = {
 // 트리맵은 카테고리 비중 시각화라 같은 톤(그린/시안 또는 블루/퍼플)이 적절하지만,
 // 라인 차트는 라인 간 식별이 핵심이라 톤이 다른 10색이 필요.
 // dark theme에서 가독성이 검증된 톤들로 구성.
-const DASH_LINE_PALETTE = [
-  '#5b8def',   // 블루
-  '#ef6c4d',   // 오렌지
-  '#34d399',   // 그린
-  '#a78bfa',   // 퍼플
-  '#fbbf24',   // 앰버
-  '#f472b6',   // 핑크
-  '#22d3ee',   // 시안
-  '#84cc16',   // 라임
-  '#f87171',   // 레드
-  '#9aa5b1',   // 그레이
+const DASH_LINE_PALETTE = [   // v0.9-13 — 뮤트 10색 (식별 유지, 형광 제거)
+  '#7d9bd1',   // 블루
+  '#cf8a72',   // 테라코타
+  '#8fbb96',   // 세이지
+  '#a99bd1',   // 퍼플
+  '#d0a955',   // 앰버
+  '#cf8fae',   // 로즈
+  '#7db3bd',   // 틸
+  '#a3b578',   // 올리브
+  '#d98a80',   // 로즈레드
+  '#9aa5a1',   // 그레이
 ];
 
 // 공통 차트 옵션 토큰 (v0.7-23) — 3개 추이 차트가 일관된 시각 유지
@@ -18299,7 +18301,7 @@ function applyTheme(theme) {
   try { localStorage.setItem('appTheme', t); } catch (e) {}
   // theme-color 메타 동기화 (PWA 상태바)
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', t === 'light' ? '#f4f5f7' : '#0d0f12');
+  if (meta) meta.setAttribute('content', t === 'light' ? '#f6f4ee' : '#1b1a18');
   // 헤더 버튼 아이콘 — 누르면 바뀔 모드를 표시 (다크면 ☀️, 라이트면 🌙)
   const $btn = document.getElementById('btn-theme-toggle');
   if ($btn) {
