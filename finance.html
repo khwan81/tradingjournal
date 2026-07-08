@@ -9641,6 +9641,18 @@ async function runRecurringDupScan() {
   }
 }
 
+// ─── v0.9-9 (#5) — 경조사 이중 계상 정책 ─────────
+// 적립 거래(경조사 카테고리, 매달)와 처리 거래(eventProcessId, 행사 때) 둘 다 지출이라
+// 연간 손익에서 행사비가 ~2배로 잡힘. 토글 ON이면 손익·분석(손익표/추세/트리맵/카테고리 추이)에서
+// 처리 거래를 제외 → 행사비는 매달 적립으로만 계상 (발생주의 배분).
+// 거래 탭 KPI·예산·현황 순이익은 현금 관리 성격이라 그대로 포함 (거래 리스트에도 항상 표시).
+// (v0.9-10 수정 — 선언이 아래 토글 핸들러보다 뒤에 있어 모듈 평가 TDZ로 로딩이 멈추던 버그)
+let plExclEvtProc = localStorage.getItem('finPlExclEvtProc') === '1';
+function applyPlPolicy(list) {
+  if (!plExclEvtProc) return list || [];
+  return (list || []).filter(t => !t.eventProcessId);
+}
+
 // v0.9-9 (#5) — 경조사 처리 거래 제외 토글
 {
   const $t = document.getElementById('pl-excl-evtproc');
@@ -12259,17 +12271,6 @@ function invalidateAnalysisYms() {
   tagTxCache.clear();
   if (isDashboardVisible()) renderDashTagsCard();
   if (isStatusVisible())    renderStatusTagsCard();
-}
-
-// ─── v0.9-9 (#5) — 경조사 이중 계상 정책 ─────────
-// 적립 거래(경조사 카테고리, 매달)와 처리 거래(eventProcessId, 행사 때) 둘 다 지출이라
-// 연간 손익에서 행사비가 ~2배로 잡힘. 토글 ON이면 손익·분석(손익표/추세/트리맵/카테고리 추이)에서
-// 처리 거래를 제외 → 행사비는 매달 적립으로만 계상 (발생주의 배분).
-// 거래 탭 KPI·예산·현황 순이익은 현금 관리 성격이라 그대로 포함 (거래 리스트에도 항상 표시).
-let plExclEvtProc = localStorage.getItem('finPlExclEvtProc') === '1';
-function applyPlPolicy(list) {
-  if (!plExclEvtProc) return list || [];
-  return (list || []).filter(t => !t.eventProcessId);
 }
 
 // ─── 분석 탭 거래 캐시 (v0.7-12 2단계) ─────────
