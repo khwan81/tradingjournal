@@ -7,7 +7,7 @@
 
 <!-- PWA -->
 <link rel="manifest" href="/tradingjournal/manifest-finance.json">
-<meta name="theme-color" content="#1b1a18">
+<meta name="theme-color" content="#151a1c">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -45,31 +45,31 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  /* v0.9-13 — 시안 A "웜 차콜": 블루라이트 제거, 순검정·순백 회피, 뮤트 시맨틱 컬러 */
-  --bg:        #1b1a18;
-  --bg2:       #22211e;
-  --bg3:       #2a2825;
-  --bg4:       #33312d;
-  --border:    rgba(255,250,240,0.08);
-  --border2:   rgba(255,250,240,0.14);
-  --text:      #e5e1d8;
-  --text2:     #9b968c;
-  --text3:     #6b665d;
-  --accent:    #8fa8d4;
-  --accent2:   #7591c2;
-  --green:     #8fbb96;
+  /* v0.9-14 — 시안 F "미드나잇 틸": 심해 블루그린, 순검정·순백 회피, 뮤트 시맨틱 컬러 */
+  --bg:        #151a1c;
+  --bg2:       #1b2124;
+  --bg3:       #222a2e;
+  --bg4:       #2b3438;
+  --border:    rgba(215,228,232,0.08);
+  --border2:   rgba(215,228,232,0.15);
+  --text:      #d8e0e2;
+  --text2:     #8fa0a5;
+  --text3:     #5c6a6f;
+  --accent:    #7fb3c8;
+  --accent2:   #6a9fb4;
+  --green:     #7fbfa2;
   --green-bg:  color-mix(in srgb, var(--green) 12%, transparent);
-  --red:       #d98a80;
+  --red:       #d98f8f;
   --red-bg:    color-mix(in srgb, var(--red) 12%, transparent);
-  --amber:     #d0a955;
+  --amber:     #cfa95a;
   --amber-bg:  color-mix(in srgb, var(--amber) 12%, transparent);
-  --rose:      #cf8fae;   /* v0.9-13a — 경조사 정체성 색 (구 var(--rose) 뮤트) */
+  --rose:      #c98fae;   /* 경조사 정체성 색 (뮤트 로즈) */
   /* v0.7 — 자산결산 카테고리 컬러 (웜 뮤트 톤으로 재조정) */
-  --acat-cash:      #86a7d9;  /* 현금     — 뮤트 블루 */
-  --acat-emergency: #a99bd1;  /* 비상금   — 뮤트 보라 */
-  --acat-trading:   #cf8fae;  /* 트레이딩 — 뮤트 로즈 */
-  --acat-longterm:  #8fbb96;  /* 장기투자 — 세이지 */
-  --acat-pension:   #d0a955;  /* 연금     — 뮤트 앰버 */
+  --acat-cash:      #7fa8cf;  /* 현금     — 뮤트 블루 */
+  --acat-emergency: #a29bd1;  /* 비상금   — 뮤트 보라 */
+  --acat-trading:   #c98fae;  /* 트레이딩 — 뮤트 로즈 */
+  --acat-longterm:  #7fbfa2;  /* 장기투자 — 세이지 */
+  --acat-pension:   #cfa95a;  /* 연금     — 뮤트 앰버 */
   --radius-sm: 6px;
   --radius:    10px;
   --radius-lg: 14px;
@@ -111,30 +111,30 @@
 
 /* ── 라이트 테마 (data-theme="light") ── */
 html[data-theme="light"] {
-  /* v0.9-13 — 시안 C "페이퍼 크림": 순백 대신 크림, 순검정 대신 잉크 — 전자책 종이 질감 */
-  --bg:        #f6f4ee;
-  --bg2:       #fffdf7;
-  --bg3:       #efece3;
-  --bg4:       #e7e3d7;
-  --border:    rgba(60,55,45,0.12);
-  --border2:   rgba(60,55,45,0.20);
-  --text:      #3a3733;
-  --text2:     #6f6a62;
-  --text3:     #9b958a;
-  --accent:    #39619f;
-  --accent2:   #2d4f86;
-  --green:     #3d7d58;
+  /* v0.9-14 — 시안 G "세이지 미스트": 그린 기 도는 회백 종이, 잉크 텍스트 */
+  --bg:        #f1f3ef;
+  --bg2:       #fbfcf9;
+  --bg3:       #e9ece6;
+  --bg4:       #dfe3db;
+  --border:    rgba(55,59,54,0.12);
+  --border2:   rgba(55,59,54,0.20);
+  --text:      #373b36;
+  --text2:     #6b7067;
+  --text3:     #979d92;
+  --accent:    #3e6b8f;
+  --accent2:   #325a7a;
+  --green:     #3a7d5c;
   --green-bg:  color-mix(in srgb, var(--green) 11%, transparent);
-  --red:       #b3554e;
+  --red:       #b05a52;
   --red-bg:    color-mix(in srgb, var(--red) 11%, transparent);
-  --amber:     #96700f;
+  --amber:     #8f6d12;
   --amber-bg:  color-mix(in srgb, var(--amber) 12%, transparent);
-  --rose:      #b05a86;
-  --acat-cash:      #3f6cae;
-  --acat-emergency: #6f5fae;
-  --acat-trading:   #b05a86;
-  --acat-longterm:  #3d7d58;
-  --acat-pension:   #96700f;
+  --rose:      #a75880;
+  --acat-cash:      #3f699e;
+  --acat-emergency: #6a5fa8;
+  --acat-trading:   #a75880;
+  --acat-longterm:  #3a7d5c;
+  --acat-pension:   #8f6d12;
 }
 /* 라이트 모드 — 흰색 오버레이 hover가 안 보이므로 어두운 오버레이로 보정 */
 html[data-theme="light"] .bg-row:hover { background: rgba(0,0,0,0.03); }
@@ -4239,7 +4239,7 @@ html, body { overflow-x: hidden; }
       var t = localStorage.getItem('appTheme') || 'dark';
       document.documentElement.setAttribute('data-theme', t);
       var meta = document.querySelector('meta[name="theme-color"]');
-      if (meta) meta.setAttribute('content', t === 'light' ? '#f6f4ee' : '#1b1a18');
+      if (meta) meta.setAttribute('content', t === 'light' ? '#f1f3ef' : '#151a1c');
     } catch (e) {}
   })();
 </script>
@@ -6832,7 +6832,7 @@ function subscribeEvents() {
 //   거래에는 tagId 하나만 박음 (마스터 live 참조 — 삭제되면 칩만 사라짐)
 // ══════════════════════════════════════════════════════
 
-const TAG_COLORS = ['#7d9bd1', '#cf8a72', '#8fbb96', '#a99bd1', '#d0a955', '#cf8fae', '#7db3bd', '#a3b578'];   // v0.9-13 — 뮤트 (기존 태그는 저장된 색 유지)
+const TAG_COLORS = ['#7f9fd1', '#cf9072', '#7fbfa2', '#a29bd1', '#cfa95a', '#c98fae', '#76b6c2', '#a2b878'];   // v0.9-13 — 뮤트 (기존 태그는 저장된 색 유지)
 
 function subscribeTags() {
   if (unsubTags) { unsubTags(); unsubTags = null; }
@@ -14756,11 +14756,11 @@ let dashAssetsChart = null;
 
 // 자산 종류별 고정 색상 팔레트 (유동은 따뜻한 톤, 비유동은 차가운 톤)
 const ASSET_COLORS = {   // v0.9-13 — 웜 뮤트 톤 재조정
-  current: [    // 유동 자산 — 세이지/틸 계열
-    '#8fbb96', '#7fae84', '#6f9e8c', '#7aa9ad', '#7fa3c0', '#a3b578',
+  current: [    // 유동 자산 — 틸그린 계열
+    '#7fbfa2', '#72b090', '#7cb5b0', '#76b6c2', '#8aa9c9', '#a2b884',
   ],
   nonCurrent: [ // 비유동 자산 — 뮤트 블루/퍼플 계열
-    '#8fa8d4', '#9a97cf', '#a99bd1', '#b393c7', '#c08fbf', '#cf8fae',
+    '#7fa8cf', '#8f9ccf', '#a29bd1', '#b193c7', '#bd8fbf', '#c98fae',
   ],
 };
 
@@ -15366,10 +15366,10 @@ let dashExpenseFlow = 'all';          // v0.7-24 — flow 토글 (all | fixed | 
 // 고정비: 블루/퍼플 (안정적), 변동비: 그린/시안 (활동적)
 const EXPENSE_TREEMAP_COLORS = {   // v0.9-13 — 웜 뮤트 톤 재조정
   fixed: [
-    '#8fa8d4', '#9a97cf', '#a99bd1', '#b393c7', '#c08fbf', '#cf8fae',
+    '#7fa8cf', '#8f9ccf', '#a29bd1', '#b193c7', '#bd8fbf', '#c98fae',
   ],
   variable: [
-    '#8fbb96', '#7fae84', '#6f9e8c', '#7aa9ad', '#7fa3c0', '#a3b578',
+    '#7fbfa2', '#72b090', '#7cb5b0', '#76b6c2', '#8aa9c9', '#a2b884',
   ],
 };
 
@@ -15380,16 +15380,16 @@ const EXPENSE_TREEMAP_COLORS = {   // v0.9-13 — 웜 뮤트 톤 재조정
 // 라인 차트는 라인 간 식별이 핵심이라 톤이 다른 10색이 필요.
 // dark theme에서 가독성이 검증된 톤들로 구성.
 const DASH_LINE_PALETTE = [   // v0.9-13 — 뮤트 10색 (식별 유지, 형광 제거)
-  '#7d9bd1',   // 블루
-  '#cf8a72',   // 테라코타
-  '#8fbb96',   // 세이지
-  '#a99bd1',   // 퍼플
-  '#d0a955',   // 앰버
-  '#cf8fae',   // 로즈
-  '#7db3bd',   // 틸
-  '#a3b578',   // 올리브
-  '#d98a80',   // 로즈레드
-  '#9aa5a1',   // 그레이
+  '#7f9fd1',   // 블루
+  '#cf9072',   // 테라코타
+  '#7fbfa2',   // 틸그린
+  '#a29bd1',   // 퍼플
+  '#cfa95a',   // 앰버
+  '#c98fae',   // 로즈
+  '#76b6c2',   // 틸
+  '#a2b878',   // 올리브
+  '#d98f8f',   // 로즈레드
+  '#98a5a3',   // 그레이
 ];
 
 // 공통 차트 옵션 토큰 (v0.7-23) — 3개 추이 차트가 일관된 시각 유지
@@ -18300,7 +18300,7 @@ function applyTheme(theme) {
   try { localStorage.setItem('appTheme', t); } catch (e) {}
   // theme-color 메타 동기화 (PWA 상태바)
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', t === 'light' ? '#f6f4ee' : '#1b1a18');
+  if (meta) meta.setAttribute('content', t === 'light' ? '#f1f3ef' : '#151a1c');
   // 헤더 버튼 아이콘 — 누르면 바뀔 모드를 표시 (다크면 ☀️, 라이트면 🌙)
   const $btn = document.getElementById('btn-theme-toggle');
   if ($btn) {

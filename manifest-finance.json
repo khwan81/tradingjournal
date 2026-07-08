@@ -6,8 +6,8 @@
   "scope": "/tradingjournal/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#1b1a18",
-  "theme_color": "#1b1a18",
+  "background_color": "#151a1c",
+  "theme_color": "#151a1c",
   "lang": "ko",
   "icons": [
     {
