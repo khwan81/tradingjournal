@@ -1330,7 +1330,38 @@ html, body { overflow-x: hidden; }
 .rec-summary-sub   { font-size: 11px; color: var(--text3); margin-top: 2px; }
 .rec-summary-sub .red   { color: var(--red); }
 .rec-summary-sub .green { color: var(--green); }
-.rec-status-line { margin-top: 6px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+/* v0.9-11 — PC 4컬럼 그리드 (모바일은 아래 미디어쿼리에서 2×2 폴백) */
+.rec-grid-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 130px 220px 110px;
+  gap: 12px; padding: 4px 8px 8px;
+  font-size: 11px; color: var(--text3);
+  border-bottom: 1px solid var(--border);
+}
+.rec-row.wl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 130px 220px 110px;
+  grid-template-areas: "main base state actions";
+  gap: 12px; align-items: center; padding: 10px 8px;
+}
+.rec-row.wl .rec-main    { grid-area: main; min-width: 0; }
+.rec-row.wl .rec-base    {
+  grid-area: base; text-align: right;
+  font-family: var(--font-mono); font-size: 13px; color: var(--text2);
+}
+.rec-row.wl .rec-base-unit { font-size: 11px; color: var(--text3); margin-left: 1px; }
+.rec-row.wl .rec-state   { grid-area: state; min-width: 0; }
+.rec-row.wl .actions     { grid-area: actions; display: flex; gap: 6px; justify-content: flex-end; align-items: center; }
+.rec-row.wl.done { opacity: 0.72; }
+@media (max-width: 700px) {
+  .rec-grid-head { display: none; }
+  .rec-row.wl {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "main base" "state actions";
+    row-gap: 6px; align-items: start;
+  }
+  .rec-row.wl .rec-state { align-self: center; }
+}
 .rec-status { font-size: 12px; font-family: var(--font-mono); }
 .rec-status.paid    { color: var(--green); }
 .rec-status.pending { color: var(--amber); }
@@ -9367,38 +9398,51 @@ function renderRecurringList() {
       </div>
     </div>`;
 
-  // ── 항목 행 ──
+  // ── 항목 행 — v0.9-11: PC 4컬럼 그리드(항목|기준|이번 달|액션) + 대기 우선 정렬.
+  //   대기끼리는 보통 결제일 임박순, 결제됨은 뒤로 밀고 흐리게(done). 모바일은 2×2 폴백.
+  rows.sort((a, b) => {
+    if (!!a.tx !== !!b.tx) return a.tx ? 1 : -1;
+    if (!a.tx && !b.tx) {
+      const da = a.rec.dayOfMonth || 32, db = b.rec.dayOfMonth || 32;
+      if (da !== db) return da - db;
+    }
+    return String(a.rec.name).localeCompare(String(b.rec.name), 'ko');
+  });
+
+  html += `
+    <div class="rec-grid-head">
+      <span>항목</span><span style="text-align:right;">기준 금액</span><span>이번 달</span><span></span>
+    </div>`;
+
   html += rows.map(({ rec, tx, matched, matchedSum }) => {
-    let statusHtml;
+    let stateHtml, quickBtn = '';
     if (tx) {
       const day = String(tx.date || '').slice(8, 10).replace(/^0/, '');
       const diff = matchedSum - (Number(rec.amount) || 0);
       const diffStr = diff !== 0
-        ? ` <span class="${diff > 0 ? 'red' : 'green'}" style="font-size:10px;">기준 대비 ${diff > 0 ? '+' : '−'}${fmtAmount(Math.abs(diff))}</span>`
+        ? ` <span class="${diff > 0 ? 'red' : 'green'}" style="font-size:10px;">${diff > 0 ? '+' : '−'}${fmtAmount(Math.abs(diff))}</span>`
         : '';
-      const multi = matched.length > 1 ? ` <span style="color:var(--text3);font-size:10px;">(${matched.length}건 합)</span>` : '';
-      statusHtml = `<span class="rec-status paid">✓ ${day}일 · ${fmtAmount(matchedSum)}원${multi}${diffStr}</span>`;
+      const multi = matched.length > 1 ? ` <span style="color:var(--text3);font-size:10px;">(${matched.length}건)</span>` : '';
+      stateHtml = `<span class="rec-status paid">✓ ${day}일 · ${fmtAmount(matchedSum)}원${multi}${diffStr}</span>`;
     } else {
-      const dayHint = rec.dayOfMonth ? ` <span style="color:var(--text3);font-size:10px;">보통 ${rec.dayOfMonth}일</span>` : '';
-      statusHtml = `
-        <span class="rec-status pending">⏳ 이번 달 아직 없음${dayHint}</span>
-        <button type="button" class="btn-s rec-quick-add" data-rec-quick="${escapeHtml(rec.id)}">입력</button>`;
+      const dayHint = rec.dayOfMonth ? ` <span style="color:var(--text3);">· 보통 ${rec.dayOfMonth}일</span>` : '';
+      stateHtml = `<span class="rec-status pending">⏳ 대기${dayHint}</span>`;
+      quickBtn = `<button type="button" class="btn-s rec-quick-add" data-rec-quick="${escapeHtml(rec.id)}">입력</button>`;
     }
     return `
-    <div class="rec-row">
+    <div class="rec-row wl${tx ? ' done' : ''}">
       <div class="rec-main">
-        <div class="rec-name-wrap">
-          <span class="rec-name">${escapeHtml(rec.name)}</span>
-          <span class="rec-amount">기준 ${fmtAmount(rec.amount)}원</span>
-        </div>
+        <div class="rec-name-wrap"><span class="rec-name">${escapeHtml(rec.name)}</span></div>
         <div class="rec-meta">
           ${escapeHtml(rec.category)}
           <span class="dot">·</span>${escapeHtml(rec.payment)}
           ${rec.memo ? `<span class="dot">·</span>${escapeHtml(rec.memo)}` : ''}
         </div>
-        <div class="rec-status-line" data-rec-status="${escapeHtml(rec.id)}">${statusHtml}</div>
       </div>
+      <div class="rec-base">${fmtAmount(rec.amount)}<span class="rec-base-unit">원</span></div>
+      <div class="rec-state" data-rec-status="${escapeHtml(rec.id)}">${stateHtml}</div>
       <div class="actions">
+        ${quickBtn}
         <button type="button" data-edit-rec="${escapeHtml(rec.id)}" aria-label="편집">⋯</button>
       </div>
     </div>`;
