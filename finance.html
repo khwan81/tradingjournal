@@ -29,10 +29,11 @@
 }
 </script>
 
-<!-- 웹폰트 (v0.9-4 정리 — @import가 style 내 다른 규칙 뒤에 있어 무시되던 버그 수정) -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500&display=swap">
+<!-- 웹폰트 (v0.9-12) — Pretendard Variable 단일 서체: 한글·영문·숫자 통일.
+     기존 DM Sans + Noto Sans KR + DM Mono 3종 혼합이 한 줄 안에서 섞여 가독성을 해치던 문제 해소.
+     숫자 표 정렬은 body의 font-variant-numeric: tabular-nums가 담당 (고정폭 숫자) -->
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 
 <!-- Chart.js 4.4.1 (v0.5 대시보드 차트) -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -70,8 +71,9 @@
   --radius-sm: 6px;
   --radius:    10px;
   --radius-lg: 14px;
-  --font:      'DM Sans', 'Noto Sans KR', sans-serif;
-  --font-mono: 'DM Mono', 'Fira Mono', monospace;
+  /* v0.9-12 — 단일 서체. --font-mono는 호환용 별칭(숫자 정렬은 tabular-nums가 담당) */
+  --font:      'Pretendard Variable', Pretendard, -apple-system, 'Noto Sans KR', sans-serif;
+  --font-mono: 'Pretendard Variable', Pretendard, -apple-system, 'Noto Sans KR', sans-serif;
 
   /* v0.7-13 — 폰트 사이즈 토큰 (앞으로 신규 컴포넌트는 토큰 사용) */
   --fs-2xs: 10px;   /* 보조 메타 (날짜, asOf, 캡션) */
@@ -143,6 +145,7 @@ body {
   min-height: 100dvh;
   font-size: 14px;
   line-height: 1.5;
+  font-variant-numeric: tabular-nums;   /* v0.9-12 — 숫자 고정폭 (전역 상속, 금액 세로 정렬) */
   -webkit-font-smoothing: antialiased;
 }
 
@@ -293,7 +296,7 @@ html, body { overflow-x: hidden; }
   color: var(--text3);
   padding: 6px 10px;
   border-radius: var(--radius-sm);
-  font-size: 11px;
+  font-size: 11.5px;
   cursor: pointer;
   font-family: var(--font);
   transition: all .15s;
@@ -512,7 +515,7 @@ html, body { overflow-x: hidden; }
 .dv-card-sub,
 .sv-cat-sub,
 .rt-section-head .rt-section-sub {
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--text2);
   font-family: var(--font-mono);
 }
@@ -523,7 +526,7 @@ html, body { overflow-x: hidden; }
   color: var(--text2); font-weight: 400; font-size: 12px;
 }
 .section-sub {
-  font-size: 11px; color: var(--text3); margin-top: 2px;
+  font-size: 11.5px; color: var(--text3); margin-top: 2px;
 }
 .section-actions { display: flex; gap: 6px; flex-shrink: 0; }
 
@@ -580,7 +583,7 @@ html, body { overflow-x: hidden; }
 }
 .acc-row:last-child { border-bottom: none; }
 .acc-row.header {
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--text3);
   padding: 10px 14px;
 }
@@ -620,13 +623,13 @@ html, body { overflow-x: hidden; }
   display: inline-flex; align-items: center;
   padding: 2px 8px;
   border-radius: 99px;
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 500;
   width: fit-content;
 }
 .badge.current   { background: var(--green-bg); color: var(--green); }
 .badge.noncurrent { background: rgba(167,139,250,0.12); color: #c4b5fd; }
-.badge.tracked   { background: rgba(79,143,255,0.12); color: #93c5fd; font-size: 10px; }
+.badge.tracked   { background: rgba(79,143,255,0.12); color: #93c5fd; font-size: 11px; }
 .badge.inactive  { background: var(--bg4); color: var(--text3); }
 
 /* 카테고리/결제수단 칩 */
@@ -667,7 +670,7 @@ html, body { overflow-x: hidden; }
   padding: 4px 0;
 }
 .chip-group-label {
-  font-size: 11px; color: var(--text2);
+  font-size: 11.5px; color: var(--text2);
   margin-bottom: 6px; margin-top: 4px;
 }
 .chip-group-label:first-child { margin-top: 0; }
@@ -683,7 +686,7 @@ html, body { overflow-x: hidden; }
 .liab-row .meta { color: var(--text2); font-size: 12px; margin-top: 2px; }
 .liab-row .name-wrap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .liab-row .badge {
-  font-size: 10px;
+  font-size: 11px;
   padding: 2px 7px;
   border-radius: 4px;
   background: var(--bg3);
@@ -724,11 +727,11 @@ html, body { overflow-x: hidden; }
 .trash-toggle .trash-label { flex: 1; text-align: left; }
 .trash-toggle .trash-count {
   background: var(--bg4); color: var(--text3);
-  font-size: 10px; padding: 2px 7px; border-radius: 10px;
+  font-size: 11px; padding: 2px 7px; border-radius: 10px;
   font-weight: 500;
 }
 .trash-toggle .trash-caret {
-  font-size: 10px; color: var(--text3);
+  font-size: 11px; color: var(--text3);
   transition: transform 0.15s;
 }
 .trash-toggle[aria-expanded="true"] .trash-caret { transform: rotate(180deg); }
@@ -743,13 +746,13 @@ html, body { overflow-x: hidden; }
 }
 .trash-row:last-child { border-bottom: none; }
 .trash-row .name-wrap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.trash-row .meta { color: var(--text3); font-size: 11px; margin-top: 2px; }
+.trash-row .meta { color: var(--text3); font-size: 11.5px; margin-top: 2px; }
 .trash-row .actions { display: flex; gap: 4px; }
 .trash-row .actions button {
   background: transparent;
   border: 1px solid var(--border2);
   color: var(--text2);
-  font-size: 11px;
+  font-size: 11.5px;
   cursor: pointer;
   padding: 4px 10px;
   border-radius: 4px;
@@ -771,11 +774,11 @@ html, body { overflow-x: hidden; }
 }
 .backup-info { flex: 1; min-width: 0; }
 .backup-info-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
-.backup-info-desc  { font-size: 11px; color: var(--text3); line-height: 1.5; }
+.backup-info-desc  { font-size: 11.5px; color: var(--text3); line-height: 1.5; }
 .backup-info-desc.danger { color: var(--red); }
 .backup-info-desc code {
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 11px;
   background: var(--bg3);
   color: var(--text2);
   padding: 1px 5px;
@@ -786,7 +789,7 @@ html, body { overflow-x: hidden; }
 /* 마지막 백업 시각 (v0.3-1) */
 .backup-last {
   margin-top: 8px;
-  font-size: 11px;
+  font-size: 11.5px;
   font-family: var(--font-mono);
   color: var(--text3);
 }
@@ -839,7 +842,7 @@ html, body { overflow-x: hidden; }
   padding: 8px 4px; text-align: center;
 }
 .rc-n { font-size: 16px; font-weight: 500; font-family: var(--font-mono); color: var(--text); }
-.rc-l { font-size: 10px; color: var(--text3); margin-top: 2px; }
+.rc-l { font-size: 11px; color: var(--text3); margin-top: 2px; }
 
 .restore-warn {
   padding: 10px 12px;
@@ -920,13 +923,13 @@ html, body { overflow-x: hidden; }
   gap: 8px;
 }
 .reset-option-desc {
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--text3);
   margin-top: 2px;
   line-height: 1.45;
 }
 .reset-count {
-  font-size: 11px;
+  font-size: 11.5px;
   font-family: var(--font-mono);
   color: var(--text3);
   font-weight: 400;
@@ -1013,7 +1016,7 @@ html, body { overflow-x: hidden; }
   padding: 14px 16px;
 }
 .kpi-card .label, .dash-kpi-label {
-  font-size: 11px; color: var(--text2); margin-bottom: 6px;
+  font-size: 11.5px; color: var(--text2); margin-bottom: 6px;
 }
 .kpi-card .value, .dash-kpi-value {
   font-size: 20px; font-weight: 500;
@@ -1027,14 +1030,14 @@ html, body { overflow-x: hidden; }
 .kpi-card .value.muted { color: var(--text2); }
 .dash-kpi-value.muted  { color: var(--text3); }
 .kpi-card .sub, .dash-kpi-sub {
-  font-size: 11px; color: var(--text3); margin-top: 4px;
+  font-size: 11.5px; color: var(--text3); margin-top: 4px;
 }
 .kpi-card .sub.green, .dash-kpi-sub.green { color: var(--green); }
 .kpi-card .sub.red,   .dash-kpi-sub.red   { color: var(--red); }
 .kpi-card .sub.amber, .dash-kpi-sub.amber { color: var(--amber); }
 /* MoM (전월 대비) — bs-kpi의 부가 라인 흡수 */
 .kpi-card .bs-mom {
-  font-size: 11px;
+  font-size: 11.5px;
   margin-top: 4px;
   font-weight: 500;
   font-family: var(--font-mono);
@@ -1270,7 +1273,7 @@ html, body { overflow-x: hidden; }
 .alert-stack-toggle .ast-dot.danger { background: var(--red); }
 .alert-stack-toggle .ast-dot.pink   { background: #ec4899; }
 .alert-stack-toggle .ast-caret {
-  font-size: 10px;
+  font-size: 11px;
   transition: transform .15s;
 }
 .alert-stack[data-collapsed="false"] .alert-stack-toggle .ast-caret {
@@ -1289,10 +1292,10 @@ html, body { overflow-x: hidden; }
 .rec-row .rec-name-wrap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .rec-row .rec-name { font-size: 14px; color: var(--text); }
 .rec-row .rec-amount { font-size: 13px; color: var(--text2); font-family: var(--font-mono); }
-.rec-row .rec-meta { font-size: 11px; color: var(--text3); margin-top: 4px; }
+.rec-row .rec-meta { font-size: 11.5px; color: var(--text3); margin-top: 4px; }
 .rec-row .rec-meta .dot { margin: 0 6px; }
 .rec-row .badge {
-  font-size: 10px; padding: 2px 7px; border-radius: 10px;
+  font-size: 11px; padding: 2px 7px; border-radius: 10px;
   background: var(--bg4); color: var(--text2);
   font-weight: 500;
 }
@@ -1323,11 +1326,11 @@ html, body { overflow-x: hidden; }
   background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
   padding: 12px 16px; margin-bottom: 12px;
 }
-.rec-summary-label { font-size: 11px; color: var(--text2); margin-bottom: 4px; }
+.rec-summary-label { font-size: 11.5px; color: var(--text2); margin-bottom: 4px; }
 .rec-summary-value { font-size: 20px; font-weight: 500; font-family: var(--font-mono); color: var(--text); }
 .rec-summary-unit  { font-size: 12px; color: var(--text3); margin-left: 2px; }
 .rec-summary-right { text-align: right; }
-.rec-summary-sub   { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.rec-summary-sub   { font-size: 11.5px; color: var(--text3); margin-top: 2px; }
 .rec-summary-sub .red   { color: var(--red); }
 .rec-summary-sub .green { color: var(--green); }
 /* v0.9-11 — PC 4컬럼 그리드 (모바일은 아래 미디어쿼리에서 2×2 폴백) */
@@ -1335,7 +1338,7 @@ html, body { overflow-x: hidden; }
   display: grid;
   grid-template-columns: minmax(0, 1fr) 130px 220px 110px;
   gap: 12px; padding: 4px 8px 8px;
-  font-size: 11px; color: var(--text3);
+  font-size: 11.5px; color: var(--text3);
   border-bottom: 1px solid var(--border);
 }
 .rec-row.wl, .event-row.wl {
@@ -1349,7 +1352,7 @@ html, body { overflow-x: hidden; }
   grid-area: base; text-align: right;
   font-family: var(--font-mono); font-size: 13px; color: var(--text2);
 }
-.rec-row.wl .rec-base-unit { font-size: 11px; color: var(--text3); margin-left: 1px; }
+.rec-row.wl .rec-base-unit { font-size: 11.5px; color: var(--text3); margin-left: 1px; }
 .rec-row.wl .rec-state,   .event-row.wl .rec-state   { grid-area: state; min-width: 0; }
 .rec-row.wl .actions,     .event-row.wl .actions     { grid-area: actions; display: flex; gap: 6px; justify-content: flex-end; align-items: center; }
 .rec-row.wl.done { opacity: 0.72; }
@@ -1370,7 +1373,7 @@ html, body { overflow-x: hidden; }
 .rec-status.pending { color: var(--amber); }
 .rec-status .red   { color: var(--red); }
 .rec-status .green { color: var(--green); }
-.rec-quick-add { padding: 2px 10px; font-size: 11px; }
+.rec-quick-add { padding: 2px 10px; font-size: 11.5px; }
 .rec-inactive { margin-top: 10px; }
 .rec-inactive summary { font-size: 12px; color: var(--text3); cursor: pointer; padding: 6px 0; }
 .rec-suggest {
@@ -1382,7 +1385,7 @@ html, body { overflow-x: hidden; }
 .rec-suggest-row + .rec-suggest-row { border-top: 1px solid var(--border); }
 .rec-suggest-info { min-width: 0; }
 .rec-suggest-name { font-size: 13px; color: var(--text); display: block; }
-.rec-suggest-meta { font-size: 11px; color: var(--text3); }
+.rec-suggest-meta { font-size: 11.5px; color: var(--text3); }
 .rec-tools { margin-top: 14px; text-align: right; }
 .recdup-row {
   display: flex; gap: 10px; align-items: flex-start; padding: 10px 0;
@@ -1392,7 +1395,7 @@ html, body { overflow-x: hidden; }
 .recdup-info { min-width: 0; }
 .recdup-line { font-size: 12px; color: var(--text2); margin-bottom: 2px; }
 .recdup-tag {
-  display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 4px; margin-right: 6px;
+  display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 4px; margin-right: 6px;
 }
 .recdup-tag.gen { background: rgba(245, 158, 11, 0.15); color: var(--amber); }
 .recdup-tag.imp { background: rgba(52, 211, 153, 0.15); color: var(--green); }
@@ -1442,7 +1445,7 @@ html, body { overflow-x: hidden; }
   max-width: 260px;
 }
 .event-account-hint {
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--text3);
   flex: 1;
   min-width: 0;
@@ -1464,10 +1467,10 @@ html, body { overflow-x: hidden; }
 .event-row .event-name-wrap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .event-row .event-name { font-size: 14px; color: var(--text); }
 .event-row .event-amount { font-size: 13px; color: var(--text2); font-family: var(--font-mono); }
-.event-row .event-meta { font-size: 11px; color: var(--text3); margin-top: 4px; }
+.event-row .event-meta { font-size: 11.5px; color: var(--text3); margin-top: 4px; }
 .event-row .event-meta .dot { margin: 0 6px; }
 .event-row .badge {
-  font-size: 10px; padding: 2px 7px; border-radius: 10px;
+  font-size: 11px; padding: 2px 7px; border-radius: 10px;
   background: var(--bg4); color: var(--text2);
   font-weight: 500;
 }
@@ -1547,7 +1550,7 @@ html, body { overflow-x: hidden; }
   margin: 0;
 }
 .bulk-row .bk-name { font-size: 13px; color: var(--text); font-weight: 600; }
-.bulk-row .bk-sub  { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.bulk-row .bk-sub  { font-size: 11.5px; color: var(--text3); margin-top: 2px; }
 .bulk-row .bk-amt  { font-size: 13px; color: var(--amber); font-weight: 700; text-align: right; }
 .bulk-empty {
   text-align: center;
@@ -1584,7 +1587,7 @@ html, body { overflow-x: hidden; }
   padding: 6px 10px;
 }
 .fx-row .fx-cur {
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--text2);
   font-weight: 600;
 }
@@ -1609,7 +1612,7 @@ html, body { overflow-x: hidden; }
   border-color: var(--accent);
 }
 .fx-row .fx-suffix {
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--text3);
 }
 
@@ -1628,7 +1631,7 @@ html, body { overflow-x: hidden; }
 .fx-section .fx-badge {
   background: var(--accent);
   color: #fff;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 10px;
@@ -1680,7 +1683,7 @@ html, body { overflow-x: hidden; }
 .pl-placeholder .hint,
 .bg-placeholder .hint,
 .dash-placeholder .hint {
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--text3);
 }
 
@@ -1697,7 +1700,7 @@ html, body { overflow-x: hidden; }
   border: 1px solid rgba(79,143,255,0.18);
   border-radius: 6px;
   margin-top: 14px;
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--text2);
   line-height: 1.55;
 }
@@ -1724,7 +1727,7 @@ html, body { overflow-x: hidden; }
 .sv-cat-dot.cat-pension   { background: var(--acat-pension); }
 .sv-cat-dot.cat-other     { background: var(--text3); }
 .sv-cat-sub {
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--text2);
   font-family: var(--font-mono);
   text-align: right;
@@ -1741,7 +1744,7 @@ html, body { overflow-x: hidden; }
   padding: 8px 14px;
   background: var(--bg2);
   color: var(--text3);
-  font-size: 10.5px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.4px;
   border-bottom: 1px solid var(--border);
@@ -1762,7 +1765,7 @@ html, body { overflow-x: hidden; }
 .sv-row .sv-cell.pos { color: var(--green); }
 .sv-row .sv-cell.neg { color: var(--red); }
 .sv-row .sv-cell-fx-sub {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text3);
   margin-top: 1px;
   font-family: var(--font-mono);
@@ -1786,7 +1789,7 @@ html, body { overflow-x: hidden; }
 
 /* 뱃지 */
 .sv-badge {
-  font-size: 9.5px;
+  font-size: 10.5px;
   padding: 1.5px 6px;
   border-radius: 9px;
   letter-spacing: 0;
@@ -1802,7 +1805,7 @@ html, body { overflow-x: hidden; }
 .sv-empty {
   padding: 18px;
   text-align: center;
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--text3);
 }
 
@@ -1874,7 +1877,7 @@ html, body { overflow-x: hidden; }
 
 .rt-range {
   display: flex; align-items: center; gap: 6px;
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--text2);
 }
 .rt-range-sep { color: var(--text3); }
@@ -1883,7 +1886,7 @@ html, body { overflow-x: hidden; }
   border: 1px solid var(--border);
   color: var(--text);
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: 12px;
   padding: 4px 8px;
   border-radius: 6px;
   color-scheme: dark;
@@ -1961,7 +1964,7 @@ html, body { overflow-x: hidden; }
   background: rgba(79,143,255,0.06);
 }
 .rt-cmp-label {
-  font-size: 10.5px;
+  font-size: 11px;
   color: var(--text3);
   letter-spacing: 0.5px;
   text-transform: uppercase;
@@ -1978,7 +1981,7 @@ html, body { overflow-x: hidden; }
 .rt-cmp-rate.neg { color: var(--red); }
 .rt-cmp-rate.muted { color: var(--text3); font-weight: 500; }
 .rt-cmp-gain {
-  font-size: 10.5px;
+  font-size: 11px;
   color: var(--text2);
   font-family: var(--font-mono);
   margin-top: 2px;
@@ -1989,7 +1992,7 @@ html, body { overflow-x: hidden; }
 /* .rt-section / .rt-section-head 본체는 위 .card 시스템(bar 패턴)에 흡수됨 (v0.7-13) */
 .rt-section-head .rt-section-sub {
   margin-left: auto;
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 400;
   color: var(--text2);
   font-family: var(--font-mono);
@@ -2004,7 +2007,7 @@ html, body { overflow-x: hidden; }
 .rt-row-head {
   background: var(--bg2);
   color: var(--text3);
-  font-size: 10.5px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.4px;
 }
@@ -2058,9 +2061,9 @@ html, body { overflow-x: hidden; }
     gap: 4px;
   }
   .rt-cmp-card { padding: 8px 4px; }
-  .rt-cmp-label { font-size: 9.5px; }
+  .rt-cmp-label { font-size: 10.5px; }
   .rt-cmp-rate  { font-size: 12px; }
-  .rt-cmp-gain  { font-size: 9.5px; }
+  .rt-cmp-gain  { font-size: 10.5px; }
 
   .rt-row-head { display: none; }
   .rt-row {
@@ -2091,7 +2094,7 @@ html, body { overflow-x: hidden; }
   background: var(--bg4);
   border: 1px solid var(--border);
   color: var(--text);
-  font-size: 11px;
+  font-size: 11.5px;
   padding: 3px 8px;
   border-radius: 6px;
   font-family: var(--font);
@@ -2148,7 +2151,7 @@ html, body { overflow-x: hidden; }
   white-space: nowrap;
 }
 .dv-sum-row .dv-sum-count {
-  font-size: 10.5px;
+  font-size: 11px;
   color: var(--text3);
   text-align: right;
   font-family: var(--font-mono);
@@ -2171,7 +2174,7 @@ html, body { overflow-x: hidden; }
 .dv-list-row-head {
   background: var(--bg2);
   color: var(--text3);
-  font-size: 10.5px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.4px;
 }
@@ -2180,7 +2183,7 @@ html, body { overflow-x: hidden; }
 .dv-list-row .dv-list-date {
   color: var(--text2);
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: 12px;
 }
 .dv-list-row .dv-list-acc {
   color: var(--text2);
@@ -2202,7 +2205,7 @@ html, body { overflow-x: hidden; }
 }
 .dv-list-row .dv-list-amt .fx-sub {
   display: block;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text3);
   font-weight: 400;
   margin-top: 1px;
@@ -2232,7 +2235,7 @@ html, body { overflow-x: hidden; }
   }
   .dv-list-row .dv-list-date {
     grid-column: 1;
-    font-size: 10.5px;
+    font-size: 11px;
   }
   .dv-list-row .dv-list-sym {
     grid-column: 1;
@@ -2240,7 +2243,7 @@ html, body { overflow-x: hidden; }
   }
   .dv-list-row .dv-list-acc {
     grid-column: 1;
-    font-size: 10.5px;
+    font-size: 11px;
   }
   .dv-list-row .dv-list-amt {
     grid-column: 2; grid-row: 1 / span 3;
@@ -2256,7 +2259,7 @@ html, body { overflow-x: hidden; }
   max-width: 480px;
 }
 .form-hint-inline {
-  font-size: 10.5px;
+  font-size: 11px;
   color: var(--text3);
   font-weight: 400;
   margin-left: 4px;
@@ -2342,7 +2345,7 @@ html, body { overflow-x: hidden; }
 /* v0.7-12k — 직전 동일 기간 비교 (delta 셀) */
 .pl-delta-cell {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 11.5px;
   text-align: right;
   min-width: 120px;
   white-space: nowrap;
@@ -2384,7 +2387,7 @@ html, body { overflow-x: hidden; }
   .pl-delta-cell {
     grid-area: delta;
     min-width: 0;
-    font-size: 10.5px;
+    font-size: 11px;
   }
   /* v0.7-23 — no-delta 모바일: delta 영역 자체 제거, name 세로 stretch X */
   .pl-table.no-delta .pl-group-head,
@@ -2415,7 +2418,7 @@ html, body { overflow-x: hidden; }
   color: var(--text);
 }
 .dash-sub {
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--text3);
   font-family: var(--font-mono);
 }
@@ -2519,7 +2522,7 @@ html, body { overflow-x: hidden; }
   font-family: var(--font-mono);
   color: var(--text3);
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: 11.5px;
 }
 .dash-legend-row.group-head .dash-legend-pct {
   color: var(--text2);
@@ -2549,12 +2552,12 @@ html, body { overflow-x: hidden; }
 }
 #btn-dash-expense-back {
   padding: 4px 10px;
-  font-size: 11px;
+  font-size: 11.5px;
 }
 
 /* 카드 헤더 링크 (v0.7-9) — "자세히" 같은 라우팅 링크 */
 .dash-card-link {
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--accent);
   text-decoration: none;
   white-space: nowrap;
@@ -2579,7 +2582,7 @@ html, body { overflow-x: hidden; }
 }
 .dash-trk-filter:empty { display: none; }
 .dash-trk-filter .fchip {
-  font-size: 11px;
+  font-size: 11.5px;
   padding: 3px 10px;
   display: inline-flex;
   align-items: center;
@@ -2615,7 +2618,7 @@ html, body { overflow-x: hidden; }
 .dash-series-filter:empty { display: none; }
 .dash-cat-filter .fchip,
 .dash-series-filter .fchip {
-  font-size: 11px;
+  font-size: 11.5px;
   padding: 3px 10px;
   display: inline-flex;
   align-items: center;
@@ -2649,7 +2652,7 @@ html, body { overflow-x: hidden; }
   gap: 2px;
 }
 .dash-trk-measure .seg-btn {
-  font-size: 11px;
+  font-size: 11.5px;
   padding: 4px 10px;
 }
 .dash-trk-prin {
@@ -2657,7 +2660,7 @@ html, body { overflow-x: hidden; }
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--text2);
   cursor: pointer;
   user-select: none;
@@ -2681,7 +2684,7 @@ html, body { overflow-x: hidden; }
   padding: 10px 12px;
 }
 .dash-trk-stat-label {
-  font-size: 10.5px;
+  font-size: 11px;
   color: var(--text3);
   letter-spacing: 0.3px;
   margin-bottom: 4px;
@@ -2697,7 +2700,7 @@ html, body { overflow-x: hidden; }
 .dash-trk-stat-value.red   { color: var(--red); }
 .dash-trk-stat-value.muted { color: var(--text3); }
 .dash-trk-stat-sub {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text3);
   font-family: var(--font-mono);
   margin-top: 2px;
@@ -2781,7 +2784,7 @@ html, body { overflow-x: hidden; }
 }
 .dash-event-save-caret {
   display: inline-block;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text3);
   margin-right: 5px;
   transition: transform 0.15s ease;
@@ -2843,7 +2846,7 @@ html, body { overflow-x: hidden; }
 /* 개별 진도 섹션 전체 접기/펼치기 (기본 접힘) */
 .dash-event-section-caret {
   display: inline-block;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text3);
   margin-right: 5px;
   transition: transform 0.15s ease;
@@ -2861,7 +2864,7 @@ html, body { overflow-x: hidden; }
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .dash-event-progress-amt {
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--text3);
   font-family: var(--font-mono);
   flex-shrink: 0;
@@ -2885,11 +2888,11 @@ html, body { overflow-x: hidden; }
   margin-top: 4px;
 }
 .dash-event-progress-time {
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--text3);
 }
 .dash-event-progress-pct {
-  font-size: 11px;
+  font-size: 11.5px;
   font-family: var(--font-mono);
   font-weight: 500;
 }
@@ -2935,7 +2938,7 @@ html, body { overflow-x: hidden; }
 .bg-remain.over { color: var(--red); }
 .bg-remain-hint {
   color: var(--text3);
-  font-size: 11px;
+  font-size: 11.5px;
   font-family: var(--font-ui, inherit);
   margin-left: 6px;
 }
@@ -2997,8 +3000,8 @@ html, body { overflow-x: hidden; }
 }
 .bg-actual { color: var(--text); }
 .bg-budget { color: var(--text3); }
-.bg-empty   { color: var(--text3); font-style: italic; font-size: 11px; }
-.bg-no-budget { color: var(--amber); font-size: 11px; margin-left: 4px; }
+.bg-empty   { color: var(--text3); font-style: italic; font-size: 11.5px; }
+.bg-no-budget { color: var(--amber); font-size: 11.5px; margin-left: 4px; }
 
 /* v0.7-14 — 예산 미설정/없음 행에 점선 leader (시인성)
  *   예산 있는 행(진행률바 있음)은 영향 없음. data-leader="1" 행에만 적용. */
@@ -3090,7 +3093,7 @@ html, body { overflow-x: hidden; }
 /* (kpi-grid / kpi-card는 .kpi-grid / .kpi-card로 통합됨 — v0.7-13) */
 
 .bs-delta {
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 600;
   margin-left: 6px;
   font-variant-numeric: tabular-nums;
@@ -3125,7 +3128,7 @@ html, body { overflow-x: hidden; }
 .bs-tier:first-of-type { margin-top: 2px; }
 .bs-tier-head {
   display: flex; justify-content: space-between;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text3);
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -3149,7 +3152,7 @@ html, body { overflow-x: hidden; }
   white-space: nowrap;
 }
 .bs-item .name .meta {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text3);
   margin-left: 6px;
 }
@@ -3163,7 +3166,7 @@ html, body { overflow-x: hidden; }
 .bs-item.empty .name { color: var(--text2); }
 .bs-item.fx .amt-line { display: block; }
 .bs-item.fx .amt-native {
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--text3);
   display: block;
   margin-top: 1px;
@@ -3172,7 +3175,7 @@ html, body { overflow-x: hidden; }
   content: '자동';
   display: inline-block;
   margin-left: 6px;
-  font-size: 9px;
+  font-size: 10.5px;
   padding: 1px 5px;
   background: rgba(79, 143, 255, 0.16);
   color: var(--accent);
@@ -3201,7 +3204,7 @@ html, body { overflow-x: hidden; }
   border: 1px solid var(--border2);
   border-radius: 8px;
   padding: 8px 12px;
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--text2);
   margin-bottom: 12px;
 }
@@ -3213,18 +3216,18 @@ html, body { overflow-x: hidden; }
 .bal-fx-strip .fx-item b { color: var(--text); font-weight: 600; }
 .bal-fx-strip .fx-snap {
   color: var(--amber);
-  font-size: 10px;
+  font-size: 11px;
   margin-left: 2px;
 }
 .bal-fx-strip .fx-snap:empty { display: none; }
 .bal-fx-strip .fx-snap-date {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text3);
 }
 .bal-fx-strip .fx-snap-date:empty { display: none; }
 .bal-fx-strip .fx-keep-snap {
   display: flex; align-items: center; gap: 6px;
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--text2);
   cursor: pointer;
   user-select: none;
@@ -3249,7 +3252,7 @@ html, body { overflow-x: hidden; }
 .bal-section:first-of-type { margin-top: 4px; }
 .bal-sec-head {
   display: flex; justify-content: space-between; align-items: center;
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--text3);
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -3286,7 +3289,7 @@ html, body { overflow-x: hidden; }
   white-space: nowrap;
 }
 .bal-row .bal-name .meta {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text3);
   margin-left: 6px;
 }
@@ -3319,13 +3322,13 @@ html, body { overflow-x: hidden; }
   cursor: not-allowed;
 }
 .bal-row .bal-unit {
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--text3);
   min-width: 28px;
   text-align: left;
 }
 .bal-row .bal-krw {
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--text3);
   text-align: right;
   grid-column: 1 / -1;
@@ -3337,7 +3340,7 @@ html, body { overflow-x: hidden; }
   content: '자동';
   display: inline-block;
   margin-left: 6px;
-  font-size: 9px;
+  font-size: 10.5px;
   padding: 1px 5px;
   background: rgba(79, 143, 255, 0.16);
   color: var(--accent);
@@ -3396,7 +3399,7 @@ html, body { overflow-x: hidden; }
 }
 .tx-row:last-child { border-bottom: none; }
 .tx-row.header {
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--text3);
   padding: 10px 16px;
 }
@@ -3425,7 +3428,7 @@ html, body { overflow-x: hidden; }
 .tx-row.tx-group .tx-memo { flex: 0 1 auto; color: var(--text2); }
 .tx-row .tx-count {
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: 11px;
   font-family: var(--font-mono);
   color: var(--text2);
   background: var(--bg3);
@@ -3436,13 +3439,13 @@ html, body { overflow-x: hidden; }
 }
 .tx-row .tx-group-catmore {
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text3);
 }
 .tx-row .tx-group-chevron {
   display: inline-block;
   color: var(--text3);
-  font-size: 10px;
+  font-size: 11px;
   transition: transform .15s;
   transform: rotate(-90deg);   /* 접힘: ▸ 방향 */
 }
@@ -3456,7 +3459,7 @@ html, body { overflow-x: hidden; }
   position: absolute;
   left: 0;
   color: var(--text3);
-  font-size: 11px;
+  font-size: 11.5px;
 }
 
 /* ── 이벤트(태그) — v0.9 ── */
@@ -3472,7 +3475,7 @@ html, body { overflow-x: hidden; }
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text2);
   background: var(--bg3);
   border: 1px solid var(--border);
@@ -3509,7 +3512,7 @@ html, body { overflow-x: hidden; }
   text-overflow: ellipsis;
 }
 .tag-list-period {
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--text3);
   font-family: var(--font-mono);
   margin-top: 2px;
@@ -3520,7 +3523,7 @@ html, body { overflow-x: hidden; }
   font-size: 13px;
 }
 .tag-ongoing {
-  font-size: 9px;
+  font-size: 10.5px;
   color: var(--green);
   background: var(--green-bg);
   border-radius: 99px;
@@ -3528,7 +3531,7 @@ html, body { overflow-x: hidden; }
   flex-shrink: 0;
 }
 .tag-archived-mark {
-  font-size: 9px;
+  font-size: 10.5px;
   color: var(--text3);
   background: var(--bg3);
   border-radius: 99px;
@@ -3540,7 +3543,7 @@ html, body { overflow-x: hidden; }
   width: 100%;
   margin-top: 8px;
   padding: 7px;
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--text3);
   background: none;
   border: 1px dashed var(--border);
@@ -3562,7 +3565,7 @@ html, body { overflow-x: hidden; }
   font-family: var(--font-mono);
   font-size: 14px;
 }
-.tag-drill-cnt { font-size: 11px; color: var(--text3); }
+.tag-drill-cnt { font-size: 11.5px; color: var(--text3); }
 
 /* 예산 진행바 */
 .tag-budget-row {
@@ -3589,7 +3592,7 @@ html, body { overflow-x: hidden; }
 .tag-budget-fill.over { background: var(--red); }
 .tag-budget-label {
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: 11px;
   font-family: var(--font-mono);
   color: var(--text3);
 }
@@ -3625,7 +3628,7 @@ html, body { overflow-x: hidden; }
   color: var(--text2);
 }
 .tag-refund-line {
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--green);
   margin: -4px 0 10px;
 }
@@ -3698,7 +3701,7 @@ html, body { overflow-x: hidden; }
 .tx-row .col-amt.income  { color: var(--green); }
 .tx-row .col-amt.expense { color: var(--red); }
 .tx-row .col-amt .fx-native {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text3);
   font-weight: 400;
   margin-top: 2px;
@@ -3720,7 +3723,7 @@ html, body { overflow-x: hidden; }
 .tx-row .col-actions button:hover { background: var(--bg3); color: var(--text); }
 
 .tx-day-head {
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--text2);
   padding: 8px 16px;
   background: var(--bg3);                    /* v0.9-9 (#8) */
@@ -3730,7 +3733,7 @@ html, body { overflow-x: hidden; }
 
 .tx-legend {
   margin-top: 10px;
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--text3);
   padding: 0 6px;
   display: flex; gap: 14px;
@@ -3760,7 +3763,7 @@ html, body { overflow-x: hidden; }
   border-color: rgba(251,191,36,0.2);
 }
 .paid-row .paid-label .main { font-size: 13px; }
-.paid-row .paid-label .sub  { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.paid-row .paid-label .sub  { font-size: 11.5px; color: var(--text3); margin-top: 2px; }
 .paid-row.unpaid .paid-label .sub { color: var(--amber); }
 
 /* 카테고리 칩 (행에서 표시할 때 색상) */
@@ -3768,7 +3771,7 @@ html, body { overflow-x: hidden; }
   display: inline-flex;
   padding: 2px 8px;
   border-radius: 99px;
-  font-size: 11px;
+  font-size: 11.5px;
   white-space: nowrap;
 }
 .cat-chip.revenue  { background: var(--green-bg); color: var(--green); }
@@ -3831,18 +3834,18 @@ html, body { overflow-x: hidden; }
 .form-group { margin-bottom: 14px; }
 .form-group:last-child { margin-bottom: 0; }
 .form-label {
-  font-size: 11px; color: var(--text2);
+  font-size: 11.5px; color: var(--text2);
   margin-bottom: 6px;
   display: block;
 }
 .form-hint {
-  font-size: 10px; color: var(--text3);
+  font-size: 11px; color: var(--text3);
   margin-top: 4px;
 }
 .form-row { display: grid; gap: 10px; }
 .form-row.cols-2 { grid-template-columns: 1fr 1fr; }
 .form-section-title {
-  font-size: 11px; color: var(--text3);
+  font-size: 11.5px; color: var(--text3);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 10px;
@@ -3940,7 +3943,7 @@ html, body { overflow-x: hidden; }
   margin-bottom: 12px;
 }
 .toggle-row .toggle-label .main { font-size: 13px; }
-.toggle-row .toggle-label .sub  { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.toggle-row .toggle-label .sub  { font-size: 11.5px; color: var(--text3); margin-top: 2px; }
 .toggle {
   position: relative;
   width: 42px; height: 24px;
@@ -4012,7 +4015,7 @@ html, body { overflow-x: hidden; }
   .fchip {
     min-height: 0;
     height: 28px;
-    font-size: 11.5px;
+    font-size: 12px;
     padding: 0 11px;
     border-radius: 99px;
   }
@@ -4083,7 +4086,7 @@ html, body { overflow-x: hidden; }
   .tx-row .col-actions { grid-area: actions; }
   .tx-row .col-pay     {
     grid-area: meta;
-    font-size: 11px;
+    font-size: 11.5px;
     grid-column: meta / meta;
   }
   .tx-row .col-acc     { display: none; }
@@ -4128,7 +4131,7 @@ html, body { overflow-x: hidden; }
 .imp-drop .imp-drop-sub { font-size: 12px; line-height: 1.6; }
 .imp-src-badges { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; margin-top: 12px; }
 .imp-src-badges span {
-  font-size: 11px; padding: 2px 8px; border-radius: 999px;
+  font-size: 11.5px; padding: 2px 8px; border-radius: 999px;
   background: var(--bg3); border: 1px solid var(--border); color: var(--text2);
 }
 .imp-section-title {
@@ -4142,7 +4145,7 @@ html, body { overflow-x: hidden; }
   font-size: 12.5px; background: var(--bg3);
 }
 .imp-hist-row .imp-hist-main { flex: 1; min-width: 0; }
-.imp-hist-row .imp-hist-sub { color: var(--text3); font-size: 11px; margin-top: 2px; }
+.imp-hist-row .imp-hist-sub { color: var(--text3); font-size: 11.5px; margin-top: 2px; }
 .imp-hist-row button { flex-shrink: 0; }
 /* 검토 단계 */
 .imp-summary {
@@ -4169,7 +4172,7 @@ html, body { overflow-x: hidden; }
   display: flex; align-items: center; gap: 8px;
   margin: 14px 0 6px; font-size: 13px; font-weight: 700; color: var(--text);
 }
-.imp-file-head .imp-file-meta { font-weight: 400; font-size: 11.5px; color: var(--text3); }
+.imp-file-head .imp-file-meta { font-weight: 400; font-size: 12px; color: var(--text3); }
 .imp-row {
   display: grid;
   grid-template-columns: 22px 42px minmax(0,1fr) 86px 138px 58px;
@@ -4179,7 +4182,7 @@ html, body { overflow-x: hidden; }
 }
 .imp-row:last-child { border-bottom: none; }
 .imp-row.off { opacity: .45; }
-.imp-row .imp-cell-date { color: var(--text2); font-family: var(--font-mono); font-size: 11.5px; }
+.imp-row .imp-cell-date { color: var(--text2); font-family: var(--font-mono); font-size: 12px; }
 .imp-row .imp-cell-merchant { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .imp-row .imp-cell-amt { text-align: right; font-family: var(--font-mono); }
 .imp-row select {
@@ -4189,7 +4192,7 @@ html, body { overflow-x: hidden; }
 }
 .imp-row select.imp-missing { border-color: var(--red); }
 .imp-badge {
-  font-size: 10.5px; padding: 2px 6px; border-radius: 999px;
+  font-size: 11px; padding: 2px 6px; border-radius: 999px;
   text-align: center; white-space: nowrap;
 }
 .imp-badge.new     { background: rgba(52,211,153,.14); color: var(--green); }
@@ -4205,7 +4208,7 @@ html, body { overflow-x: hidden; }
 }
 .imp-merch-input:focus { border-color: var(--accent); outline: none; }
 .imp-merch-sub {
-  font-size: 10.5px; color: var(--text3); margin-top: 2px;
+  font-size: 11px; color: var(--text3); margin-top: 2px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .imp-excl-toggle {
@@ -4213,7 +4216,7 @@ html, body { overflow-x: hidden; }
   color: var(--text2); font-size: 12.5px; padding: 8px 4px; cursor: pointer;
 }
 .imp-excl-toggle:hover { color: var(--text); }
-.imp-note { font-size: 11.5px; color: var(--text3); line-height: 1.6; margin-top: 8px; }
+.imp-note { font-size: 12px; color: var(--text3); line-height: 1.6; margin-top: 8px; }
 @media (max-width: 700px) {
   .imp-row {
     grid-template-columns: 22px 40px minmax(0,1fr) 78px;
@@ -6094,7 +6097,7 @@ html, body { overflow-x: hidden; }
         <div class="pv-row"><span class="pv-label">유동부채</span><span class="pv-val muted" id="pv-cliab">0</span></div>
         <div class="pv-row"><span class="pv-label">비유동부채</span><span class="pv-val muted" id="pv-nliab">0</span></div>
         <div class="pv-row full"><span class="pv-label">순자산</span><span class="pv-val" id="pv-net">0</span></div>
-        <div class="pv-row" style="grid-column: 1 / -1;"><span class="pv-label">조정 순자산 <span style="font-size:10px;color:var(--text3);">(자산 - 유동부채)</span></span><span class="pv-val" id="pv-net-adj">0</span></div>
+        <div class="pv-row" style="grid-column: 1 / -1;"><span class="pv-label">조정 순자산 <span style="font-size: 11px;color:var(--text3);">(자산 - 유동부채)</span></span><span class="pv-val" id="pv-net-adj">0</span></div>
       </div>
     </div>
     <div class="modal-foot">
@@ -7917,7 +7920,7 @@ function renderPlTrendChart(txList, fromYm, toYm) {
       maintainAspectRatio: false,
       plugins: {
         legend: { display: true, position: 'top', align: 'end',
-          labels: { color: colorText, font: { size: 10 }, boxWidth: 10, padding: 8 } },
+          labels: { color: colorText, font: { size: 11 }, boxWidth: 10, padding: 8 } },
         tooltip: {
           callbacks: {
             label: (ctx) => {
@@ -7929,10 +7932,10 @@ function renderPlTrendChart(txList, fromYm, toYm) {
         }
       },
       scales: {
-        x: { ticks: { color: colorText, font: { size: 10 } }, grid: { color: colorGrid, drawBorder: false } },
+        x: { ticks: { color: colorText, font: { size: 11 } }, grid: { color: colorGrid, drawBorder: false } },
         y: {
           ticks: {
-            color: colorText, font: { size: 10 },
+            color: colorText, font: { size: 11 },
             callback: v => v >= 1e8 ? (v/1e8).toFixed(1)+'억' :
                            v >= 1e6 ? (v/1e6).toFixed(1)+'M' :
                            v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v,
@@ -8054,7 +8057,7 @@ function renderPayments() {
     return;
   }
   $c.innerHTML = list.map((p, i) =>
-    `<span class="chip" data-edit-pay="${i}">${escapeHtml(p.name)}<span style="color:var(--text3); font-size:10px;">${p.type === 'card' ? '카드' : '현금성'}</span></span>`
+    `<span class="chip" data-edit-pay="${i}">${escapeHtml(p.name)}<span style="color:var(--text3); font-size: 11px;">${p.type === 'card' ? '카드' : '현금성'}</span></span>`
   ).join('');
   $c.querySelectorAll('[data-edit-pay]').forEach(el => {
     el.addEventListener('click', () => openPaymentModal(parseInt(el.dataset.editPay, 10)));
@@ -9367,7 +9370,7 @@ function renderRecurringList() {
     $l.innerHTML = `
       <div class="chip-empty" style="text-align:center; padding:24px 0;">
         등록된 반복지출이 없습니다<br>
-        <span style="font-size:11px;color:var(--text3);">우상단 "+ 반복지출 추가" — 또는 아래 자동 감지 제안에서 등록하세요</span>
+        <span style="font-size: 11.5px;color:var(--text3);">우상단 "+ 반복지출 추가" — 또는 아래 자동 감지 제안에서 등록하세요</span>
       </div>
       <div id="rec-suggest-wrap"></div>
       <div class="rec-tools"><button type="button" class="btn-s" id="btn-rec-dupscan">🔍 과거 생성분 중복 검사</button></div>`;
@@ -9423,9 +9426,9 @@ function renderRecurringList() {
       const day = String(tx.date || '').slice(8, 10).replace(/^0/, '');
       const diff = matchedSum - (Number(rec.amount) || 0);
       const diffStr = diff !== 0
-        ? ` <span class="${diff > 0 ? 'red' : 'green'}" style="font-size:10px;">${diff > 0 ? '+' : '−'}${fmtAmount(Math.abs(diff))}</span>`
+        ? ` <span class="${diff > 0 ? 'red' : 'green'}" style="font-size: 11px;">${diff > 0 ? '+' : '−'}${fmtAmount(Math.abs(diff))}</span>`
         : '';
-      const multi = matched.length > 1 ? ` <span style="color:var(--text3);font-size:10px;">(${matched.length}건)</span>` : '';
+      const multi = matched.length > 1 ? ` <span style="color:var(--text3);font-size: 11px;">(${matched.length}건)</span>` : '';
       stateHtml = `<span class="rec-status paid">✓ ${day}일 · ${fmtAmount(matchedSum)}원${multi}${diffStr}</span>`;
     } else {
       const dayHint = rec.dayOfMonth ? ` <span style="color:var(--text3);">· 보통 ${rec.dayOfMonth}일</span>` : '';
@@ -12588,10 +12591,10 @@ function renderReturnsTrendChart(fromYm, toYm) {
         }
       },
       scales: {
-        x: { ticks: { color: colorText, font: { size: 10 } }, grid: { color: colorGrid, drawBorder: false } },
+        x: { ticks: { color: colorText, font: { size: 11 } }, grid: { color: colorGrid, drawBorder: false } },
         y: {
           ticks: {
-            color: colorText, font: { size: 10 },
+            color: colorText, font: { size: 11 },
             callback: v => (v > 0 ? '+' : '') + v.toFixed(1) + '%',
           },
           grid: { color: colorGrid, drawBorder: false },
@@ -13145,14 +13148,14 @@ function renderDividendsChart() {
       },
       scales: {
         x: {
-          ticks: { color: colText2, font: { size: 10 } },
+          ticks: { color: colText2, font: { size: 11 } },
           grid: { color: colBorder, drawBorder: false },
         },
         y: {
           beginAtZero: true,
           ticks: {
             color: colText3,
-            font: { size: 10 },
+            font: { size: 11 },
             callback: v => v >= 1e6 ? (v/1e6).toFixed(1)+'M' :
                            v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v,
           },
@@ -15390,6 +15393,12 @@ const DASH_LINE_PALETTE = [
 
 // 공통 차트 옵션 토큰 (v0.7-23) — 3개 추이 차트가 일관된 시각 유지
 // 각 차트는 dataset 단위 옵션만 다르고 옵션 객체는 이 헬퍼로 통일.
+// v0.9-12 — 차트도 앱 서체로 통일 + 틱 최소 사이즈 확보
+if (window.Chart) {
+  Chart.defaults.font.family = "'Pretendard Variable', Pretendard, -apple-system, 'Noto Sans KR', sans-serif";
+  Chart.defaults.font.size = 11;
+}
+
 function getDashChartTokens() {
   const css = getComputedStyle(document.documentElement);
   return {
@@ -15456,7 +15465,7 @@ function makeDashScales({ stacked = false, isPct = false, beginAtZero = false } 
   const t = getDashChartTokens();
   return {
     x: {
-      ticks: { color: t.text, font: { size: 10 } },
+      ticks: { color: t.text, font: { size: 11 } },
       grid:  { color: t.grid, drawBorder: false },
     },
     y: {
@@ -15464,7 +15473,7 @@ function makeDashScales({ stacked = false, isPct = false, beginAtZero = false } 
       beginAtZero,
       ticks: {
         color: t.text3,
-        font: { size: 10 },
+        font: { size: 11 },
         callback: (v) => {
           if (isPct) return v.toFixed(0) + '%';
           const abs = Math.abs(v);
@@ -16042,7 +16051,7 @@ function renderDashEventsCard() {
 
     const pendingCount = thisMonthEvents.filter(ev => ev.lastDoneYm !== today).length;
     const hint = pendingCount > 0
-      ? `<div style="font-size:11px;color:var(--text3);margin-top:8px;">처리 대기 ${pendingCount}건 — <a href="#" data-goto-tx-tab style="color:var(--accent);text-decoration:none;">거래 탭</a>의 경조사 알림바에서 처리하세요</div>`
+      ? `<div style="font-size: 11.5px;color:var(--text3);margin-top:8px;">처리 대기 ${pendingCount}건 — <a href="#" data-goto-tx-tab style="color:var(--accent);text-decoration:none;">거래 탭</a>의 경조사 알림바에서 처리하세요</div>`
       : '';
 
     e1Html = `
@@ -19054,7 +19063,7 @@ function impRowHtml(r, fi, kind, ri) {
   const reason = r.reason ? ` title="${escapeHtml(r.reason)}"` : '';
   const key = `${fi}|${kind}|${ri}`;
   const catCell = r.status === 'already'
-    ? `<span style="color:var(--text3); font-size:11px;">—</span>`
+    ? `<span style="color:var(--text3); font-size: 11.5px;">—</span>`
     : `<select data-imp-cat="${key}" class="${inc && !r.category && r.status !== 'enrich' ? 'imp-missing' : ''}">${impCatOptions(r.category)}</select>`;
   // 사용처 — 직접 수정 가능 (교체 행은 기존 메모 → 새 사용처 함께 표시)
   const merchCell = r.status === 'already'
