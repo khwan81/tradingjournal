@@ -63,6 +63,7 @@
   --red-bg:    color-mix(in srgb, var(--red) 12%, transparent);
   --amber:     #d0a955;
   --amber-bg:  color-mix(in srgb, var(--amber) 12%, transparent);
+  --rose:      #cf8fae;   /* v0.9-13a — 경조사 정체성 색 (구 var(--rose) 뮤트) */
   /* v0.7 — 자산결산 카테고리 컬러 (웜 뮤트 톤으로 재조정) */
   --acat-cash:      #86a7d9;  /* 현금     — 뮤트 블루 */
   --acat-emergency: #a99bd1;  /* 비상금   — 뮤트 보라 */
@@ -128,6 +129,7 @@ html[data-theme="light"] {
   --red-bg:    color-mix(in srgb, var(--red) 11%, transparent);
   --amber:     #96700f;
   --amber-bg:  color-mix(in srgb, var(--amber) 12%, transparent);
+  --rose:      #b05a86;
   --acat-cash:      #3f6cae;
   --acat-emergency: #6f5fae;
   --acat-trading:   #b05a86;
@@ -804,7 +806,7 @@ html, body { overflow-x: hidden; }
 
 /* 복원 카드 (v0.3-1) — 백업 카드 사이 간격 */
 .backup-card + .backup-card { margin-top: 10px; }
-.backup-card-restore { border-color: rgba(239,68,68,0.28); }
+.backup-card-restore { border-color: color-mix(in srgb, var(--red) 28%, transparent); }
 
 @media (max-width: 480px) {
   .backup-card { flex-direction: column; align-items: stretch; }
@@ -857,8 +859,8 @@ html, body { overflow-x: hidden; }
   margin-bottom: 10px;
 }
 .restore-warn-danger {
-  background: rgba(239, 68, 68, 0.08);
-  border-color: rgba(239, 68, 68, 0.32);
+  background: color-mix(in srgb, var(--red) 8%, transparent);
+  border-color: color-mix(in srgb, var(--red) 32%, transparent);
   color: #fca5a5;
 }
 
@@ -905,8 +907,8 @@ html, body { overflow-x: hidden; }
 }
 .reset-option:hover { border-color: var(--border2); }
 .reset-option:has(.reset-check:checked) {
-  border-color: rgba(239, 68, 68, 0.45);
-  background: rgba(239, 68, 68, 0.06);
+  border-color: color-mix(in srgb, var(--red) 45%, transparent);
+  background: color-mix(in srgb, var(--red) 6%, transparent);
 }
 .reset-check {
   margin-top: 2px;
@@ -947,8 +949,8 @@ html, body { overflow-x: hidden; }
 .reset-confirm-block {
   margin-top: 14px;
   padding: 12px;
-  background: rgba(239, 68, 68, 0.06);
-  border: 1px solid rgba(239, 68, 68, 0.28);
+  background: color-mix(in srgb, var(--red) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--red) 28%, transparent);
   border-radius: 8px;
 }
 .reset-confirm-label {
@@ -1130,12 +1132,12 @@ html, body { overflow-x: hidden; }
   border-color: color-mix(in srgb, var(--amber) 32%, transparent);
 }
 .alert-bar[data-tone="danger"], .budget-bar.severe {
-  background: rgba(239, 68, 68, 0.08);
-  border-color: rgba(239, 68, 68, 0.36);
+  background: color-mix(in srgb, var(--red) 8%, transparent);
+  border-color: color-mix(in srgb, var(--red) 36%, transparent);
 }
 .alert-bar[data-tone="pink"], .event-bar {
-  background: rgba(236, 72, 153, 0.08);
-  border-color: rgba(236, 72, 153, 0.32);
+  background: color-mix(in srgb, var(--rose) 8%, transparent);
+  border-color: color-mix(in srgb, var(--rose) 32%, transparent);
 }
 
 /* 좌측 (아이콘 + 텍스트) */
@@ -1162,7 +1164,7 @@ html, body { overflow-x: hidden; }
 .unpaid-bar    .ub-icon { background: var(--amber); }
 .budget-bar    .bb-icon { background: var(--amber); }
 .budget-bar.severe .bb-icon { background: var(--red); }
-.event-bar     .eb-icon { background: #ec4899; }
+.event-bar     .eb-icon { background: var(--rose); }
 .alert-text,
 .unpaid-bar .ub-text,
 .budget-bar .bb-text,
@@ -1175,34 +1177,31 @@ html, body { overflow-x: hidden; }
 .unpaid-bar .ub-amt    { color: var(--amber); font-weight: 600; }
 .budget-bar .bb-strong { color: var(--amber); font-weight: 600; }
 .budget-bar.severe .bb-strong { color: var(--red); }
-.event-bar .eb-strong { color: #ec4899; font-weight: 600; }
+.event-bar .eb-strong { color: var(--rose); font-weight: 600; }
 
-/* CTA 버튼 — 톤별 outline 통일 (시각 무게 일관) */
+/* v0.9-13a — 알림 CTA를 표준 버튼(.btn-s)과 동일한 중립 스타일로 통일.
+   긴급도는 알림바의 dot·본문 색이 담당 — 버튼까지 색을 입히면 형광 outline이 튐 */
 .alert-cta,
 .unpaid-bar .ub-cta,
-.unpaid-bar .ub-cta {
-  background: transparent;
-  color: var(--amber);
-  border: 1px solid color-mix(in srgb, var(--amber) 45%, transparent);
-}
-.unpaid-bar .ub-cta:hover { background: color-mix(in srgb, var(--amber) 10%, transparent); }
-.budget-bar .bb-cta {
-  background: transparent;
-  color: var(--amber);
-  border: 1px solid color-mix(in srgb, var(--amber) 45%, transparent);
-}
-.budget-bar .bb-cta:hover { background: color-mix(in srgb, var(--amber) 10%, transparent); }
-.budget-bar.severe .bb-cta {
-  color: var(--red);
-  border-color: rgba(239, 68, 68, 0.45);
-}
-.budget-bar.severe .bb-cta:hover { background: rgba(239, 68, 68, 0.08); }
+.budget-bar .bb-cta,
 .event-bar .eb-cta {
-  background: transparent;
-  color: #ec4899;
-  border: 1px solid rgba(236, 72, 153, 0.45);
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  height: var(--btn-h-sm);
+  padding: 0 var(--btn-px-sm);
+  font-size: var(--btn-fs-sm);
+  font-family: var(--font);
+  cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background .15s;
+  flex-shrink: 0; white-space: nowrap;
 }
-.event-bar .eb-cta:hover { background: rgba(236, 72, 153, 0.10); }
+.alert-cta:hover,
+.unpaid-bar .ub-cta:hover,
+.budget-bar .bb-cta:hover,
+.event-bar .eb-cta:hover { background: var(--bg4); }
 
 /* 모바일 — 세로 스택 */
 @media (max-width: 640px) {
@@ -1273,7 +1272,7 @@ html, body { overflow-x: hidden; }
 .alert-stack-toggle .ast-dot.info   { background: var(--accent); }
 .alert-stack-toggle .ast-dot.warn   { background: var(--amber); }
 .alert-stack-toggle .ast-dot.danger { background: var(--red); }
-.alert-stack-toggle .ast-dot.pink   { background: #ec4899; }
+.alert-stack-toggle .ast-dot.pink   { background: var(--rose); }
 .alert-stack-toggle .ast-caret {
   font-size: 11px;
   transition: transform .15s;
@@ -3782,8 +3781,8 @@ html, body { overflow-x: hidden; }
 .cat-chip.unknown  { background: var(--bg3);      color: var(--text3); }
 /* v0.7-15 — 경조사 처리 거래 표시 (분홍 톤) */
 .cat-chip.process-mark {
-  background: rgba(236, 72, 153, 0.12);
-  color: #ec4899;
+  background: color-mix(in srgb, var(--rose) 12%, transparent);
+  color: var(--rose);
   margin-left: 4px;
   font-weight: 500;
 }
@@ -16037,7 +16036,7 @@ function renderDashEventsCard() {
       const isProcessed = ev.lastDoneYm === today;
       const statusBadge = isProcessed
         ? '<span class="badge done" style="margin-left:6px;">처리됨</span>'
-        : '<span class="badge" style="margin-left:6px;background:rgba(236,72,153,0.15);color:#ec4899;">처리 대기</span>';
+        : '<span class="badge" style="margin-left:6px;background:color-mix(in srgb, var(--rose) 15%, transparent);color:var(--rose);">처리 대기</span>';
 
       return `
         <div class="dash-event-thismonth-row ${isProcessed ? 'processed' : ''}">
