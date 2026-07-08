@@ -1338,29 +1338,32 @@ html, body { overflow-x: hidden; }
   font-size: 11px; color: var(--text3);
   border-bottom: 1px solid var(--border);
 }
-.rec-row.wl {
+.rec-row.wl, .event-row.wl {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 130px 220px 110px;
   grid-template-areas: "main base state actions";
   gap: 12px; align-items: center; padding: 10px 8px;
 }
-.rec-row.wl .rec-main    { grid-area: main; min-width: 0; }
-.rec-row.wl .rec-base    {
+.rec-row.wl .rec-main,    .event-row.wl .rec-main    { grid-area: main; min-width: 0; }
+.rec-row.wl .rec-base,    .event-row.wl .rec-base    {
   grid-area: base; text-align: right;
   font-family: var(--font-mono); font-size: 13px; color: var(--text2);
 }
 .rec-row.wl .rec-base-unit { font-size: 11px; color: var(--text3); margin-left: 1px; }
-.rec-row.wl .rec-state   { grid-area: state; min-width: 0; }
-.rec-row.wl .actions     { grid-area: actions; display: flex; gap: 6px; justify-content: flex-end; align-items: center; }
+.rec-row.wl .rec-state,   .event-row.wl .rec-state   { grid-area: state; min-width: 0; }
+.rec-row.wl .actions,     .event-row.wl .actions     { grid-area: actions; display: flex; gap: 6px; justify-content: flex-end; align-items: center; }
 .rec-row.wl.done { opacity: 0.72; }
+.event-row.wl { border-bottom: 1px solid var(--border); }
+.event-row.wl:last-child { border-bottom: none; }
+.event-row.wl .event-when { font-size: 12px; color: var(--text2); font-family: var(--font-mono); margin-left: 6px; }
 @media (max-width: 700px) {
   .rec-grid-head { display: none; }
-  .rec-row.wl {
+  .rec-row.wl, .event-row.wl {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas: "main base" "state actions";
     row-gap: 6px; align-items: start;
   }
-  .rec-row.wl .rec-state { align-self: center; }
+  .rec-row.wl .rec-state, .event-row.wl .rec-state { align-self: center; }
 }
 .rec-status { font-size: 12px; font-family: var(--font-mono); }
 .rec-status.paid    { color: var(--green); }
@@ -9963,43 +9966,53 @@ function renderEventsList() {
   const today = currentMonth;
   const [, curMonth] = today.split('-').map(Number);
 
-  $list.innerHTML = eventsMasters.map(ev => {
+  // v0.9-11 — 반복지출과 동일한 4컬럼 그리드(행사|행사비|시기·적립|액션) + 다가오는 순 정렬.
+  //   이번 달 처리 대기 맨 위 → 다가오는 달 순 → 이번 달 처리됨은 맨 뒤(흐림).
+  const items = eventsMasters.map(ev => {
     const monthly = eventMonthlySaving(ev);
     const isDoneThisMonth = ev.lastDoneYm === today;
-    const isInRecurMonth = parseInt(ev.recurMonth, 10) === curMonth;
+    const recurM = parseInt(ev.recurMonth, 10) || 12;
+    const isInRecurMonth = recurM === curMonth;
+    const monthsAway = (recurM - curMonth + 12) % 12;   // 0 = 이번 달
+    return { ev, monthly, isDoneThisMonth, isInRecurMonth, monthsAway };
+  }).sort((a, b) => {
+    if (a.isDoneThisMonth !== b.isDoneThisMonth) return a.isDoneThisMonth ? 1 : -1;
+    if (a.monthsAway !== b.monthsAway) return a.monthsAway - b.monthsAway;
+    return String(a.ev.title).localeCompare(String(b.ev.title), 'ko');
+  });
 
+  let html = `
+    <div class="event-grid-head rec-grid-head">
+      <span>행사</span><span style="text-align:right;">행사비</span><span>시기 · 적립</span><span></span>
+    </div>`;
+
+  html += items.map(({ ev, monthly, isDoneThisMonth, isInRecurMonth, monthsAway }) => {
     let badge;
-    if (isDoneThisMonth)      badge = '<span class="badge done">이번 달 처리됨</span>';
-    else if (isInRecurMonth)  badge = '<span class="badge upcoming">이번 달 처리 대기</span>';
-    else                      badge = '<span class="badge yearly">매년</span>';
+    if (isDoneThisMonth)      badge = '<span class="badge done">처리됨</span>';
+    else if (isInRecurMonth)  badge = '<span class="badge upcoming">이번 달</span>';
+    else                      badge = `<span class="badge yearly">${monthsAway}개월 뒤</span>`;
 
-    const targetText = `매년 ${ev.recurMonth}월`;
-    const periodText = `${ev.startYm || '—'}부터 매년`;
-
-    // v0.7-15 — 처리 액션은 거래 탭 알림바로 통일. 여기는 마스터 관리만.
+    const metaParts = [`${escapeHtml(ev.startYm || '—')}부터`];
+    if (ev.note) metaParts.push(escapeHtml(ev.note));
 
     return `
-      <div class="event-row ${isDoneThisMonth ? 'done' : ''}">
-        <div class="event-main">
-          <div class="event-name-wrap">
-            <span class="event-name">${escapeHtml(ev.title || '(제목 없음)')}</span>
-            ${badge}
-          </div>
-          <div class="event-meta">
-            <span class="event-amount">${fmtAmount(Number(ev.amount) || 0)}원</span>
-            <span class="dot">·</span>
-            ${escapeHtml(targetText)}
-            ${monthly > 0 ? `<span class="dot">·</span>월 ${fmtAmount(monthly)}원 적립` : ''}
-            <br>
-            <span style="color:var(--text3);">${escapeHtml(periodText)}</span>
-            ${ev.note ? `<br><span style="color:var(--text3);">${escapeHtml(ev.note)}</span>` : ''}
-          </div>
+      <div class="event-row wl ${isDoneThisMonth ? 'done' : ''}">
+        <div class="rec-main">
+          <div class="rec-name-wrap"><span class="rec-name">${escapeHtml(ev.title || '(제목 없음)')}</span></div>
+          <div class="rec-meta">${metaParts.join('<span class="dot">·</span>')}</div>
+        </div>
+        <div class="rec-base">${fmtAmount(Number(ev.amount) || 0)}<span class="rec-base-unit">원</span></div>
+        <div class="rec-state">
+          ${badge}
+          <span class="event-when">매년 ${escapeHtml(String(ev.recurMonth))}월${monthly > 0 ? ` · 월 ${fmtAmount(monthly)}` : ''}</span>
         </div>
         <div class="actions">
-          <button data-event-edit="${ev.id}">편집</button>
+          <button data-event-edit="${ev.id}" aria-label="편집">⋯</button>
         </div>
       </div>`;
   }).join('');
+
+  $list.innerHTML = html;
 
   // 이벤트 위임
   $list.querySelectorAll('[data-event-edit]').forEach(el => {
