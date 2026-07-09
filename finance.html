@@ -4545,6 +4545,7 @@ html, body { overflow-x: hidden; }
       <div class="subtab-list">
         <button class="subtab active" data-subtab="pl">손익</button>
         <button class="subtab"        data-subtab="returns">수익률</button>
+        <button class="subtab"        data-subtab="events">이벤트</button>
         <button class="subtab"        data-subtab="dashboard">대시보드</button>
       </div>
       <!-- 기간 프리셋 + month range (한 묶음) -->
@@ -4810,6 +4811,12 @@ html, body { overflow-x: hidden; }
         </div>
       </div>
 
+    </div>
+  </div>
+  <!-- /tab-dashboard subtab -->
+
+  <!-- ═══ 이벤트 서브탭 (v0.9-16) — 대시보드에서 분리. 기간 필터와 무관 (이벤트 전체 기간 기준) ═══ -->
+  <div class="subtab-content" id="tab-events">
       <!-- 이벤트 지출 (v0.9) — 이벤트별 합계 목록 → 탭하면 드릴다운 (카테고리 브레이크다운 + 거래 목록).
            금액은 분석 기간과 무관하게 항상 이벤트 전체 기간 기준. 이벤트가 없으면 카드 자체 숨김 -->
       <div class="dash-card" id="dash-tags-card" style="display:none;">
@@ -4823,9 +4830,8 @@ html, body { overflow-x: hidden; }
         </div>
         <div id="dash-tags-body"></div>
       </div>
-    </div>
   </div>
-  <!-- /tab-dashboard subtab -->
+  <!-- /tab-events subtab -->
   </div>
   <!-- /tab-analysis -->
 
@@ -6461,7 +6467,11 @@ function activateSubtab($topPane, subtab) {
     renderDashTrkChart();       // v0.7-9 — 추적자산 추이 (기간형)
     renderDashCatExpenseChart(); // v0.7-22 — 카테고리별 지출 추이
     renderDashExpenseChart();
-    renderDashTagsCard();       // v0.9 — 이벤트 지출 (이벤트 전체 기간 기준)
+  }
+
+  // v0.9-16 — 이벤트 서브탭 (대시보드에서 분리)
+  if (subtab === 'events') {
+    renderDashTagsCard();
   }
 
   // v0.7-7 — 수익률 서브탭 진입 시 렌더
@@ -6849,8 +6859,8 @@ function subscribeTags() {
         return String(b.startDate || '').localeCompare(String(a.startDate || ''));
       });
       renderTransactions();                       // 거래 행 이벤트 칩 갱신
-      if (isDashboardVisible()) renderDashTagsCard();
-      if (isStatusVisible())    renderStatusTagsCard();
+      if (isEventsVisible())  renderDashTagsCard();   // v0.9-16 — 이벤트 서브탭으로 이동
+      if (isStatusVisible())  renderStatusTagsCard();
     },
     err => { console.error('tags subscribe error', err); showToast('이벤트 로드 실패'); }
   );
@@ -7096,7 +7106,7 @@ async function renderStatusTagsCard() {
   $body.querySelectorAll('[data-status-tag]').forEach(row => {
     row.addEventListener('click', () => {
       dashTagDrillId = row.dataset.statusTag;
-      switchTab('analysis', 'dashboard');
+      switchTab('analysis', 'events');   // v0.9-16 — 이벤트 서브탭으로
     });
   });
 }
@@ -10930,31 +10940,32 @@ function setMonth(ym) {
   renderEventBar();        // v0.6 — 글로벌 월 기준 적립 부족 재계산
   // 글로벌 월 변경 시 트리맵 drill-down 상태 리셋 (다른 월에 그 카테고리가 없을 수 있음)
   dashExpenseDrillCategory = null;
-  // 대시보드(기간형) — 활성일 때만 재로드
-  if (isDashboardVisible()) {
-    renderDashNetworthChart();
-    renderDashTrkChart();       // v0.7-9 — 추적자산 추이 (기간형)
-    renderDashCatExpenseChart(); // v0.7-22 — 카테고리별 지출 추이
-    renderDashExpenseChart();
-  }
-  // 현황(시점형) — 활성일 때만 재로드
-  if (isStatusVisible()) {
-    renderStatusAll();
-  }
 
-  // v0.7-12c — 글로벌 월 변경 시 분석 기간 toYm 동기화
-  // 프리셋 모드일 때만 재계산 (커스텀 모드는 사용자 의도라 그대로 둠).
+  // v0.9-16 — (버그 수정) 기간 재앵커를 렌더보다 **먼저** 수행.
+  // 기존: 구범위로 대시보드 4개 차트를 먼저 렌더 → 그 뒤 범위 갱신 후 재렌더 (이중 렌더).
+  // tx-fetch 기반인 카테고리 추이/트리맵은 두 비동기 렌더가 레이스를 일으켜 낡은 결과가
+  // 남을 수 있었음 (monthly 캐시 기반인 순자산/추적은 티가 안 남). 또 분석 탭 비활성 중
+  // 월을 이동하면 재앵커 자체가 스킵돼 stale 범위가 유지됐음 → 이제 탭과 무관하게 항상 갱신.
   if (returnsActivePreset && returnsCurrentRange) {
     const r = presetRange(returnsActivePreset);
     if (r) {
       returnsCurrentRange = { ...r, preset: returnsActivePreset };
-      // 분석 탭 활성 시 즉시 갱신 (캐시 무효화 + 활성 서브탭 재렌더)
-      const $analysisTop = document.getElementById('tab-analysis');
-      if ($analysisTop?.classList.contains('active')) {
-        analysisTxCache = null;   // 기간 바뀌었으니 거래 캐시도 비움
-        applyAnalysisPeriod();
-      }
+      analysisTxCache = null;   // 기간이 바뀌었으니 거래 캐시 무효화
     }
+  }
+
+  // 분석 탭 활성이면 활성 서브탭만 **1회** 재렌더 (대시보드면 새 범위로 4개 차트).
+  // 커스텀 범위 모드여도 drill 리셋 반영 위해 재렌더 (같은 범위 — 무해)
+  {
+    const $analysisTop = document.getElementById('tab-analysis');
+    if ($analysisTop?.classList.contains('active')) {
+      applyAnalysisPeriod();
+    }
+  }
+
+  // 현황(시점형) — 활성일 때만 재로드
+  if (isStatusVisible()) {
+    renderStatusAll();
   }
 
   // v0.7-8 — 배당 탭 활성일 때 월 변경 시 재렌더 (KPI/필터/차트는 currentMonth 종속)
@@ -12330,8 +12341,8 @@ function invalidateAnalysisYms() {
   analysisTxCache = null;
   // v0.9 — 이벤트별 거래 캐시 무효화 + 보이는 카드 즉시 갱신
   tagTxCache.clear();
-  if (isDashboardVisible()) renderDashTagsCard();
-  if (isStatusVisible())    renderStatusTagsCard();
+  if (isEventsVisible())  renderDashTagsCard();   // v0.9-16
+  if (isStatusVisible())  renderStatusTagsCard();
 }
 
 // ─── 분석 탭 거래 캐시 (v0.7-12 2단계) ─────────
@@ -12841,6 +12852,12 @@ function updateReturnsPresetUi() {
 }
 
 // 가시성 검사
+function isEventsVisible() {   // v0.9-16 — 분석>이벤트 서브탭
+  const $top = document.getElementById('tab-analysis');
+  if (!$top || !$top.classList.contains('active')) return false;
+  return !!document.getElementById('tab-events')?.classList.contains('active');
+}
+
 function isReturnsVisible() {
   const $top = document.getElementById('tab-analysis');
   if (!$top || !$top.classList.contains('active')) return false;
@@ -12939,6 +12956,8 @@ function applyAnalysisPeriod() {
     renderDashExpenseChart();
   } else if (activeSub === 'pl') {
     renderPlBody();
+  } else if (activeSub === 'events') {
+    renderDashTagsCard();   // v0.9-16 — 기간 무관이지만 드릴 상태 유지 재렌더 (무해)
   }
 }
 
@@ -15550,7 +15569,9 @@ function buildCatExpColorMap(cats) {
   return map;
 }
 
+let dashCatExpGen = 0;   // v0.9-16 — 렌더 세대: 마지막 호출만 그린다 (비동기 레이스 방어)
 async function renderDashCatExpenseChart() {
+  const __gen = ++dashCatExpGen;
   const $canvas = document.getElementById('dash-cat-exp-chart');
   const $empty  = document.getElementById('dash-cat-exp-empty');
   const $sub    = document.getElementById('dash-cat-exp-sub');
@@ -15575,6 +15596,7 @@ async function renderDashCatExpenseChart() {
       txData = applyPlPolicy(await loadAnalysisTransactions(fromYm, toYm));   // v0.9-9 (#5)
       modeLabel = `${fromYm} ~ ${toYm}`;
     }
+    if (__gen !== dashCatExpGen) return;   // v0.9-16 — 그 사이 새 렌더 시작 → 이 결과 폐기
 
     // 2) 카테고리별 월별 합계 집계 (flow 토글 적용 — fixed/variable/all)
     //    catTotals: Map<cat, { flow, monthSums: Map<ym, sum>, total }>
@@ -15755,7 +15777,9 @@ function initCatExpFlowToggle() {
 }
 initCatExpFlowToggle();
 
+let dashTreemapGen = 0;   // v0.9-16 — 렌더 세대 (비동기 레이스 방어)
 async function renderDashExpenseChart() {
+  const __gen = ++dashTreemapGen;
   const $canvas = document.getElementById('dash-expense-chart');
   const $empty  = document.getElementById('dash-expense-empty');
   const $sub    = document.getElementById('dash-expense-sub');
@@ -15778,6 +15802,7 @@ async function renderDashExpenseChart() {
       txData = transactions;
       modeLabel = currentMonth;
     }
+    if (__gen !== dashTreemapGen) return;   // v0.9-16 — 낡은 렌더 폐기
 
     // 1) 카테고리 색상 인덱스 빌드 (drill-down 시에도 색상 일관성 유지)
     //    데이터를 한 번 훑어서 카테고리별 색상 결정
