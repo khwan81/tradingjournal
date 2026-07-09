@@ -47,16 +47,16 @@
   --accent:    #4f8fff;
   --accent2:   #3a72e8;
   --green:     #34d399;
-  --green-bg:  rgba(52,211,153,0.1);
+  --green-bg:  color-mix(in srgb, var(--green) 10%, transparent);
   --red:       #f87171;
-  --red-bg:    rgba(248,113,113,0.1);
+  --red-bg:    color-mix(in srgb, var(--red) 10%, transparent);
   --amber:     #fbbf24;
   --amber-bg:  rgba(251,191,36,0.1);
   --purple:    #a78bfa;
   --purple-bg: rgba(167,139,250,0.1);
   --coin-bg:   rgba(167,139,250,0.12);
   --coin-c:    #c4b5fd;
-  --kor-bg:    rgba(52,211,153,0.12);
+  --kor-bg:    color-mix(in srgb, var(--green) 12%, transparent);
   --kor-c:     #6ee7b7;
   --us-bg:     rgba(79,143,255,0.12);
   --us-c:      #93c5fd;
@@ -71,33 +71,35 @@
 
 /* ── 라이트 테마 (data-theme="light") ── */
 html[data-theme="light"] {
-  --bg:        #f4f5f7;
-  --bg2:       #ffffff;
-  --bg3:       #eef0f3;
-  --bg4:       #e2e5ea;
-  --border:    rgba(0,0,0,0.08);
-  --border2:   rgba(0,0,0,0.14);
-  --text:      #1a1d23;
-  --text2:     #5c6373;
-  --text3:     #9298a6;
-  --accent:    #2f6fe0;
-  --accent2:   #2560c8;
-  --green:     #0f9d6f;
-  --green-bg:  rgba(15,157,111,0.10);
-  --red:       #e0524d;
-  --red-bg:    rgba(224,82,77,0.10);
-  --amber:     #c8870f;
-  --amber-bg:  rgba(200,135,15,0.12);
-  --purple:    #7c5cdc;
-  --purple-bg: rgba(124,92,220,0.10);
-  --coin-bg:   rgba(124,92,220,0.12);
-  --coin-c:    #6b46c1;
-  --kor-bg:    rgba(15,157,111,0.12);
-  --kor-c:     #0c7a56;
-  --us-bg:     rgba(47,111,224,0.12);
-  --us-c:      #2560c8;
-  --open-bg:   rgba(200,135,15,0.14);
-  --open-c:    #a06d0a;
+  /* v0.8 — Finance 라이트(세이지 미스트)와 동일 토큰. 그린 기 도는 회백 종이 + 잉크 텍스트 */
+  --bg:        #f1f3ef;
+  --bg2:       #fbfcf9;
+  --bg3:       #e9ece6;
+  --bg4:       #dfe3db;
+  --border:    rgba(55,59,54,0.12);
+  --border2:   rgba(55,59,54,0.20);
+  --text:      #373b36;
+  --text2:     #6b7067;
+  --text3:     #979d92;
+  --accent:    #3e6b8f;
+  --accent2:   #325a7a;
+  --green:     #3a7d5c;
+  --green-bg:  color-mix(in srgb, var(--green) 11%, transparent);
+  --red:       #b05a52;
+  --red-bg:    color-mix(in srgb, var(--red) 11%, transparent);
+  --amber:     #8f6d12;
+  --amber-bg:  color-mix(in srgb, var(--amber) 12%, transparent);
+  /* Trading 전용 — 세이지 배경 위 딥 톤으로 정렬 */
+  --purple:    #6a5fa8;
+  --purple-bg: color-mix(in srgb, var(--purple) 11%, transparent);
+  --coin-bg:   color-mix(in srgb, #6a5fa8 12%, transparent);
+  --coin-c:    #5f549e;
+  --kor-bg:    color-mix(in srgb, #3a7d5c 12%, transparent);
+  --kor-c:     #35714f;
+  --us-bg:     color-mix(in srgb, #3e6b8f 12%, transparent);
+  --us-c:      #325a7a;
+  --open-bg:   color-mix(in srgb, #8f6d12 14%, transparent);
+  --open-c:    #7d5f10;
 }
 
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500&display=swap');
@@ -460,7 +462,7 @@ body {
 }
 .btn-edit { border: 1px solid var(--border2); color: var(--text2); }
 .btn-edit:hover { border-color: var(--accent); color: var(--accent); }
-.btn-del { border: 1px solid rgba(248,113,113,.25); color: var(--red); }
+.btn-del { border: 1px solid color-mix(in srgb, var(--red) 25%, transparent); color: var(--red); }
 .btn-del:hover { background: var(--red-bg); }
 
 /* ── Badge ── */
@@ -589,11 +591,11 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
   display: flex; align-items: center; justify-content: space-between;
   padding: 12px 16px;
   background: var(--green-bg);
-  border: 1px solid rgba(52,211,153,.2);
+  border: 1px solid color-mix(in srgb, var(--green) 20%, transparent);
   border-radius: var(--radius-sm);
 }
 .r-goal-lbl { font-size: 11px; color: var(--green); }
-.r-goal-mkt { font-size: 10px; color: rgba(52,211,153,.6); margin-top: 2px; }
+.r-goal-mkt { font-size: 10px; color: color-mix(in srgb, var(--green) 60%, transparent); margin-top: 2px; }
 .r-goal-val { font-size: 20px; font-weight: 600; color: var(--green); }
 .r-calc-box {
   display: flex; flex-direction: column; gap: 3px;
@@ -686,9 +688,9 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
   color: var(--text2); font-family: var(--font); transition: all .12s;
 }
 .btn-icon:hover { border-color: var(--accent); color: var(--accent); }
-.btn-icon.confirm { border-color: rgba(52,211,153,.3); color: var(--green); }
+.btn-icon.confirm { border-color: color-mix(in srgb, var(--green) 30%, transparent); color: var(--green); }
 .btn-icon.confirm:hover { background: var(--green-bg); }
-.btn-icon.danger { border-color: rgba(248,113,113,.25); color: var(--red); }
+.btn-icon.danger { border-color: color-mix(in srgb, var(--red) 25%, transparent); color: var(--red); }
 .btn-icon.danger:hover { background: var(--red-bg); }
 
 /* ── Delete Confirm ── */
@@ -929,7 +931,7 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
 .acct-result-val { font-size: 22px; font-weight: 600; color: var(--green); }
 .btn-acct-del {
   padding: 3px 8px; font-size: 11px; border-radius: var(--radius-sm);
-  background: transparent; cursor: pointer; border: 1px solid rgba(248,113,113,.25);
+  background: transparent; cursor: pointer; border: 1px solid color-mix(in srgb, var(--red) 25%, transparent);
   color: var(--red); font-family: var(--font); transition: all .12s;
 }
 .btn-acct-del:hover { background: var(--red-bg); }
@@ -1140,7 +1142,7 @@ input[type=month]::-webkit-calendar-picker-indicator {
   margin-top: 10px;
 }
 .backup-card:first-of-type { margin-top: 4px; }
-.backup-card-restore { border-color: rgba(248,113,113,.22); }
+.backup-card-restore { border-color: color-mix(in srgb, var(--red) 22%, transparent); }
 .backup-info { flex: 1; min-width: 0; }
 .backup-info-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
 .backup-info-desc {
@@ -1201,7 +1203,7 @@ input[type=month]::-webkit-calendar-picker-indicator {
   line-height: 1.5; margin-bottom: 10px;
 }
 .restore-warn-danger {
-  background: var(--red-bg); border-color: rgba(248,113,113,.22);
+  background: var(--red-bg); border-color: color-mix(in srgb, var(--red) 22%, transparent);
   color: var(--text);
 }
 .restore-warn strong { color: var(--text); }
@@ -1223,7 +1225,7 @@ input[type=month]::-webkit-calendar-picker-indicator {
   background: rgba(79,143,255,.08);
 }
 .restore-progress-step.done {
-  color: var(--green); border-color: rgba(52,211,153,.25);
+  color: var(--green); border-color: color-mix(in srgb, var(--green) 25%, transparent);
   background: var(--green-bg);
 }
 
@@ -1282,7 +1284,7 @@ input[type=month]::-webkit-calendar-picker-indicator {
 }
 .reset-confirm-block {
   margin-top: 14px; padding: 12px;
-  background: var(--red-bg); border: 1px solid rgba(248,113,113,.22);
+  background: var(--red-bg); border: 1px solid color-mix(in srgb, var(--red) 22%, transparent);
   border-radius: var(--radius-sm);
 }
 .reset-confirm-label { font-size: 12px; color: var(--text); margin-bottom: 8px; }
@@ -1332,7 +1334,7 @@ input[type=month]::-webkit-calendar-picker-indicator {
       var t = localStorage.getItem('appTheme') || 'dark';
       document.documentElement.setAttribute('data-theme', t);
       var meta = document.querySelector('meta[name="theme-color"]');
-      if (meta) meta.setAttribute('content', t === 'light' ? '#f4f5f7' : '#0d0f12');
+      if (meta) meta.setAttribute('content', t === 'light' ? '#f1f3ef' : '#0d0f12');
     } catch (e) {}
   })();
 </script>
@@ -2770,8 +2772,8 @@ function renderCumChart(filtered) {
         }}}
       },
       scales: {
-        x: { grid:{color:'rgba(255,255,255,0.05)'}, ticks:{color:'#555b6a',font:{size:10}}, title:{display:true,text:'거래 순서',color:'#555b6a',font:{size:10}} },
-        y: { grid:{color:'rgba(255,255,255,0.05)'}, ticks:{color:'#555b6a',font:{size:10}, callback: v => cumMode==='r'?v.toFixed(1)+'R':fmtKrwAxis(v)+'₩'}, beginAtZero:false }
+        x: {  ticks:{font:{size:10}}, title:{display:true,text:'거래 순서',font:{size:10}} },
+        y: {  ticks:{font:{size:10}, callback: v => cumMode==='r'?v.toFixed(1)+'R':fmtKrwAxis(v)+'₩'}, beginAtZero:false }
       }
     }
   });
@@ -2850,14 +2852,18 @@ function renderMonthly(list) {
   const labels=entries.map(([m])=>m.slice(5)+'월');
   const pnlData=entries.map(([,d])=>Math.round(d.pnlSum));
   const rCumData=entries.map(([,d])=>d.rCum);
-  const pnlColors=pnlData.map(v=>v>=0?'rgba(52,211,153,0.8)':'rgba(248,113,113,0.8)');
+  // v0.8 — 데이터 색을 토큰에서 (다크=원본 동일, 라이트=딥 톤). 캔버스라 hex+alpha 사용
+  const __cs=getComputedStyle(document.documentElement);
+  const __cGreen=(__cs.getPropertyValue('--green')||'#34d399').trim();
+  const __cRed=(__cs.getPropertyValue('--red')||'#f87171').trim();
+  const pnlColors=pnlData.map(v=>v>=0?__cGreen+'CC':__cRed+'CC');
   const thisMonthKey=(()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;})();
   const tmThis=months[thisMonthKey]||null;
 
   const lineCtx=ge('monthly-line-canvas');
   if(lineCtx){
     if(lineChart)lineChart.destroy();
-    lineChart=new Chart(lineCtx,{type:'line',data:{labels,datasets:[{data:rCumData,borderColor:'#34d399',backgroundColor:'rgba(52,211,153,0.08)',borderWidth:2,pointBackgroundColor:'#34d399',pointRadius:4,fill:true,tension:0.35}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>(ctx.parsed.y>=0?'+':'')+ctx.parsed.y.toFixed(2)+'R'}}},scales:{x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#555b6a',font:{size:11}}},y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#555b6a',font:{size:11},callback:v=>v.toFixed(1)+'R'},beginAtZero:false}}}});
+    lineChart=new Chart(lineCtx,{type:'line',data:{labels,datasets:[{data:rCumData,borderColor:__cGreen,backgroundColor:__cGreen+'14',borderWidth:2,pointBackgroundColor:__cGreen,pointRadius:4,fill:true,tension:0.35}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>(ctx.parsed.y>=0?'+':'')+ctx.parsed.y.toFixed(2)+'R'}}},scales:{x:{ticks:{font:{size:11}}},y:{ticks:{font:{size:11},callback:v=>v.toFixed(1)+'R'},beginAtZero:false}}}});
     const latestR=rCumData[rCumData.length-1]||0;
     const avgRThis=(tmThis&&tmThis.cnt)?tmThis.rSum/tmThis.cnt:null;
     const bestM=entries.length?entries.reduce((best,cur)=>cur[1].rSum>best[1].rSum?cur:best):null;
@@ -2870,7 +2876,7 @@ function renderMonthly(list) {
   const barCtx=ge('monthly-bar-canvas');
   if(barCtx){
     if(barChart)barChart.destroy();
-    barChart=new Chart(barCtx,{type:'bar',data:{labels,datasets:[{data:pnlData,backgroundColor:pnlColors,borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>(ctx.parsed.y>=0?'+':'')+'₩'+Math.abs(ctx.parsed.y).toLocaleString('ko-KR')}}},scales:{x:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#555b6a',font:{size:11}}},y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#555b6a',font:{size:11},callback:v=>fmtKrwAxis(v)}}}}});
+    barChart=new Chart(barCtx,{type:'bar',data:{labels,datasets:[{data:pnlData,backgroundColor:pnlColors,borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>(ctx.parsed.y>=0?'+':'')+'₩'+Math.abs(ctx.parsed.y).toLocaleString('ko-KR')}}},scales:{x:{ticks:{font:{size:11}}},y:{ticks:{font:{size:11},callback:v=>fmtKrwAxis(v)}}}}});
     const totalPnl=pnlData.reduce((s,v)=>s+v,0);
     const thisPnl=tmThis?Math.round(tmThis.pnlSum):null;
     const winRate=(tmThis&&tmThis.cnt)?(tmThis.wins/tmThis.cnt*100).toFixed(0)+'%':'—';
@@ -4064,7 +4070,7 @@ function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', t);
   try { localStorage.setItem('appTheme', t); } catch (e) {}
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', t === 'light' ? '#f4f5f7' : '#0d0f12');
+  if (meta) meta.setAttribute('content', t === 'light' ? '#f1f3ef' : '#0d0f12');
   const btn = ge('btn-theme-toggle');
   if (btn) {
     btn.textContent = t === 'light' ? '🌙' : '☀️';
