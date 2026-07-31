@@ -988,6 +988,14 @@ input.mono { font-family: var(--font-mono); font-size: 15px; letter-spacing: .15
 
 /* v2.0: 모달 거래/저널 탭 제거 — 한 탭으로 통합 */
 
+/* ── 통계 지표 설명 모달 (v2.2) ── */
+.stat-help-item { padding: 13px 0; border-bottom: 1px solid var(--border); }
+.stat-help-item:last-of-type { border-bottom: none; }
+.stat-help-term { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 5px; }
+.stat-help-body { font-size: 12px; color: var(--text2); line-height: 1.65; }
+.stat-help-body b { color: var(--text); font-weight: 600; }
+.stat-help-formula { font-size: 11px; color: var(--text3); font-family: var(--font-mono); margin-top: 5px; }
+
 /* ── 누적R 진행 박스 (모달) ── */
 .modal-goal-box {
   border: 1px solid var(--border); border-radius: var(--radius);
@@ -1405,8 +1413,13 @@ input[type=month]::-webkit-calendar-picker-indicator {
       <div class="mcell"><div class="mcell-lbl">총 거래수</div><div class="mcell-val" id="d-cnt">—</div><div class="mcell-sub" id="d-cnt-s">—</div></div>
     </div></div>
 
-    <!-- v2.1: 통계 신뢰도 -->
-    <div class="mgroup"><div class="mcells" style="grid-template-columns:repeat(3,1fr);">
+    <!-- v2.1: 통계 신뢰도 / v2.2: ? 설명 모달 -->
+    <div class="mgroup">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;">통계 신뢰도</span>
+        <button class="btn-icon" onclick="openStatHelp()" aria-label="지표 설명" style="padding:2px 9px;font-size:12px;line-height:1.4;">?</button>
+      </div>
+      <div class="mcells" style="grid-template-columns:repeat(3,1fr);">
       <div class="mcell"><div class="mcell-lbl">SQN</div><div class="mcell-val sm" id="d-sqn">—</div><div class="mcell-sub" id="d-sqn-s">평균R ÷ σ × √N</div></div>
       <div class="mcell"><div class="mcell-lbl">R 표준편차</div><div class="mcell-val sm" id="d-rstd">—</div><div class="mcell-sub">청산 R 산포 (σ)</div></div>
       <div class="mcell"><div class="mcell-lbl">손익분기 승률</div><div class="mcell-val sm" id="d-bewr">—</div><div class="mcell-sub" id="d-bewr-s">이겨야 본전인 승률</div></div>
@@ -1733,6 +1746,54 @@ input[type=month]::-webkit-calendar-picker-indicator {
   <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:16px;">
     <button class="btn-s" onclick="closeModal()">취소</button>
     <button class="btn-p" onclick="saveTrade()">저장</button>
+  </div>
+</div>
+</div>
+
+<!-- ─── 통계 지표 설명 (v2.2) ─── -->
+<div class="ov" id="ov-stat-help" onclick="if(event.target===this)closeStatHelp()">
+<div class="modal" style="max-width:480px;">
+  <div class="modal-hd">
+    <span class="modal-title">통계 지표 설명</span>
+    <button class="modal-close" onclick="closeStatHelp()">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 2l12 12M14 2L2 14"/></svg>
+    </button>
+  </div>
+
+  <div class="stat-help-item">
+    <div class="stat-help-term">SQN — 시스템 품질 점수</div>
+    <div class="stat-help-body">
+      내 매매가 <b>운인지 실력인지</b>를 한 숫자로 요약합니다. 평균 수익(R)이 높을수록, 결과의 편차가 작을수록, 거래 수가 많을수록 올라갑니다.<br>
+      <b>2 이상 양호 · 3 이상 우수</b> · 1.6 미만이면 아직 엣지가 검증되지 않은 상태입니다.
+    </div>
+    <div class="stat-help-formula">SQN = 평균R ÷ R표준편차 × √거래수</div>
+  </div>
+
+  <div class="stat-help-item">
+    <div class="stat-help-term">R 표준편차 (σ)</div>
+    <div class="stat-help-body">
+      거래 결과가 얼마나 <b>들쭉날쭉한지</b>입니다. 평균 R이 같아도 σ가 크면 롤러코스터, 작으면 안정적인 시스템입니다. <b>작을수록 좋습니다.</b> 큰 σ의 흔한 원인은 손절 크기가 거래마다 제각각이거나, 가끔 손절을 안 지키는 것입니다.
+    </div>
+  </div>
+
+  <div class="stat-help-item">
+    <div class="stat-help-term">손익분기 승률</div>
+    <div class="stat-help-body">
+      지금의 평균 익절·손절 크기 구조에서 <b>본전이 되는 최소 승률</b>입니다.<br>
+      실제 승률이 이보다 높으면(<span style="color:var(--green);">+%p</span>) 구조적으로 버는 중이고, 낮으면(<span style="color:var(--red);">−%p</span>) 승률을 올리거나 평균 손절 폭을 줄여야 한다는 신호입니다.
+    </div>
+    <div class="stat-help-formula">손익분기 승률 = |평균 손절R| ÷ (평균 익절R + |평균 손절R|)</div>
+  </div>
+
+  <div class="stat-help-item">
+    <div class="stat-help-term">⚠ 표본 부족</div>
+    <div class="stat-help-body">
+      청산 거래가 <b>30건 미만</b>이면 승률·기대값·SQN은 우연에 크게 흔들립니다. 예컨대 20건짜리 승률 65%는 실제로는 45~85% 어디든 될 수 있습니다. 이 배지가 떠 있는 동안은 숫자를 <b>참고만</b> 하고, 시스템 판단은 유보하세요. 기간 필터를 좁혀도 그 기간의 거래 수 기준으로 표시됩니다.
+    </div>
+  </div>
+
+  <div style="display:flex;justify-content:flex-end;margin-top:14px;">
+    <button class="btn-s" onclick="closeStatHelp()">닫기</button>
   </div>
 </div>
 </div>
@@ -2269,11 +2330,12 @@ window.saveTrade = async function() {
   }
 
   const isOpen = pnl === null;
-  // v2.1: N은 거래일 단위 (계좌 무관 — 같은 날 전체에서 넘버링)
-  const sameDay = trades.filter(t =>
-    t.dateStart === dateStart && (!editId || t.id !== editId)
-  );
-  const n = sameDay.length + 1;
+  // v2.2: N은 거래일 단위 (계좌 무관), createdAt 시간순 위치 — 목록 표시(dayNMap)와 동일 공식.
+  //       신규 = 그날 마지막 번호, 수정 = 원래 createdAt 기준 위치 유지.
+  const orig = editId ? trades.find(x => x.id === editId) : null;
+  const myCreated = (editId && orig?.createdAt) ? orig.createdAt : Infinity;
+  const others = trades.filter(t => t.dateStart === dateStart && (!editId || t.id !== editId));
+  const n = others.filter(t => (t.createdAt || 0) <= myCreated).length + 1;
   const dow = DAYS[new Date(dateStart+'T12:00:00').getDay()];
   const dur = null;
 
@@ -2297,6 +2359,9 @@ window.saveTrade = async function() {
   };
 
   if (editId) {
+    // v2.2 버그 수정: setDoc은 문서 통째 교체라 createdAt이 지워지던 문제 — 원본 값 보존.
+    //               createdAt 없던 옛 거래는 수정 시점으로 백필(이후 N 순서 안정화).
+    data.createdAt = orig?.createdAt ?? Date.now();
     await setDoc(doc(db, 'users', currentUid, 'trades', editId), data);
   } else {
     data.createdAt = Date.now();
@@ -2325,7 +2390,11 @@ function renderTrades() {
     list.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
     list.forEach((t, i) => { dayNMap[t.id] = i + 1; });
   });
-  const filtered = filterTradesList(trades, logFilter_).filter(inPeriod);
+  // v2.2: 정렬 — 날짜 내림차순 + 같은 날은 createdAt 내림차순(최신 위) → 마지막 숫자(N 최대)가 항상 최신.
+  const filtered = filterTradesList(trades, logFilter_).filter(inPeriod)
+    .slice().sort((a, b) =>
+      (b.dateStart || '').localeCompare(a.dateStart || '') || ((b.createdAt || 0) - (a.createdAt || 0))
+    );
   if (!filtered.length) {
     body.innerHTML = `<div style="padding:32px;text-align:center;color:var(--text3);font-size:13px;">거래 기록이 없습니다</div>`;
     return;
@@ -2991,6 +3060,9 @@ window.openEdit = function(id,e) {
 };
 
 window.closeModal = function() { ge('modal-ov').classList.remove('open'); };
+// v2.2: 통계 지표 설명 모달
+window.openStatHelp  = function() { ge('ov-stat-help').classList.add('open'); };
+window.closeStatHelp = function() { ge('ov-stat-help').classList.remove('open'); };
 window.bgClose    = function(e) { if(e.target===ge('modal-ov'))closeModal(); };
 
 function clearModal() {
@@ -3177,12 +3249,15 @@ window.calcR = function() {
 };
 
 function updateAutoN() {
-  // v2.1: N은 거래일 단위 (계좌 무관)
+  // v2.2: 저장되는 n과 동일 공식 (거래일 단위 · createdAt 시간순 위치).
+  //       신규 = 그날 마지막 번호, 수정 = 원래 위치 그대로.
   const dateS=v('m-datetime-start')?.slice(0,10);
   const editId=v('m-edit-id');
   if(!dateS){ge('auto-n').textContent='—';return;}
-  const same=trades.filter(t=>t.dateStart===dateS&&(!editId||t.id!==editId));
-  ge('auto-n').textContent=same.length+1;
+  const orig = editId ? trades.find(x=>x.id===editId) : null;
+  const myCreated = (editId && orig?.createdAt) ? orig.createdAt : Infinity;
+  const others = trades.filter(t=>t.dateStart===dateS&&(!editId||t.id!==editId));
+  ge('auto-n').textContent = others.filter(t=>(t.createdAt||0)<=myCreated).length+1;
 }
 
 function updateModalGoalBox() {
@@ -3384,7 +3459,7 @@ async function downloadBackup() {
     const payload = {
       app: 'trading',
       schemaVersion: 1,
-      appVersion: 'v2.1',
+      appVersion: 'v2.2',
       exportedAt: new Date().toISOString(),
       uid: currentUid,
       data: {
