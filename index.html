@@ -424,7 +424,7 @@ body {
 .trade-wrap { border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
 .trade-head {
   display: grid;
-  grid-template-columns: 96px 80px 1fr 60px 88px 56px 68px;
+  grid-template-columns: 96px 34px 80px 1fr 60px 88px 56px 68px;
   padding: 9px 14px;
   gap: 0 12px;
   background: var(--bg3);
@@ -434,7 +434,7 @@ body {
 }
 .trade-row {
   display: grid;
-  grid-template-columns: 96px 80px 1fr 60px 88px 56px 68px;
+  grid-template-columns: 96px 34px 80px 1fr 60px 88px 56px 68px;
   padding: 11px 14px;
   gap: 0 12px;
   font-size: 12px;
@@ -1390,6 +1390,9 @@ input[type=month]::-webkit-calendar-picker-indicator {
       <div class="cum-chart-summary" id="cum-chart-summary"></div>
     </div>
 
+    <!-- v2.1: 표본 부족 경고 -->
+    <div id="db-sample-warn" style="display:none;font-size:11px;color:var(--amber);background:color-mix(in srgb, var(--amber) 10%, transparent);border:1px solid color-mix(in srgb, var(--amber) 30%, transparent);border-radius:var(--radius-sm);padding:7px 11px;margin-bottom:10px;"></div>
+
     <div class="mgroup"><div class="mcells" style="grid-template-columns:repeat(3,1fr);">
       <div class="mcell"><div class="mcell-lbl">누적 손익</div><div class="mcell-val" id="d-pnl">—</div><div class="mcell-sub" id="d-pnl-s">원화환산 합계</div></div>
       <div class="mcell"><div class="mcell-lbl">손익비 (PF)</div><div class="mcell-val" id="d-pf">—</div><div class="mcell-sub" id="d-pf-s">총이익 ÷ 총손실</div></div>
@@ -1400,6 +1403,13 @@ input[type=month]::-webkit-calendar-picker-indicator {
       <div class="mcell"><div class="mcell-lbl">전체 승률</div><div class="mcell-val" id="d-wr">—</div><div class="mcell-sub" id="d-wr-s">—</div></div>
       <div class="mcell"><div class="mcell-lbl">평균 R</div><div class="mcell-val" id="d-r">—</div><div class="mcell-sub" id="d-r-s">—</div></div>
       <div class="mcell"><div class="mcell-lbl">총 거래수</div><div class="mcell-val" id="d-cnt">—</div><div class="mcell-sub" id="d-cnt-s">—</div></div>
+    </div></div>
+
+    <!-- v2.1: 통계 신뢰도 -->
+    <div class="mgroup"><div class="mcells" style="grid-template-columns:repeat(3,1fr);">
+      <div class="mcell"><div class="mcell-lbl">SQN</div><div class="mcell-val sm" id="d-sqn">—</div><div class="mcell-sub" id="d-sqn-s">평균R ÷ σ × √N</div></div>
+      <div class="mcell"><div class="mcell-lbl">R 표준편차</div><div class="mcell-val sm" id="d-rstd">—</div><div class="mcell-sub">청산 R 산포 (σ)</div></div>
+      <div class="mcell"><div class="mcell-lbl">손익분기 승률</div><div class="mcell-val sm" id="d-bewr">—</div><div class="mcell-sub" id="d-bewr-s">이겨야 본전인 승률</div></div>
     </div></div>
 
     <div class="mgroup"><div class="mcells" style="grid-template-columns:repeat(4,1fr);">
@@ -1492,6 +1502,7 @@ input[type=month]::-webkit-calendar-picker-indicator {
     <div class="trade-wrap">
       <div class="trade-head t-cols">
         <span>날짜</span>
+        <span>N</span>
         <span>계좌</span>
         <span>종목</span>
         <span>방향</span>
@@ -1647,6 +1658,10 @@ input[type=month]::-webkit-calendar-picker-indicator {
         <input type="number" id="m-seed" oninput="calcR()">
       </div>
     </div>
+    <div class="fgrp" style="margin-bottom:12px;">
+      <label class="flbl">리스크 금액 <span class="fslbl">선택 — 비우면 시드 × 리스크%</span></label>
+      <input type="number" id="m-riskamt" oninput="calcR()">
+    </div>
 
     <div class="divider"></div>
     <p class="sec-lbl">날짜</p>
@@ -1677,7 +1692,7 @@ input[type=month]::-webkit-calendar-picker-indicator {
       <div class="auto-item"><div class="auto-lbl">N (번호)</div><div class="auto-val" id="auto-n">—</div></div>
       <div class="auto-item"><div class="auto-lbl">요일</div><div class="auto-val" id="auto-dow">—</div></div>
     </div>
-    <div style="font-size:11px;color:var(--text3);text-align:center;margin-bottom:12px;">R = 손익 ÷ (시드 × 리스크%)</div>
+    <div style="font-size:11px;color:var(--text3);text-align:center;margin-bottom:12px;">R = 손익 ÷ 리스크 금액 <span style="opacity:.7;">(미입력 시 시드 × 리스크%)</span></div>
 
     <!-- 이번달 누적 R 진행 -->
     <div class="modal-goal-box" id="modal-goal-box">
@@ -1966,6 +1981,9 @@ let dbFilter_   = 'all';     // 'all' | accountId
 let period_     = { preset:'ALL', fromYm:null, toYm:null }; // 매도일(dateStart) 기준, 대시보드+목록 공유
 let logFilter_  = 'all';     // 'all' | accountId | 'long' | 'short' | 'stop' | 'open'
 let delTargetId = null;
+let mEditRisk   = null;      // v2.1: 수정 중인 거래의 박제 risk% (R 소급 변경 방지)
+let mEditAcctId = null;      //       그 거래의 원래 계좌 (계좌 바뀌면 박제 무효)
+let dayNMap     = {};        // v2.1: 렌더 시 계산되는 거래일별 N (tradeId → n)
 let unsubTrades = null;
 let cumMode     = 'r';       // 'r' | 'pnl'
 let cumChart    = null;
@@ -2236,8 +2254,10 @@ window.saveTrade = async function() {
 
   const pnl  = v('m-pnl') !== '' ? parseFloat(v('m-pnl')) : null;
   const seed = parseFloat(v('m-seed')) || null;
-  const risk = acct?.risk || 1;
-  const rVal = (pnl !== null && seed) ? pnl / (seed * risk / 100) : null;
+  const risk = currentRisk();                                     // v2.1: 수정 시 박제 risk 유지
+  const riskAmt = parseFloat(v('m-riskamt')) > 0 ? parseFloat(v('m-riskamt')) : null;  // v2.1: 실제 리스크 금액(선택)
+  const denom = riskAmt !== null ? riskAmt : (seed ? seed * risk / 100 : null);
+  const rVal = (pnl !== null && denom) ? pnl / denom : null;
 
   const tetherRate = parseFloat(v('m-tether')) || getTether();
   const usdRate    = parseFloat(v('m-usd'))    || getUsdRate();
@@ -2249,10 +2269,11 @@ window.saveTrade = async function() {
   }
 
   const isOpen = pnl === null;
+  // v2.1: N은 거래일 단위 (계좌 무관 — 같은 날 전체에서 넘버링)
   const sameDay = trades.filter(t =>
-    t.accountId === acctId && t.dateStart === dateStart && (!editId || t.id !== editId)
+    t.dateStart === dateStart && (!editId || t.id !== editId)
   );
-  const n = sameDay.length + (editId ? 0 : 1);
+  const n = sameDay.length + 1;
   const dow = DAYS[new Date(dateStart+'T12:00:00').getDay()];
   const dur = null;
 
@@ -2265,6 +2286,8 @@ window.saveTrade = async function() {
     dateStart, dateEnd, timeStart, timeEnd,
     duration:  dur || null,
     pnl, seed, rVal, krw,
+    risk,                       // v2.1: 저장 시점 risk% 박제 — 설정 변경이 옛 거래 R을 소급 변경하지 않도록
+    riskAmt,                    // v2.1: 실제 리스크 금액 (선택, null이면 시드×risk% 방식)
     memo:      v('m-memo').trim() || null,
     chartUrl:  v('m-chart-url').trim() || null,
     isOpen, dow, n,
@@ -2294,6 +2317,14 @@ window.doDelete = async function() {
 // ── Render: Trades ────────────────────────────────────────────────────────────
 function renderTrades() {
   const body = ge('trade-body');
+  // v2.1: 거래일별 N — 전체 거래 기준으로 날짜마다 1부터 (createdAt 순), 필터와 무관하게 안정적
+  dayNMap = {};
+  const byDay = {};
+  trades.forEach(t => { const d = t.dateStart || '—'; (byDay[d] = byDay[d] || []).push(t); });
+  Object.values(byDay).forEach(list => {
+    list.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    list.forEach((t, i) => { dayNMap[t.id] = i + 1; });
+  });
   const filtered = filterTradesList(trades, logFilter_).filter(inPeriod);
   if (!filtered.length) {
     body.innerHTML = `<div style="padding:32px;text-align:center;color:var(--text3);font-size:13px;">거래 기록이 없습니다</div>`;
@@ -2350,6 +2381,7 @@ function buildTradeRow(t) {
   const desktopRow = `
     <div class="trade-row t-cols" id="row-${t.id}" onclick="toggleExp('${t.id}',event)">
       <div><div style="font-size:12px;">${dtStr}</div></div>
+      <div style="font-size:11px;color:var(--text3);">${dayNMap[t.id]||t.n||'—'}</div>
       <div>${mktBadge}</div>
       <span style="font-weight:500;font-size:12px;">${t.symbol}</span>
       <div>${dirBadge}</div>
@@ -2376,7 +2408,7 @@ function buildTradeRow(t) {
       <div class="tc-bot">
         ${dirBadge}
         <span style="font-size:11px;color:${rColor};">${rMobile}</span>
-        <span class="tc-meta">${dtStr}</span>
+        <span class="tc-meta">${dtStr} · N${dayNMap[t.id]||t.n||'—'}</span>
       </div>
       <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:8px;">
         <button class="btn-edit" onclick="openEdit('${t.id}',event)">✏ 수정</button>
@@ -2478,7 +2510,43 @@ function renderDashboard() {
   });
   renderRDist(rBuckets);
 
-  // v2.0: 전략별/매도별 집계 제거
+  // v2.1: 통계 신뢰도 — R 표준편차 / SQN / 손익분기 승률 + 표본 부족 배지
+  {
+    const rs = closed.map(t => t.rVal || 0);
+    const nn = rs.length;
+    const mean = nn ? rs.reduce((a, b) => a + b, 0) / nn : 0;
+    const std = nn > 1 ? Math.sqrt(rs.reduce((a, r) => a + (r - mean) * (r - mean), 0) / (nn - 1)) : null;
+    const sqn = (std && std > 0) ? mean / std * Math.sqrt(nn) : null;
+    setText('d-rstd', std === null ? '—' : std.toFixed(2) + 'R');
+    setText('d-sqn',  sqn === null ? '—' : sqn.toFixed(2), sqn === null ? '' : sqn >= 2 ? 'pos' : sqn < 1 ? 'neg' : '');
+    const sqnSub = ge('d-sqn-s');
+    if (sqnSub) sqnSub.textContent = sqn === null ? '평균R ÷ σ × √N'
+      : sqn >= 3 ? '우수 (≥3)' : sqn >= 2 ? '양호 (2~3)' : sqn >= 1.6 ? '보통 (1.6~2)' : '개선 필요 (<1.6)';
+    // 손익분기 승률 = |평균손절| ÷ (평균익절 + |평균손절|)
+    const winRs  = rs.filter(r => r > 0);
+    const lossRs = rs.filter(r => r < 0);
+    const aw = winRs.length  ? winRs.reduce((a, b) => a + b, 0) / winRs.length : null;
+    const al = lossRs.length ? Math.abs(lossRs.reduce((a, b) => a + b, 0) / lossRs.length) : null;
+    const be = (aw !== null && al !== null && (aw + al) > 0) ? al / (aw + al) * 100 : null;
+    setText('d-bewr', be === null ? '—' : be.toFixed(1) + '%');
+    const beSub = ge('d-bewr-s');
+    if (beSub) {
+      if (be === null || wr === '—') beSub.textContent = '이겨야 본전인 승률';
+      else {
+        const diff = parseFloat(wr) - be;
+        beSub.innerHTML = `실제 승률 대비 <span class="${diff >= 0 ? 'pos' : 'neg'}">${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%p</span>`;
+      }
+    }
+    // 표본 부족 배지 (청산 30건 미만)
+    const warn = ge('db-sample-warn');
+    if (warn) {
+      if (nn < 30) {
+        warn.style.display = '';
+        warn.textContent = `⚠ 표본 부족 — 청산 거래 ${nn}건. 승률·기대값·SQN은 30건 이상 쌓여야 안정적으로 해석할 수 있습니다.`;
+      } else warn.style.display = 'none';
+    }
+  }
+
 
   // 요일별 성과 (청산 거래만, 월~금 기본 + 주말은 데이터 있을 때만)
   const dowMap={};
@@ -2908,6 +2976,9 @@ window.openEdit = function(id,e) {
     sv('m-datetime-start', t.dateStart);
   }
   if(t.seed)       sv('m-seed',   String(t.seed));
+  if(t.riskAmt)    sv('m-riskamt',String(t.riskAmt));  // v2.1
+  mEditRisk   = (t.risk != null) ? t.risk : null;       // v2.1: 옛 거래(risk 미박제)는 null → 계좌 설정 폴백
+  mEditAcctId = acctId;
   if(t.pnl!=null)  sv('m-pnl',    String(t.pnl));
   if(t.tetherRate) sv('m-tether', String(t.tetherRate));
   if(t.usdRate)    sv('m-usd',    String(t.usdRate));
@@ -2924,7 +2995,8 @@ window.bgClose    = function(e) { if(e.target===ge('modal-ov'))closeModal(); };
 
 function clearModal() {
   ['m-edit-id','m-symbol','m-datetime-start',
-   'm-pnl','m-seed','m-tether','m-usd','m-memo','m-chart-url'].forEach(id=>sv(id,''));
+   'm-pnl','m-seed','m-riskamt','m-tether','m-usd','m-memo','m-chart-url'].forEach(id=>sv(id,''));
+  mEditRisk = null; mEditAcctId = null;  // v2.1
   // v2.0: 계좌 프리필 = 이전 입력 계좌 (없거나 삭제됐으면 첫 계좌)
   if(accounts.length){
     let lastAcc = null;
@@ -3064,18 +3136,31 @@ function syncAccountSelect() {
 }
 
 // ── R 계산 ────────────────────────────────────────────────────────────────────
+// v2.1: risk% 해석 — 수정 모드에서 계좌가 안 바뀌었으면 거래에 박제된 risk 사용
+function currentRisk() {
+  const acctId = v('m-account');
+  if (v('m-edit-id') && mEditRisk != null && acctId === mEditAcctId) return mEditRisk;
+  return (accounts.find(a => a.id === acctId)?.risk) || 1;
+}
+// v2.1: R 분모 — 리스크 금액(선택) 우선, 비우면 시드 × risk%
+function riskDenom() {
+  const ra = parseFloat(v('m-riskamt'));
+  if (!isNaN(ra) && ra > 0) return ra;
+  const seed = parseFloat(v('m-seed'));
+  if (isNaN(seed) || seed <= 0) return null;
+  return seed * currentRisk() / 100;
+}
 window.calcR = function() {
   const pnl  = parseFloat(v('m-pnl'));
-  const seed = parseFloat(v('m-seed'));
   const acct = accounts.find(a=>a.id===v('m-account'));
-  const risk = acct?.risk || 1;
   const market = acct?.market || 'coin';
   const tether = parseFloat(v('m-tether')) || getTether();
   const usd    = parseFloat(v('m-usd'))    || getUsdRate();
   const rEl    = ge('r-out');
+  const denom  = riskDenom();  // v2.1: 리스크 금액 우선
 
-  if(!isNaN(pnl)&&!isNaN(seed)&&seed>0){
-    const r=pnl/(seed*risk/100);
+  if(!isNaN(pnl)&&denom){
+    const r=pnl/denom;
     rEl.textContent=(r>=0?'+':'')+r.toFixed(2)+'R';
     rEl.style.color=r>=0?'var(--green)':'var(--red)';
     let krw=market==='coin'?pnl*tether:market==='us'?pnl*usd:pnl;
@@ -3092,10 +3177,11 @@ window.calcR = function() {
 };
 
 function updateAutoN() {
-  const acctId=v('m-account'); const dateS=v('m-datetime-start')?.slice(0,10);
+  // v2.1: N은 거래일 단위 (계좌 무관)
+  const dateS=v('m-datetime-start')?.slice(0,10);
   const editId=v('m-edit-id');
   if(!dateS){ge('auto-n').textContent='—';return;}
-  const same=trades.filter(t=>(t.accountId||t.market)===acctId&&t.dateStart===dateS&&(!editId||t.id!==editId));
+  const same=trades.filter(t=>t.dateStart===dateS&&(!editId||t.id!==editId));
   ge('auto-n').textContent=same.length+1;
 }
 
@@ -3108,8 +3194,8 @@ function updateModalGoalBox() {
   const targetR=calcTargetRForAccount(acct)||0;
   const pct=(targetR&&targetR>0&&cumR>0)?Math.min(Math.round(cumR/targetR*100),100):0;
 
-  const pnl=parseFloat(v('m-pnl')), seed=parseFloat(v('m-seed')), risk=acct.risk||1;
-  const thisR=(!isNaN(pnl)&&!isNaN(seed)&&seed>0)?pnl/(seed*risk/100):0;
+  const pnl=parseFloat(v('m-pnl')), denom=riskDenom();  // v2.1
+  const thisR=(!isNaN(pnl)&&denom)?pnl/denom:0;
   const afterR=cumR+thisR;
   const remain=Math.max(0, targetR-afterR);
 
@@ -3298,7 +3384,7 @@ async function downloadBackup() {
     const payload = {
       app: 'trading',
       schemaVersion: 1,
-      appVersion: 'v2.0',
+      appVersion: 'v2.1',
       exportedAt: new Date().toISOString(),
       uid: currentUid,
       data: {
