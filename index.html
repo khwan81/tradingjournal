@@ -1662,18 +1662,18 @@ input[type=month]::-webkit-calendar-picker-indicator {
       <div class="fgrp">
         <label class="flbl">방향</label>
         <select id="m-dir">
-          <option value="short">숏</option>
           <option value="long">롱</option>
+          <option value="short">숏</option>
         </select>
       </div>
       <div class="fgrp">
         <label class="flbl">시드 <span class="fslbl" id="m-seed-cur"></span></label>
-        <input type="number" id="m-seed" oninput="calcR()">
+        <input type="text" inputmode="decimal" id="m-seed" autocomplete="off" oninput="fmtMoneyLive(this);calcR()">
       </div>
     </div>
     <div class="fgrp" style="margin-bottom:12px;">
       <label class="flbl">리스크 금액 <span class="fslbl">선택 — 비우면 시드 × 리스크%</span></label>
-      <input type="number" id="m-riskamt" oninput="calcR()">
+      <input type="text" inputmode="decimal" id="m-riskamt" autocomplete="off" oninput="fmtMoneyLive(this);calcR()">
     </div>
 
     <div class="divider"></div>
@@ -1688,15 +1688,18 @@ input[type=month]::-webkit-calendar-picker-indicator {
     <div class="fg2" style="margin-bottom:10px;">
       <div class="fgrp">
         <label class="flbl">손익 <span class="fslbl">$ 또는 ₩</span></label>
-        <input type="number" id="m-pnl" oninput="calcR()">
+        <div style="display:flex;gap:6px;">
+          <input type="text" inputmode="decimal" id="m-pnl" autocomplete="off" oninput="fmtMoneyLive(this,true);calcR()" style="flex:1;min-width:0;">
+          <button type="button" class="btn-icon" onclick="togglePnlSign()" title="부호 전환" style="padding:0 13px;font-size:14px;">±</button>
+        </div>
       </div>
       <div class="fgrp" id="rate-tether-grp">
         <label class="flbl">테더 <span class="fslbl">비우면 기본값</span></label>
-        <input type="number" id="m-tether" oninput="calcR()">
+        <input type="text" inputmode="decimal" id="m-tether" autocomplete="off" oninput="fmtMoneyLive(this);calcR()">
       </div>
       <div class="fgrp" id="rate-usd-grp" style="display:none;">
         <label class="flbl">원/달러 <span class="fslbl">비우면 기본값</span></label>
-        <input type="number" id="m-usd" oninput="calcR()">
+        <input type="text" inputmode="decimal" id="m-usd" autocomplete="off" oninput="fmtMoneyLive(this);calcR()">
       </div>
     </div>
     <div class="auto-grid" style="margin-bottom:10px;">
@@ -2313,15 +2316,16 @@ window.saveTrade = async function() {
   const dateEnd   = null;
   const timeEnd   = null;
 
-  const pnl  = v('m-pnl') !== '' ? parseFloat(v('m-pnl')) : null;
-  const seed = parseFloat(v('m-seed')) || null;
+  const pnlRaw = mNum('m-pnl');                                   // v2.3: 콤마 파싱, '-'만 입력 등 무효는 미결 처리
+  const pnl  = !isNaN(pnlRaw) ? pnlRaw : null;
+  const seed = mNum('m-seed') || null;
   const risk = currentRisk();                                     // v2.1: 수정 시 박제 risk 유지
-  const riskAmt = parseFloat(v('m-riskamt')) > 0 ? parseFloat(v('m-riskamt')) : null;  // v2.1: 실제 리스크 금액(선택)
+  const riskAmt = mNum('m-riskamt') > 0 ? mNum('m-riskamt') : null;  // v2.1: 실제 리스크 금액(선택)
   const denom = riskAmt !== null ? riskAmt : (seed ? seed * risk / 100 : null);
   const rVal = (pnl !== null && denom) ? pnl / denom : null;
 
-  const tetherRate = parseFloat(v('m-tether')) || getTether();
-  const usdRate    = parseFloat(v('m-usd'))    || getUsdRate();
+  const tetherRate = mNum('m-tether') || getTether();
+  const usdRate    = mNum('m-usd')    || getUsdRate();
   let krw = null;
   if (pnl !== null) {
     if (market==='coin') krw = pnl * tetherRate;
@@ -2423,7 +2427,7 @@ function buildTradeRow(t) {
     : `<span class="badge b-${t.dir}">${t.dir==='long'?'롱':'숏'}</span>`;
   const sym = MKT_SYM[mktKey]||'$';
   const pnlStr = t.pnl===null ? '<span style="color:var(--text3)">미결</span>'
-    : `<span style="color:${t.pnl>=0?'var(--green)':'var(--red)'};font-weight:500;">${t.pnl>=0?'+':''}${t.pnl?.toFixed(2)}${mktKey==='kor'?'₩':'$'}</span>`;
+    : `<span style="color:${t.pnl>=0?'var(--green)':'var(--red)'};font-weight:500;">${t.pnl>=0?'+':''}${fmtAmt(t.pnl)}${mktKey==='kor'?'₩':'$'}</span>`;
   const rStr = t.rVal===null ? '<span style="color:var(--text3)">—</span>'
     : `<span style="color:${t.rVal>=0?'var(--green)':'var(--red)'};">${t.rVal>=0?'+':''}${t.rVal?.toFixed(2)}R</span>`;
 
@@ -2463,7 +2467,7 @@ function buildTradeRow(t) {
     </div>`;
 
   const pnlColor  = t.pnl===null?'var(--text3)':t.pnl>=0?'var(--green)':'var(--red)';
-  const pnlMobile = t.pnl===null?'미결':`${t.pnl>=0?'+':''}${t.pnl.toFixed(2)}${mktKey==='kor'?'₩':'$'}`;
+  const pnlMobile = t.pnl===null?'미결':`${t.pnl>=0?'+':''}${fmtAmt(t.pnl)}${mktKey==='kor'?'₩':'$'}`;
   const rMobile   = t.rVal===null?'—':`${t.rVal>=0?'+':''}${t.rVal.toFixed(2)}R`;
   const rColor    = t.rVal===null?'var(--text3)':t.rVal>=0?'var(--green)':'var(--red)';
 
@@ -2865,8 +2869,8 @@ function renderMonthly(list) {
     const pC=d.pnlSum>=0?'var(--green)':'var(--red)';
     const rC=d.rSum>=0?'var(--green)':'var(--red)';
     const mL=m!=='—'?m.slice(5)+'월':'—';
-    const mx=d.maxPnl===-Infinity?'—':(d.maxPnl>=0?'+':'')+d.maxPnl.toFixed(2);
-    const mn=d.minPnl===Infinity?'—':d.minPnl.toFixed(2);
+    const mx=d.maxPnl===-Infinity?'—':(d.maxPnl>=0?'+':'')+fmtAmt(d.maxPnl);
+    const mn=d.minPnl===Infinity?'—':fmtAmt(d.minPnl);
     return `<tr><td style="font-weight:500;">${mL}</td><td style="text-align:right;">${d.cnt}</td><td style="text-align:right;">${wr}</td><td style="text-align:right;color:${pC};">${d.pnlSum>=0?'+':''}₩${Math.round(Math.abs(d.pnlSum)).toLocaleString('ko-KR')}</td><td style="text-align:right;color:${rC};">${ar}</td><td style="text-align:right;color:var(--green);">${mx}</td><td style="text-align:right;color:var(--red);">${mn}</td></tr>`;
   }).join('');
 }
@@ -3044,13 +3048,13 @@ window.openEdit = function(id,e) {
   if(t.dateStart){
     sv('m-datetime-start', t.dateStart);
   }
-  if(t.seed)       sv('m-seed',   String(t.seed));
-  if(t.riskAmt)    sv('m-riskamt',String(t.riskAmt));  // v2.1
+  if(t.seed)       sv('m-seed',   fmtAmtIn(t.seed));      // v2.3: 콤마 포맷
+  if(t.riskAmt)    sv('m-riskamt',fmtAmtIn(t.riskAmt));   // v2.1/v2.3
   mEditRisk   = (t.risk != null) ? t.risk : null;       // v2.1: 옛 거래(risk 미박제)는 null → 계좌 설정 폴백
   mEditAcctId = acctId;
-  if(t.pnl!=null)  sv('m-pnl',    String(t.pnl));
-  if(t.tetherRate) sv('m-tether', String(t.tetherRate));
-  if(t.usdRate)    sv('m-usd',    String(t.usdRate));
+  if(t.pnl!=null)  sv('m-pnl',    fmtAmtIn(t.pnl));        // v2.3: 콤마 포맷
+  if(t.tetherRate) sv('m-tether', fmtAmtIn(t.tetherRate));
+  if(t.usdRate)    sv('m-usd',    fmtAmtIn(t.usdRate));
   sv('m-memo',      t.memo     ||'');
   sv('m-chart-url', t.chartUrl ||'');
   ge('modal-title-txt').textContent='거래 수정';
@@ -3075,7 +3079,7 @@ function clearModal() {
     try { lastAcc = localStorage.getItem('trd_lastAccount'); } catch(e) {}
     sv('m-account', accounts.find(a=>a.id===lastAcc) ? lastAcc : accounts[0].id);
   }
-  sv('m-dir','short');
+  sv('m-dir','long');  // v2.3: 기본값 롱
   onAccountChange();
   ge('r-out').textContent='— R'; ge('r-out').style.color='';
   ge('krw-summary').textContent='— ₩'; ge('krw-summary').style.color='';
@@ -3194,7 +3198,7 @@ window.onAccountChange = function(fromUser) {
   if (seedCur) seedCur.textContent = market==='coin' ? 'USDT' : market==='us' ? '$' : '₩';
   // 시드 자동입력: 사용자가 계좌를 바꾸면 그 계좌에 설정된 시드로 갱신,
   // 그 외(모달 초기화·거래 수정 로드 등)엔 빈 칸일 때만 채움(수정 중인 시드 보존).
-  if (acct.seed && (fromUser || !v('m-seed'))) sv('m-seed', String(acct.seed));
+  if (acct.seed && (fromUser || !v('m-seed'))) sv('m-seed', fmtAmtIn(acct.seed));  // v2.3: 콤마 포맷
   calcR();
   updateAutoN();
   updateModalGoalBox();
@@ -3216,18 +3220,18 @@ function currentRisk() {
 }
 // v2.1: R 분모 — 리스크 금액(선택) 우선, 비우면 시드 × risk%
 function riskDenom() {
-  const ra = parseFloat(v('m-riskamt'));
+  const ra = mNum('m-riskamt');
   if (!isNaN(ra) && ra > 0) return ra;
-  const seed = parseFloat(v('m-seed'));
+  const seed = mNum('m-seed');
   if (isNaN(seed) || seed <= 0) return null;
   return seed * currentRisk() / 100;
 }
 window.calcR = function() {
-  const pnl  = parseFloat(v('m-pnl'));
+  const pnl  = mNum('m-pnl');
   const acct = accounts.find(a=>a.id===v('m-account'));
   const market = acct?.market || 'coin';
-  const tether = parseFloat(v('m-tether')) || getTether();
-  const usd    = parseFloat(v('m-usd'))    || getUsdRate();
+  const tether = mNum('m-tether') || getTether();
+  const usd    = mNum('m-usd')    || getUsdRate();
   const rEl    = ge('r-out');
   const denom  = riskDenom();  // v2.1: 리스크 금액 우선
 
@@ -3269,7 +3273,7 @@ function updateModalGoalBox() {
   const targetR=calcTargetRForAccount(acct)||0;
   const pct=(targetR&&targetR>0&&cumR>0)?Math.min(Math.round(cumR/targetR*100),100):0;
 
-  const pnl=parseFloat(v('m-pnl')), denom=riskDenom();  // v2.1
+  const pnl=mNum('m-pnl'), denom=riskDenom();  // v2.1/v2.3
   const thisR=(!isNaN(pnl)&&denom)?pnl/denom:0;
   const afterR=cumR+thisR;
   const remain=Math.max(0, targetR-afterR);
@@ -3292,6 +3296,29 @@ function updateModalGoalBox() {
 
 // ── 설정 유틸 ──────────────────────────────────────────────────────────────────
 window.fmtComma = function(el){const raw=parseFloat(el.value.replace(/,/g,''));if(!isNaN(raw))el.value=raw.toLocaleString('ko-KR');};
+// v2.3: 금액 입력 라이브 콤마 (소수점 유지, allowNeg면 맨 앞 '-' 허용)
+window.fmtMoneyLive = function(el, allowNeg){
+  let str = el.value;
+  const neg = !!allowNeg && /^\s*-/.test(str);
+  str = str.replace(/[^0-9.]/g,'');
+  const di = str.indexOf('.');
+  if (di !== -1) str = str.slice(0, di+1) + str.slice(di+1).replace(/\./g,'');
+  let intP = di !== -1 ? str.slice(0, di) : str;
+  const decP = di !== -1 ? str.slice(di) : '';
+  intP = intP.replace(/^0+(?=\d)/,'').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  el.value = (neg ? '-' : '') + intP + decP;
+};
+// v2.3: 손익 부호 토글 (iOS 숫자 패드에 '-' 없음 대응)
+window.togglePnlSign = function(){
+  const el = ge('m-pnl'); if(!el) return;
+  el.value = el.value.startsWith('-') ? el.value.slice(1) : '-' + el.value;
+  calcR();
+};
+// v2.3: 콤마 포함 입력 → 숫자 (기존 parseFloat 의미 유지: 빈/무효 = NaN)
+function mNum(id){ return parseFloat((v(id)||'').replace(/,/g,'')); }
+// v2.3: 표시용 콤마 포맷 (소수 최대 2자리) / 입력 프리필용 (최대 8자리)
+function fmtAmt(x){ return Number(x).toLocaleString('ko-KR',{maximumFractionDigits:2}); }
+function fmtAmtIn(x){ return Number(x).toLocaleString('ko-KR',{maximumFractionDigits:8}); }
 window.rawNum   = function(el){const p=el.selectionStart;el.value=el.value.replace(/[^0-9.]/g,'');try{el.setSelectionRange(p,p);}catch(e){}};
 window.numOnly  = function(el){const p=el.selectionStart;el.value=el.value.replace(/[^0-9.]/g,'');try{el.setSelectionRange(p,p);}catch(e){}};
 window.fmtPct   = function(el){const raw=parseFloat(el.value);if(!isNaN(raw))el.value=raw+'%';};
@@ -3459,7 +3486,7 @@ async function downloadBackup() {
     const payload = {
       app: 'trading',
       schemaVersion: 1,
-      appVersion: 'v2.2',
+      appVersion: 'v2.3',
       exportedAt: new Date().toISOString(),
       uid: currentUid,
       data: {
