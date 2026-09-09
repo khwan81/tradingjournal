@@ -1152,12 +1152,13 @@ html, body { overflow-x: hidden; }
 .cl-warn.danger b { color: var(--red); }
 
 /* 고정 지출 상세 */
-.fx-list { padding: 4px 4px 2px; display: flex; flex-direction: column; gap: 2px; }
-.fx-item { position: relative; display: grid; grid-template-columns: 1fr 34px auto; gap: 8px; align-items: center; padding: 7px 8px 9px; font-size: var(--fs-md); border-radius: 6px; }
-.fx-item .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.fx-item .pct { font-size: var(--fs-xs); text-align: right; }
+.fx-list { padding: 4px 4px 2px; display: flex; flex-direction: column; gap: 8px; }
+.fx-grp { border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px 4px; }
+.fx-grp-h { display: flex; justify-content: space-between; font-size: var(--fs-sm); font-weight: 600; padding: 2px 0 4px; border-bottom: 1px solid var(--border); margin-bottom: 2px; }
+.fx-grp-h .muted { font-weight: 400; font-size: var(--fs-xs); }
+.fx-item { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 6px 0; font-size: var(--fs-md); }
+.fx-item .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text2); }
 .fx-item .amt { white-space: nowrap; font-variant-numeric: tabular-nums; }
-.fx-item .bar { position: absolute; left: 8px; bottom: 3px; height: 2px; border-radius: 1px; background: color-mix(in srgb, var(--red) 55%, transparent); max-width: calc(100% - 16px); }
 
 /* 재무상태표 */
 .bs-grid { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; font-size: var(--fs-md); }
@@ -1653,6 +1654,7 @@ html, body { overflow-x: hidden; }
         <div class="form-group"><label>기준 금액</label><input class="input" id="rec-amount" inputmode="numeric" placeholder="0"></div>
         <div class="form-group"><label>주기</label><select class="select" id="rec-month"><option value="">매월</option></select></div>
       </div>
+      <div class="form-group" id="rec-cat-wrap"><label>분류</label><input class="input" id="rec-cat" list="rec-cat-list" placeholder="예: 주거, 보험, 통신·구독"><datalist id="rec-cat-list"></datalist><div class="hint">현금흐름에서 이 분류로 묶어 소계를 보여줍니다. 비우면 "기타".</div></div>
       <p class="hint" id="rec-hint">매달 마감 때 이 금액으로 자동 반영됩니다.</p>
     </div>
     <div class="modal-foot">
@@ -1895,6 +1897,9 @@ function accMeta(accId, d) {
   return '';
 }
 function recKind(r) { return r.kind || 'fixed'; }
+const REC_CATS = ['주거', '대출', '보험', '통신·구독', '교육', '교통', '기타'];
+function recCategory(r) { return recKind(r) === 'event' ? '경조사' : (r.category || '기타'); }
+function itemCategory(i) { if (i.kind === 'event') return '경조사'; if (i.category) return i.category; const r = i.recId ? recurring.find(x => x.id === i.recId) : null; return r?.category || '기타'; }  // 박제 항목에 분류 없으면 현재 마스터 분류로 표시
 function recApplies(r, ym) { const m = Number(r.month) || 0; return m ? m === monthOf(ym) : true; }
 function recAmount(r) { return Number(r.amount) || 0; }
 function fixedMonthly() { return recurring.filter(r => recKind(r) !== 'income' && !r.month).reduce((s, r) => s + recAmount(r), 0); }
@@ -1952,7 +1957,7 @@ function totals(ym, { exRe = false } = {}) {
 function recItemsFor(ym, kind) {
   return recurring.filter(r => recKind(r) === kind && recApplies(r, ym))
     .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
-    .map(r => ({ recId: r.id, name: r.name, amount: recAmount(r), kind }));
+    .map(r => ({ recId: r.id, name: r.name, amount: recAmount(r), kind, category: recCategory(r) }));
 }
 function fixedItemsFor(ym) { return [...recItemsFor(ym, 'fixed'), ...recItemsFor(ym, 'event')]; }
 function eventSpend(ym) { return txs.filter(t => t.ym === ym).reduce((s, t) => s + (Number(t.amount) || 0), 0); }
@@ -2210,12 +2215,17 @@ function fixedListHtml(cf, ym) {
   let html = `<div class="cf-line h tap" data-fixed-toggle><span class="n">고정 지출 <span class="badge auto">정기 ${items.length}건${events ? ` · 경조사 ${events}` : ''}</span>${inc ? `<small>수입의 ${Math.round(tot / inc * 100)}%${prev ? ` · 전월 ${fmtSigned(tot - (prev.fixedSum != null ? Number(prev.fixedSum) : (prev.fixed || []).reduce((x, i) => x + (Number(i.amount) || 0), 0)))}` : ''}</small>` : ''}</span><span class="a neg">−${fmtNum(tot)}</span><span class="chev">${fixedCollapsed ? '▸' : '▾'}</span></div>`;
   if (!items.length) return html + `<div class="cf-line"><span class="n dim">정기 지출 없음 — 설정 › 정기 수입·지출에서 등록</span></div>`;
   if (fixedCollapsed) return html;
-  html += `<div class="fx-list">` + items.map(i => {
+  // 분류별 묶기 (소계 큰 순), 분류 안은 금액 순
+  const groups = new Map();
+  for (const i of items) { const c = itemCategory(i); if (!groups.has(c)) groups.set(c, []); groups.get(c).push(i); }
+  const gl = [...groups.entries()].map(([c, list]) => ({ c, list, sum: list.reduce((x, i) => x + (Number(i.amount) || 0), 0) })).sort((a, b) => (a.c === '경조사') - (b.c === '경조사') || b.sum - a.sum);
+  const itemHtml = i => {
     const amt = Number(i.amount) || 0; const key = i.recId || i.name; const pv = prevMap.has(key) ? prevMap.get(key) : null;
     const delta = pv != null && pv !== amt ? amt - pv : null; const isNew = prev && !prevMap.has(key) && i.kind !== 'event';
     const base = i.recId ? recurring.find(r => r.id === i.recId) : null; const overridden = base && Number(base.amount) !== amt && i.kind !== 'event';
-    return `<div class="fx-item"><span class="nm">${escapeHtml(i.name)}${i.kind === 'event' ? ` <span class="badge">경조사 ${monthOf(ym)}월</span>` : ''}${isNew ? ' <span class="badge auto">신규</span>' : ''}${overridden ? ` <span class="badge">이번 달만</span>` : ''}${delta != null ? ` <span class="${delta > 0 ? 'neg' : 'pos'} small">${delta > 0 ? '▲' : '▼'} ${fmtNum(Math.abs(delta))}</span>` : ''}</span><span class="pct muted">${Math.round(amt / tot * 100)}%</span><span class="amt">${fmtNum(amt)}</span><i class="bar" style="width:${Math.max(amt / tot * 100, 1)}%"></i></div>`;
-  }).join('') + `</div><p class="note-line" style="margin:4px 4px 8px;">기준 금액 · 실제 결제액과의 차이는 변동에 포함 · 헤더 탭하면 접기</p>`;
+    return `<div class="fx-item"><span class="nm">${escapeHtml(i.name)}${i.kind === 'event' ? ` <span class="badge">${monthOf(ym)}월</span>` : ''}${isNew ? ' <span class="badge auto">신규</span>' : ''}${overridden ? ` <span class="badge">이번 달만</span>` : ''}${delta != null ? ` <span class="${delta > 0 ? 'neg' : 'pos'} small">${delta > 0 ? '▲' : '▼'} ${fmtNum(Math.abs(delta))}</span>` : ''}</span><span class="amt">${fmtNum(amt)}</span></div>`;
+  };
+  html += `<div class="fx-list">` + gl.map(g => `<div class="fx-grp"><div class="fx-grp-h"><span>${escapeHtml(g.c)} <span class="muted">${g.list.length}</span></span><span>${fmtNum(g.sum)}</span></div>${g.list.map(itemHtml).join('')}</div>`).join('') + `</div><p class="note-line" style="margin:4px 4px 8px;">기준 금액 · 실제 결제액과의 차이는 변동에 포함 · 분류는 설정 › 정기 항목에서 · 헤더 탭하면 접기</p>`;
   return html;
 }
 function renderCfEvents() {
@@ -2677,7 +2687,8 @@ function renderSettings() {
   const kinds = [['fixed', '고정 지출'], ['event', '경조사'], ['income', '수입 (v2에서 미사용 — 수입은 마감 때 직접 입력, 삭제 권장)']];
   let rh = '';
   for (const [k, label] of kinds) { const list = recurring.filter(r => recKind(r) === k).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)); if (!list.length) continue;
-    rh += `<div class="grp-label">${label} <span class="muted">${list.length}</span></div>` + list.map(r => `<div class="set-row"><div class="n">${escapeHtml(r.name)}<small>${r.month ? `매년 ${r.month}월` : '매월'}${!r.kind ? ' · 이전 버전 항목' : ''}</small></div><span class="v">${fmtNum(recAmount(r))}</span><div class="acts"><button data-rec-edit="${escapeHtml(r.id)}" title="편집">✎</button></div></div>`).join(''); }
+    const sum = list.reduce((x, r) => x + recAmount(r), 0);
+    rh += `<div class="grp-label">${label} <span class="muted">${list.length} · ${fmtNum(sum)}</span></div>` + list.sort((a, b) => recCategory(a).localeCompare(recCategory(b), 'ko') || recAmount(b) - recAmount(a)).map(r => `<div class="set-row"><div class="n">${escapeHtml(r.name)}<small>${k === 'fixed' ? `<span class="badge">${escapeHtml(recCategory(r))}</span> ` : ''}${r.month ? `매년 ${r.month}월` : '매월'}${!r.kind ? ' · 이전 버전 항목' : ''}</small></div><span class="v">${fmtNum(recAmount(r))}</span><div class="acts"><button data-rec-edit="${escapeHtml(r.id)}" title="편집">✎</button></div></div>`).join(''); }
   $('set-recurring').innerHTML = rh || `<div class="dim small" style="padding:8px 2px;">정기 항목이 없습니다. 급여·월세·보험 등을 등록하면 매달 자동 반영됩니다.</div>`;
   // 환율
   const fx = sharedSettings.fxRates || {};
@@ -2760,16 +2771,19 @@ function openRecModal(id) {
   const k = r ? recKind(r) : 'fixed'; $('rkind-fixed').checked = k !== 'event'; $('rkind-event').checked = k === 'event';
   $('rec-name').value = r?.name || ''; $('rec-amount').value = r ? fmtNum(recAmount(r)) : '';
   $('rec-month').innerHTML = '<option value="">매월</option>' + Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}">매년 ${i + 1}월</option>`).join(''); $('rec-month').value = r?.month ? String(r.month) : '';
+  $('rec-cat').value = r?.category || '';
+  const cats = [...new Set([...REC_CATS, ...recurring.map(x => x.category).filter(Boolean)])]; $('rec-cat-list').innerHTML = cats.map(c => `<option value="${escapeHtml(c)}">`).join('');
   $('btn-rec-delete').style.display = r ? '' : 'none'; recKindChanged(); openOv('ov-rec'); setTimeout(() => $('rec-name').focus(), 50);
 }
-function recKindChanged() { const k = document.querySelector('input[name="rec-kind"]:checked')?.value; if (k === 'event' && !$('rec-month').value) $('rec-month').value = String(monthOf(currentMonth)); $('rec-hint').textContent = k === 'event' ? '그 달 마감 때 고정 지출에 자동 포함됩니다. 적립은 기록하지 않습니다.' : '매달 마감 때 이 금액으로 자동 반영됩니다. 실제 결제액과의 차이는 변동 지출에 포함됩니다.'; }
+function recKindChanged() { const k = document.querySelector('input[name="rec-kind"]:checked')?.value; $('rec-cat-wrap').style.display = k === 'event' ? 'none' : ''; if (k === 'event' && !$('rec-month').value) $('rec-month').value = String(monthOf(currentMonth)); $('rec-hint').textContent = k === 'event' ? '그 달 마감 때 고정 지출에 자동 포함됩니다. 적립은 기록하지 않습니다.' : '매달 마감 때 이 금액으로 자동 반영됩니다. 실제 결제액과의 차이는 변동 지출에 포함됩니다.'; }
 document.querySelectorAll('input[name="rec-kind"]').forEach(r => r.addEventListener('change', recKindChanged));
 $('btn-add-rec').addEventListener('click', () => openRecModal(null));
 $('btn-rec-save').addEventListener('click', async () => {
   const name = $('rec-name').value.trim(); const amount = parseNum($('rec-amount').value); const kind = document.querySelector('input[name="rec-kind"]:checked')?.value || 'fixed'; const month = Number($('rec-month').value) || null;
   if (!name) { showToast('이름을 입력하세요'); return; } if (amount == null || amount < 0) { showToast('기준 금액을 입력하세요'); return; }
   const ex = editingRecId ? recurring.find(x => x.id === editingRecId) : null; const id = editingRecId || genId('rec');
-  try { await setDoc(P.rec(id), sanitize({ id, kind, name, amount: Math.round(amount), month, sortOrder: ex?.sortOrder ?? (recurring.reduce((m, r) => Math.max(m, r.sortOrder || 0), 0) + 1), createdAt: ex?.createdAt ?? new Date().toISOString(), updatedAt: new Date().toISOString(), v: 2 })); closeOv('ov-rec'); showToast(ex ? '저장되었습니다 — 다음 마감부터 적용' : '추가되었습니다 — 다음 마감부터 적용'); } catch (e) { showToast('저장 실패'); }
+  const category = kind === 'event' ? null : ($('rec-cat').value.trim() || null);
+  try { await setDoc(P.rec(id), sanitize({ id, kind, name, category, amount: Math.round(amount), month, sortOrder: ex?.sortOrder ?? (recurring.reduce((m, r) => Math.max(m, r.sortOrder || 0), 0) + 1), createdAt: ex?.createdAt ?? new Date().toISOString(), updatedAt: new Date().toISOString(), v: 2 })); closeOv('ov-rec'); showToast(ex ? '저장되었습니다 — 다음 마감부터 적용' : '추가되었습니다 — 다음 마감부터 적용'); } catch (e) { showToast('저장 실패'); }
 });
 $('btn-rec-delete').addEventListener('click', async () => { if (!editingRecId) return; if (!await appConfirm('이 정기 항목을 삭제할까요?\n지난 달 마감은 그대로 보존되고, 다음 마감부터 빠집니다.')) return; try { await deleteDoc(P.rec(editingRecId)); closeOv('ov-rec'); showToast('삭제됨'); } catch (e) { showToast('삭제 실패'); } });
 
