@@ -1872,7 +1872,9 @@ function recAmount(r) { return Number(r.amount) || 0; }
 function fixedMonthly() { return recurring.filter(r => recKind(r) !== 'income' && !r.month).reduce((s, r) => s + recAmount(r), 0); }
 /* 수입은 매달 마감 때 직접 입력 (v2.0-1) — 최근 마감 월의 수입을 기본값·참고치로 사용 */
 function cfIncome(cf) { if (!cf) return null; if (cf.incomeSum != null) return Number(cf.incomeSum) || 0; return (cf.income || []).reduce((s, i) => s + (Number(i.amount) || 0), 0) + (Number(cf.extraIncome) || 0); }
-function lastIncomeBefore(ym) { let best = null; for (const c of cashflowAll) if (c.ym < ym && (!best || c.ym > best.ym)) best = c; return best ? cfIncome(best) : null; }
+function lastCfBefore(ym) { let best = null; for (const c of cashflowAll) if (c.ym < ym && (!best || c.ym > best.ym)) best = c; return best; }
+function lastIncomeBefore(ym) { const b = lastCfBefore(ym); return b ? cfIncome(b) : null; }
+function cfSalary(cf) { return cf.salary != null ? (Number(cf.salary) || 0) : cfIncome(cf) - (Number(cf.extraIncome) || 0); }
 function incomeMonthly() { return lastIncomeBefore(ymAdd(currentMonth, 1)) || 0; }
 
 /* ── 인덱스 재구축 ─────────────────────────────────── */
@@ -1933,14 +1935,14 @@ function cashflowFor(ym) {
   const extra = cf ? (Number(cf.extraIncome) || 0) : 0;
   const fixed = cf ? (cf.fixed || []) : fixedItemsFor(ym);
   const incomeSum = cf ? cfIncome(cf) : (lastIncomeBefore(ym) || 0);
-  const incomeMemo = cf?.incomeMemo || null;
+  const salary = cf ? cfSalary(cf) : null;
   const fixedSum = fixed.reduce((s, i) => s + (Number(i.amount) || 0), 0);
   const saving = savingMove(ym);
   const cashNow = cashBal(ym), cashPrev = cashBal(prevYm(ym));
   const delta = (cashNow != null && cashPrev != null) ? cashNow - cashPrev : null;
   const variable = delta != null ? incomeSum - fixedSum - saving - delta : null;
   const ev = eventSpend(ym);
-  return { ym, closed: !!cf, cf, income, extra, incomeMemo, fixed, incomeSum, fixedSum, saving, cashNow, cashPrev, delta, variable, ev, rest: variable != null ? variable - ev : null };
+  return { ym, closed: !!cf, cf, income, extra, salary, fixed, incomeSum, fixedSum, saving, cashNow, cashPrev, delta, variable, ev, rest: variable != null ? variable - ev : null };
 }
 function runwayFor(ym) {
   const fixed = fixedMonthly(); const cash = cashBal(ym);
@@ -2157,7 +2159,8 @@ function renderCfSheet() {
   const evs = tagsInMonth(ym);
   let html = `<div class="card cf-sheet">`;
   html += line('들어온 돈', '', '+' + fmtNum(cf.incomeSum), 'pos', 'h');
-  html += line(escapeHtml(cf.incomeMemo || '이번 달 수입'), '마감 때 직접 입력', fmtNum(cf.incomeSum));
+  html += line('급여', '마감 때 직접 입력', fmtNum(cf.salary));
+  if (cf.extra) html += line('기타 수입', '상여 · 환급 · 부업 등', fmtNum(cf.extra));
   html += line(`고정 지출 <span class="badge auto">정기 ${cf.fixed.length}건</span>`, '', '−' + fmtNum(cf.fixedSum), 'neg', 'h');
   html += line(fixedNames || '<span class="dim">정기 지출 없음</span>', '기준 금액 · 실제 차이는 변동에 포함', '');
   html += line('변동 지출 <span class="badge auto">역산</span>', '', cf.variable != null ? '−' + fmtNum(cf.variable) : '—', 'neg', 'h');
@@ -2370,7 +2373,8 @@ function openCloseModal(ym) {
   });
   const liabRows = liveLiabs().map(l => { const ex = liabDoc(ym, l.id); const pv = (() => { let b = null; for (const d of liabAll) if (d.liabKey === l.id && d.ym < ym && (!b || d.ym > b.ym)) b = d; return b; })(); return { l, ex, pv, balance: ex ? ex.balance : null }; });
   const cf = cfByYm.get(ym) || null;
-  CL = { ym, rows, liabRows, step: 1, cf, income: cf ? cfIncome(cf) : lastIncomeBefore(ym), incomeMemo: cf?.incomeMemo || '', incomePrefilled: !cf, overrides: { fixed: new Map() }, cashPrev: cashBal(prev) };
+  const lastCf = lastCfBefore(ym);
+  CL = { ym, rows, liabRows, step: 1, cf, salary: cf ? cfSalary(cf) : (lastCf ? cfSalary(lastCf) : null), extra: cf ? (Number(cf.extraIncome) || 0) : null, incomePrefilled: !cf, overrides: { fixed: new Map() }, cashPrev: cashBal(prev) };
   if (cf) { for (const i of cf.fixed || []) if (i.recId) CL.overrides.fixed.set(i.recId, Number(i.amount) || 0); }
   $('close-title').textContent = `${ymLabel(ym)} 마감${cf ? ' 수정' : ''}`;
   if (rows.some(r => r.cur !== 'KRW' && !r.rate)) showToast('환율이 없는 통화가 있어요 — 설정 › 환율에서 먼저 넣어주세요');
@@ -2467,7 +2471,7 @@ function closeItems() {
 }
 function closeRenderStep2() {
   const ym = CL.ym; const { fix } = closeItems();
-  const incomeSum = Number(CL.income) || 0;
+  const incomeSum = (Number(CL.salary) || 0) + (Number(CL.extra) || 0);
   const fixedSum = fix.reduce((s, i) => s + i.amount, 0);
   const saving = CL.rows.filter(r => r.a.trackPerformance).reduce((s, r) => { const c = rowCalc(r); return s + (c && !c.isStart ? c.depKrw : 0); }, 0);
   const cashNow = CL.preview?.cash ?? null, cashPrev = CL.cashPrev;
@@ -2476,8 +2480,9 @@ function closeRenderStep2() {
   const ev = eventSpend(ym);
   CL.calc = { fix, incomeSum, fixedSum, saving, cashNow, cashPrev, delta, variable, ev };
   const line = (n, s, a, cls = '', ex = '') => `<div class="cf-line ${ex}"><span class="n">${n}${s ? `<small>${s}</small>` : ''}</span><span class="a ${cls}">${a}</span></div>`;
-  let html = `<div class="cl-row" style="padding:9px 4px;"><div class="n">들어온 돈 <span class="badge">직접 입력</span><small>${CL.incomePrefilled && CL.income != null ? `전월 ${fmtNum(CL.income)} 기본 채움 · ` : ''}급여·상여·환급 등 이번 달 실제 들어온 합</small></div><input class="cl-in" id="cl-income" inputmode="numeric" placeholder="수입" value="${CL.income != null ? fmtNum(CL.income) : ''}"></div>
-  <div class="cl-row" style="padding:0 4px 9px; border-bottom:1px solid var(--border);"><div class="n"></div><input class="cl-in" id="cl-income-memo" style="text-align:left; width:100%; flex:1;" placeholder="메모 (선택) 예: 급여 + 상여 100만" value="${escapeHtml(CL.incomeMemo)}"></div>`;
+  let html = `<div class="cf-line h"><span class="n">들어온 돈 <span class="badge">직접 입력</span></span><span class="a pos">${fmtSigned(incomeSum)}</span></div>
+  <div class="cl-row"><div class="n">급여<small>${CL.incomePrefilled && CL.salary != null ? `전월 ${fmtNum(CL.salary)} 기본 채움` : '이번 달 실수령'}</small></div><input class="cl-in" id="cl-salary" inputmode="numeric" placeholder="급여" value="${CL.salary != null ? fmtNum(CL.salary) : ''}"></div>
+  <div class="cl-row"><div class="n">기타<small>상여 · 환급 · 부업 등 (없으면 비움)</small></div><input class="cl-in" id="cl-extra" inputmode="numeric" placeholder="0" value="${CL.extra ? fmtNum(CL.extra) : ''}"></div>`;
   html += `<div class="cf-line tap" data-ov="fixed"><span class="n">고정 지출 <span class="badge auto">정기 ${fix.length}건</span><small>${fix.map(i => `${escapeHtml(i.name)}${i.kind === 'event' ? `(${monthOf(ym)}월)` : ''}`).join(' · ') || '정기 지출 없음'}</small></span><span class="a neg">−${fmtNum(fixedSum)}</span><span class="chev">›</span></div>`;
   html += line(`저축·투자로 이동 <span class="badge auto">결산</span>`, '추적 자산 입출금 합', '−' + fmtNum(saving), 'neg');
   html += line('현금성 잔고 변화', cashNow != null && cashPrev != null ? `${fmtNum(cashNow)} − ${fmtNum(cashPrev)}` : cashNow == null ? '현금성 계좌 잔고 없음' : `전월(${ymLabel(prevYm(ym))}) 잔고 없음`, delta != null ? fmtSigned(delta) : '—', delta != null ? (delta >= 0 ? 'pos' : 'neg') : '');
@@ -2485,11 +2490,11 @@ function closeRenderStep2() {
   $('close-summary').innerHTML = html;
   $('close-summary').querySelectorAll('[data-ov]').forEach(el => el.addEventListener('click', () => closeOpenOverride(el.dataset.ov)));
   let incTimer = null;
-  $('cl-income').addEventListener('input', e => { CL.income = parseNum(e.target.value); CL.incomePrefilled = false; clearTimeout(incTimer); incTimer = setTimeout(() => { const memo = $('cl-income-memo'); const pos = memo === document.activeElement; closeRenderStep2(); if (pos) $('cl-income-memo').focus(); else { const i = $('cl-income'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 600); });
-  $('cl-income-memo').addEventListener('input', e => { CL.incomeMemo = e.target.value; });
+  const onInc = (id, key) => $(id).addEventListener('input', e => { CL[key] = parseNum(e.target.value); CL.incomePrefilled = false; clearTimeout(incTimer); incTimer = setTimeout(() => { const focusId = document.activeElement?.id; closeRenderStep2(); const el = focusId ? $(focusId) : null; if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }, 700); });
+  onInc('cl-salary', 'salary'); onInc('cl-extra', 'extra');
   // 경고
   const p = cashflowFor(prevYm(ym)); let warn = '';
-  if (!incomeSum) warn = `<div class="cl-warn"><b>수입이 비어 있어요</b>이번 달 들어온 돈을 입력해야 변동 지출이 맞게 계산됩니다. 정말 수입이 없었다면 0으로 두세요.</div>`;
+  if (!incomeSum) warn = `<div class="cl-warn"><b>수입이 비어 있어요</b>급여(와 기타)를 입력해야 변동 지출이 맞게 계산됩니다. 정말 수입이 없었다면 0으로 두세요.</div>`;
   else if (variable != null && variable < 0) warn = `<div class="cl-warn danger"><b>변동 지출이 음수입니다</b>수입이 빠졌거나 잔고를 잘못 넣었을 수 있어요. ‹ 뒤로 가서 확인하세요.</div>`;
   else if (variable != null && p.closed && p.variable > 0) { const r = variable / p.variable - 1; if (Math.abs(r) >= 0.2) { const rEx = (p.variable - p.ev) > 0 ? (variable - ev) / (p.variable - p.ev) - 1 : null; warn = `<div class="cl-warn"><b>전월보다 변동 지출이 ${Math.abs(Math.round(r * 100))}% ${r > 0 ? '큽니다' : '작습니다'}</b>${rEx != null ? `이벤트를 빼면 ${rEx > 0 ? '+' : ''}${Math.round(rEx * 100)}%. ` : ''}잔고를 잘못 넣었다면 ‹ 뒤로.</div>`; } }
   else if (delta == null) warn = `<div class="cl-warn"><b>변동 지출을 계산할 수 없습니다</b>${cashNow == null ? '현금성 계좌(설정 › 계좌 "현금흐름에 포함")에 잔고를 넣어주세요.' : `전월(${ymLabel(prevYm(ym))}) 마감이 없습니다. 이번 달은 잔고만 저장되고, 다음 달부터 계산됩니다.`}</div>`;
@@ -2514,7 +2519,7 @@ function closeOpenOverride(kind) {
 async function closeSaveStep2() {
   if (!CL || !CL.calc || !currentUid) return;
   const { fix, incomeSum, fixedSum, saving, cashNow, cashPrev, delta, variable, ev } = CL.calc;
-  const data = sanitize({ ym: CL.ym, income: [], extraIncome: 0, incomeMemo: (CL.incomeMemo || '').trim() || null,
+  const data = sanitize({ ym: CL.ym, income: [], salary: Number(CL.salary) || 0, extraIncome: Number(CL.extra) || 0,
     fixed: fix.map(i => sanitize({ recId: i.recId || null, name: i.name, amount: i.amount, kind: i.kind || 'fixed' })),
     incomeSum, fixedSum, saving, cashNow, cashPrev, delta, variable, eventSpend: ev,
     closedAt: CL.cf?.closedAt ?? new Date().toISOString(), updatedAt: new Date().toISOString(), appVersion: APP_VERSION });
