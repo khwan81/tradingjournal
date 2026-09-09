@@ -1456,7 +1456,7 @@ html, body { overflow-x: hidden; }
       <div class="card">
         <div class="card-head">정기 수입·지출 <span class="section-actions"><button class="btn-s" id="btn-add-rec">+ 항목</button></span></div>
         <div class="set-list" id="set-recurring"></div>
-        <p class="note-line">매달 마감 때 기준 금액으로 자동 반영됩니다. 실제 결제액과의 차이는 변동 지출에 포함됩니다. 해지는 삭제, 금액 변경은 수정 — 다음 마감부터 적용되고 지난 달은 그대로 보존됩니다.</p>
+        <p class="note-line">고정 지출·경조사만 등록합니다 — 수입은 매달 마감 때 직접 입력. 매달 마감 때 기준 금액으로 자동 반영되고, 실제 결제액과의 차이는 변동 지출에 포함됩니다. 해지는 삭제, 금액 변경은 수정 — 다음 마감부터 적용되고 지난 달은 그대로 보존됩니다.</p>
       </div>
       <div class="card">
         <div class="card-head">환율 <span class="section-actions"><button class="btn-s" id="btn-fx-auto">↻ 자동</button><button class="btn-s" id="btn-fx-save">저장</button></span></div>
@@ -1627,7 +1627,6 @@ html, body { overflow-x: hidden; }
     <div class="modal-body">
       <div class="form-group"><label>종류</label>
         <div class="seg">
-          <input type="radio" name="rec-kind" id="rkind-income" value="income"><label for="rkind-income">수입</label>
           <input type="radio" name="rec-kind" id="rkind-fixed" value="fixed" checked><label for="rkind-fixed">고정 지출</label>
           <input type="radio" name="rec-kind" id="rkind-event" value="event"><label for="rkind-event">경조사</label>
         </div>
@@ -1871,7 +1870,10 @@ function recKind(r) { return r.kind || 'fixed'; }
 function recApplies(r, ym) { const m = Number(r.month) || 0; return m ? m === monthOf(ym) : true; }
 function recAmount(r) { return Number(r.amount) || 0; }
 function fixedMonthly() { return recurring.filter(r => recKind(r) !== 'income' && !r.month).reduce((s, r) => s + recAmount(r), 0); }
-function incomeMonthly() { return recurring.filter(r => recKind(r) === 'income' && !r.month).reduce((s, r) => s + recAmount(r), 0); }
+/* 수입은 매달 마감 때 직접 입력 (v2.0-1) — 최근 마감 월의 수입을 기본값·참고치로 사용 */
+function cfIncome(cf) { if (!cf) return null; if (cf.incomeSum != null) return Number(cf.incomeSum) || 0; return (cf.income || []).reduce((s, i) => s + (Number(i.amount) || 0), 0) + (Number(cf.extraIncome) || 0); }
+function lastIncomeBefore(ym) { let best = null; for (const c of cashflowAll) if (c.ym < ym && (!best || c.ym > best.ym)) best = c; return best ? cfIncome(best) : null; }
+function incomeMonthly() { return lastIncomeBefore(ymAdd(currentMonth, 1)) || 0; }
 
 /* ── 인덱스 재구축 ─────────────────────────────────── */
 function rebuildIndex() {
@@ -1927,17 +1929,18 @@ function eventSpend(ym) { return txs.filter(t => t.ym === ym).reduce((s, t) => s
 /* 현금흐름 한 달 계산 — 마감 도큐먼트 있으면 박제값, 없으면 preview */
 function cashflowFor(ym) {
   const cf = cfByYm.get(ym) || null;
-  const income = cf ? (cf.income || []) : recItemsFor(ym, 'income');
+  const income = cf ? (cf.income || []) : [];
   const extra = cf ? (Number(cf.extraIncome) || 0) : 0;
   const fixed = cf ? (cf.fixed || []) : fixedItemsFor(ym);
-  const incomeSum = income.reduce((s, i) => s + (Number(i.amount) || 0), 0) + extra;
+  const incomeSum = cf ? cfIncome(cf) : (lastIncomeBefore(ym) || 0);
+  const incomeMemo = cf?.incomeMemo || null;
   const fixedSum = fixed.reduce((s, i) => s + (Number(i.amount) || 0), 0);
   const saving = savingMove(ym);
   const cashNow = cashBal(ym), cashPrev = cashBal(prevYm(ym));
   const delta = (cashNow != null && cashPrev != null) ? cashNow - cashPrev : null;
   const variable = delta != null ? incomeSum - fixedSum - saving - delta : null;
   const ev = eventSpend(ym);
-  return { ym, closed: !!cf, cf, income, extra, fixed, incomeSum, fixedSum, saving, cashNow, cashPrev, delta, variable, ev, rest: variable != null ? variable - ev : null };
+  return { ym, closed: !!cf, cf, income, extra, incomeMemo, fixed, incomeSum, fixedSum, saving, cashNow, cashPrev, delta, variable, ev, rest: variable != null ? variable - ev : null };
 }
 function runwayFor(ym) {
   const fixed = fixedMonthly(); const cash = cashBal(ym);
@@ -2091,7 +2094,7 @@ function renderHome() {
   kpi.push({ label: '남은 현금', value: cf.closed && cf.delta != null ? fmtKoSigned(cf.delta) : '마감 후', cls: cf.closed && cf.delta != null ? (cf.delta >= 0 ? 'pos' : 'neg') : 'muted', sub: (() => { const p = cashflowFor(prevYm(ym)); return p.closed && p.delta != null ? `${monthOf(prevYm(ym))}월 ${fmtKoSigned(p.delta)}` : '현금성 잔고 변화'; })() });
   kpi.push({ label: '현금 버팀', value: rw != null ? `${rw.toFixed(1)}개월` : '—', cls: rw == null ? 'muted' : rw < runwayWarn() ? 'neg' : rw < runwayTarget() ? 'warn-text' : 'pos', sub: rw != null ? `현금성 ${fmtKo(cashBal(ymData))} ÷ 고정 ${fmtKo(fixedM)} · 목표 ${runwayTarget()}` : fixedM ? '현금성 잔고 없음' : '정기 지출을 등록하세요' });
   if (cf.closed && cf.variable != null) kpi.push({ label: '변동 지출', value: fmtKo(cf.variable), cls: '', sub: (() => { const p = cashflowFor(prevYm(ym)); const pr = p.variable ? Math.round((cf.variable / p.variable - 1) * 100) : null; return `${pr != null ? `전월 ${pr > 0 ? '+' : ''}${pr}% · ` : ''}이벤트 ${fmtKo(cf.ev)}`; })() });
-  else kpi.push({ label: '고정 지출', value: fixedM ? fmtKo(fixedM) : '—', cls: '', sub: incomeM ? `수입의 ${Math.round(fixedM / incomeM * 100)}%` : '정기 마스터 기준' });
+  else kpi.push({ label: '고정 지출', value: fixedM ? fmtKo(fixedM) : '—', cls: '', sub: incomeM ? `최근 수입의 ${Math.round(fixedM / incomeM * 100)}%` : '정기 마스터 기준' });
   $('home-kpi').innerHTML = kpi.map(k => `<div class="kpi-card"><div class="label">${k.label}</div><div class="value ${k.cls}">${k.value}</div><div class="sub">${escapeHtml(k.sub)}</div></div>`).join('');
 
   // 수입 흐름 바 (마감 후)
@@ -2150,12 +2153,11 @@ function renderCfSheet() {
     $('btn-cf-empty-close').onclick = () => openCloseModal(ym); return;
   }
   const line = (n, s, a, cls = '', extra = '') => `<div class="cf-line ${extra}"><span class="n">${n}${s ? `<small>${s}</small>` : ''}</span><span class="a ${cls}">${a}</span></div>`;
-  const inc = cf.income.map(i => escapeHtml(i.name)).join(' · ') + (cf.extra ? ` · 기타 ${fmtNum(cf.extra)}` : '');
   const fixedNames = cf.fixed.map(i => `${escapeHtml(i.name)}${i.kind === 'event' ? `(${monthOf(ym)}월)` : ''}`).join(' · ');
   const evs = tagsInMonth(ym);
   let html = `<div class="card cf-sheet">`;
   html += line('들어온 돈', '', '+' + fmtNum(cf.incomeSum), 'pos', 'h');
-  html += line(inc || '<span class="dim">정기 수입 없음</span>', '정기 마스터 기준', fmtNum(cf.incomeSum));
+  html += line(escapeHtml(cf.incomeMemo || '이번 달 수입'), '마감 때 직접 입력', fmtNum(cf.incomeSum));
   html += line(`고정 지출 <span class="badge auto">정기 ${cf.fixed.length}건</span>`, '', '−' + fmtNum(cf.fixedSum), 'neg', 'h');
   html += line(fixedNames || '<span class="dim">정기 지출 없음</span>', '기준 금액 · 실제 차이는 변동에 포함', '');
   html += line('변동 지출 <span class="badge auto">역산</span>', '', cf.variable != null ? '−' + fmtNum(cf.variable) : '—', 'neg', 'h');
@@ -2368,8 +2370,8 @@ function openCloseModal(ym) {
   });
   const liabRows = liveLiabs().map(l => { const ex = liabDoc(ym, l.id); const pv = (() => { let b = null; for (const d of liabAll) if (d.liabKey === l.id && d.ym < ym && (!b || d.ym > b.ym)) b = d; return b; })(); return { l, ex, pv, balance: ex ? ex.balance : null }; });
   const cf = cfByYm.get(ym) || null;
-  CL = { ym, rows, liabRows, step: 1, cf, overrides: { extraIncome: cf ? (Number(cf.extraIncome) || 0) : 0, income: new Map(), fixed: new Map() }, cashPrev: cashBal(prev) };
-  if (cf) { for (const i of cf.income || []) if (i.recId) CL.overrides.income.set(i.recId, Number(i.amount) || 0); for (const i of cf.fixed || []) if (i.recId) CL.overrides.fixed.set(i.recId, Number(i.amount) || 0); }
+  CL = { ym, rows, liabRows, step: 1, cf, income: cf ? cfIncome(cf) : lastIncomeBefore(ym), incomeMemo: cf?.incomeMemo || '', incomePrefilled: !cf, overrides: { fixed: new Map() }, cashPrev: cashBal(prev) };
+  if (cf) { for (const i of cf.fixed || []) if (i.recId) CL.overrides.fixed.set(i.recId, Number(i.amount) || 0); }
   $('close-title').textContent = `${ymLabel(ym)} 마감${cf ? ' 수정' : ''}`;
   if (rows.some(r => r.cur !== 'KRW' && !r.rate)) showToast('환율이 없는 통화가 있어요 — 설정 › 환율에서 먼저 넣어주세요');
   showCloseStep(1); closeRenderRows(true); openOv('ov-close');
@@ -2457,35 +2459,38 @@ async function closeSaveStep1() {
 /* 2/2 확인 */
 function closeItems() {
   const ym = CL.ym; const cf = CL.cf;
-  const baseInc = cf ? (cf.income || []).map(i => ({ ...i })) : recItemsFor(ym, 'income');
   const baseFix = cf ? (cf.fixed || []).map(i => ({ ...i })) : fixedItemsFor(ym);
   // 마감 수정 시 정기 마스터에 새로 생긴 항목도 추가 (박제 항목은 유지)
-  if (cf) { for (const it of recItemsFor(ym, 'income')) if (!baseInc.some(b => b.recId === it.recId)) baseInc.push(it); for (const it of fixedItemsFor(ym)) if (!baseFix.some(b => b.recId === it.recId)) baseFix.push(it); }
-  const inc = baseInc.map(i => ({ ...i, amount: CL.overrides.income.has(i.recId) ? CL.overrides.income.get(i.recId) : (Number(i.amount) || 0) }));
+  if (cf) { for (const it of fixedItemsFor(ym)) if (!baseFix.some(b => b.recId === it.recId)) baseFix.push(it); }
   const fix = baseFix.map(i => ({ ...i, amount: CL.overrides.fixed.has(i.recId) ? CL.overrides.fixed.get(i.recId) : (Number(i.amount) || 0) }));
-  return { inc, fix };
+  return { fix };
 }
 function closeRenderStep2() {
-  const ym = CL.ym; const { inc, fix } = closeItems();
-  const incomeSum = inc.reduce((s, i) => s + i.amount, 0) + (Number(CL.overrides.extraIncome) || 0);
+  const ym = CL.ym; const { fix } = closeItems();
+  const incomeSum = Number(CL.income) || 0;
   const fixedSum = fix.reduce((s, i) => s + i.amount, 0);
   const saving = CL.rows.filter(r => r.a.trackPerformance).reduce((s, r) => { const c = rowCalc(r); return s + (c && !c.isStart ? c.depKrw : 0); }, 0);
   const cashNow = CL.preview?.cash ?? null, cashPrev = CL.cashPrev;
   const delta = cashNow != null && cashPrev != null ? cashNow - cashPrev : null;
   const variable = delta != null ? incomeSum - fixedSum - saving - delta : null;
   const ev = eventSpend(ym);
-  CL.calc = { inc, fix, incomeSum, fixedSum, saving, cashNow, cashPrev, delta, variable, ev };
+  CL.calc = { fix, incomeSum, fixedSum, saving, cashNow, cashPrev, delta, variable, ev };
   const line = (n, s, a, cls = '', ex = '') => `<div class="cf-line ${ex}"><span class="n">${n}${s ? `<small>${s}</small>` : ''}</span><span class="a ${cls}">${a}</span></div>`;
-  let html = `<div class="cf-line tap" data-ov="income"><span class="n">들어온 돈 <span class="badge auto">정기</span><small>${inc.map(i => `${escapeHtml(i.name)} ${fmtNum(i.amount)}`).join(' · ') || '정기 수입 없음'}${CL.overrides.extraIncome ? ` · 기타 ${fmtNum(CL.overrides.extraIncome)}` : ''} · 탭하면 이번 달만 수정</small></span><span class="a pos">${fmtSigned(incomeSum)}</span><span class="chev">›</span></div>`;
+  let html = `<div class="cl-row" style="padding:9px 4px;"><div class="n">들어온 돈 <span class="badge">직접 입력</span><small>${CL.incomePrefilled && CL.income != null ? `전월 ${fmtNum(CL.income)} 기본 채움 · ` : ''}급여·상여·환급 등 이번 달 실제 들어온 합</small></div><input class="cl-in" id="cl-income" inputmode="numeric" placeholder="수입" value="${CL.income != null ? fmtNum(CL.income) : ''}"></div>
+  <div class="cl-row" style="padding:0 4px 9px; border-bottom:1px solid var(--border);"><div class="n"></div><input class="cl-in" id="cl-income-memo" style="text-align:left; width:100%; flex:1;" placeholder="메모 (선택) 예: 급여 + 상여 100만" value="${escapeHtml(CL.incomeMemo)}"></div>`;
   html += `<div class="cf-line tap" data-ov="fixed"><span class="n">고정 지출 <span class="badge auto">정기 ${fix.length}건</span><small>${fix.map(i => `${escapeHtml(i.name)}${i.kind === 'event' ? `(${monthOf(ym)}월)` : ''}`).join(' · ') || '정기 지출 없음'}</small></span><span class="a neg">−${fmtNum(fixedSum)}</span><span class="chev">›</span></div>`;
   html += line(`저축·투자로 이동 <span class="badge auto">결산</span>`, '추적 자산 입출금 합', '−' + fmtNum(saving), 'neg');
   html += line('현금성 잔고 변화', cashNow != null && cashPrev != null ? `${fmtNum(cashNow)} − ${fmtNum(cashPrev)}` : cashNow == null ? '현금성 계좌 잔고 없음' : `전월(${ymLabel(prevYm(ym))}) 잔고 없음`, delta != null ? fmtSigned(delta) : '—', delta != null ? (delta >= 0 ? 'pos' : 'neg') : '');
   html += line(`→ 변동 지출 <span class="badge auto">역산</span>`, ev ? `이벤트 ${fmtNum(ev)} · 고정 차액 포함` : '고정 차액 포함', variable != null ? fmtNum(variable) : '—', 'neg', 'tot');
   $('close-summary').innerHTML = html;
   $('close-summary').querySelectorAll('[data-ov]').forEach(el => el.addEventListener('click', () => closeOpenOverride(el.dataset.ov)));
+  let incTimer = null;
+  $('cl-income').addEventListener('input', e => { CL.income = parseNum(e.target.value); CL.incomePrefilled = false; clearTimeout(incTimer); incTimer = setTimeout(() => { const memo = $('cl-income-memo'); const pos = memo === document.activeElement; closeRenderStep2(); if (pos) $('cl-income-memo').focus(); else { const i = $('cl-income'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 600); });
+  $('cl-income-memo').addEventListener('input', e => { CL.incomeMemo = e.target.value; });
   // 경고
   const p = cashflowFor(prevYm(ym)); let warn = '';
-  if (variable != null && variable < 0) warn = `<div class="cl-warn danger"><b>변동 지출이 음수입니다</b>수입이 빠졌거나 잔고를 잘못 넣었을 수 있어요. ‹ 뒤로 가서 확인하세요.</div>`;
+  if (!incomeSum) warn = `<div class="cl-warn"><b>수입이 비어 있어요</b>이번 달 들어온 돈을 입력해야 변동 지출이 맞게 계산됩니다. 정말 수입이 없었다면 0으로 두세요.</div>`;
+  else if (variable != null && variable < 0) warn = `<div class="cl-warn danger"><b>변동 지출이 음수입니다</b>수입이 빠졌거나 잔고를 잘못 넣었을 수 있어요. ‹ 뒤로 가서 확인하세요.</div>`;
   else if (variable != null && p.closed && p.variable > 0) { const r = variable / p.variable - 1; if (Math.abs(r) >= 0.2) { const rEx = (p.variable - p.ev) > 0 ? (variable - ev) / (p.variable - p.ev) - 1 : null; warn = `<div class="cl-warn"><b>전월보다 변동 지출이 ${Math.abs(Math.round(r * 100))}% ${r > 0 ? '큽니다' : '작습니다'}</b>${rEx != null ? `이벤트를 빼면 ${rEx > 0 ? '+' : ''}${Math.round(rEx * 100)}%. ` : ''}잔고를 잘못 넣었다면 ‹ 뒤로.</div>`; } }
   else if (delta == null) warn = `<div class="cl-warn"><b>변동 지출을 계산할 수 없습니다</b>${cashNow == null ? '현금성 계좌(설정 › 계좌 "현금흐름에 포함")에 잔고를 넣어주세요.' : `전월(${ymLabel(prevYm(ym))}) 마감이 없습니다. 이번 달은 잔고만 저장되고, 다음 달부터 계산됩니다.`}</div>`;
   $('close-warn').innerHTML = warn;
@@ -2493,25 +2498,23 @@ function closeRenderStep2() {
   $('close-left').textContent = delta != null ? fmtSigned(delta) : '—'; $('close-left').className = delta != null ? (delta >= 0 ? 'pos' : 'neg') : '';
 }
 function closeOpenOverride(kind) {
-  const { inc, fix } = closeItems(); const list = kind === 'income' ? inc : fix;
+  const { fix } = closeItems(); const list = fix;
   const $o = $('close-override'); $o.style.display = '';
-  let html = `<div class="card"><div class="card-head" style="font-size:var(--fs-md);">이번 달만 수정 <small>${kind === 'income' ? '들어온 돈' : '고정 지출'} · 정기 마스터는 바뀌지 않음</small></div>`;
+  let html = `<div class="card"><div class="card-head" style="font-size:var(--fs-md);">이번 달만 수정 <small>고정 지출 · 정기 마스터는 바뀌지 않음</small></div>`;
   html += list.map(i => `<div class="cl-row"><div class="n">${escapeHtml(i.name)}${i.kind === 'event' ? ' <span class="badge">경조사</span>' : ''}<small>기준 ${fmtNum(recurring.find(r => r.id === i.recId)?.amount ?? i.amount)}${i.amount === 0 ? ' · 이번 달 0 (제외)' : ''}</small></div><input class="cl-in" data-ovr="${kind}:${escapeHtml(i.recId || i.name)}" inputmode="numeric" value="${fmtNum(i.amount)}"></div>`).join('');
-  if (kind === 'income') html += `<div class="cl-row"><div class="n">기타 수입<small>상여 · 환급 등 이번 달만</small></div><input class="cl-in" data-ovr="extra" inputmode="numeric" value="${CL.overrides.extraIncome ? fmtNum(CL.overrides.extraIncome) : ''}" placeholder="0"></div>`;
   html += `<div style="display:flex; justify-content:flex-end; margin-top:10px;"><button class="btn-s" id="btn-ovr-done">적용</button></div></div>`;
   $o.innerHTML = html;
   $o.querySelectorAll('[data-ovr]').forEach(el => el.addEventListener('input', () => {
     const v = parseNum(el.value); const key = el.dataset.ovr;
-    if (key === 'extra') CL.overrides.extraIncome = v || 0;
-    else { const [k, id] = key.split(':'); (k === 'income' ? CL.overrides.income : CL.overrides.fixed).set(id, v || 0); }
+    const id = key.split(':')[1]; CL.overrides.fixed.set(id, v || 0);
   }));
   $('btn-ovr-done').onclick = () => closeRenderStep2();
   $o.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 async function closeSaveStep2() {
   if (!CL || !CL.calc || !currentUid) return;
-  const { inc, fix, incomeSum, fixedSum, saving, cashNow, cashPrev, delta, variable, ev } = CL.calc;
-  const data = sanitize({ ym: CL.ym, income: inc.map(i => sanitize({ recId: i.recId || null, name: i.name, amount: i.amount })), extraIncome: Number(CL.overrides.extraIncome) || 0,
+  const { fix, incomeSum, fixedSum, saving, cashNow, cashPrev, delta, variable, ev } = CL.calc;
+  const data = sanitize({ ym: CL.ym, income: [], extraIncome: 0, incomeMemo: (CL.incomeMemo || '').trim() || null,
     fixed: fix.map(i => sanitize({ recId: i.recId || null, name: i.name, amount: i.amount, kind: i.kind || 'fixed' })),
     incomeSum, fixedSum, saving, cashNow, cashPrev, delta, variable, eventSpend: ev,
     closedAt: CL.cf?.closedAt ?? new Date().toISOString(), updatedAt: new Date().toISOString(), appVersion: APP_VERSION });
@@ -2613,7 +2616,7 @@ function renderSettings() {
   $('set-trash-list').innerHTML = [...trashA.map(a => `<div class="set-row inactive"><div class="n">${escapeHtml(a.name)}<small>계좌 · 삭제 ${escapeHtml(String(a.deletedAt).slice(0, 10))}</small></div><div class="acts"><button data-acc-restore="${escapeHtml(a.id)}" title="복원">↩</button><button data-acc-purge="${escapeHtml(a.id)}" title="영구삭제">✕</button></div></div>`),
     ...trashL.map(l => `<div class="set-row inactive"><div class="n">${escapeHtml(l.name)}<small>부채 · 삭제 ${escapeHtml(String(l.deletedAt).slice(0, 10))}</small></div><div class="acts"><button data-liab-restore="${escapeHtml(l.id)}" title="복원">↩</button><button data-liab-purge="${escapeHtml(l.id)}" title="영구삭제">✕</button></div></div>`)].join('') || `<div class="dim small" style="padding:8px 2px;">휴지통이 비어 있습니다</div>`;
   // 정기
-  const kinds = [['income', '수입'], ['fixed', '고정 지출'], ['event', '경조사']];
+  const kinds = [['fixed', '고정 지출'], ['event', '경조사'], ['income', '수입 (v2에서 미사용 — 수입은 마감 때 직접 입력, 삭제 권장)']];
   let rh = '';
   for (const [k, label] of kinds) { const list = recurring.filter(r => recKind(r) === k).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)); if (!list.length) continue;
     rh += `<div class="grp-label">${label} <span class="muted">${list.length}</span></div>` + list.map(r => `<div class="set-row"><div class="n">${escapeHtml(r.name)}<small>${r.month ? `매년 ${r.month}월` : '매월'}${!r.kind ? ' · 이전 버전 항목' : ''}</small></div><span class="v">${fmtNum(recAmount(r))}</span><div class="acts"><button data-rec-edit="${escapeHtml(r.id)}" title="편집">✎</button></div></div>`).join(''); }
@@ -2696,12 +2699,12 @@ let editingRecId = null;
 function openRecModal(id) {
   editingRecId = id; const r = id ? recurring.find(x => x.id === id) : null;
   $('rec-title').textContent = r ? '정기 항목 편집' : '정기 항목 추가';
-  const k = r ? recKind(r) : 'fixed'; $('rkind-income').checked = k === 'income'; $('rkind-fixed').checked = k === 'fixed'; $('rkind-event').checked = k === 'event';
+  const k = r ? recKind(r) : 'fixed'; $('rkind-fixed').checked = k !== 'event'; $('rkind-event').checked = k === 'event';
   $('rec-name').value = r?.name || ''; $('rec-amount').value = r ? fmtNum(recAmount(r)) : '';
   $('rec-month').innerHTML = '<option value="">매월</option>' + Array.from({ length: 12 }, (_, i) => `<option value="${i + 1}">매년 ${i + 1}월</option>`).join(''); $('rec-month').value = r?.month ? String(r.month) : '';
   $('btn-rec-delete').style.display = r ? '' : 'none'; recKindChanged(); openOv('ov-rec'); setTimeout(() => $('rec-name').focus(), 50);
 }
-function recKindChanged() { const k = document.querySelector('input[name="rec-kind"]:checked')?.value; if (k === 'event' && !$('rec-month').value) $('rec-month').value = String(monthOf(currentMonth)); $('rec-hint').textContent = k === 'income' ? '매달 마감 때 들어온 돈으로 자동 반영됩니다. 상여처럼 한 번만 들어오는 돈은 마감 확인 화면에서 "기타 수입"으로.' : k === 'event' ? '그 달 마감 때 고정 지출에 자동 포함됩니다. 적립은 기록하지 않습니다.' : '매달 마감 때 이 금액으로 자동 반영됩니다. 실제 결제액과의 차이는 변동 지출에 포함됩니다.'; }
+function recKindChanged() { const k = document.querySelector('input[name="rec-kind"]:checked')?.value; if (k === 'event' && !$('rec-month').value) $('rec-month').value = String(monthOf(currentMonth)); $('rec-hint').textContent = k === 'event' ? '그 달 마감 때 고정 지출에 자동 포함됩니다. 적립은 기록하지 않습니다.' : '매달 마감 때 이 금액으로 자동 반영됩니다. 실제 결제액과의 차이는 변동 지출에 포함됩니다.'; }
 document.querySelectorAll('input[name="rec-kind"]').forEach(r => r.addEventListener('change', recKindChanged));
 $('btn-add-rec').addEventListener('click', () => openRecModal(null));
 $('btn-rec-save').addEventListener('click', async () => {
