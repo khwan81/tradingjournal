@@ -1477,7 +1477,7 @@ html, body { overflow-x: hidden; }
           <button class="btn-s" id="btn-backup">백업 내려받기</button>
           <button class="btn-s" id="btn-restore">백업 복원</button>
           <input type="file" id="restore-file" accept="application/json" style="display:none;">
-          <button class="btn-danger" id="btn-reset">전체 초기화</button>
+          <button class="btn-danger" id="btn-reset">데이터 초기화</button>
         </div>
         <p class="note-line" id="backup-info"></p>
         <p class="note-line" style="margin-top:6px;" id="legacy-info"></p>
@@ -2772,13 +2772,13 @@ $('restore-file').addEventListener('change', async e => {
   } catch (err) { console.error(err); await appAlert('복원 실패: ' + (err.message || err)); }
 });
 $('btn-reset').addEventListener('click', async () => {
-  const word = await appPrompt({ title: '전체 초기화', label: '"초기화"를 입력하세요', hint: 'Finance의 마감·결산·정기·이벤트 데이터를 모두 삭제합니다. 공유 계좌 마스터는 남습니다. 되돌릴 수 없습니다.' });
+  const word = await appPrompt({ title: '데이터 초기화', label: '"초기화"를 입력하세요', hint: '마감·결산(잔고)·이벤트 기록을 모두 삭제합니다. 계좌·부채·정기 항목·환율·현금 버팀 설정은 그대로 남습니다. 되돌릴 수 없습니다.' });
   if (word !== '초기화') { if (word != null) showToast('취소됨'); return; }
   try {
-    const cols = [P.monthly(), P.monLiab(), P.cashflow(), P.recurring(), P.tags(), P.txs(), P.liabs()]; let n = 0;
+    const cols = [P.monthly(), P.monLiab(), P.cashflow(), P.tags(), P.txs()]; let n = 0;   // 마스터(계좌·부채·정기)와 설정은 유지
     for (const c of cols) { const s = await getDocs(c); for (let i = 0; i < s.docs.length; i += 400) { const b = writeBatch(db); s.docs.slice(i, i + 400).forEach(d => b.delete(d.ref)); await b.commit(); n += Math.min(400, s.docs.length - i); } }
-    await setDoc(P.settings(), { runwayTarget: 6, runwayWarn: 2, liabV2MigratedAt: new Date().toISOString(), appVersion: APP_VERSION, resetAt: new Date().toISOString() });
-    showToast(`초기화 완료 — ${n}개 삭제`);
+    await setDoc(P.settings(), { appVersion: APP_VERSION, resetAt: new Date().toISOString() }, { merge: true });
+    showToast(`초기화 완료 — ${n}개 삭제 · 계좌·부채·정기 항목은 유지`);
   } catch (e) { console.error(e); showToast('초기화 실패'); }
 });
 
