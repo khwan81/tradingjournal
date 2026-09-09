@@ -1118,6 +1118,10 @@ html, body { overflow-x: hidden; }
   font-variant-numeric: tabular-nums;
 }
 .cl-in.s { width: 84px; }
+.cl-wrap { position: relative; display: inline-flex; }
+.cl-wrap i { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); font-style: normal; font-size: var(--fs-xs); color: var(--text3); pointer-events: none; }
+.cl-wrap .cl-in { padding-left: 26px; }
+.cl-wrap .cl-in.s { width: 104px; }
 .cl-in:focus { outline: none; border-color: var(--accent); }
 .cl-in::placeholder { color: var(--text3); }
 .cl-in.auto { border-style: dashed; color: var(--text2); }
@@ -1245,7 +1249,8 @@ html, body { overflow-x: hidden; }
   .sv-table .c-dep { display: none; } /* 입출금 열 숨김 */
   .cl-row { flex-wrap: wrap; row-gap: 6px; }
   .cl-row .n { flex: 1 1 100%; }
-  .cl-in, .cl-in.s { flex: 1 1 0; width: auto; min-width: 0; }
+  .cl-wrap { flex: 1 1 0; min-width: 0; }
+  .cl-in, .cl-in.s, .cl-wrap .cl-in.s { flex: 1 1 0; width: auto; min-width: 0; }
   .toast { bottom: auto; top: calc(12px + env(safe-area-inset-top)); transform: translateX(-50%) translateY(-60px); }
   .toast.show { transform: translateX(-50%) translateY(0); }
   .form-row.cols-2 { grid-template-columns: 1fr; }
@@ -1765,6 +1770,17 @@ function fmtKo(n) {
 function fmtKoSigned(n) { const v = Math.round(Number(n) || 0); return v > 0 ? '+' + fmtKo(v) : fmtKo(v); }
 function fmtPct(r, d = 1) { const v = (Number(r) || 0) * 100; return `${v > 0 ? '+' : ''}${v.toFixed(d)}%`; }
 function fmtNative(n, cur) { const v = Number(n) || 0; return cur === 'JPY' || cur === 'KRW' ? Math.round(v).toLocaleString('ko-KR') : v.toLocaleString('ko-KR', { maximumFractionDigits: 4 }); }
+/* 입력 중 실시간 천단위 쉼표 (외화는 소수 4자리까지, KRW·JPY는 정수) */
+function fmtLive(el, cur = 'KRW') {
+  const raw = el.value; const neg = raw.trim().startsWith('-');
+  const t = raw.replace(/[^\d.]/g, ''); const parts = t.split('.');
+  const intPart = parts[0].replace(/^0+(?=\d)/, '');
+  const allowDec = !(cur === 'KRW' || cur === 'JPY');
+  const dec = allowDec && parts.length > 1 ? '.' + parts.slice(1).join('').slice(0, 4) : '';
+  el.value = (neg ? '-' : '') + (intPart ? Number(intPart).toLocaleString('ko-KR') : (dec ? '0' : '')) + dec;
+}
+const CUR_SIGN = { KRW: '₩', USD: '$', USDT: '₮', JPY: '¥' };
+function wrapIn(cur, inputHtml) { return `<span class="cl-wrap"><i>${CUR_SIGN[cur] || cur}</i>${inputHtml}</span>`; }
 function parseNum(s) { const t = String(s ?? '').replace(/[^\d.\-]/g, ''); if (t === '' || t === '-' || t === '.') return null; const v = Number(t); return Number.isFinite(v) ? v : null; }
 function todayIso() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
 function currentYm() { return todayIso().slice(0, 7); }
@@ -2397,20 +2413,20 @@ function closeRenderRows(full) {
       list.forEach(r => { const i = CL.rows.indexOf(r); const a = r.a; const fx = r.cur !== 'KRW';
         const sub = [fx ? `${r.cur} · 환율 <span id="cl-rate-${i}">${fmtNum(r.rate)}</span> <button data-fxreset="${i}" title="현재 환율로">↻</button>` : '', r.pv ? `${r.pv.ym === prevYm(CL.ym) ? '전월' : ymShort(r.pv.ym)} ${fmtNative(r.pv.balance, r.cur)}` : (a.trackPerformance ? '첫 입력 → 시작월' : '첫 입력'), a.noRevalue ? '재평가 안 함' : ''].filter(Boolean).join(' · ');
         html += `<div class="cl-row"><div class="n">${escapeHtml(a.name)} ${a.trackPerformance ? '<span class="badge trk">추적</span>' : ''}<small>${sub}</small></div>
-          <input class="cl-in ${a.trackPerformance ? 's' : ''} ${r.auto ? 'auto' : ''}" data-bal="${i}" inputmode="decimal" placeholder="${r.ex ? '비우면 삭제' : '잔고'}" value="${r.balance != null ? fmtNative(r.balance, r.cur) : ''}">
-          ${a.trackPerformance ? `<input class="cl-in s" data-dep="${i}" inputmode="decimal" placeholder="입출금" value="${r.deposit ? fmtNative(r.deposit, r.cur) : ''}" ${!r.pv && !r.ex?.deposit ? 'disabled title="시작월은 입출금 없음"' : ''}>` : ''}</div>`;
+          ${wrapIn(r.cur, `<input class="cl-in ${a.trackPerformance ? 's' : ''} ${r.auto ? 'auto' : ''}" data-bal="${i}" data-cur="${r.cur}" inputmode="decimal" placeholder="${r.ex ? '비우면 삭제' : '잔고'}" value="${r.balance != null ? fmtNative(r.balance, r.cur) : ''}">`)}
+          ${a.trackPerformance ? ((!r.pv && !r.ex?.deposit) ? `<span class="cl-wrap"><input class="cl-in s" disabled placeholder="시작월" title="첫 결산은 시작월 — 원금 = 잔고, 입출금 없음"></span>` : wrapIn(r.cur, `<input class="cl-in s" data-dep="${i}" data-cur="${r.cur}" inputmode="decimal" placeholder="입출금" value="${r.deposit ? fmtNative(r.deposit, r.cur) : ''}">`)) : ''}</div>`;
         if (a.trackPerformance) html += `<div class="cl-calc" id="cl-calc-${i}"></div>`;
       });
     }
     if (CL.liabRows.length) {
       html += `<div class="grp-label">부채</div>`;
-      CL.liabRows.forEach((r, i) => { html += `<div class="cl-row"><div class="n">${escapeHtml(r.l.name)}<small>${r.pv ? `${r.pv.ym === prevYm(CL.ym) ? '전월' : ymShort(r.pv.ym)} ${fmtNum(r.pv.balance)}` : '첫 입력'}</small></div><input class="cl-in" data-liab="${i}" inputmode="numeric" placeholder="${r.ex ? '비우면 삭제' : '잔고'}" value="${r.balance != null ? fmtNum(r.balance) : ''}"></div>`; });
+      CL.liabRows.forEach((r, i) => { html += `<div class="cl-row"><div class="n">${escapeHtml(r.l.name)}<small>${r.pv ? `${r.pv.ym === prevYm(CL.ym) ? '전월' : ymShort(r.pv.ym)} ${fmtNum(r.pv.balance)}` : '첫 입력'}</small></div>${wrapIn('KRW', `<input class="cl-in" data-liab="${i}" inputmode="numeric" placeholder="${r.ex ? '비우면 삭제' : '잔고'}" value="${r.balance != null ? fmtNum(r.balance) : ''}">`)}</div>`; });
     }
     if (!CL.rows.length && !CL.liabRows.length) html = `<div class="empty-state">계좌가 없습니다<div class="hint">설정 › 계좌 · 부채에서 먼저 추가하세요</div></div>`;
     $r.innerHTML = html;
-    $r.querySelectorAll('[data-bal]').forEach(el => el.addEventListener('input', () => { const i = +el.dataset.bal; CL.rows[i].balance = parseNum(el.value); CL.rows[i].auto = false; el.classList.remove('auto'); closeUpdatePreview(); }));
-    $r.querySelectorAll('[data-dep]').forEach(el => el.addEventListener('input', () => { const i = +el.dataset.dep; CL.rows[i].deposit = parseNum(el.value); closeUpdatePreview(); }));
-    $r.querySelectorAll('[data-liab]').forEach(el => el.addEventListener('input', () => { const i = +el.dataset.liab; CL.liabRows[i].balance = parseNum(el.value); closeUpdatePreview(); }));
+    $r.querySelectorAll('[data-bal]').forEach(el => el.addEventListener('input', () => { fmtLive(el, el.dataset.cur); const i = +el.dataset.bal; CL.rows[i].balance = parseNum(el.value); CL.rows[i].auto = false; el.classList.remove('auto'); closeUpdatePreview(); }));
+    $r.querySelectorAll('[data-dep]').forEach(el => el.addEventListener('input', () => { fmtLive(el, el.dataset.cur); const i = +el.dataset.dep; CL.rows[i].deposit = parseNum(el.value); closeUpdatePreview(); }));
+    $r.querySelectorAll('[data-liab]').forEach(el => el.addEventListener('input', () => { fmtLive(el); const i = +el.dataset.liab; CL.liabRows[i].balance = parseNum(el.value); closeUpdatePreview(); }));
     $r.querySelectorAll('[data-fxreset]').forEach(el => el.addEventListener('click', () => { const i = +el.dataset.fxreset; const r = CL.rows[i]; const now = fxRate(r.cur); if (!now) { showToast('현재 환율이 없습니다 — 설정에서 갱신'); return; } r.rate = now; $(`cl-rate-${i}`).textContent = fmtNum(now); closeUpdatePreview(); showToast(`${r.cur} 환율 ${fmtNum(now)} 적용`); }));
   }
   closeUpdatePreview();
@@ -2481,8 +2497,8 @@ function closeRenderStep2() {
   CL.calc = { fix, incomeSum, fixedSum, saving, cashNow, cashPrev, delta, variable, ev };
   const line = (n, s, a, cls = '', ex = '') => `<div class="cf-line ${ex}"><span class="n">${n}${s ? `<small>${s}</small>` : ''}</span><span class="a ${cls}">${a}</span></div>`;
   let html = `<div class="cf-line h"><span class="n">들어온 돈 <span class="badge">직접 입력</span></span><span class="a pos">${fmtSigned(incomeSum)}</span></div>
-  <div class="cl-row"><div class="n">급여<small>${CL.incomePrefilled && CL.salary != null ? `전월 ${fmtNum(CL.salary)} 기본 채움` : '이번 달 실수령'}</small></div><input class="cl-in" id="cl-salary" inputmode="numeric" placeholder="급여" value="${CL.salary != null ? fmtNum(CL.salary) : ''}"></div>
-  <div class="cl-row"><div class="n">기타<small>상여 · 환급 · 부업 등 (없으면 비움)</small></div><input class="cl-in" id="cl-extra" inputmode="numeric" placeholder="0" value="${CL.extra ? fmtNum(CL.extra) : ''}"></div>`;
+  <div class="cl-row"><div class="n">급여<small>${CL.incomePrefilled && CL.salary != null ? `전월 ${fmtNum(CL.salary)} 기본 채움` : '이번 달 실수령'}</small></div>${wrapIn('KRW', `<input class="cl-in" id="cl-salary" inputmode="numeric" placeholder="급여" value="${CL.salary != null ? fmtNum(CL.salary) : ''}">`)}</div>
+  <div class="cl-row"><div class="n">기타<small>상여 · 환급 · 부업 등 (없으면 비움)</small></div>${wrapIn('KRW', `<input class="cl-in" id="cl-extra" inputmode="numeric" placeholder="0" value="${CL.extra ? fmtNum(CL.extra) : ''}">`)}</div>`;
   html += `<div class="cf-line tap" data-ov="fixed"><span class="n">고정 지출 <span class="badge auto">정기 ${fix.length}건</span><small>${fix.map(i => `${escapeHtml(i.name)}${i.kind === 'event' ? `(${monthOf(ym)}월)` : ''}`).join(' · ') || '정기 지출 없음'}</small></span><span class="a neg">−${fmtNum(fixedSum)}</span><span class="chev">›</span></div>`;
   html += line(`저축·투자로 이동 <span class="badge auto">결산</span>`, '추적 자산 입출금 합', '−' + fmtNum(saving), 'neg');
   html += line('현금성 잔고 변화', cashNow != null && cashPrev != null ? `${fmtNum(cashNow)} − ${fmtNum(cashPrev)}` : cashNow == null ? '현금성 계좌 잔고 없음' : `전월(${ymLabel(prevYm(ym))}) 잔고 없음`, delta != null ? fmtSigned(delta) : '—', delta != null ? (delta >= 0 ? 'pos' : 'neg') : '');
@@ -2490,7 +2506,7 @@ function closeRenderStep2() {
   $('close-summary').innerHTML = html;
   $('close-summary').querySelectorAll('[data-ov]').forEach(el => el.addEventListener('click', () => closeOpenOverride(el.dataset.ov)));
   let incTimer = null;
-  const onInc = (id, key) => $(id).addEventListener('input', e => { CL[key] = parseNum(e.target.value); CL.incomePrefilled = false; clearTimeout(incTimer); incTimer = setTimeout(() => { const focusId = document.activeElement?.id; closeRenderStep2(); const el = focusId ? $(focusId) : null; if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }, 700); });
+  const onInc = (id, key) => $(id).addEventListener('input', e => { fmtLive(e.target); CL[key] = parseNum(e.target.value); CL.incomePrefilled = false; clearTimeout(incTimer); incTimer = setTimeout(() => { const focusId = document.activeElement?.id; closeRenderStep2(); const el = focusId ? $(focusId) : null; if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }, 700); });
   onInc('cl-salary', 'salary'); onInc('cl-extra', 'extra');
   // 경고
   const p = cashflowFor(prevYm(ym)); let warn = '';
@@ -2506,11 +2522,11 @@ function closeOpenOverride(kind) {
   const { fix } = closeItems(); const list = fix;
   const $o = $('close-override'); $o.style.display = '';
   let html = `<div class="card"><div class="card-head" style="font-size:var(--fs-md);">이번 달만 수정 <small>고정 지출 · 정기 마스터는 바뀌지 않음</small></div>`;
-  html += list.map(i => `<div class="cl-row"><div class="n">${escapeHtml(i.name)}${i.kind === 'event' ? ' <span class="badge">경조사</span>' : ''}<small>기준 ${fmtNum(recurring.find(r => r.id === i.recId)?.amount ?? i.amount)}${i.amount === 0 ? ' · 이번 달 0 (제외)' : ''}</small></div><input class="cl-in" data-ovr="${kind}:${escapeHtml(i.recId || i.name)}" inputmode="numeric" value="${fmtNum(i.amount)}"></div>`).join('');
+  html += list.map(i => `<div class="cl-row"><div class="n">${escapeHtml(i.name)}${i.kind === 'event' ? ' <span class="badge">경조사</span>' : ''}<small>기준 ${fmtNum(recurring.find(r => r.id === i.recId)?.amount ?? i.amount)}${i.amount === 0 ? ' · 이번 달 0 (제외)' : ''}</small></div>${wrapIn('KRW', `<input class="cl-in" data-ovr="${kind}:${escapeHtml(i.recId || i.name)}" inputmode="numeric" value="${fmtNum(i.amount)}">`)}</div>`).join('');
   html += `<div style="display:flex; justify-content:flex-end; margin-top:10px;"><button class="btn-s" id="btn-ovr-done">적용</button></div></div>`;
   $o.innerHTML = html;
   $o.querySelectorAll('[data-ovr]').forEach(el => el.addEventListener('input', () => {
-    const v = parseNum(el.value); const key = el.dataset.ovr;
+    fmtLive(el); const v = parseNum(el.value); const key = el.dataset.ovr;
     const id = key.split(':')[1]; CL.overrides.fixed.set(id, v || 0);
   }));
   $('btn-ovr-done').onclick = () => closeRenderStep2();
