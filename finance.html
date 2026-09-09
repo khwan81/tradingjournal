@@ -2268,13 +2268,13 @@ function renderSavings() {
       <div class="sv-table"><span class="th">계좌</span><span class="th r">잔고</span><span class="th r c-dep">입출금</span><span class="th r">월수익</span><span class="th r">누적%</span>`;
     for (const { a, d } of list) {
       const cr = Number(d.cumReturnRate) || 0; const mr = Number(d.monthlyReturn) || 0;
-      html += `<span class="td name">${escapeHtml(a.name)}${d.isStart ? '<small>시작</small>' : ''}${d.currency !== 'KRW' ? `<small>${escapeHtml(d.currency)} ${fmtNative(d.balance, d.currency)}</small>` : ''}</span><span class="td r">${fmtNum(d.balanceKrw)}</span><span class="td r c-dep ${!d.isStart && d.depositKrw ? '' : 'muted'}">${d.isStart ? '—' : fmtSigned(d.depositKrw)}</span><span class="td r ${mr >= 0 ? 'pos' : 'neg'}">${d.isStart ? '—' : fmtSigned(mr)}</span><span class="td r ${cr >= 0 ? 'pos' : 'neg'}">${fmtPct(cr)}</span>`;
+      html += `<span class="td name">${escapeHtml(a.name)}${d.isStart ? '<small>시작</small>' : ''}${d.currency !== 'KRW' ? `<small>${escapeHtml(d.currency)} ${fmtNative(d.balance, d.currency)}</small>` : ''}</span><span class="td r">${fmtNum(d.balanceKrw)}</span><span class="td r c-dep ${!d.isStart && d.depositKrw ? '' : 'muted'}">${d.isStart ? '—' : fmtSigned(d.depositKrw)}<small class="muted" style="display:block;font-size:var(--fs-xs);">원금 ${fmtKo(d.principal)}</small></span><span class="td r ${mr >= 0 ? 'pos' : 'neg'}">${d.isStart ? '—' : fmtSigned(mr)}</span><span class="td r ${cr >= 0 ? 'pos' : 'neg'}">${fmtPct(cr)}</span>`;
     }
     html += `</div></div>`;
   }
   const missing = trackedAccs.filter(a => !m.get(a.id));
   if (missing.length) html += `<p class="note-line">미입력: ${missing.map(a => escapeHtml(a.name)).join(' · ')}</p>`;
-  html += `<p class="note-line">시작월은 첫 입력이 자동. 원금 = 시작 잔고 + 이후 입출금 누적. 수정하면 이후 월이 자동 재계산됩니다.</p>`;
+  html += `<p class="note-line">시작월은 첫 입력이 자동 — 마감에서 원금(그때까지 넣은 돈)을 따로 넣을 수 있고, 비우면 잔고와 같음. 원금 = 시작 원금 + 이후 입출금 누적. 수정하면 이후 월이 자동 재계산됩니다.</p>`;
   $b.innerHTML = html;
 }
 
@@ -2388,7 +2388,9 @@ function openCloseModal(ym) {
     const cur = a.currency || 'KRW';
     const rate = cur === 'KRW' ? 1 : (ex?.fxRate ?? (pv && a.noRevalue ? pv.fxRate : null) ?? fxRate(cur));
     let balance = ex ? ex.balance : (a.noRevalue && pv ? pv.balance : null);
-    return { a, ex, pv, cur, rate, balance, deposit: ex ? ex.deposit : null, auto: !ex && a.noRevalue && pv != null,
+    const isStartRow = !pv || !!ex?.isStart;
+    const prnPrefill = isStartRow && ex ? (ex.principalNative != null ? ex.principalNative : (ex.principal != null && ex.fxRate ? ex.principal / ex.fxRate : ex.principal)) : null;
+    return { a, ex, pv, cur, rate, balance, deposit: ex ? ex.deposit : null, principal: (prnPrefill != null && ex && Math.abs(prnPrefill - ex.balance) > 1e-6) ? prnPrefill : null, auto: !ex && a.noRevalue && pv != null,
       group: isCashAcc(a) ? 'cash' : a.trackPerformance ? 'track' : 'other' };
   });
   const liabRows = liveLiabs().map(l => { const ex = liabDoc(ym, l.id); const pv = (() => { let b = null; for (const d of liabAll) if (d.liabKey === l.id && d.ym < ym && (!b || d.ym > b.ym)) b = d; return b; })(); return { l, ex, pv, balance: ex ? ex.balance : null }; });
@@ -2418,7 +2420,12 @@ function closeRenderRows(full) {
         const sub = [fx ? `${r.cur} · 환율 <span id="cl-rate-${i}">${fmtNum(r.rate)}</span> <button data-fxreset="${i}" title="현재 환율로">↻</button>` : '', r.pv ? `${r.pv.ym === prevYm(CL.ym) ? '전월' : ymShort(r.pv.ym)} ${fmtNative(r.pv.balance, r.cur)}` : (a.trackPerformance ? '첫 입력 → 시작월' : '첫 입력'), a.noRevalue ? '재평가 안 함' : ''].filter(Boolean).join(' · ');
         html += `<div class="cl-row"><div class="n">${escapeHtml(a.name)} ${a.trackPerformance ? '<span class="badge trk">추적</span>' : ''}<small>${sub}</small></div>
           ${wrapIn(r.cur, `<input class="cl-in ${r.auto ? 'auto' : ''}" data-bal="${i}" data-cur="${r.cur}" inputmode="decimal" placeholder="${r.ex ? '비우면 삭제' : '잔고'}" value="${r.balance != null ? fmtNative(r.balance, r.cur) : ''}">`)}</div>`;
-        if (a.trackPerformance) html += `<div class="cl-row sub"><div class="n">입출금 <span class="muted">이번 달 넣은(+)·뺀(−) 돈</span></div>${(!r.pv && !r.ex?.deposit) ? `<span class="cl-wrap"><input class="cl-in" disabled placeholder="시작월 — 없음" title="첫 결산은 시작월 — 원금 = 잔고, 입출금 없음"></span>` : wrapIn(r.cur, `<input class="cl-in" data-dep="${i}" data-cur="${r.cur}" inputmode="decimal" placeholder="0" value="${r.deposit ? fmtNative(r.deposit, r.cur) : ''}">`)}</div>`;
+        if (a.trackPerformance) {
+          const isStartRow = !r.pv || !!r.ex?.isStart;
+          html += isStartRow
+            ? `<div class="cl-row sub"><div class="n">원금 <span class="badge">시작월</span> <span class="muted">지금까지 넣은 돈 누적 · 비우면 잔고와 같음</span></div>${wrapIn(r.cur, `<input class="cl-in" data-prn="${i}" data-cur="${r.cur}" inputmode="decimal" placeholder="= 잔고" value="${r.principal != null ? fmtNative(r.principal, r.cur) : ''}">`)}</div>`
+            : `<div class="cl-row sub"><div class="n">입출금 <span class="muted">이번 달 넣은(+)·뺀(−) 돈 · 원금에 누적</span></div>${wrapIn(r.cur, `<input class="cl-in" data-dep="${i}" data-cur="${r.cur}" inputmode="decimal" placeholder="0" value="${r.deposit ? fmtNative(r.deposit, r.cur) : ''}">`)}</div>`;
+        }
         if (a.trackPerformance) html += `<div class="cl-calc" id="cl-calc-${i}"></div>`;
       });
     }
@@ -2430,6 +2437,7 @@ function closeRenderRows(full) {
     $r.innerHTML = html;
     $r.querySelectorAll('[data-bal]').forEach(el => el.addEventListener('input', () => { fmtLive(el, el.dataset.cur); const i = +el.dataset.bal; CL.rows[i].balance = parseNum(el.value); CL.rows[i].auto = false; el.classList.remove('auto'); closeUpdatePreview(); }));
     $r.querySelectorAll('[data-dep]').forEach(el => el.addEventListener('input', () => { fmtLive(el, el.dataset.cur); const i = +el.dataset.dep; CL.rows[i].deposit = parseNum(el.value); closeUpdatePreview(); }));
+    $r.querySelectorAll('[data-prn]').forEach(el => el.addEventListener('input', () => { fmtLive(el, el.dataset.cur); const i = +el.dataset.prn; CL.rows[i].principal = parseNum(el.value); closeUpdatePreview(); }));
     $r.querySelectorAll('[data-liab]').forEach(el => el.addEventListener('input', () => { fmtLive(el); const i = +el.dataset.liab; CL.liabRows[i].balance = parseNum(el.value); closeUpdatePreview(); }));
     $r.querySelectorAll('[data-fxreset]').forEach(el => el.addEventListener('click', () => { const i = +el.dataset.fxreset; const r = CL.rows[i]; const now = fxRate(r.cur); if (!now) { showToast('현재 환율이 없습니다 — 설정에서 갱신'); return; } r.rate = now; $(`cl-rate-${i}`).textContent = fmtNum(now); closeUpdatePreview(); showToast(`${r.cur} 환율 ${fmtNum(now)} 적용`); }));
   }
@@ -2440,7 +2448,7 @@ function rowCalc(r) {
   const balKrw = rowKrw(r); if (balKrw == null) return null;
   const depNative = Number(r.deposit) || 0; const depKrw = r.cur === 'KRW' ? depNative : Math.round(depNative * r.rate);
   const pv = r.pv; const isStart = !pv || (r.ex && r.ex.isStart);
-  if (isStart) return { isStart: true, balKrw, depKrw: 0, depNative: 0, principal: balKrw, principalNative: r.balance, monthlyReturn: 0, cumReturn: 0, cumReturnRate: 0 };
+  if (isStart) { const prnN = r.principal != null ? Number(r.principal) : r.balance; const principal = r.cur === 'KRW' ? Math.round(prnN) : Math.round(prnN * r.rate); const cumReturn = balKrw - principal; return { isStart: true, balKrw, depKrw: 0, depNative: 0, principal, principalNative: prnN, monthlyReturn: 0, cumReturn, cumReturnRate: principal > 0 ? cumReturn / principal : 0 }; }
   const prevPrn = Number(pv.principal) || 0; const prevPrnN = pv.principalNative != null ? Number(pv.principalNative) : (r.cur !== 'KRW' && pv.fxRate ? prevPrn / Number(pv.fxRate) : prevPrn);
   const principal = prevPrn + depKrw; const principalNative = r.cur !== 'KRW' ? prevPrnN + depNative : principal;
   const monthlyReturn = balKrw - (Number(pv.balanceKrw) || 0) - depKrw; const cumReturn = balKrw - principal;
@@ -2450,7 +2458,7 @@ function closeUpdatePreview() {
   if (!CL) return;
   let assets = 0, liab = 0, cash = 0, hasCash = false;
   CL.rows.forEach((r, i) => { const k = rowKrw(r); if (k != null) { assets += k; if (r.group === 'cash') { cash += k; hasCash = true; } }
-    if (r.a.trackPerformance) { const c = rowCalc(r); const $c = $(`cl-calc-${i}`); if ($c) $c.innerHTML = c ? (c.isStart ? `<span>잔고 ${fmtNum(c.balKrw)}</span><span>시작월 · 원금 = 잔고</span>` : `<span>잔고 ${fmtNum(c.balKrw)}</span><span>월수익 <b class="${c.monthlyReturn >= 0 ? 'pos' : 'neg'}">${fmtSigned(c.monthlyReturn)}</b></span><span>누적 <b class="${c.cumReturnRate >= 0 ? 'pos' : 'neg'}">${fmtPct(c.cumReturnRate)}</b></span>`) : ''; } });
+    if (r.a.trackPerformance) { const c = rowCalc(r); const $c = $(`cl-calc-${i}`); if ($c) $c.innerHTML = c ? (c.isStart ? `<span>잔고 ${fmtNum(c.balKrw)}</span><span>원금 ${fmtNum(c.principal)}</span><span>시작 누적 <b class="${c.cumReturnRate >= 0 ? 'pos' : 'neg'}">${fmtSigned(c.cumReturn)} (${fmtPct(c.cumReturnRate)})</b></span>` : `<span>잔고 ${fmtNum(c.balKrw)}</span><span>원금 ${fmtNum(c.principal)}</span><span>월수익 <b class="${c.monthlyReturn >= 0 ? 'pos' : 'neg'}">${fmtSigned(c.monthlyReturn)}</b></span><span>누적 <b class="${c.cumReturnRate >= 0 ? 'pos' : 'neg'}">${fmtPct(c.cumReturnRate)}</b></span>`) : ''; } });
   CL.liabRows.forEach(r => { if (r.balance != null) liab += Math.round(r.balance); });
   CL.preview = { assets, liab, net: assets - liab, cash: hasCash ? cash : null };
   const exRe = CL.rows.filter(r => isRealEstate(r.a)).reduce((s, r) => s + (rowKrw(r) || 0), 0);
