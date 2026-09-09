@@ -1151,6 +1151,14 @@ html, body { overflow-x: hidden; }
 .cl-warn.danger { background: var(--red-bg); }
 .cl-warn.danger b { color: var(--red); }
 
+/* 고정 지출 상세 */
+.fx-list { padding: 4px 4px 2px; display: flex; flex-direction: column; gap: 2px; }
+.fx-item { position: relative; display: grid; grid-template-columns: 1fr 34px auto; gap: 8px; align-items: center; padding: 7px 8px 9px; font-size: var(--fs-md); border-radius: 6px; }
+.fx-item .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fx-item .pct { font-size: var(--fs-xs); text-align: right; }
+.fx-item .amt { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.fx-item .bar { position: absolute; left: 8px; bottom: 3px; height: 2px; border-radius: 1px; background: color-mix(in srgb, var(--red) 55%, transparent); max-width: calc(100% - 16px); }
+
 /* 재무상태표 */
 .bs-grid { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; font-size: var(--fs-md); }
 .bs-grid .h { grid-column: 1 / -1; color: var(--text2); font-size: var(--fs-xs); padding-top: 8px; }
@@ -2175,14 +2183,12 @@ function renderCfSheet() {
     $('btn-cf-empty-close').onclick = () => openCloseModal(ym); return;
   }
   const line = (n, s, a, cls = '', extra = '') => `<div class="cf-line ${extra}"><span class="n">${n}${s ? `<small>${s}</small>` : ''}</span><span class="a ${cls}">${a}</span></div>`;
-  const fixedNames = cf.fixed.map(i => `${escapeHtml(i.name)}${i.kind === 'event' ? `(${monthOf(ym)}월)` : ''}`).join(' · ');
   const evs = tagsInMonth(ym);
   let html = `<div class="card cf-sheet">`;
   html += line('들어온 돈', '', '+' + fmtNum(cf.incomeSum), 'pos', 'h');
   html += line('급여', '마감 때 직접 입력', fmtNum(cf.salary));
   if (cf.extra) html += line('기타 수입', '상여 · 환급 · 부업 등', fmtNum(cf.extra));
-  html += line(`고정 지출 <span class="badge auto">정기 ${cf.fixed.length}건</span>`, '', '−' + fmtNum(cf.fixedSum), 'neg', 'h');
-  html += line(fixedNames || '<span class="dim">정기 지출 없음</span>', '기준 금액 · 실제 차이는 변동에 포함', '');
+  html += fixedListHtml(cf, ym);
   html += line('변동 지출 <span class="badge auto">역산</span>', '', cf.variable != null ? '−' + fmtNum(cf.variable) : '—', 'neg', 'h');
   for (const e of evs) html += line(`<span class="ev-color" style="background:${escapeHtml(e.tag.color || '#5b8def')}"></span>${escapeHtml(e.tag.name)}`, `그중 · ${monthOf(ym)}월분`, fmtNum(e.sum));
   html += line('<span class="dim">나머지</span>', '카드·현금 · 고정 차액 포함', cf.rest != null ? fmtNum(cf.rest) : '—', 'dim');
@@ -2194,6 +2200,24 @@ function renderCfSheet() {
   $b.innerHTML = html;
 }
 
+/* 고정 지출 상세 — 금액순 정렬 · 비중 바 · 전월比 변경 표시 · 접기 */
+let fixedCollapsed = false;
+function fixedListHtml(cf, ym) {
+  const prev = cfByYm.get(prevYm(ym)); const prevMap = new Map((prev?.fixed || []).map(i => [i.recId || i.name, Number(i.amount) || 0]));
+  const items = cf.fixed.slice().sort((a, b) => (Number(b.amount) || 0) - (Number(a.amount) || 0));
+  const tot = cf.fixedSum || 1; const inc = cf.incomeSum || 0;
+  const events = items.filter(i => i.kind === 'event').length;
+  let html = `<div class="cf-line h tap" data-fixed-toggle><span class="n">고정 지출 <span class="badge auto">정기 ${items.length}건${events ? ` · 경조사 ${events}` : ''}</span>${inc ? `<small>수입의 ${Math.round(tot / inc * 100)}%${prev ? ` · 전월 ${fmtSigned(tot - (prev.fixedSum != null ? Number(prev.fixedSum) : (prev.fixed || []).reduce((x, i) => x + (Number(i.amount) || 0), 0)))}` : ''}</small>` : ''}</span><span class="a neg">−${fmtNum(tot)}</span><span class="chev">${fixedCollapsed ? '▸' : '▾'}</span></div>`;
+  if (!items.length) return html + `<div class="cf-line"><span class="n dim">정기 지출 없음 — 설정 › 정기 수입·지출에서 등록</span></div>`;
+  if (fixedCollapsed) return html;
+  html += `<div class="fx-list">` + items.map(i => {
+    const amt = Number(i.amount) || 0; const key = i.recId || i.name; const pv = prevMap.has(key) ? prevMap.get(key) : null;
+    const delta = pv != null && pv !== amt ? amt - pv : null; const isNew = prev && !prevMap.has(key) && i.kind !== 'event';
+    const base = i.recId ? recurring.find(r => r.id === i.recId) : null; const overridden = base && Number(base.amount) !== amt && i.kind !== 'event';
+    return `<div class="fx-item"><span class="nm">${escapeHtml(i.name)}${i.kind === 'event' ? ` <span class="badge">경조사 ${monthOf(ym)}월</span>` : ''}${isNew ? ' <span class="badge auto">신규</span>' : ''}${overridden ? ` <span class="badge">이번 달만</span>` : ''}${delta != null ? ` <span class="${delta > 0 ? 'neg' : 'pos'} small">${delta > 0 ? '▲' : '▼'} ${fmtNum(Math.abs(delta))}</span>` : ''}</span><span class="pct muted">${Math.round(amt / tot * 100)}%</span><span class="amt">${fmtNum(amt)}</span><i class="bar" style="width:${Math.max(amt / tot * 100, 1)}%"></i></div>`;
+  }).join('') + `</div><p class="note-line" style="margin:4px 4px 8px;">기준 금액 · 실제 결제액과의 차이는 변동에 포함 · 헤더 탭하면 접기</p>`;
+  return html;
+}
 function renderCfEvents() {
   const ym = currentMonth; const evs = tagsInMonth(ym);
   const $b = $('cf-events-body');
@@ -2860,6 +2884,7 @@ $('btn-close-save').addEventListener('click', async () => {
 });
 /* 전역 클릭 위임 */
 document.addEventListener('click', e => {
+  const ft = e.target.closest('[data-fixed-toggle]'); if (ft) { fixedCollapsed = !fixedCollapsed; renderCfSheet(); return; }
   const t = e.target.closest('[data-todo],[data-goto],[data-goto-ym],[data-tag-edit],[data-spend-edit],[data-spend-new],[data-acc-edit],[data-liab-edit],[data-rec-edit],[data-acc-restore],[data-acc-purge],[data-liab-restore],[data-liab-purge]'); if (!t) return;
   const d = t.dataset;
   if (d.todo !== undefined) { const f = homeTodoActs[+d.todo]; if (f) f(); return; }
