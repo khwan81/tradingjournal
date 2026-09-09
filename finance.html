@@ -2389,8 +2389,9 @@ function openCloseModal(ym) {
     const rate = cur === 'KRW' ? 1 : (ex?.fxRate ?? (pv && a.noRevalue ? pv.fxRate : null) ?? fxRate(cur));
     let balance = ex ? ex.balance : (a.noRevalue && pv ? pv.balance : null);
     const isStartRow = !pv || !!ex?.isStart;
-    const prnPrefill = isStartRow && ex ? (ex.principalNative != null ? ex.principalNative : (ex.principal != null && ex.fxRate ? ex.principal / ex.fxRate : ex.principal)) : null;
-    return { a, ex, pv, cur, rate, balance, deposit: ex ? ex.deposit : null, principal: (prnPrefill != null && ex && Math.abs(prnPrefill - ex.balance) > 1e-6) ? prnPrefill : null, auto: !ex && a.noRevalue && pv != null,
+    // 시작월 원금은 통화 무관 원화로 입력 (principal KRW 저장, principalNative는 환율로 역산)
+    const prnPrefill = isStartRow && ex && ex.principal != null ? Number(ex.principal) : null;
+    return { a, ex, pv, cur, rate, balance, deposit: ex ? ex.deposit : null, principal: (prnPrefill != null && ex && Math.abs(prnPrefill - (Number(ex.balanceKrw) || 0)) > 0.5) ? prnPrefill : null, auto: !ex && a.noRevalue && pv != null,
       group: isCashAcc(a) ? 'cash' : a.trackPerformance ? 'track' : 'other' };
   });
   const liabRows = liveLiabs().map(l => { const ex = liabDoc(ym, l.id); const pv = (() => { let b = null; for (const d of liabAll) if (d.liabKey === l.id && d.ym < ym && (!b || d.ym > b.ym)) b = d; return b; })(); return { l, ex, pv, balance: ex ? ex.balance : null }; });
@@ -2423,7 +2424,7 @@ function closeRenderRows(full) {
         if (a.trackPerformance) {
           const isStartRow = !r.pv || !!r.ex?.isStart;
           html += isStartRow
-            ? `<div class="cl-row sub"><div class="n">원금 <span class="badge">시작월</span> <span class="muted">지금까지 넣은 돈 누적 · 비우면 잔고와 같음</span></div>${wrapIn(r.cur, `<input class="cl-in" data-prn="${i}" data-cur="${r.cur}" inputmode="decimal" placeholder="= 잔고" value="${r.principal != null ? fmtNative(r.principal, r.cur) : ''}">`)}</div>`
+            ? `<div class="cl-row sub"><div class="n">원금 <span class="badge">시작월</span> <span class="muted">지금까지 넣은 돈 누적 · ${r.cur !== 'KRW' ? '원화로 입력 · ' : ''}비우면 잔고와 같음</span></div>${wrapIn('KRW', `<input class="cl-in" data-prn="${i}" data-cur="KRW" inputmode="numeric" placeholder="= 잔고 ${r.cur !== 'KRW' ? '(원화)' : ''}" value="${r.principal != null ? fmtNum(r.principal) : ''}">`)}</div>`
             : `<div class="cl-row sub"><div class="n">입출금 <span class="muted">이번 달 넣은(+)·뺀(−) 돈 · 원금에 누적</span></div>${wrapIn(r.cur, `<input class="cl-in" data-dep="${i}" data-cur="${r.cur}" inputmode="decimal" placeholder="0" value="${r.deposit ? fmtNative(r.deposit, r.cur) : ''}">`)}</div>`;
         }
         if (a.trackPerformance) html += `<div class="cl-calc" id="cl-calc-${i}"></div>`;
@@ -2448,7 +2449,7 @@ function rowCalc(r) {
   const balKrw = rowKrw(r); if (balKrw == null) return null;
   const depNative = Number(r.deposit) || 0; const depKrw = r.cur === 'KRW' ? depNative : Math.round(depNative * r.rate);
   const pv = r.pv; const isStart = !pv || (r.ex && r.ex.isStart);
-  if (isStart) { const prnN = r.principal != null ? Number(r.principal) : r.balance; const principal = r.cur === 'KRW' ? Math.round(prnN) : Math.round(prnN * r.rate); const cumReturn = balKrw - principal; return { isStart: true, balKrw, depKrw: 0, depNative: 0, principal, principalNative: prnN, monthlyReturn: 0, cumReturn, cumReturnRate: principal > 0 ? cumReturn / principal : 0 }; }
+  if (isStart) { const principal = r.principal != null ? Math.round(Number(r.principal)) : balKrw; const prnN = r.cur === 'KRW' ? principal : (r.rate ? principal / r.rate : r.balance); const cumReturn = balKrw - principal; return { isStart: true, balKrw, depKrw: 0, depNative: 0, principal, principalNative: prnN, monthlyReturn: 0, cumReturn, cumReturnRate: principal > 0 ? cumReturn / principal : 0 }; }
   const prevPrn = Number(pv.principal) || 0; const prevPrnN = pv.principalNative != null ? Number(pv.principalNative) : (r.cur !== 'KRW' && pv.fxRate ? prevPrn / Number(pv.fxRate) : prevPrn);
   const principal = prevPrn + depKrw; const principalNative = r.cur !== 'KRW' ? prevPrnN + depNative : principal;
   const monthlyReturn = balKrw - (Number(pv.balanceKrw) || 0) - depKrw; const cumReturn = balKrw - principal;
