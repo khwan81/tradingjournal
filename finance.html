@@ -1106,6 +1106,9 @@ html, body { overflow-x: hidden; }
   border-bottom: 1px solid var(--border);
 }
 .cl-row .n { flex: 1; min-width: 0; font-size: var(--fs-md); }
+.cl-row.sub { border-bottom: none; padding-top: 0; }
+.cl-row.sub .n { padding-left: 12px; color: var(--text2); font-size: var(--fs-sm); }
+.cl-row.sub .n .muted { font-size: var(--fs-xs); margin-left: 4px; }
 .cl-row .n small { display: block; color: var(--text3); font-size: var(--fs-xs); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cl-row .n small button {
   background: none; border: none; color: var(--accent); font-family: var(--font);
@@ -1249,6 +1252,7 @@ html, body { overflow-x: hidden; }
   .sv-table .c-dep { display: none; } /* 입출금 열 숨김 */
   .cl-row { flex-wrap: wrap; row-gap: 6px; }
   .cl-row .n { flex: 1 1 100%; }
+  .cl-row.sub .n { padding-left: 0; }
   .cl-wrap { flex: 1 1 0; min-width: 0; }
   .cl-in, .cl-in.s, .cl-wrap .cl-in.s { flex: 1 1 0; width: auto; min-width: 0; }
   .toast { bottom: auto; top: calc(12px + env(safe-area-inset-top)); transform: translateX(-50%) translateY(-60px); }
@@ -2413,8 +2417,8 @@ function closeRenderRows(full) {
       list.forEach(r => { const i = CL.rows.indexOf(r); const a = r.a; const fx = r.cur !== 'KRW';
         const sub = [fx ? `${r.cur} · 환율 <span id="cl-rate-${i}">${fmtNum(r.rate)}</span> <button data-fxreset="${i}" title="현재 환율로">↻</button>` : '', r.pv ? `${r.pv.ym === prevYm(CL.ym) ? '전월' : ymShort(r.pv.ym)} ${fmtNative(r.pv.balance, r.cur)}` : (a.trackPerformance ? '첫 입력 → 시작월' : '첫 입력'), a.noRevalue ? '재평가 안 함' : ''].filter(Boolean).join(' · ');
         html += `<div class="cl-row"><div class="n">${escapeHtml(a.name)} ${a.trackPerformance ? '<span class="badge trk">추적</span>' : ''}<small>${sub}</small></div>
-          ${wrapIn(r.cur, `<input class="cl-in ${a.trackPerformance ? 's' : ''} ${r.auto ? 'auto' : ''}" data-bal="${i}" data-cur="${r.cur}" inputmode="decimal" placeholder="${r.ex ? '비우면 삭제' : '잔고'}" value="${r.balance != null ? fmtNative(r.balance, r.cur) : ''}">`)}
-          ${a.trackPerformance ? ((!r.pv && !r.ex?.deposit) ? `<span class="cl-wrap"><input class="cl-in s" disabled placeholder="시작월" title="첫 결산은 시작월 — 원금 = 잔고, 입출금 없음"></span>` : wrapIn(r.cur, `<input class="cl-in s" data-dep="${i}" data-cur="${r.cur}" inputmode="decimal" placeholder="입출금" value="${r.deposit ? fmtNative(r.deposit, r.cur) : ''}">`)) : ''}</div>`;
+          ${wrapIn(r.cur, `<input class="cl-in ${r.auto ? 'auto' : ''}" data-bal="${i}" data-cur="${r.cur}" inputmode="decimal" placeholder="${r.ex ? '비우면 삭제' : '잔고'}" value="${r.balance != null ? fmtNative(r.balance, r.cur) : ''}">`)}</div>`;
+        if (a.trackPerformance) html += `<div class="cl-row sub"><div class="n">입출금 <span class="muted">이번 달 넣은(+)·뺀(−) 돈</span></div>${(!r.pv && !r.ex?.deposit) ? `<span class="cl-wrap"><input class="cl-in" disabled placeholder="시작월 — 없음" title="첫 결산은 시작월 — 원금 = 잔고, 입출금 없음"></span>` : wrapIn(r.cur, `<input class="cl-in" data-dep="${i}" data-cur="${r.cur}" inputmode="decimal" placeholder="0" value="${r.deposit ? fmtNative(r.deposit, r.cur) : ''}">`)}</div>`;
         if (a.trackPerformance) html += `<div class="cl-calc" id="cl-calc-${i}"></div>`;
       });
     }
