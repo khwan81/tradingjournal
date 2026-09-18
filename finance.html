@@ -1514,6 +1514,7 @@ html, body { overflow-x: hidden; }
     <div class="modal-body">
       <div class="steps"><span class="on" id="step-1"></span><span id="step-2"></span></div>
       <div class="close-pane active" id="close-pane-1">
+        <div id="close-draft-note" class="cl-warn" style="display:none;"></div>
         <div id="close-rows"></div>
         <div class="cl-foot">
           <div class="nw"><small id="close-nw-sub">순자산 미리보기</small><b id="close-nw">—</b></div>
@@ -2430,6 +2431,41 @@ function renderAnTr() {
  * 마감 모달 (2스텝: 잔고 → 확인)
  * ══════════════════════════════════════════════════════ */
 let CL = null;   // { ym, rows: [...], liabRows: [...], step, overrides, saved1 }
+/* ── 마감 임시 저장(draft) — 모달이 실수로 닫혀도 입력값 유지 (localStorage, uid+ym 키) ── */
+const draftKey = ym => `fin:closeDraft:${currentUid}:${ym}`;
+function closeSaveDraft() {
+  if (!CL || !currentUid) return;
+  try {
+    const d = { savedAt: new Date().toISOString(),
+      rows: CL.rows.map(r => ({ id: r.a.id, balance: r.balance, deposit: r.deposit, principal: r.principal, rate: r.rate })),
+      liabs: CL.liabRows.map(r => ({ id: r.l.id, balance: r.balance })),
+      salary: CL.salary, extra: CL.extra, incomePrefilled: CL.incomePrefilled, overrides: [...CL.overrides.fixed.entries()] };
+    localStorage.setItem(draftKey(CL.ym), JSON.stringify(d));
+  } catch (e) {}
+}
+function closeLoadDraft(ym) { try { const v = localStorage.getItem(draftKey(ym)); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
+function closeClearDraft(ym) { try { localStorage.removeItem(draftKey(ym)); } catch (e) {} }
+/* draft를 CL에 덧입힘 — 값이 하나라도 바뀌면 true */
+function closeApplyDraft(d) {
+  if (!CL || !d) return false; let changed = false;
+  const same = (a, b) => (a ?? null) === (b ?? null);
+  for (const dr of d.rows || []) { const r = CL.rows.find(x => x.a.id === dr.id); if (!r) continue;
+    if (!same(r.balance, dr.balance) || !same(r.deposit, dr.deposit) || !same(r.principal, dr.principal)) changed = true;
+    r.balance = dr.balance ?? null; r.deposit = dr.deposit ?? null; r.principal = dr.principal ?? null; if (dr.rate) r.rate = dr.rate; if (r.balance != null) r.auto = false; }
+  for (const dl of d.liabs || []) { const r = CL.liabRows.find(x => x.l.id === dl.id); if (!r) continue; if (!same(r.balance, dl.balance)) changed = true; r.balance = dl.balance ?? null; }
+  if (d.salary !== undefined && !same(CL.salary, d.salary)) { CL.salary = d.salary; changed = true; }
+  if (d.extra !== undefined && !same(CL.extra, d.extra)) { CL.extra = d.extra; changed = true; }
+  if (d.incomePrefilled === false) CL.incomePrefilled = false;
+  for (const [k, v] of d.overrides || []) { if (CL.overrides.fixed.get(k) !== v) changed = true; CL.overrides.fixed.set(k, v); }
+  return changed;
+}
+function closeShowDraftNote(d) {
+  const $n = $('close-draft-note'); if (!d) { $n.style.display = 'none'; return; }
+  const t = new Date(d.savedAt); const when = isNaN(t) ? '' : ` (${t.getMonth() + 1}/${t.getDate()} ${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')})`;
+  $n.innerHTML = `<b>저장하지 않은 입력을 복원했어요${when}</b>이어서 입력하거나, 마감 전 값으로 되돌릴 수 있어요. <button class="btn-s subtle" id="btn-draft-discard" style="height:24px;margin-left:6px;">되돌리기</button>`;
+  $n.style.display = '';
+  $('btn-draft-discard').onclick = () => { const ym = CL.ym; closeClearDraft(ym); openCloseModal(ym); showToast('임시 입력을 지웠습니다'); };
+}
 function openCloseModal(ym) {
   if (!ready.acc || !ready.mon) { showToast('데이터 로드 중…'); return; }
   const prev = prevYm(ym);
@@ -2451,6 +2487,8 @@ function openCloseModal(ym) {
   if (cf) { for (const i of cf.fixed || []) if (i.recId) CL.overrides.fixed.set(i.recId, Number(i.amount) || 0); }
   $('close-title').textContent = `${ymLabel(ym)} 마감${cf ? ' 수정' : ''}`;
   if (rows.some(r => r.cur !== 'KRW' && !r.rate)) showToast('환율이 없는 통화가 있어요 — 설정 › 환율에서 먼저 넣어주세요');
+  const draft = closeLoadDraft(ym);
+  if (draft && closeApplyDraft(draft)) closeShowDraftNote(draft); else { closeShowDraftNote(null); if (draft) closeClearDraft(ym); }
   showCloseStep(1); closeRenderRows(true); openOv('ov-close');
 }
 function showCloseStep(n) {
@@ -2486,11 +2524,11 @@ function closeRenderRows(full) {
     }
     if (!CL.rows.length && !CL.liabRows.length) html = `<div class="empty-state">계좌가 없습니다<div class="hint">설정 › 계좌 · 부채에서 먼저 추가하세요</div></div>`;
     $r.innerHTML = html;
-    $r.querySelectorAll('[data-bal]').forEach(el => el.addEventListener('input', () => { fmtLive(el, el.dataset.cur); const i = +el.dataset.bal; CL.rows[i].balance = parseNum(el.value); CL.rows[i].auto = false; el.classList.remove('auto'); closeUpdatePreview(); }));
-    $r.querySelectorAll('[data-dep]').forEach(el => el.addEventListener('input', () => { fmtLive(el, el.dataset.cur); const i = +el.dataset.dep; CL.rows[i].deposit = parseNum(el.value); closeUpdatePreview(); }));
-    $r.querySelectorAll('[data-prn]').forEach(el => el.addEventListener('input', () => { fmtLive(el, el.dataset.cur); const i = +el.dataset.prn; CL.rows[i].principal = parseNum(el.value); closeUpdatePreview(); }));
-    $r.querySelectorAll('[data-liab]').forEach(el => el.addEventListener('input', () => { fmtLive(el); const i = +el.dataset.liab; CL.liabRows[i].balance = parseNum(el.value); closeUpdatePreview(); }));
-    $r.querySelectorAll('[data-fxreset]').forEach(el => el.addEventListener('click', () => { const i = +el.dataset.fxreset; const r = CL.rows[i]; const now = fxRate(r.cur); if (!now) { showToast('현재 환율이 없습니다 — 설정에서 갱신'); return; } r.rate = now; $(`cl-rate-${i}`).textContent = fmtNum(now); closeUpdatePreview(); showToast(`${r.cur} 환율 ${fmtNum(now)} 적용`); }));
+    $r.querySelectorAll('[data-bal]').forEach(el => el.addEventListener('input', () => { fmtLive(el, el.dataset.cur); const i = +el.dataset.bal; CL.rows[i].balance = parseNum(el.value); CL.rows[i].auto = false; el.classList.remove('auto'); closeUpdatePreview(); closeSaveDraft(); }));
+    $r.querySelectorAll('[data-dep]').forEach(el => el.addEventListener('input', () => { fmtLive(el, el.dataset.cur); const i = +el.dataset.dep; CL.rows[i].deposit = parseNum(el.value); closeUpdatePreview(); closeSaveDraft(); }));
+    $r.querySelectorAll('[data-prn]').forEach(el => el.addEventListener('input', () => { fmtLive(el, el.dataset.cur); const i = +el.dataset.prn; CL.rows[i].principal = parseNum(el.value); closeUpdatePreview(); closeSaveDraft(); }));
+    $r.querySelectorAll('[data-liab]').forEach(el => el.addEventListener('input', () => { fmtLive(el); const i = +el.dataset.liab; CL.liabRows[i].balance = parseNum(el.value); closeUpdatePreview(); closeSaveDraft(); }));
+    $r.querySelectorAll('[data-fxreset]').forEach(el => el.addEventListener('click', () => { const i = +el.dataset.fxreset; const r = CL.rows[i]; const now = fxRate(r.cur); if (!now) { showToast('현재 환율이 없습니다 — 설정에서 갱신'); return; } r.rate = now; $(`cl-rate-${i}`).textContent = fmtNum(now); closeUpdatePreview(); closeSaveDraft(); showToast(`${r.cur} 환율 ${fmtNum(now)} 적용`); }));
   }
   closeUpdatePreview();
 }
@@ -2570,7 +2608,7 @@ function closeRenderStep2() {
   $('close-summary').innerHTML = html;
   $('close-summary').querySelectorAll('[data-ov]').forEach(el => el.addEventListener('click', () => closeOpenOverride(el.dataset.ov)));
   let incTimer = null;
-  const onInc = (id, key) => $(id).addEventListener('input', e => { fmtLive(e.target); CL[key] = parseNum(e.target.value); CL.incomePrefilled = false; clearTimeout(incTimer); incTimer = setTimeout(() => { const focusId = document.activeElement?.id; closeRenderStep2(); const el = focusId ? $(focusId) : null; if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }, 700); });
+  const onInc = (id, key) => $(id).addEventListener('input', e => { fmtLive(e.target); CL[key] = parseNum(e.target.value); CL.incomePrefilled = false; closeSaveDraft(); clearTimeout(incTimer); incTimer = setTimeout(() => { const focusId = document.activeElement?.id; closeRenderStep2(); const el = focusId ? $(focusId) : null; if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }, 700); });
   onInc('cl-salary', 'salary'); onInc('cl-extra', 'extra');
   // 경고
   const p = cashflowFor(prevYm(ym)); let warn = '';
@@ -2591,7 +2629,7 @@ function closeOpenOverride(kind) {
   $o.innerHTML = html;
   $o.querySelectorAll('[data-ovr]').forEach(el => el.addEventListener('input', () => {
     fmtLive(el); const v = parseNum(el.value); const key = el.dataset.ovr;
-    const id = key.split(':')[1]; CL.overrides.fixed.set(id, v || 0);
+    const id = key.split(':')[1]; CL.overrides.fixed.set(id, v || 0); closeSaveDraft();
   }));
   $('btn-ovr-done').onclick = () => closeRenderStep2();
   $o.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -2863,6 +2901,7 @@ $('btn-reset').addEventListener('click', async () => {
     const cols = [P.monthly(), P.monLiab(), P.cashflow(), P.tags(), P.txs()]; let n = 0;   // 마스터(계좌·부채·정기)와 설정은 유지
     for (const c of cols) { const s = await getDocs(c); for (let i = 0; i < s.docs.length; i += 400) { const b = writeBatch(db); s.docs.slice(i, i + 400).forEach(d => b.delete(d.ref)); await b.commit(); n += Math.min(400, s.docs.length - i); } }
     await setDoc(P.settings(), { appVersion: APP_VERSION, resetAt: new Date().toISOString() }, { merge: true });
+    try { Object.keys(localStorage).filter(k => k.startsWith(`fin:closeDraft:${currentUid}:`)).forEach(k => localStorage.removeItem(k)); } catch (e) {}   // 마감 임시 입력도 정리
     showToast(`초기화 완료 — ${n}개 삭제 · 계좌·부채·정기 항목은 유지`);
   } catch (e) { console.error(e); showToast('초기화 실패'); }
 });
@@ -2903,14 +2942,14 @@ $('an-tr-mode-pct').addEventListener('click', () => { anTrPct = true; renderAnTr
 /* 마감 모달 버튼 */
 $('btn-close-next').addEventListener('click', async () => {
   if (!CL) return; const $b = $('btn-close-next'); $b.disabled = true; $b.textContent = '저장 중…';
-  try { const r = await closeSaveStep1(); showToast(`잔고 ${r.nSet}건 저장${r.nDel ? ` · ${r.nDel}건 삭제` : ''}${r.chained ? ` · 이후 ${r.chained}개월 재계산` : ''}`); CL.cashPrev = cashBal(prevYm(CL.ym)); closeRenderStep2(); showCloseStep(2); }
+  try { const r = await closeSaveStep1(); showToast(`잔고 ${r.nSet}건 저장${r.nDel ? ` · ${r.nDel}건 삭제` : ''}${r.chained ? ` · 이후 ${r.chained}개월 재계산` : ''}`); CL.cashPrev = cashBal(prevYm(CL.ym)); $('close-draft-note').style.display = 'none'; closeSaveDraft(); closeRenderStep2(); showCloseStep(2); }
   catch (e) { console.error(e); showToast('저장 실패: ' + (e.message || e.code)); }
   finally { $b.disabled = false; $b.textContent = '다음 ›'; }
 });
 $('btn-close-back').addEventListener('click', () => { if (!CL) return; CL.rows.forEach(r => { r.ex = monDoc(CL.ym, r.a.id) || r.ex; }); showCloseStep(1); closeRenderRows(true); });
 $('btn-close-save').addEventListener('click', async () => {
   if (!CL) return; const $b = $('btn-close-save'); $b.disabled = true;
-  try { await closeSaveStep2(); closeOv('ov-close'); showToast(`${ymLabel(CL.ym)} 마감 저장됨`); const ym = CL.ym; CL = null; if (currentMonth !== ym) { currentMonth = ym; } go(activeTab === 'settings' ? 'home' : activeTab); }
+  try { await closeSaveStep2(); closeClearDraft(CL.ym); closeOv('ov-close'); showToast(`${ymLabel(CL.ym)} 마감 저장됨`); const ym = CL.ym; CL = null; if (currentMonth !== ym) { currentMonth = ym; } go(activeTab === 'settings' ? 'home' : activeTab); }
   catch (e) { console.error(e); showToast('저장 실패: ' + (e.message || e.code)); }
   finally { $b.disabled = false; }
 });
