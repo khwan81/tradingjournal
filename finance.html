@@ -1945,20 +1945,22 @@ function savingMove(ym) {
 function totals(ym, { exRe = false } = {}) {
   const m = monByYm.get(ym), l = liabByYm.get(ym);
   let assets = 0, liab = 0, fin = 0, re = 0, mortgage = 0, tracked = 0, trackedPrn = 0, trackedRet = 0, cur = 0, non = 0;
+  const trk = { cur: { v: 0, prn: 0, ret: 0 }, non: { v: 0, prn: 0, ret: 0 } };   // 추적 자산 유동/비유동 소계
   if (m) for (const d of m.values()) {
     const a = accById(d.accountId); const v = Number(d.balanceKrw) || 0;
     const isRe = isRealEstate(a, d);
     if (isRe) re += v; else fin += v;
     if (!(exRe && isRe)) assets += v;
     if ((d.financeType || a?.financeType) === 'nonCurrent') non += v; else cur += v;
-    if (d.trackPerformance) { tracked += v; trackedPrn += Number(d.principal) || 0; trackedRet += Number(d.monthlyReturn) || 0; }
+    if (d.trackPerformance) { tracked += v; trackedPrn += Number(d.principal) || 0; trackedRet += Number(d.monthlyReturn) || 0;
+      const g = ((d.financeType || a?.financeType) === 'nonCurrent') ? trk.non : trk.cur; g.v += v; g.prn += Number(d.principal) || 0; g.ret += Number(d.monthlyReturn) || 0; }
   }
   if (l) for (const d of l.values()) {
     const v = Number(d.balanceKrw) || 0; const isMg = isMortgage(liabById(d.liabKey), d);
     if (isMg) mortgage += v;
     if (!(exRe && isMg)) liab += v;   // 부동산 제외 = 부동산 자산 + 담보 부채 모두 제외
   }
-  return { assets, liab, net: assets - liab, fin, re, mortgage, tracked, trackedPrn, trackedRet, cur, non, has: !!(m || l) };
+  return { assets, liab, net: assets - liab, fin, re, mortgage, tracked, trackedPrn, trackedRet, trk, cur, non, has: !!(m || l) };
 }
 /* 정기 마스터 → 그 달 자동 항목 */
 function recItemsFor(ym, kind) {
@@ -2156,9 +2158,14 @@ function renderHome() {
   renderHomeDonut(ymData);
   // 추적 자산
   if (T && T.tracked) {
-    const rate = T.trackedPrn ? (T.tracked - T.trackedPrn) / T.trackedPrn : 0;
-    $('home-tracked').innerHTML = [['평가액', fmtKo(T.tracked), ''], [`${monthOf(ymData)}월 수익`, fmtKoSigned(T.trackedRet), T.trackedRet >= 0 ? 'pos' : 'neg'], ['누적', fmtPct(rate), rate >= 0 ? 'pos' : 'neg']]
-      .map(k => `<div class="kpi-card" style="padding:8px 10px;"><div class="label">${k[0]}</div><div class="value ${k[2]}" style="font-size:var(--fs-lg);">${k[1]}</div></div>`).join('');
+    // 유동(주식·코인 등) / 비유동(연금 등) 분리 — 한쪽만 있으면 그 줄만
+    const row = g => { const rate = g.prn ? (g.v - g.prn) / g.prn : 0; return [['평가액', fmtKo(g.v), ''], [`${monthOf(ymData)}월 수익`, fmtKoSigned(g.ret), g.ret >= 0 ? 'pos' : 'neg'], ['누적', fmtPct(rate), rate >= 0 ? 'pos' : 'neg']]
+      .map(k => `<div class="kpi-card" style="padding:8px 10px;"><div class="label">${k[0]}</div><div class="value ${k[2]}" style="font-size:var(--fs-lg);">${k[1]}</div></div>`).join(''); };
+    const head = t => `<div class="small muted" style="grid-column:1/-1;margin-top:4px;">${t}</div>`;
+    const groups = [['유동', T.trk.cur], ['비유동 · 연금 등', T.trk.non]].filter(([, g]) => g.v);
+    const totRate = T.trackedPrn ? (T.tracked - T.trackedPrn) / T.trackedPrn : 0;
+    $('home-tracked').innerHTML = groups.map(([t, g]) => (groups.length > 1 ? head(t) : '') + row(g)).join('')
+      + (groups.length > 1 ? `<div class="small dim" style="grid-column:1/-1;margin-top:2px;">합계 ${fmtKo(T.tracked)} · ${monthOf(ymData)}월 ${fmtKoSigned(T.trackedRet)} · 누적 ${fmtPct(totRate)}</div>` : '');
   } else $('home-tracked').innerHTML = `<div class="dim small" style="grid-column:1/-1;">추적 자산 없음 — 계좌 설정에서 "수익률 추적"을 켜세요</div>`;
   // 이벤트
   const evs = tagsInMonth(ym);
