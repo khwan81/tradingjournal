@@ -2132,7 +2132,9 @@ function renderHome() {
   const rw = ymData ? runwayFor(ymData) : null;
   const fixedM = fixedMonthly(), incomeM = incomeMonthly();
   const kpi = [];
-  kpi.push({ label: '순자산', value: T ? fmtKo(T.net) : '—', cls: T ? (T.net >= 0 ? 'pos' : 'neg') : '', sub: T ? `${ymData !== ym ? ymLabel(ymData) + ' 기준 · ' : Tp ? `전월 ${fmtKoSigned(T.net - Tp.net)} · ` : ''}${(T.re || T.mortgage) ? `부동산 제외 ${fmtKo(Tx.net)}` : ''}` : '결산 데이터 없음' });
+  // 홈 순자산: 큰 값 = 부동산·담보부채 제외, 작은 글씨 = 부동산 포함 (부동산 없으면 전체 순자산 하나만)
+  { const hasRe = !!(T && (T.re || T.mortgage)); const main = T ? (hasRe ? Tx.net : T.net) : 0; const prevMain = Tp ? (hasRe ? totals(prevData, { exRe: true }).net : Tp.net) : null;
+    kpi.push({ label: '순자산', value: T ? fmtKo(main) : '—', cls: T ? (main >= 0 ? 'pos' : 'neg') : '', sub: T ? [ymData !== ym ? ymLabel(ymData) + ' 기준' : (prevMain != null ? `전월 ${fmtKoSigned(main - prevMain)}` : ''), hasRe ? `부동산 포함 ${fmtKo(T.net)}` : ''].filter(Boolean).join(' · ') : '결산 데이터 없음' }); }
   kpi.push({ label: '남은 현금', value: cf.closed && cf.delta != null ? fmtKoSigned(cf.delta) : '마감 후', cls: cf.closed && cf.delta != null ? (cf.delta >= 0 ? 'pos' : 'neg') : 'muted', sub: (() => { const p = cashflowFor(prevYm(ym)); return p.closed && p.delta != null ? `${monthOf(prevYm(ym))}월 ${fmtKoSigned(p.delta)}` : '현금성 잔고 변화'; })() });
   kpi.push({ label: '현금 버팀', value: rw != null ? `${rw.toFixed(1)}개월` : '—', cls: rw == null ? 'muted' : rw < runwayWarn() ? 'neg' : rw < runwayTarget() ? 'warn-text' : 'pos', sub: rw != null ? `현금성 ${fmtKo(cashBal(ymData))} ÷ 고정 ${fmtKo(fixedM)} · 목표 ${runwayTarget()}` : fixedM ? '현금성 잔고 없음' : '정기 지출을 등록하세요' });
   if (cf.closed && cf.variable != null) kpi.push({ label: '변동 지출', value: fmtKo(cf.variable), cls: '', sub: (() => { const p = cashflowFor(prevYm(ym)); const pr = p.variable ? Math.round((cf.variable / p.variable - 1) * 100) : null; return `${pr != null ? `전월 ${pr > 0 ? '+' : ''}${pr}% · ` : ''}이벤트 ${fmtKo(cf.ev)}`; })() });
