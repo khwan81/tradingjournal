@@ -2277,11 +2277,21 @@ function renderBs() {
   if (!m && !l) { $b.innerHTML = `<div class="empty-state">${ymLabel(ym)} 결산 데이터가 없습니다<div class="hint" style="margin:6px 0 12px;">마감에서 잔고를 입력하면 재무상태표가 만들어집니다</div><button class="btn-p" id="btn-bs-empty-close">${monthOf(ym)}월 마감 시작</button></div>`; $('btn-bs-empty-close').onclick = () => openCloseModal(ym); return; }
   const T = totals(ym), Tx = totals(ym, { exRe: true });
   const prevData = latestYmWithData(prevYm(ym)); const Tp = prevData ? totals(prevData) : null;
-  const rw = runwayFor(ym);
+  // 재무상태 KPI = 구조 지표 (홈의 순자산·현금 버팀과 역할 분리): 변화 · 부채비율 · 유동성
+  const hasRe = !!(T.re || T.mortgage);
+  const liabCur = l ? [...l.values()].reduce((s, d) => s + ((d.type || liabById(d.liabKey)?.type || 'current') === 'current' ? (Number(d.balanceKrw) || 0) : 0), 0) : 0;
+  const liabNon = T.liab - liabCur;
+  const liqNet = T.cur - liabCur;                       // 유동 순자산 = 유동 자산 − 유동 부채
+  const ratio = T.assets ? T.liab / T.assets * 100 : null;
+  const ratioP = Tp && Tp.assets ? Tp.liab / Tp.assets * 100 : null;
+  const ratioX = hasRe && Tx.assets ? Tx.liab / Tx.assets * 100 : null;
+  const dNet = Tp ? T.net - Tp.net : null;
   const kpi = [
-    { l: '순자산', v: fmtKo(T.net), c: T.net >= 0 ? 'pos' : 'neg', s: Tp ? `전월 ${fmtKoSigned(T.net - Tp.net)}` : '' },
-    { l: '자산', v: fmtKo(T.assets), c: '', s: T.re ? `금융 ${fmtKo(T.fin)} · 부동산 ${fmtKo(T.re)}` : `유동 ${fmtKo(T.cur)}` },
-    { l: '현금 버팀', v: rw != null ? `${rw.toFixed(1)}개월` : '—', c: rw == null ? 'muted' : rw < runwayWarn() ? 'neg' : rw < runwayTarget() ? 'warn-text' : 'pos', s: T.assets ? `부채비율 ${Math.round(T.liab / T.assets * 100)}%${(T.re || T.mortgage) ? ` · 부동산 제외 순자산 ${fmtKo(Tx.net)}` : ''}` : '' },
+    { l: '순자산 변화', v: dNet != null ? fmtKoSigned(dNet) : '—', c: dNet == null ? 'muted' : dNet >= 0 ? 'pos' : 'neg',
+      s: Tp ? `자산 ${fmtKoSigned(T.assets - Tp.assets)} · 부채 ${fmtKoSigned(-(T.liab - Tp.liab))}${prevData !== prevYm(ym) ? ` (${ymShort(prevData)} 대비)` : ''}` : '이전 결산 없음' },
+    { l: '부채비율', v: ratio != null ? `${Math.round(ratio)}%` : '—', c: ratio == null ? 'muted' : ratio >= 60 ? 'neg' : ratio >= 40 ? 'warn-text' : 'pos',
+      s: [ratioP != null ? `전월 ${Math.round(ratioP)}%` : '', ratioX != null ? `담보 제외 ${Math.round(ratioX)}%` : ''].filter(Boolean).join(' · ') || '부채 ÷ 자산' },
+    { l: '유동 순자산', v: fmtKo(liqNet), c: liqNet >= 0 ? 'pos' : 'neg', s: `유동 ${fmtKo(T.cur)}${liabCur ? ` − 유동부채 ${fmtKo(liabCur)}` : ''} · 비유동 ${fmtKo(T.non)}${liabNon ? ` / ${fmtKo(liabNon)}` : ''}` },
   ];
   let html = `<div class="kpi-grid k3">${kpi.map(k => `<div class="kpi-card"><div class="label">${k.l}</div><div class="value ${k.c}">${k.v}</div><div class="sub">${escapeHtml(k.s)}</div></div>`).join('')}</div>`;
   const rows = m ? [...m.values()] : [];
@@ -2296,6 +2306,8 @@ function renderBs() {
   const lrows = l ? [...l.values()] : [];
   html += `<span class="h">부채</span>${lrows.length ? lrows.map(d => { const lb = liabById(d.liabKey); const meta = !lb ? '삭제됨' : lb.deletedAt ? '휴지통' : ''; return `<span class="r">${escapeHtml(d.name || lb?.name || d.liabKey)}${meta ? `<span class="meta"> (${meta})</span>` : ''}</span><span class="v">${fmtNum(d.balanceKrw)}</span>`; }).join('') : '<span class="r dim">부채 없음</span><span class="v"></span>'}`;
   html += `<span class="r sum">부채 합계</span><span class="v sum neg">${T.liab ? '−' + fmtNum(T.liab) : fmtNum(0)}</span>`;   // 합계만 − 표기 (개별 부채 행은 그대로)
+  html += `<span class="r sum">순자산</span><span class="v sum ${T.net >= 0 ? 'pos' : 'neg'}">${fmtNum(T.net)}</span>`;
+  if (hasRe) html += `<span class="r meta">부동산 · 담보 부채 제외</span><span class="v meta">${fmtNum(Tx.net)}</span>`;
   html += `</div></div>`;
   html += `<p class="note-line">현금 기준 — 카드 미지급금은 잡지 않습니다. 현금 버팀 = 현금성 자산 ÷ 월 고정지출.</p>`;
   $b.innerHTML = html;
