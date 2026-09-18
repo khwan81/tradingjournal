@@ -2292,10 +2292,10 @@ function renderBs() {
   html += `<div class="card"><div class="bs-grid">`;
   html += `<span class="h">자산 · 유동</span>${cur.map(rowHtml).join('') || '<span class="r dim">—</span><span class="v"></span>'}`;
   html += `<span class="h">자산 · 비유동</span>${non.map(rowHtml).join('') || '<span class="r dim">—</span><span class="v"></span>'}`;
-  html += `<span class="r sum">자산 합계</span><span class="v sum">${fmtNum(T.assets)}</span>`;
+  html += `<span class="r sum">자산 합계</span><span class="v sum pos">${fmtNum(T.assets)}</span>`;
   const lrows = l ? [...l.values()] : [];
   html += `<span class="h">부채</span>${lrows.length ? lrows.map(d => { const lb = liabById(d.liabKey); const meta = !lb ? '삭제됨' : lb.deletedAt ? '휴지통' : ''; return `<span class="r">${escapeHtml(d.name || lb?.name || d.liabKey)}${meta ? `<span class="meta"> (${meta})</span>` : ''}</span><span class="v">${fmtNum(d.balanceKrw)}</span>`; }).join('') : '<span class="r dim">부채 없음</span><span class="v"></span>'}`;
-  html += `<span class="r sum">부채 합계</span><span class="v sum">${fmtNum(T.liab)}</span>`;
+  html += `<span class="r sum">부채 합계</span><span class="v sum neg">${T.liab ? '−' + fmtNum(T.liab) : fmtNum(0)}</span>`;   // 합계만 − 표기 (개별 부채 행은 그대로)
   html += `</div></div>`;
   html += `<p class="note-line">현금 기준 — 카드 미지급금은 잡지 않습니다. 현금 버팀 = 현금성 자산 ÷ 월 고정지출.</p>`;
   $b.innerHTML = html;
