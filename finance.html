@@ -1629,6 +1629,7 @@ html, body { overflow-x: hidden; }
           <input type="radio" name="liab-type" id="ltype-non" value="nonCurrent" checked><label for="ltype-non">비유동</label>
         </div>
       </div>
+      <div class="toggle-row"><div class="toggle-label"><div class="main">부동산 담보 대출</div><div class="sub">주담대 등. "부동산 제외" 순자산 계산 때 이 부채도 함께 제외됩니다</div></div><div class="toggle" id="liab-mortgage-toggle"></div></div>
     </div>
     <div class="modal-foot">
       <button class="btn-danger grow" id="btn-liab-delete" style="display:none;">휴지통</button>
@@ -1709,7 +1710,7 @@ import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, onSnapshot, q
  *   - 변동 지출 = 수입 − 고정 − 저축·투자 이동 − 현금성 잔고 변화 (역산)
  *   - monthly / monthly_liab SSOT · 비정규화 박제 · 체인 재계산 유지
  * ══════════════════════════════════════════════════════ */
-const APP_VERSION = 'v2.0';
+const APP_VERSION = 'v2.0-1';
 
 const firebaseConfig = {
   apiKey:            "AIzaSyAeRy5MJOLLF3uK_xaN_UeIt5p1kA_KwEA",
@@ -1888,6 +1889,8 @@ const liveAccounts = () => accounts.filter(isLive).sort((a, b) => (a.sortOrder |
 const liveLiabs = () => liabilities.filter(l => l.active !== false && !l.deletedAt).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 function isCashAcc(a) { if (!a) return false; if (a.cashflowInclude === true) return true; if (a.cashflowInclude === false) return false; return !a.trackPerformance && CASH_DEFAULT_CATS.includes(a.financeCategory); }
 function isRealEstate(a, docLike) { const cat = a?.financeCategory ?? docLike?.financeCategory; return cat === '부동산'; }
+/* 부동산 담보 부채(주담대) — 박제 doc에 mortgage 없으면(구 데이터) 마스터 값 폴백 */
+function isMortgage(l, docLike) { const v = docLike?.mortgage ?? l?.mortgage; return v === true; }
 function fxRate(cur) { if (!cur || cur === 'KRW') return 1; return Number(sharedSettings?.fxRates?.[cur]) || 0; }
 function accMeta(accId, d) {
   const a = accById(accId);
@@ -1941,7 +1944,7 @@ function savingMove(ym) {
 }
 function totals(ym, { exRe = false } = {}) {
   const m = monByYm.get(ym), l = liabByYm.get(ym);
-  let assets = 0, liab = 0, fin = 0, re = 0, tracked = 0, trackedPrn = 0, trackedRet = 0, cur = 0, non = 0;
+  let assets = 0, liab = 0, fin = 0, re = 0, mortgage = 0, tracked = 0, trackedPrn = 0, trackedRet = 0, cur = 0, non = 0;
   if (m) for (const d of m.values()) {
     const a = accById(d.accountId); const v = Number(d.balanceKrw) || 0;
     const isRe = isRealEstate(a, d);
@@ -1950,8 +1953,12 @@ function totals(ym, { exRe = false } = {}) {
     if ((d.financeType || a?.financeType) === 'nonCurrent') non += v; else cur += v;
     if (d.trackPerformance) { tracked += v; trackedPrn += Number(d.principal) || 0; trackedRet += Number(d.monthlyReturn) || 0; }
   }
-  if (l) for (const d of l.values()) liab += Number(d.balanceKrw) || 0;
-  return { assets, liab, net: assets - liab, fin, re, tracked, trackedPrn, trackedRet, cur, non, has: !!(m || l) };
+  if (l) for (const d of l.values()) {
+    const v = Number(d.balanceKrw) || 0; const isMg = isMortgage(liabById(d.liabKey), d);
+    if (isMg) mortgage += v;
+    if (!(exRe && isMg)) liab += v;   // 부동산 제외 = 부동산 자산 + 담보 부채 모두 제외
+  }
+  return { assets, liab, net: assets - liab, fin, re, mortgage, tracked, trackedPrn, trackedRet, cur, non, has: !!(m || l) };
 }
 /* 정기 마스터 → 그 달 자동 항목 */
 function recItemsFor(ym, kind) {
@@ -2125,7 +2132,7 @@ function renderHome() {
   const rw = ymData ? runwayFor(ymData) : null;
   const fixedM = fixedMonthly(), incomeM = incomeMonthly();
   const kpi = [];
-  kpi.push({ label: '순자산', value: T ? fmtKo(T.net) : '—', cls: T ? (T.net >= 0 ? 'pos' : 'neg') : '', sub: T ? `${ymData !== ym ? ymLabel(ymData) + ' 기준 · ' : Tp ? `전월 ${fmtKoSigned(T.net - Tp.net)} · ` : ''}${T.re ? `부동산 제외 ${fmtKo(Tx.net)}` : ''}` : '결산 데이터 없음' });
+  kpi.push({ label: '순자산', value: T ? fmtKo(T.net) : '—', cls: T ? (T.net >= 0 ? 'pos' : 'neg') : '', sub: T ? `${ymData !== ym ? ymLabel(ymData) + ' 기준 · ' : Tp ? `전월 ${fmtKoSigned(T.net - Tp.net)} · ` : ''}${(T.re || T.mortgage) ? `부동산 제외 ${fmtKo(Tx.net)}` : ''}` : '결산 데이터 없음' });
   kpi.push({ label: '남은 현금', value: cf.closed && cf.delta != null ? fmtKoSigned(cf.delta) : '마감 후', cls: cf.closed && cf.delta != null ? (cf.delta >= 0 ? 'pos' : 'neg') : 'muted', sub: (() => { const p = cashflowFor(prevYm(ym)); return p.closed && p.delta != null ? `${monthOf(prevYm(ym))}월 ${fmtKoSigned(p.delta)}` : '현금성 잔고 변화'; })() });
   kpi.push({ label: '현금 버팀', value: rw != null ? `${rw.toFixed(1)}개월` : '—', cls: rw == null ? 'muted' : rw < runwayWarn() ? 'neg' : rw < runwayTarget() ? 'warn-text' : 'pos', sub: rw != null ? `현금성 ${fmtKo(cashBal(ymData))} ÷ 고정 ${fmtKo(fixedM)} · 목표 ${runwayTarget()}` : fixedM ? '현금성 잔고 없음' : '정기 지출을 등록하세요' });
   if (cf.closed && cf.variable != null) kpi.push({ label: '변동 지출', value: fmtKo(cf.variable), cls: '', sub: (() => { const p = cashflowFor(prevYm(ym)); const pr = p.variable ? Math.round((cf.variable / p.variable - 1) * 100) : null; return `${pr != null ? `전월 ${pr > 0 ? '+' : ''}${pr}% · ` : ''}이벤트 ${fmtKo(cf.ev)}`; })() });
@@ -2264,7 +2271,7 @@ function renderBs() {
   const kpi = [
     { l: '순자산', v: fmtKo(T.net), c: T.net >= 0 ? 'pos' : 'neg', s: Tp ? `전월 ${fmtKoSigned(T.net - Tp.net)}` : '' },
     { l: '자산', v: fmtKo(T.assets), c: '', s: T.re ? `금융 ${fmtKo(T.fin)} · 부동산 ${fmtKo(T.re)}` : `유동 ${fmtKo(T.cur)}` },
-    { l: '현금 버팀', v: rw != null ? `${rw.toFixed(1)}개월` : '—', c: rw == null ? 'muted' : rw < runwayWarn() ? 'neg' : rw < runwayTarget() ? 'warn-text' : 'pos', s: T.assets ? `부채비율 ${Math.round(T.liab / T.assets * 100)}%${T.re ? ` · 부동산 제외 순자산 ${fmtKo(Tx.net)}` : ''}` : '' },
+    { l: '현금 버팀', v: rw != null ? `${rw.toFixed(1)}개월` : '—', c: rw == null ? 'muted' : rw < runwayWarn() ? 'neg' : rw < runwayTarget() ? 'warn-text' : 'pos', s: T.assets ? `부채비율 ${Math.round(T.liab / T.assets * 100)}%${(T.re || T.mortgage) ? ` · 부동산 제외 순자산 ${fmtKo(Tx.net)}` : ''}` : '' },
   ];
   let html = `<div class="kpi-grid k3">${kpi.map(k => `<div class="kpi-card"><div class="label">${k.l}</div><div class="value ${k.c}">${k.v}</div><div class="sub">${escapeHtml(k.s)}</div></div>`).join('')}</div>`;
   const rows = m ? [...m.values()] : [];
@@ -2391,7 +2398,7 @@ function renderAnNw() {
   ];
   mkChart('an-nw-chart', { type: 'line', data: { labels, datasets: ds }, options: chartBase() });
   const last = Ts[Ts.length - 1], first = Ts[0];
-  $('an-nw-legend').innerHTML = last ? (anNwSplit ? `<span style="--dot:${cG}">자산 ${fmtKo(last.assets)}</span><span style="--dot:${cR}">부채 ${fmtKo(last.liab)}</span>` : `<span style="--dot:${cG}">순자산${anNwExRe ? '(부동산 제외)' : ''} ${fmtKo(first.net)} → ${fmtKo(last.net)}</span><span class="nodot muted">${fmtKoSigned(last.net - first.net)} · ${yms.length}개월</span>`) + (anNwExRe ? `<span class="nodot muted">"부동산 제외" 끄면 공시가 포함 계단 그래프</span>` : '') : '<span class="nodot dim">데이터 없음</span>';
+  $('an-nw-legend').innerHTML = last ? (anNwSplit ? `<span style="--dot:${cG}">자산 ${fmtKo(last.assets)}</span><span style="--dot:${cR}">부채 ${fmtKo(last.liab)}</span>` : `<span style="--dot:${cG}">순자산${anNwExRe ? '(부동산 제외)' : ''} ${fmtKo(first.net)} → ${fmtKo(last.net)}</span><span class="nodot muted">${fmtKoSigned(last.net - first.net)} · ${yms.length}개월</span>`) + (anNwExRe ? `<span class="nodot muted">"부동산 제외" = 부동산 자산·담보 부채 모두 제외 · 끄면 공시가 포함 계단 그래프</span>` : '') : '<span class="nodot dim">데이터 없음</span>';
 }
 function renderAnTr() {
   const yms = periodYms().filter(y => monByYm.has(y));
@@ -2497,8 +2504,9 @@ function closeUpdatePreview() {
   CL.liabRows.forEach(r => { if (r.balance != null) liab += Math.round(r.balance); });
   CL.preview = { assets, liab, net: assets - liab, cash: hasCash ? cash : null };
   const exRe = CL.rows.filter(r => isRealEstate(r.a)).reduce((s, r) => s + (rowKrw(r) || 0), 0);
+  const exMg = CL.liabRows.filter(r => isMortgage(r.l)).reduce((s, r) => s + (r.balance != null ? Math.round(r.balance) : 0), 0);
   $('close-nw').textContent = fmtNum(CL.preview.net); $('close-nw').className = CL.preview.net >= 0 ? 'pos' : 'neg';
-  $('close-nw-sub').textContent = `순자산 미리보기${exRe ? ` · 부동산 제외 ${fmtNum(CL.preview.net - exRe)}` : ''}`;
+  $('close-nw-sub').textContent = `순자산 미리보기${(exRe || exMg) ? ` · 부동산 제외 ${fmtNum(CL.preview.net - exRe + exMg)}` : ''}`;
 }
 async function closeSaveStep1() {
   if (!CL || !currentUid) return;
@@ -2516,7 +2524,7 @@ async function closeSaveStep1() {
   }
   for (const r of CL.liabRows) {
     if (r.balance == null) { if (r.ex) { batch.delete(P.monLiabDoc(ym, r.l.id)); nDel++; } continue; }
-    batch.set(P.monLiabDoc(ym, r.l.id), sanitize({ ym, liabKey: r.l.id, name: r.l.name, type: r.l.type || 'current', balance: Math.round(r.balance), balanceKrw: Math.round(r.balance), fxRate: null, currency: 'KRW', asOf, createdAt: r.ex?.createdAt ?? serverTimestamp(), updatedAt: serverTimestamp() })); nSet++;
+    batch.set(P.monLiabDoc(ym, r.l.id), sanitize({ ym, liabKey: r.l.id, name: r.l.name, type: r.l.type || 'current', mortgage: r.l.mortgage === true, balance: Math.round(r.balance), balanceKrw: Math.round(r.balance), fxRate: null, currency: 'KRW', asOf, createdAt: r.ex?.createdAt ?? serverTimestamp(), updatedAt: serverTimestamp() })); nSet++;
   }
   await batch.commit();
   let chained = 0; for (const id of [...new Set(chainAccs)]) chained += await recalculateChain(id, ym);
@@ -2677,7 +2685,7 @@ function renderSettings() {
   // 계좌 + 부채
   const accs = liveAccounts(), liabs = liveLiabs();
   const accRow = a => `<div class="set-row"><div class="n">${escapeHtml(a.name)} ${a.trackPerformance ? '<span class="badge trk">추적</span>' : ''}${isCashAcc(a) ? '<span class="badge auto">현금흐름</span>' : ''}${a.noRevalue ? '<span class="badge">재평가 안 함</span>' : ''}<small>${a.financeType === 'nonCurrent' ? '비유동' : '유동'} · ${escapeHtml(a.financeCategory || '—')}${a.currency && a.currency !== 'KRW' ? ' · ' + a.currency : ''}${a.trackPerformance && a.assetsCategory ? ' · ' + escapeHtml(a.assetsCategory) : ''}${a.trading ? ' · Trading' : ''}</small></div><div class="acts"><button data-acc-edit="${escapeHtml(a.id)}" title="편집">✎</button></div></div>`;
-  const liabRow = l => `<div class="set-row"><div class="n">${escapeHtml(l.name)} <span class="badge danger">부채</span><small>${l.type === 'nonCurrent' ? '비유동' : '유동'}</small></div><div class="acts"><button data-liab-edit="${escapeHtml(l.id)}" title="편집">✎</button></div></div>`;
+  const liabRow = l => `<div class="set-row"><div class="n">${escapeHtml(l.name)} <span class="badge danger">부채</span>${l.mortgage ? '<span class="badge noncurrent">부동산 담보</span>' : ''}<small>${l.type === 'nonCurrent' ? '비유동' : '유동'}</small></div><div class="acts"><button data-liab-edit="${escapeHtml(l.id)}" title="편집">✎</button></div></div>`;
   $('set-accounts').innerHTML = (accs.map(accRow).join('') + liabs.map(liabRow).join('')) || `<div class="dim small" style="padding:8px 2px;">계좌가 없습니다. + 계좌로 추가하세요.</div>`;
   const trashA = accounts.filter(a => a.deletedAt), trashL = liabilities.filter(l => l.deletedAt);
   $('set-trash-count').textContent = trashA.length + trashL.length;
@@ -2754,12 +2762,13 @@ $('btn-add-account').addEventListener('click', () => openAccountModal(null));
 
 /* 부채 모달 */
 let editingLiabId = null;
-function openLiabModal(id) { editingLiabId = id; const l = id ? liabById(id) : null; $('liab-title').textContent = l ? '부채 편집' : '부채 추가'; $('liab-name').value = l?.name || ''; $('ltype-current').checked = (l?.type || 'nonCurrent') === 'current'; $('ltype-non').checked = !$('ltype-current').checked; $('btn-liab-delete').style.display = l ? '' : 'none'; openOv('ov-liab'); setTimeout(() => $('liab-name').focus(), 50); }
+function openLiabModal(id) { editingLiabId = id; const l = id ? liabById(id) : null; $('liab-title').textContent = l ? '부채 편집' : '부채 추가'; $('liab-name').value = l?.name || ''; $('ltype-current').checked = (l?.type || 'nonCurrent') === 'current'; $('ltype-non').checked = !$('ltype-current').checked; setTog('liab-mortgage-toggle', !!l?.mortgage); $('btn-liab-delete').style.display = l ? '' : 'none'; openOv('ov-liab'); setTimeout(() => $('liab-name').focus(), 50); }
 $('btn-add-liab').addEventListener('click', () => openLiabModal(null));
+$('liab-mortgage-toggle').addEventListener('click', () => setTog('liab-mortgage-toggle', !isOn('liab-mortgage-toggle')));
 $('btn-liab-save').addEventListener('click', async () => {
   const name = $('liab-name').value.trim(); if (!name) { showToast('이름을 입력하세요'); return; }
   const type = document.querySelector('input[name="liab-type"]:checked')?.value || 'nonCurrent'; const ex = editingLiabId ? liabById(editingLiabId) : null; const id = editingLiabId || genId('liab');
-  try { await setDoc(P.liab(id), sanitize({ id, name, type, active: ex?.active !== false, deletedAt: ex?.deletedAt ?? null, sortOrder: ex?.sortOrder ?? (liabilities.reduce((m, l) => Math.max(m, l.sortOrder || 0), 0) + 1), createdAt: ex?.createdAt ?? new Date().toISOString() })); closeOv('ov-liab'); showToast(ex ? '저장되었습니다' : '부채가 추가되었습니다'); } catch (e) { showToast('저장 실패'); }
+  try { await setDoc(P.liab(id), sanitize({ id, name, type, mortgage: isOn('liab-mortgage-toggle'), active: ex?.active !== false, deletedAt: ex?.deletedAt ?? null, sortOrder: ex?.sortOrder ?? (liabilities.reduce((m, l) => Math.max(m, l.sortOrder || 0), 0) + 1), createdAt: ex?.createdAt ?? new Date().toISOString() })); closeOv('ov-liab'); showToast(ex ? '저장되었습니다' : '부채가 추가되었습니다'); } catch (e) { showToast('저장 실패'); }
 });
 $('btn-liab-delete').addEventListener('click', async () => { const l = liabById(editingLiabId); if (!l) return; if (!await appConfirm(`"${l.name}" 부채를 휴지통으로 보낼까요?\n결산 데이터는 보존됩니다.`)) return; try { await setDoc(P.liab(l.id), sanitize({ ...l, active: false, deletedAt: new Date().toISOString() })); closeOv('ov-liab'); showToast('휴지통으로 이동'); } catch (e) { showToast('실패'); } });
 
