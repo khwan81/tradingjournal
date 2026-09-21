@@ -1472,7 +1472,7 @@ html, body { overflow-x: hidden; }
         <div id="set-trash-list" style="display:none;"></div>
       </div>
       <div class="card">
-        <div class="card-head">정기 수입·지출 <span class="section-actions"><button class="btn-s" id="btn-add-rec">+ 항목</button></span></div>
+        <div class="card-head">정기 지출 <span class="section-actions"><button class="btn-s" id="btn-add-rec">+ 항목</button></span></div>
         <div class="set-list" id="set-recurring"></div>
         <p class="note-line">고정 지출·경조사만 등록합니다 — 수입은 매달 마감 때 직접 입력. 매달 마감 때 기준 금액으로 자동 반영되고, 실제 결제액과의 차이는 변동 지출에 포함됩니다. 해지는 삭제, 금액 변경은 수정 — 다음 마감부터 적용되고 지난 달은 그대로 보존됩니다.</p>
       </div>
@@ -1518,7 +1518,7 @@ html, body { overflow-x: hidden; }
         <div id="close-rows"></div>
         <div class="cl-foot">
           <div class="nw"><small id="close-nw-sub">순자산 미리보기</small><b id="close-nw">—</b></div>
-          <div class="btns"><button class="btn-p" id="btn-close-next">다음 ›</button></div>
+          <div class="btns"><button class="btn-s subtle" id="btn-close-delete" style="display:none;" title="이 달 마감 삭제">🗑</button><button class="btn-p" id="btn-close-next">다음 ›</button></div>
         </div>
       </div>
       <div class="close-pane" id="close-pane-2">
@@ -2238,7 +2238,7 @@ function fixedListHtml(cf, ym) {
   const tot = cf.fixedSum || 1; const inc = cf.incomeSum || 0;
   const events = items.filter(i => i.kind === 'event').length;
   let html = `<div class="cf-line h tap" data-fixed-toggle><span class="n">고정 지출 <span class="badge auto">정기 ${items.length}건${events ? ` · 경조사 ${events}` : ''}</span>${inc ? `<small>수입의 ${Math.round(tot / inc * 100)}%${prev ? ` · 전월 ${fmtSigned(tot - (prev.fixedSum != null ? Number(prev.fixedSum) : (prev.fixed || []).reduce((x, i) => x + (Number(i.amount) || 0), 0)))}` : ''}</small>` : ''}</span><span class="a neg">−${fmtNum(tot)}</span><span class="chev">${fixedCollapsed ? '▸' : '▾'}</span></div>`;
-  if (!items.length) return html + `<div class="cf-line"><span class="n dim">정기 지출 없음 — 설정 › 정기 수입·지출에서 등록</span></div>`;
+  if (!items.length) return html + `<div class="cf-line"><span class="n dim">정기 지출 없음 — 설정 › 정기 지출에서 등록</span></div>`;
   if (fixedCollapsed) return html;
   // 분류별 묶기 (소계 큰 순), 분류 안은 금액 순
   const groups = new Map();
@@ -2510,6 +2510,7 @@ function openCloseModal(ym) {
   if (rows.some(r => r.cur !== 'KRW' && !r.rate)) showToast('환율이 없는 통화가 있어요 — 설정 › 환율에서 먼저 넣어주세요');
   const draft = closeLoadDraft(ym);
   if (draft && closeApplyDraft(draft)) closeShowDraftNote(draft); else { closeShowDraftNote(null); if (draft) closeClearDraft(ym); }
+  $('btn-close-delete').style.display = (rows.some(r => r.ex) || liabRows.some(r => r.ex) || cfByYm.has(ym)) ? '' : 'none';   // 박제가 있을 때만
   showCloseStep(1); closeRenderRows(true); openOv('ov-close');
 }
 function showCloseStep(n) {
@@ -3014,6 +3015,26 @@ $('btn-close-next').addEventListener('click', async () => {
   try { const r = await closeSaveStep1(); showToast(`잔고 ${r.nSet}건 저장${r.nDel ? ` · ${r.nDel}건 삭제` : ''}${r.chained ? ` · 이후 ${r.chained}개월 재계산` : ''}`); CL.cashPrev = cashBal(prevYm(CL.ym)); $('close-draft-note').style.display = 'none'; closeSaveDraft(); closeRenderStep2(); showCloseStep(2); }
   catch (e) { console.error(e); showToast('저장 실패: ' + (e.message || e.code)); }
   finally { $b.disabled = false; $b.textContent = '다음 ›'; }
+});
+/* 마감 삭제: 그 달의 monthly · monthly_liab · cashflow 전부 삭제 → 추적 계좌 체인 재계산 (마스터·정기·태그는 유지) */
+$('btn-close-delete').addEventListener('click', async () => {
+  if (!CL) return; const ym = CL.ym;
+  const nA = CL.rows.filter(r => r.ex).length, nL = CL.liabRows.filter(r => r.ex).length, hasCf = cfByYm.has(ym);
+  const later = allYms.filter(y => y > ym && monByYm.has(y)).length;
+  const ok = await appConfirm(`${ymLabel(ym)} 마감을 삭제할까요?\n자산 ${nA}건 · 부채 ${nL}건${hasCf ? ' · 현금흐름' : ''}이 지워지고 되돌릴 수 없습니다.${later ? `\n이후 ${later}개월 결산은 남고, 추적 계좌 수익은 재계산됩니다.` : ''}`, { title: '마감 삭제' });
+  if (!ok) return;
+  const $b = $('btn-close-delete'); $b.disabled = true;
+  try {
+    const batch = writeBatch(db);
+    for (const r of CL.rows) if (r.ex) batch.delete(P.monthlyDoc(ym, r.a.id));
+    for (const r of CL.liabRows) if (r.ex) batch.delete(P.monLiabDoc(ym, r.l.id));
+    if (hasCf) batch.delete(P.cf(ym));
+    await batch.commit();
+    const trackIds = CL.rows.filter(r => r.ex && r.a.trackPerformance).map(r => r.a.id);
+    let chained = 0; for (const id of trackIds) if (hasLaterMonDoc(id, ym)) chained += await recalculateChain(id, null);
+    closeClearDraft(ym); CL = null; closeOv('ov-close'); showToast(`${ymLabel(ym)} 마감 삭제됨${chained ? ` · 추적 ${chained}건 재계산` : ''}`);
+  } catch (e) { console.error(e); showToast('삭제 실패'); }
+  $b.disabled = false;
 });
 $('btn-close-back').addEventListener('click', () => { if (!CL) return; CL.rows.forEach(r => { r.ex = monDoc(CL.ym, r.a.id) || r.ex; }); showCloseStep(1); closeRenderRows(true); });
 $('btn-close-save').addEventListener('click', async () => {
