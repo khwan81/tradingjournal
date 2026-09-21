@@ -2037,7 +2037,7 @@ async function loadAll() {
   if (!finSnap.exists()) await setDoc(P.settings(), { runwayTarget: 6, runwayWarn: 2, appVersion: APP_VERSION, createdAt: new Date().toISOString() }, { merge: true });
 
   unsubs.push(onSnapshot(query(P.accItems(), orderBy('sortOrder', 'asc')), snap => {
-    accounts = snap.docs.map(d => ({ id: d.id, ...d.data() })); ready.acc = true; renderAll();
+    accounts = snap.docs.map(d => ({ ...d.data(), id: d.id })); ready.acc = true; renderAll();
   }, err => { console.error('accounts', err); showToast('계좌 로드 실패'); }));
 
   unsubs.push(onSnapshot(P.accSettings(), snap => {
@@ -2057,17 +2057,17 @@ async function loadAll() {
     renderAll();
   }));
 
-  unsubs.push(onSnapshot(P.liabs(), snap => { liabilities = snap.docs.map(d => ({ id: d.id, ...d.data() })); ready.liab = true; renderAll(); }));
-  unsubs.push(onSnapshot(P.monthly(), snap => { monthlyAll = snap.docs.map(d => ({ id: d.id, ...d.data() })); rebuildIndex(); ready.mon = true; renderAll(); }));
-  unsubs.push(onSnapshot(P.monLiab(), snap => { liabAll = snap.docs.map(d => ({ id: d.id, ...d.data() })); rebuildIndex(); renderAll(); }));
-  unsubs.push(onSnapshot(P.cashflow(), snap => { cashflowAll = snap.docs.map(d => ({ id: d.id, ...d.data() })); rebuildIndex(); ready.cf = true; renderAll(); }));
+  unsubs.push(onSnapshot(P.liabs(), snap => { liabilities = snap.docs.map(d => ({ ...d.data(), id: d.id })); ready.liab = true; renderAll(); }));
+  unsubs.push(onSnapshot(P.monthly(), snap => { monthlyAll = snap.docs.map(d => ({ ...d.data(), id: d.id })); rebuildIndex(); ready.mon = true; renderAll(); }));
+  unsubs.push(onSnapshot(P.monLiab(), snap => { liabAll = snap.docs.map(d => ({ ...d.data(), id: d.id })); rebuildIndex(); renderAll(); }));
+  unsubs.push(onSnapshot(P.cashflow(), snap => { cashflowAll = snap.docs.map(d => ({ ...d.data(), id: d.id })); rebuildIndex(); ready.cf = true; renderAll(); }));
   unsubs.push(onSnapshot(P.recurring(), snap => {
-    recurring = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => r.name && (r.kind || r.amount != null));
+    recurring = snap.docs.map(d => ({ ...d.data(), id: d.id })).filter(r => r.name && (r.kind || r.amount != null));
     ready.rec = true; renderAll();
   }));
-  unsubs.push(onSnapshot(P.tags(), snap => { tags = snap.docs.map(d => ({ id: d.id, ...d.data() })); renderAll(); }));
+  unsubs.push(onSnapshot(P.tags(), snap => { tags = snap.docs.map(d => ({ ...d.data(), id: d.id })); renderAll(); }));
   unsubs.push(onSnapshot(query(P.txs(), where('tagId', '!=', null)), snap => {
-    txs = snap.docs.map(d => ({ id: d.id, ...d.data() })).map(t => ({ ...t, ym: t.ym || String(t.date || '').slice(0, 7) }));
+    txs = snap.docs.map(d => ({ ...d.data(), id: d.id })).map(t => ({ ...t, ym: t.ym || String(t.date || '').slice(0, 7) }));
     renderAll();
   }, err => console.error('txs', err)));
 }
@@ -2667,7 +2667,7 @@ async function closeSaveStep2() {
 async function recalculateChain(accountId, startFromYm) {
   if (!currentUid || !accountId) return 0;
   const snap = await getDocs(query(P.monthly(), where('accountId', '==', accountId)));
-  const all = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => String(a.ym).localeCompare(String(b.ym)));
+  const all = snap.docs.map(d => ({ ...d.data(), id: d.id })).sort((a, b) => String(a.ym).localeCompare(String(b.ym)));
   if (all.length < 2) return 0;
   let startIdx = startFromYm ? all.findIndex(d => d.ym === startFromYm) : -1; if (startIdx < 0) startIdx = 0;
   const batch = writeBatch(db); let prev = all[startIdx]; let writes = 0;
@@ -2760,9 +2760,17 @@ function renderSettings() {
   // 정기
   const kinds = [['fixed', '고정 지출'], ['event', '경조사'], ['income', '수입 (v2에서 미사용 — 수입은 마감 때 직접 입력, 삭제 권장)']];
   let rh = '';
-  for (const [k, label] of kinds) { const list = recurring.filter(r => recKind(r) === k).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)); if (!list.length) continue;
+  const recRow = (r, showCat) => `<div class="set-row"><div class="n">${escapeHtml(r.name)}<small>${showCat ? `<span class="badge">${escapeHtml(recCategory(r))}</span> ` : ''}${r.month ? `매년 ${r.month}월` : '매월'}${!r.kind ? ' · 이전 버전 항목' : ''}</small></div><span class="v">${fmtNum(recAmount(r))}</span><div class="acts"><button data-rec-edit="${escapeHtml(r.id)}" title="편집">✎</button></div></div>`;
+  for (const [k, label] of kinds) { const list = recurring.filter(r => recKind(r) === k); if (!list.length) continue;
     const sum = list.reduce((x, r) => x + recAmount(r), 0);
-    rh += `<div class="grp-label">${label} <span class="muted">${list.length} · ${fmtNum(sum)}</span></div>` + list.sort((a, b) => recCategory(a).localeCompare(recCategory(b), 'ko') || recAmount(b) - recAmount(a)).map(r => `<div class="set-row"><div class="n">${escapeHtml(r.name)}<small>${k === 'fixed' ? `<span class="badge">${escapeHtml(recCategory(r))}</span> ` : ''}${r.month ? `매년 ${r.month}월` : '매월'}${!r.kind ? ' · 이전 버전 항목' : ''}</small></div><span class="v">${fmtNum(recAmount(r))}</span><div class="acts"><button data-rec-edit="${escapeHtml(r.id)}" title="편집">✎</button></div></div>`).join(''); }
+    rh += `<div class="grp-label">${label} <span class="muted">${list.length} · ${fmtNum(sum)}</span></div>`;
+    if (k === 'fixed') {
+      // 현금흐름과 같은 분류별 묶기 (소계 큰 순), 분류 안은 금액 순
+      const groups = new Map(); for (const r of list) { const c = recCategory(r); if (!groups.has(c)) groups.set(c, []); groups.get(c).push(r); }
+      const gl = [...groups.entries()].map(([c, l]) => ({ c, l: l.sort((a, b) => recAmount(b) - recAmount(a)), sum: l.reduce((x, r) => x + recAmount(r), 0) })).sort((a, b) => b.sum - a.sum);
+      rh += `<div class="fx-list" style="margin-bottom:4px;">` + gl.map(g => `<div class="fx-grp"><div class="fx-grp-h"><span>${escapeHtml(g.c)} <span class="muted">${g.l.length}</span></span><span>${fmtNum(g.sum)}</span></div>${g.l.map(r => recRow(r, false)).join('')}</div>`).join('') + `</div>`;
+    } else rh += list.sort((a, b) => (a.month || 0) - (b.month || 0) || recAmount(b) - recAmount(a)).map(r => recRow(r, false)).join('');
+  }
   $('set-recurring').innerHTML = rh || `<div class="dim small" style="padding:8px 2px;">정기 항목이 없습니다. 급여·월세·보험 등을 등록하면 매달 자동 반영됩니다.</div>`;
   // 환율
   const fx = sharedSettings.fxRates || {};
@@ -2897,7 +2905,7 @@ $('btn-fx-auto').addEventListener('click', () => autoUpdateFx(true));
 $('btn-fx-save').addEventListener('click', async () => { const fx = { ...(sharedSettings.fxRates || {}) }; document.querySelectorAll('[data-fx]').forEach(el => { const v = parseNum(el.value); if (v != null && v > 0) fx[el.dataset.fx] = el.dataset.fx === 'JPY' ? v : Math.round(v); }); try { await setDoc(P.accSettings(), { fxRates: fx, fxUpdatedAt: Date.now() }, { merge: true }); showToast('환율 저장됨'); } catch (e) { showToast('저장 실패'); } });
 
 /* 백업 · 복원 · 초기화 */
-async function collectAll(col) { const s = await getDocs(col); return s.docs.map(d => ({ id: d.id, ...d.data() })); }
+async function collectAll(col) { const s = await getDocs(col); return s.docs.map(d => ({ ...d.data(), id: d.id })); }
 function stripTs(o) { return JSON.parse(JSON.stringify(o, (k, v) => (v && typeof v === 'object' && typeof v.seconds === 'number' && typeof v.nanoseconds === 'number') ? new Date(v.seconds * 1000).toISOString() : v)); }
 $('btn-backup').addEventListener('click', async () => {
   try {
