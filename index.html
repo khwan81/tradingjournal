@@ -1504,7 +1504,6 @@ input[type=month]::-webkit-calendar-picker-indicator {
         <button class="fchip" onclick="logFilter(this,'long')">롱</button>
         <button class="fchip" onclick="logFilter(this,'short')">숏</button>
         <button class="fchip" onclick="logFilter(this,'stop')">손절</button>
-        <button class="fchip" onclick="logFilter(this,'open')">오픈</button>
       </div>
       <button class="btn-add btn-add-desktop" onclick="openModal()">
         <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 1v12M1 7h12"/></svg>
@@ -1930,7 +1929,7 @@ input[type=month]::-webkit-calendar-picker-indicator {
             <input type="checkbox" class="reset-check" data-key="trades">
             <div class="reset-option-body">
               <div class="reset-option-title">거래 기록 <span class="reset-count" id="rsc-trades">…</span></div>
-              <div class="reset-option-desc">모든 매매 기록 (오픈/클로즈 포함)</div>
+              <div class="reset-option-desc">모든 매매 기록</div>
             </div>
           </label>
         </div>
@@ -2043,7 +2042,7 @@ let sharedFx    = {};        // 공유 마스터 config/accounts.fxRates { USD, 
 let sharedFxAt  = 0;         // fxRates 마지막 갱신 시각(ms)
 let dbFilter_   = 'all';     // 'all' | accountId
 let period_     = { preset:'ALL', fromYm:null, toYm:null }; // 매도일(dateStart) 기준, 대시보드+목록 공유
-let logFilter_  = 'all';     // 'all' | accountId | 'long' | 'short' | 'stop' | 'open'
+let logFilter_  = 'all';     // 'all' | accountId | 'long' | 'short' | 'stop'   (v2.4: 'open' 제거)
 let delTargetId = null;
 let mEditRisk   = null;      // v2.1: 수정 중인 거래의 박제 risk% (R 소급 변경 방지)
 let mEditAcctId = null;      //       그 거래의 원래 계좌 (계좌 바뀌면 박제 무효)
@@ -2166,13 +2165,15 @@ window.saveSettings = async function() {
     accounts:   accounts,
   };
   settings = cfg;
-  await setDoc(doc(db, 'users', currentUid, 'config', 'settings'), cfg);
+  // v2.4: 오프라인 대응 — await 없이 쓰고 실패만 토스트 (로컬 캐시엔 즉시 반영)
+  setDoc(doc(db, 'users', currentUid, 'config', 'settings'), cfg)
+    .catch(e => { console.error('[settings] 저장 실패', e); showToast('설정 저장 실패: ' + (e.message || e.code || '오류')); });
   // 환율은 공유 마스터(config/accounts.fxRates)에도 기록 — Finance와 단일 출처
   const usdt = Math.round(parseNum('cfg-tether')), usd = Math.round(parseNum('cfg-usd'));
   if (usdt || usd) {
     if (usdt) sharedFx.USDT = usdt;
     if (usd)  sharedFx.USD  = usd;
-    try { await writeSharedFx(sharedFx); updateFxStatus(); } catch(e) { console.warn('[fx] 공유 저장 실패', e); }
+    writeSharedFx(sharedFx).then(updateFxStatus).catch(e => console.warn('[fx] 공유 저장 실패', e));
   }
   showToast('✓ 설정이 저장되었습니다');
   syncAccountSelect();
@@ -2346,8 +2347,9 @@ window.saveTrade = async function() {
   const market   = acct?.market || 'coin';
   const dtStart  = v('m-datetime-start');
 
-  if (!dtStart || !v('m-symbol').trim()) {
-    alert('매도일과 종목은 필수입니다.'); return;
+  const pnlRaw = mNum('m-pnl');                                   // v2.3: 콤마 파싱
+  if (!dtStart || !v('m-symbol').trim() || isNaN(pnlRaw)) {
+    alert('매도일 · 종목 · 손익은 필수입니다.'); return;             // v2.4: 손익 필수 (오픈 포지션 제거)
   }
 
   const dateStart = dtStart.slice(0,10);
@@ -2355,8 +2357,7 @@ window.saveTrade = async function() {
   const dateEnd   = null;
   const timeEnd   = null;
 
-  const pnlRaw = mNum('m-pnl');                                   // v2.3: 콤마 파싱, '-'만 입력 등 무효는 미결 처리
-  const pnl  = !isNaN(pnlRaw) ? pnlRaw : null;
+  const pnl  = pnlRaw;                                            // v2.4: 위에서 검증됨 (항상 숫자)
   const seed = mNum('m-seed') || null;
   const risk = currentRisk();                                     // v2.1: 수정 시 박제 risk 유지
   const riskAmt = mNum('m-riskamt') > 0 ? mNum('m-riskamt') : null;  // v2.1: 실제 리스크 금액(선택)
@@ -2365,14 +2366,9 @@ window.saveTrade = async function() {
 
   const tetherRate = mNum('m-tether') || getTether();
   const usdRate    = mNum('m-usd')    || getUsdRate();
-  let krw = null;
-  if (pnl !== null) {
-    if (market==='coin') krw = pnl * tetherRate;
-    else if (market==='us') krw = pnl * usdRate;
-    else krw = pnl;
-  }
+  const krw = market==='coin' ? pnl * tetherRate : market==='us' ? pnl * usdRate : pnl;
 
-  const isOpen = pnl === null;
+  const isOpen = false;   // v2.4: 오픈 포지션 제거 — 신규/수정 모두 청산 거래. 옛 오픈 거래 가드(!t.isOpen)는 하위호환으로 유지
   // v2.2: N은 거래일 단위 (계좌 무관), createdAt 시간순 위치 — 목록 표시(dayNMap)와 동일 공식.
   //       신규 = 그날 마지막 번호, 수정 = 원래 createdAt 기준 위치 유지.
   const orig = editId ? trades.find(x => x.id === editId) : null;
@@ -2401,23 +2397,28 @@ window.saveTrade = async function() {
     updatedAt:  Date.now(),
   };
 
+  // v2.4: 오프라인 대응 — persistent cache 모드에선 쓰기 promise가 서버 ack까지 안 풀리므로
+  //       await 하지 않는다. 로컬 캐시엔 즉시 반영(onSnapshot이 목록 갱신)되고, 실패만 토스트.
+  let write;
   if (editId) {
     // v2.2 버그 수정: setDoc은 문서 통째 교체라 createdAt이 지워지던 문제 — 원본 값 보존.
     //               createdAt 없던 옛 거래는 수정 시점으로 백필(이후 N 순서 안정화).
     data.createdAt = orig?.createdAt ?? Date.now();
-    await setDoc(doc(db, 'users', currentUid, 'trades', editId), data);
+    write = setDoc(doc(db, 'users', currentUid, 'trades', editId), data);
   } else {
     data.createdAt = Date.now();
-    await addDoc(collection(db, 'users', currentUid, 'trades'), data);
+    write = addDoc(collection(db, 'users', currentUid, 'trades'), data);
   }
+  write.catch(e => { console.error('[trade] 저장 실패', e); showToast('저장 실패: ' + (e.message || e.code || '오류')); });
   try { localStorage.setItem('trd_lastAccount', acctId); } catch(e) {}  // v2.0: 다음 새 거래의 계좌 프리필
-  showToast(isOpen ? '📌 오픈 포지션으로 저장됐습니다' : (editId ? '✓ 거래가 수정되었습니다' : '✓ 거래가 저장되었습니다'));
+  showToast(editId ? '✓ 거래가 수정되었습니다' : '✓ 거래가 저장되었습니다');
   closeModal();
 };
 
-window.doDelete = async function() {
+window.doDelete = function() {
   if (!delTargetId) return;
-  await deleteDoc(doc(db, 'users', currentUid, 'trades', delTargetId));
+  deleteDoc(doc(db, 'users', currentUid, 'trades', delTargetId))   // v2.4: 오프라인 대응 — await 없음
+    .catch(e => { console.error('[trade] 삭제 실패', e); showToast('삭제 실패: ' + (e.message || e.code || '오류')); });
   showToast('거래가 삭제되었습니다');
   closeDel();
 };
@@ -2449,37 +2450,39 @@ function filterTradesList(list, f) {
   if (f === 'all')   return list;
   if (f === 'long')  return list.filter(t => t.dir === 'long');
   if (f === 'short') return list.filter(t => t.dir === 'short');
-  if (f === 'stop')  return list.filter(t => !t.isOpen && t.pnl !== null && t.pnl <= 0);
-  if (f === 'open')  return list.filter(t => t.isOpen);
-  // accountId 필터
-  return list.filter(t => (t.accountId || t.market) === f);
+  if (f === 'stop')  return list.filter(t => !t.isOpen && t.pnl != null && t.pnl <= 0);
+  // accountId 필터 — v2.4: 대시보드와 동일하게 accountId 없는 옛 거래는 market으로 매핑
+  const acct = accounts.find(a => a.id === f);
+  return list.filter(t => t.accountId === f || (!t.accountId && acct && t.market === acct.market));
 }
 
 // v2.0: 전략/매도 제거 — stratsOf/sellsOf 헬퍼 삭제 (옛 거래의 strategy/strategies/sells 필드는 데이터에 보존)
 
 function buildTradeRow(t) {
-  const acct = accounts.find(a => a.id === t.accountId);
   const mktKey = t.market || 'coin';
-  const mktBadge = `<span class="badge ${MKT_BADGE[mktKey]}">${t.accountName || MKT_LABEL[mktKey]}</span>`;
+  const esc = escapeHtmlSym;   // v2.4: 사용자 문자열 이스케이프 (메모에 '<' 등 들어가도 레이아웃 안 깨짐)
+  const symbolStr = esc(t.symbol || '');
+  const mktBadge = `<span class="badge ${MKT_BADGE[mktKey]}">${esc(t.accountName || MKT_LABEL[mktKey])}</span>`;
   const dirBadge = t.isOpen
     ? `<span class="badge b-open">오픈</span>`
     : `<span class="badge b-${t.dir}">${t.dir==='long'?'롱':'숏'}</span>`;
   const sym = MKT_SYM[mktKey]||'$';
-  const pnlStr = t.pnl===null ? '<span style="color:var(--text3)">미결</span>'
+  const pnlStr = t.pnl==null ? '<span style="color:var(--text3)">미결</span>'
     : `<span style="color:${t.pnl>=0?'var(--green)':'var(--red)'};font-weight:500;">${t.pnl>=0?'+':''}${fmtAmt(t.pnl)}${mktKey==='kor'?'₩':'$'}</span>`;
-  const rStr = t.rVal===null ? '<span style="color:var(--text3)">—</span>'
-    : `<span style="color:${t.rVal>=0?'var(--green)':'var(--red)'};">${t.rVal>=0?'+':''}${t.rVal?.toFixed(2)}R</span>`;
+  const rStr = t.rVal==null ? '<span style="color:var(--text3)">—</span>'
+    : `<span style="color:${t.rVal>=0?'var(--green)':'var(--red)'};">${t.rVal>=0?'+':''}${t.rVal.toFixed(2)}R</span>`;
 
   const dtStr = t.dateStart ? fmtDate(t.dateStart) : '—';
   const timeStr = t.timeStart
     ? (t.timeEnd ? `${fmtTime(t.timeStart)}~${fmtTime(t.timeEnd)}` : `${fmtTime(t.timeStart)} ~`) : '';
 
-  const memo = t.memo || '';
-  const chartSection = t.chartUrl
+  const memo = esc(t.memo || '');
+  const safeUrl = /^https?:\/\//i.test(t.chartUrl || '') ? esc(t.chartUrl) : '';   // v2.4: http(s)만 허용
+  const chartSection = safeUrl
     ? `<div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-top:12px;margin-bottom:8px;">차트 이미지</div>
        <div class="chart-link-box">
          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.8"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-         <a href="${t.chartUrl}" target="_blank" rel="noopener">구글 드라이브에서 차트 보기</a>
+         <a href="${safeUrl}" target="_blank" rel="noopener">구글 드라이브에서 차트 보기</a>
        </div>`
     : `<div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-top:12px;margin-bottom:8px;">차트 이미지</div><div class="chart-empty">차트 이미지 없음</div>`;
 
@@ -2495,7 +2498,7 @@ function buildTradeRow(t) {
       <div><div style="font-size:12px;">${dtStr}</div></div>
       <div style="font-size:11px;color:var(--text3);">${dayNMap[t.id]||t.n||'—'}</div>
       <div>${mktBadge}</div>
-      <span style="font-weight:500;font-size:12px;">${t.symbol}</span>
+      <span style="font-weight:500;font-size:12px;">${symbolStr}</span>
       <div>${dirBadge}</div>
       <div>${pnlStr}</div>
       <div>${rStr}</div>
@@ -2505,16 +2508,16 @@ function buildTradeRow(t) {
       </div>
     </div>`;
 
-  const pnlColor  = t.pnl===null?'var(--text3)':t.pnl>=0?'var(--green)':'var(--red)';
-  const pnlMobile = t.pnl===null?'미결':`${t.pnl>=0?'+':''}${fmtAmt(t.pnl)}${mktKey==='kor'?'₩':'$'}`;
-  const rMobile   = t.rVal===null?'—':`${t.rVal>=0?'+':''}${t.rVal.toFixed(2)}R`;
-  const rColor    = t.rVal===null?'var(--text3)':t.rVal>=0?'var(--green)':'var(--red)';
+  const pnlColor  = t.pnl==null?'var(--text3)':t.pnl>=0?'var(--green)':'var(--red)';
+  const pnlMobile = t.pnl==null?'미결':`${t.pnl>=0?'+':''}${fmtAmt(t.pnl)}${mktKey==='kor'?'₩':'$'}`;
+  const rMobile   = t.rVal==null?'—':`${t.rVal>=0?'+':''}${t.rVal.toFixed(2)}R`;   // v2.4: undefined 가드
+  const rColor    = t.rVal==null?'var(--text3)':t.rVal>=0?'var(--green)':'var(--red)';
 
   const mobileCard = `
     <div class="trade-card" id="card-${t.id}" onclick="toggleExp('${t.id}',event)">
       <div class="tc-top">
         ${mktBadge}
-        <span class="tc-symbol">${t.symbol}</span>
+        <span class="tc-symbol">${symbolStr}</span>
         <span class="tc-pnl" style="color:${pnlColor}">${pnlMobile}</span>
       </div>
       <div class="tc-bot">
@@ -2933,7 +2936,7 @@ function renderLogFilterChips() {
   const bar = ge('log-fbar'); if (!bar) return;
   bar.innerHTML = `<button class="fchip${logFilter_==='all'?' active':''}" onclick="logFilter(this,'all')">전체</button>` +
     accounts.map(a=>`<button class="fchip${logFilter_===a.id?' active':''}" onclick="logFilter(this,'${a.id}')"><span class="badge ${MKT_BADGE[a.market]}" style="margin-right:3px;font-size:9px;">${MKT_LABEL[a.market]}</span>${a.name}</button>`).join('') +
-    `<button class="fchip${logFilter_==='long'?' active':''}" onclick="logFilter(this,'long')">롱</button><button class="fchip${logFilter_==='short'?' active':''}" onclick="logFilter(this,'short')">숏</button><button class="fchip${logFilter_==='stop'?' active':''}" onclick="logFilter(this,'stop')">손절</button><button class="fchip${logFilter_==='open'?' active':''}" onclick="logFilter(this,'open')">오픈</button>`;
+    `<button class="fchip${logFilter_==='long'?' active':''}" onclick="logFilter(this,'long')">롱</button><button class="fchip${logFilter_==='short'?' active':''}" onclick="logFilter(this,'short')">숏</button><button class="fchip${logFilter_==='stop'?' active':''}" onclick="logFilter(this,'stop')">손절</button>`;   // v2.4: '오픈' 칩 제거
   renderPeriodBar('log-period');
 }
 
@@ -3054,11 +3057,6 @@ window.toggleExp = function(id,e) {
   if(e.target.closest('.trade-actions'))return;
   const el=ge('exp-'+id);
   if(el)el.style.display=el.style.display==='block'?'none':'block';
-};
-
-window.toggleAcc = function(id,btn) {
-  const body=ge(id); const open=body.classList.toggle('open');
-  btn.classList.toggle('open',open);
 };
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
@@ -3378,8 +3376,6 @@ function fmtAmt(x){ return Number(x).toLocaleString('ko-KR',{maximumFractionDigi
 function fmtAmtIn(x){ return Number(x).toLocaleString('ko-KR',{maximumFractionDigits:8}); }
 window.rawNum   = function(el){const p=el.selectionStart;el.value=el.value.replace(/[^0-9.]/g,'');try{el.setSelectionRange(p,p);}catch(e){}};
 window.numOnly  = function(el){const p=el.selectionStart;el.value=el.value.replace(/[^0-9.]/g,'');try{el.setSelectionRange(p,p);}catch(e){}};
-window.fmtPct   = function(el){const raw=parseFloat(el.value);if(!isNaN(raw))el.value=raw+'%';};
-function stripPct(str){return parseFloat((str||'').replace('%',''))||0;}
 
 // ── 유틸 ─────────────────────────────────────────────────────────────────────
 function v(id){const el=ge(id);return el?el.value:'';}

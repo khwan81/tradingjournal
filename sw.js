@@ -17,7 +17,7 @@
  *   CACHE_VERSION을 올리면 새 캐시가 만들어지고 옛 캐시는 정리됨.
  * ============================================================ */
 
-const CACHE_VERSION = 'v2';   // ← 이전 v1 캐시 강제 정리용
+const CACHE_VERSION = 'v3';   // ← v2.4: cdnjs 호스트 추가로 CDN 캐시 재생성
 const APP_CACHE     = `trading-app-${CACHE_VERSION}`;
 const CDN_CACHE     = `trading-cdn-${CACHE_VERSION}`;
 
@@ -34,7 +34,8 @@ const APP_SHELL = [
 /* stale-while-revalidate 대상 CDN 호스트 (정확 매칭) */
 const CDN_HOSTS = [
   'www.gstatic.com',          // Firebase SDK ESM
-  'cdn.jsdelivr.net',         // Chart.js
+  'cdn.jsdelivr.net',         // (예비)
+  'cdnjs.cloudflare.com',     // Chart.js — v2.4: index.html 실제 로드 호스트 (누락 시 오프라인에서 차트 미로드)
   'fonts.googleapis.com',     // Google Fonts CSS
   'fonts.gstatic.com',        // Google Fonts woff2
 ];
