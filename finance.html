@@ -1953,23 +1953,23 @@ function savingMove(ym) {
 }
 function totals(ym, { exRe = false } = {}) {
   const m = monByYm.get(ym), l = liabByYm.get(ym);
-  let assets = 0, liab = 0, fin = 0, re = 0, mortgage = 0, tracked = 0, trackedPrn = 0, trackedRet = 0, cur = 0, non = 0;
-  const trk = { cur: { v: 0, prn: 0, ret: 0 }, non: { v: 0, prn: 0, ret: 0 } };   // 추적 자산 유동/비유동 소계
+  let assets = 0, liab = 0, fin = 0, re = 0, mortgage = 0, tracked = 0, trackedPrn = 0, trackedDep = 0, trackedRet = 0, cur = 0, non = 0;
+  const trk = { cur: { v: 0, prn: 0, dep: 0, ret: 0 }, non: { v: 0, prn: 0, dep: 0, ret: 0 } };   // prn=순투입(잔고−prn=누적수익), dep=총투입(수익률 분모)   // 추적 자산 유동/비유동 소계
   if (m) for (const d of m.values()) {
     const a = accById(d.accountId); const v = Number(d.balanceKrw) || 0;
     const isRe = isRealEstate(a, d);
     if (isRe) re += v; else fin += v;
     if (!(exRe && isRe)) assets += v;
     if ((d.financeType || a?.financeType) === 'nonCurrent') non += v; else cur += v;
-    if (d.trackPerformance) { tracked += v; trackedPrn += Number(d.principal) || 0; trackedRet += Number(d.monthlyReturn) || 0;
-      const g = ((d.financeType || a?.financeType) === 'nonCurrent') ? trk.non : trk.cur; g.v += v; g.prn += Number(d.principal) || 0; g.ret += Number(d.monthlyReturn) || 0; }
+    if (d.trackPerformance) { const dep = d.deposited != null ? Number(d.deposited) : Math.max(Number(d.principal) || 0, 0); tracked += v; trackedPrn += Number(d.principal) || 0; trackedDep += dep; trackedRet += Number(d.monthlyReturn) || 0;
+      const g = ((d.financeType || a?.financeType) === 'nonCurrent') ? trk.non : trk.cur; g.v += v; g.prn += Number(d.principal) || 0; g.dep += dep; g.ret += Number(d.monthlyReturn) || 0; }
   }
   if (l) for (const d of l.values()) {
     const v = Number(d.balanceKrw) || 0; const isMg = isMortgage(liabById(d.liabKey), d);
     if (isMg) mortgage += v;
     if (!(exRe && isMg)) liab += v;   // 부동산 제외 = 부동산 자산 + 담보 부채 모두 제외
   }
-  return { assets, liab, net: assets - liab, fin, re, mortgage, tracked, trackedPrn, trackedRet, trk, cur, non, has: !!(m || l) };
+  return { assets, liab, net: assets - liab, fin, re, mortgage, tracked, trackedPrn, trackedDep, trackedRet, trk, cur, non, has: !!(m || l) };
 }
 /* 정기 마스터 → 그 달 자동 항목 */
 function recItemsFor(ym, kind) {
@@ -2059,7 +2059,7 @@ async function loadAll() {
   }));
 
   unsubs.push(onSnapshot(P.liabs(), snap => { liabilities = snap.docs.map(d => ({ ...d.data(), id: d.id })); ready.liab = true; renderAll(); }));
-  unsubs.push(onSnapshot(P.monthly(), snap => { monthlyAll = snap.docs.map(d => ({ ...d.data(), id: d.id })); rebuildIndex(); ready.mon = true; renderAll(); }));
+  unsubs.push(onSnapshot(P.monthly(), snap => { monthlyAll = snap.docs.map(d => ({ ...d.data(), id: d.id })); rebuildIndex(); ready.mon = true; renderAll(); migrateDepWd(); }));
   unsubs.push(onSnapshot(P.monLiab(), snap => { liabAll = snap.docs.map(d => ({ ...d.data(), id: d.id })); rebuildIndex(); renderAll(); }));
   unsubs.push(onSnapshot(P.cashflow(), snap => { cashflowAll = snap.docs.map(d => ({ ...d.data(), id: d.id })); rebuildIndex(); ready.cf = true; renderAll(); }));
   unsubs.push(onSnapshot(P.recurring(), snap => {
@@ -2168,11 +2168,11 @@ function renderHome() {
   // 추적 자산
   if (T && T.tracked) {
     // 유동(주식·코인 등) / 비유동(연금 등) 분리 — 한쪽만 있으면 그 줄만
-    const row = g => { const rate = g.prn ? (g.v - g.prn) / g.prn : 0; return [['평가액', fmtKo(g.v), ''], [`${monthOf(ymData)}월 수익`, fmtKoSigned(g.ret), g.ret >= 0 ? 'pos' : 'neg'], ['누적', fmtPct(rate), rate >= 0 ? 'pos' : 'neg']]
+    const row = g => { const rate = g.dep > 0 ? (g.v - g.prn) / g.dep : 0; return [['평가액', fmtKo(g.v), ''], [`${monthOf(ymData)}월 수익`, fmtKoSigned(g.ret), g.ret >= 0 ? 'pos' : 'neg'], ['누적', fmtPct(rate), rate >= 0 ? 'pos' : 'neg']]
       .map(k => `<div class="kpi-card" style="padding:8px 10px;"><div class="label">${k[0]}</div><div class="value ${k[2]}" style="font-size:var(--fs-lg);">${k[1]}</div></div>`).join(''); };
     const head = t => `<div class="small muted" style="grid-column:1/-1;margin-top:4px;">${t}</div>`;
     const groups = [['유동', T.trk.cur], ['비유동 · 연금 등', T.trk.non]].filter(([, g]) => g.v);
-    const totRate = T.trackedPrn ? (T.tracked - T.trackedPrn) / T.trackedPrn : 0;
+    const totRate = T.trackedDep > 0 ? (T.tracked - T.trackedPrn) / T.trackedDep : 0;
     $('home-tracked').innerHTML = groups.map(([t, g]) => (groups.length > 1 ? head(t) : '') + row(g)).join('')
       + (groups.length > 1 ? `<div class="small dim" style="grid-column:1/-1;margin-top:2px;">합계 ${fmtKo(T.tracked)} · ${monthOf(ymData)}월 ${fmtKoSigned(T.trackedRet)} · 누적 ${fmtPct(totRate)}</div>` : '');
   } else $('home-tracked').innerHTML = `<div class="dim small" style="grid-column:1/-1;">추적 자산 없음 — 계좌 설정에서 "수익률 추적"을 켜세요</div>`;
@@ -2328,9 +2328,10 @@ function renderSavings() {
   const m = monByYm.get(ym) || new Map();
   const docs = trackedAccs.map(a => ({ a, d: m.get(a.id) || null })).filter(x => x.d && x.d.trackPerformance);
   if (!docs.length) { $b.innerHTML = `<div class="empty-state">${ymLabel(ym)} 추적 자산 결산이 없습니다<div class="hint" style="margin:6px 0 12px;">마감에서 잔고와 입출금을 입력하세요</div><button class="btn-p" id="btn-sv-empty-close">${monthOf(ym)}월 마감 시작</button></div>`; $('btn-sv-empty-close').onclick = () => openCloseModal(ym); return; }
-  const tot = docs.reduce((s, x) => s + (Number(x.d.balanceKrw) || 0), 0), prn = docs.reduce((s, x) => s + (Number(x.d.principal) || 0), 0), ret = docs.reduce((s, x) => s + (Number(x.d.monthlyReturn) || 0), 0);
-  const rate = prn ? (tot - prn) / prn : 0;
-  let html = `<div class="kpi-grid k3">${[['평가액', fmtKo(tot), '', `${docs.length}/${trackedAccs.length} 입력 · 원금 ${fmtKo(prn)}`], [`${monthOf(ym)}월 수익`, fmtKoSigned(ret), ret >= 0 ? 'pos' : 'neg', ''], ['누적', fmtPct(rate, 2), rate >= 0 ? 'pos' : 'neg', `누적수익 ${fmtKoSigned(tot - prn)}`]].map(k => `<div class="kpi-card"><div class="label">${k[0]}</div><div class="value ${k[2]}">${k[1]}</div><div class="sub">${k[3]}</div></div>`).join('')}</div>`;
+  const depOf = d => d.deposited != null ? Number(d.deposited) : Math.max(Number(d.principal) || 0, 0), wdOf = d => Number(d.withdrawn) || 0;
+  const tot = docs.reduce((s, x) => s + (Number(x.d.balanceKrw) || 0), 0), prn = docs.reduce((s, x) => s + (Number(x.d.principal) || 0), 0), dep = docs.reduce((s, x) => s + depOf(x.d), 0), wd = docs.reduce((s, x) => s + wdOf(x.d), 0), ret = docs.reduce((s, x) => s + (Number(x.d.monthlyReturn) || 0), 0);
+  const rate = dep > 0 ? (tot - prn) / dep : 0;   // 누적수익 ÷ 총투입
+  let html = `<div class="kpi-grid k3">${[['평가액', fmtKo(tot), '', `${docs.length}/${trackedAccs.length} 입력 · 투입 ${fmtKo(dep)}${wd ? ` · 회수 ${fmtKo(wd)}` : ''}`], [`${monthOf(ym)}월 수익`, fmtKoSigned(ret), ret >= 0 ? 'pos' : 'neg', ''], ['누적', fmtPct(rate, 2), rate >= 0 ? 'pos' : 'neg', `누적수익 ${fmtKoSigned(tot - prn)}`]].map(k => `<div class="kpi-card"><div class="label">${k[0]}</div><div class="value ${k[2]}">${k[1]}</div><div class="sub">${k[3]}</div></div>`).join('')}</div>`;
   const cats = [...new Set(docs.map(x => x.d.assetsCategory || x.a.assetsCategory || '기타'))];
   for (const cat of cats) {
     const list = docs.filter(x => (x.d.assetsCategory || x.a.assetsCategory || '기타') === cat);
@@ -2339,13 +2340,13 @@ function renderSavings() {
       <div class="sv-table"><span class="th">계좌</span><span class="th r">잔고</span><span class="th r c-dep">입출금</span><span class="th r">월수익</span><span class="th r">누적%</span>`;
     for (const { a, d } of list) {
       const cr = Number(d.cumReturnRate) || 0; const mr = Number(d.monthlyReturn) || 0;
-      html += `<span class="td name">${escapeHtml(a.name)}${d.isStart ? '<small>시작</small>' : ''}${d.currency !== 'KRW' ? `<small>${escapeHtml(d.currency)} ${fmtNative(d.balance, d.currency)}</small>` : ''}</span><span class="td r">${fmtNum(d.balanceKrw)}</span><span class="td r c-dep ${!d.isStart && d.depositKrw ? '' : 'muted'}">${d.isStart ? '—' : fmtSigned(d.depositKrw)}<small class="muted" style="display:block;font-size:var(--fs-xs);">원금 ${fmtKo(d.principal)}</small></span><span class="td r ${mr >= 0 ? 'pos' : 'neg'}">${d.isStart ? '—' : fmtSigned(mr)}</span><span class="td r ${cr >= 0 ? 'pos' : 'neg'}">${fmtPct(cr)}</span>`;
+      html += `<span class="td name">${escapeHtml(a.name)}${d.isStart ? '<small>시작</small>' : ''}${d.currency !== 'KRW' ? `<small>${escapeHtml(d.currency)} ${fmtNative(d.balance, d.currency)}</small>` : ''}</span><span class="td r">${fmtNum(d.balanceKrw)}</span><span class="td r c-dep ${!d.isStart && d.depositKrw ? '' : 'muted'}">${d.isStart ? '—' : fmtSigned(d.depositKrw)}<small class="muted" style="display:block;font-size:var(--fs-xs);">투입 ${fmtKo(depOf(d))}${wdOf(d) ? ` · 회수 ${fmtKo(wdOf(d))}` : ''}</small></span><span class="td r ${mr >= 0 ? 'pos' : 'neg'}">${d.isStart ? '—' : fmtSigned(mr)}</span><span class="td r ${cr >= 0 ? 'pos' : 'neg'}">${fmtPct(cr)}</span>`;
     }
     html += `</div></div>`;
   }
   const missing = trackedAccs.filter(a => !m.get(a.id));
   if (missing.length) html += `<p class="note-line">미입력: ${missing.map(a => escapeHtml(a.name)).join(' · ')}</p>`;
-  html += `<p class="note-line">시작월은 첫 입력이 자동 — 마감에서 원금(그때까지 넣은 돈)을 따로 넣을 수 있고, 비우면 잔고와 같음. 원금 = 시작 원금 + 이후 입출금 누적. 수정하면 이후 월이 자동 재계산됩니다.</p>`;
+  html += `<p class="note-line">시작월은 첫 입력이 자동 — 마감에서 원금(그때까지 넣은 돈)을 따로 넣을 수 있고, 비우면 잔고와 같음. 입금(+)은 투입에, 출금(−)은 회수에 누적 · 누적수익 = 잔고 + 회수 − 투입, 누적% = 누적수익 ÷ 투입(회수해도 분모는 안 줄어듦). 수정하면 이후 월이 자동 재계산됩니다.</p>`;
   $b.innerHTML = html;
 }
 
@@ -2557,17 +2558,19 @@ function rowCalc(r) {
   const balKrw = rowKrw(r); if (balKrw == null) return null;
   const depNative = Number(r.deposit) || 0; const depKrw = r.cur === 'KRW' ? depNative : Math.round(depNative * r.rate);
   const pv = r.pv; const isStart = !pv || (r.ex && r.ex.isStart);
-  if (isStart) { const principal = r.principal != null ? Math.round(Number(r.principal)) : balKrw; const prnN = r.cur === 'KRW' ? principal : (r.rate ? principal / r.rate : r.balance); const cumReturn = balKrw - principal; return { isStart: true, balKrw, depKrw: 0, depNative: 0, principal, principalNative: prnN, monthlyReturn: 0, cumReturn, cumReturnRate: principal > 0 ? cumReturn / principal : 0 }; }
+  // 투입/회수 분리: principal(순투입) = deposited − withdrawn 은 호환용, 수익률 분모는 deposited(총투입)라 100% 넘게 회수해도 정상
+  if (isStart) { const principal = r.principal != null ? Math.round(Number(r.principal)) : balKrw; const prnN = r.cur === 'KRW' ? principal : (r.rate ? principal / r.rate : r.balance); const cumReturn = balKrw - principal; const deposited = Math.max(principal, 0); return { isStart: true, balKrw, depKrw: 0, depNative: 0, principal, principalNative: prnN, deposited, withdrawn: 0, monthlyReturn: 0, cumReturn, cumReturnRate: deposited > 0 ? cumReturn / deposited : 0 }; }
   const prevPrn = Number(pv.principal) || 0; const prevPrnN = pv.principalNative != null ? Number(pv.principalNative) : (r.cur !== 'KRW' && pv.fxRate ? prevPrn / Number(pv.fxRate) : prevPrn);
   const principal = prevPrn + depKrw; const principalNative = r.cur !== 'KRW' ? prevPrnN + depNative : principal;
-  const monthlyReturn = balKrw - (Number(pv.balanceKrw) || 0) - depKrw; const cumReturn = balKrw - principal;
-  return { isStart: false, balKrw, depKrw, depNative, principal, principalNative, monthlyReturn, cumReturn, cumReturnRate: principal > 0 ? cumReturn / principal : 0 };
+  const deposited = (pv.deposited != null ? Number(pv.deposited) : Math.max(prevPrn, 0)) + Math.max(depKrw, 0); const withdrawn = (Number(pv.withdrawn) || 0) + Math.max(-depKrw, 0);
+  const monthlyReturn = balKrw - (Number(pv.balanceKrw) || 0) - depKrw; const cumReturn = balKrw - principal;   // = balKrw + withdrawn − deposited
+  return { isStart: false, balKrw, depKrw, depNative, principal, principalNative, deposited, withdrawn, monthlyReturn, cumReturn, cumReturnRate: deposited > 0 ? cumReturn / deposited : 0 };
 }
 function closeUpdatePreview() {
   if (!CL) return;
   let assets = 0, liab = 0, cash = 0, hasCash = false;
   CL.rows.forEach((r, i) => { const k = rowKrw(r); if (k != null) { assets += k; if (r.group === 'cash') { cash += k; hasCash = true; } }
-    if (r.a.trackPerformance) { const c = rowCalc(r); const $c = $(`cl-calc-${i}`); if ($c) $c.innerHTML = c ? (c.isStart ? `<span>잔고 ${fmtNum(c.balKrw)}</span><span>원금 ${fmtNum(c.principal)}</span><span>시작 누적 <b class="${c.cumReturnRate >= 0 ? 'pos' : 'neg'}">${fmtSigned(c.cumReturn)} (${fmtPct(c.cumReturnRate)})</b></span>` : `<span>잔고 ${fmtNum(c.balKrw)}</span><span>원금 ${fmtNum(c.principal)}</span><span>월수익 <b class="${c.monthlyReturn >= 0 ? 'pos' : 'neg'}">${fmtSigned(c.monthlyReturn)}</b></span><span>누적 <b class="${c.cumReturnRate >= 0 ? 'pos' : 'neg'}">${fmtPct(c.cumReturnRate)}</b></span>`) : ''; } });
+    if (r.a.trackPerformance) { const c = rowCalc(r); const $c = $(`cl-calc-${i}`); if ($c) $c.innerHTML = c ? (c.isStart ? `<span>잔고 ${fmtNum(c.balKrw)}</span><span>투입 ${fmtNum(c.deposited)}</span><span>시작 누적 <b class="${c.cumReturnRate >= 0 ? 'pos' : 'neg'}">${fmtSigned(c.cumReturn)} (${fmtPct(c.cumReturnRate)})</b></span>` : `<span>잔고 ${fmtNum(c.balKrw)}</span><span>투입 ${fmtNum(c.deposited)}${c.withdrawn ? ` · 회수 ${fmtNum(c.withdrawn)}` : ''}</span><span>월수익 <b class="${c.monthlyReturn >= 0 ? 'pos' : 'neg'}">${fmtSigned(c.monthlyReturn)}</b></span><span>누적 <b class="${c.cumReturnRate >= 0 ? 'pos' : 'neg'}">${fmtPct(c.cumReturnRate)}</b></span>`) : ''; } });
   CL.liabRows.forEach(r => { if (r.balance != null) liab += Math.round(r.balance); });
   CL.preview = { assets, liab, net: assets - liab, cash: hasCash ? cash : null };
   const exRe = CL.rows.filter(r => isRealEstate(r.a)).reduce((s, r) => s + (rowKrw(r) || 0), 0);
@@ -2585,8 +2588,8 @@ async function closeSaveStep1() {
     const balKrw = rowKrw(r);
     const base = { ym, accountId: a.id, accountName: a.name, currency: r.cur, financeType: a.financeType || 'current', financeCategory: a.financeCategory || null, trackPerformance: !!a.trackPerformance, assetsCategory: a.trackPerformance ? (a.assetsCategory || null) : null,
       balance: r.balance, balanceKrw: balKrw, fxRate: r.cur === 'KRW' ? null : r.rate, memo: r.ex?.memo ?? null, asOf, createdAt: r.ex?.createdAt ?? serverTimestamp(), updatedAt: serverTimestamp(),
-      deposit: null, depositKrw: null, principal: null, principalNative: null, monthlyReturn: null, cumReturn: null, cumReturnRate: null, isStart: false };
-    if (a.trackPerformance) { const c = rowCalc(r); Object.assign(base, { deposit: c.isStart ? null : c.depNative, depositKrw: c.isStart ? null : c.depKrw, principal: c.principal, principalNative: c.principalNative, monthlyReturn: c.monthlyReturn, cumReturn: c.cumReturn, cumReturnRate: c.cumReturnRate, isStart: c.isStart }); if (hasLaterMonDoc(a.id, ym)) chainAccs.push(a.id); }
+      deposit: null, depositKrw: null, principal: null, principalNative: null, deposited: null, withdrawn: null, monthlyReturn: null, cumReturn: null, cumReturnRate: null, isStart: false };
+    if (a.trackPerformance) { const c = rowCalc(r); Object.assign(base, { deposit: c.isStart ? null : c.depNative, depositKrw: c.isStart ? null : c.depKrw, principal: c.principal, principalNative: c.principalNative, deposited: c.deposited, withdrawn: c.withdrawn, monthlyReturn: c.monthlyReturn, cumReturn: c.cumReturn, cumReturnRate: c.cumReturnRate, isStart: c.isStart }); if (hasLaterMonDoc(a.id, ym)) chainAccs.push(a.id); }
     batch.set(P.monthlyDoc(ym, a.id), sanitize(base)); nSet++;
   }
   for (const r of CL.liabRows) {
@@ -2665,24 +2668,36 @@ async function closeSaveStep2() {
 }
 
 /* 체인 재계산 (v0.7-4 로직 유지) */
+/* 1회 마이그레이션: 추적 doc에 deposited/withdrawn 없으면 계좌별 체인 재계산으로 채움 (세션당 한 번) */
+let _depWdMigrated = false;
+async function migrateDepWd() {
+  if (_depWdMigrated || !currentUid) return;
+  const ids = [...new Set(monthlyAll.filter(d => d.trackPerformance && d.deposited == null).map(d => d.accountId))];
+  _depWdMigrated = true; if (!ids.length) return;
+  try { let n = 0; for (const id of ids) n += await recalculateChain(id, null); if (n) console.info('[migrate] deposited/withdrawn', n); } catch (e) { console.warn('migrate dep/wd', e); }
+}
 async function recalculateChain(accountId, startFromYm) {
   if (!currentUid || !accountId) return 0;
   const snap = await getDocs(query(P.monthly(), where('accountId', '==', accountId)));
   const all = snap.docs.map(d => ({ ...d.data(), id: d.id })).sort((a, b) => String(a.ym).localeCompare(String(b.ym)));
-  if (all.length < 2) return 0;
+  if (!all.length) return 0;
   let startIdx = startFromYm ? all.findIndex(d => d.ym === startFromYm) : -1; if (startIdx < 0) startIdx = 0;
   const batch = writeBatch(db); let prev = all[startIdx]; let writes = 0;
+  if (prev.isStart && prev.deposited == null) { const dep = Math.max(Number(prev.principal) || 0, 0); const rate = dep > 0 ? (Number(prev.cumReturn) || 0) / dep : 0; batch.update(P.monthlyDoc(prev.ym, accountId), { deposited: dep, withdrawn: 0, cumReturnRate: rate, updatedAt: serverTimestamp() }); writes++; prev = { ...prev, deposited: dep, withdrawn: 0 }; }
   for (let i = startIdx + 1; i < all.length; i++) {
     const cur = all[i];
-    if (cur.isStart) { prev = cur; continue; }
+    if (cur.isStart) {   // 시작월: deposited/withdrawn 없으면 채움
+      if (cur.deposited == null) { const dep = Math.max(Number(cur.principal) || 0, 0); const rate = dep > 0 ? (Number(cur.cumReturn) || 0) / dep : 0; batch.update(P.monthlyDoc(cur.ym, accountId), { deposited: dep, withdrawn: 0, cumReturnRate: rate, updatedAt: serverTimestamp() }); writes++; cur.deposited = dep; cur.withdrawn = 0; }
+      prev = cur; continue; }
     const balKrw = Number(cur.balanceKrw) || 0, depKrw = Number(cur.depositKrw) || 0, depNative = Number(cur.deposit) || 0;
     const prevBal = Number(prev.balanceKrw) || 0, prevPrn = Number(prev.principal) || 0;
     const prevPrnN = prev.principalNative != null ? Number(prev.principalNative) : (cur.currency && cur.currency !== 'KRW' && prev.fxRate ? prevPrn / Number(prev.fxRate) : prevPrn);
     const principal = prevPrn + depKrw; const principalNative = (cur.currency && cur.currency !== 'KRW') ? prevPrnN + depNative : principal;
-    const monthlyReturn = balKrw - prevBal - depKrw; const cumReturn = balKrw - principal; const cumReturnRate = principal > 0 ? cumReturn / principal : 0;
-    if (Number(cur.principal) === principal && Number(cur.principalNative) === principalNative && Number(cur.monthlyReturn) === monthlyReturn && Number(cur.cumReturn) === cumReturn && Math.abs((Number(cur.cumReturnRate) || 0) - cumReturnRate) < 1e-9) { prev = cur; continue; }
-    batch.update(P.monthlyDoc(cur.ym, accountId), { principal, principalNative, monthlyReturn, cumReturn, cumReturnRate, updatedAt: serverTimestamp() }); writes++;
-    prev = { ...cur, principal, principalNative, monthlyReturn, cumReturn, cumReturnRate };
+    const deposited = (prev.deposited != null ? Number(prev.deposited) : Math.max(prevPrn, 0)) + Math.max(depKrw, 0); const withdrawn = (Number(prev.withdrawn) || 0) + Math.max(-depKrw, 0);
+    const monthlyReturn = balKrw - prevBal - depKrw; const cumReturn = balKrw - principal; const cumReturnRate = deposited > 0 ? cumReturn / deposited : 0;
+    if (Number(cur.principal) === principal && Number(cur.principalNative) === principalNative && Number(cur.deposited) === deposited && Number(cur.withdrawn) === withdrawn && Number(cur.monthlyReturn) === monthlyReturn && Number(cur.cumReturn) === cumReturn && Math.abs((Number(cur.cumReturnRate) || 0) - cumReturnRate) < 1e-9) { prev = cur; continue; }
+    batch.update(P.monthlyDoc(cur.ym, accountId), { principal, principalNative, deposited, withdrawn, monthlyReturn, cumReturn, cumReturnRate, updatedAt: serverTimestamp() }); writes++;
+    prev = { ...cur, principal, principalNative, deposited, withdrawn, monthlyReturn, cumReturn, cumReturnRate };
   }
   if (writes) await batch.commit();
   return writes;
