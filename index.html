@@ -1708,7 +1708,7 @@ input[type=month]::-webkit-calendar-picker-indicator {
       <div class="auto-item"><div class="auto-lbl">N (번호)</div><div class="auto-val" id="auto-n">—</div></div>
       <div class="auto-item"><div class="auto-lbl">요일</div><div class="auto-val" id="auto-dow">—</div></div>
     </div>
-    <div style="font-size:11px;color:var(--text3);text-align:center;margin-bottom:12px;">R = 손익 ÷ 리스크 금액 <span style="opacity:.7;">(미입력 시 시드 × 리스크%)</span></div>
+    <div id="r-unit-line" style="font-size:11px;color:var(--text3);text-align:center;margin-bottom:12px;">1R = —</div>
 
     <!-- 이번달 누적 R 진행 -->
     <div class="modal-goal-box" id="modal-goal-box">
@@ -2206,6 +2206,7 @@ function renderAccountList() {
     const sym = a.market === 'kor' ? '₩' : '$';
     const targetR = calcTargetRForAccount(a, curYm());
     const targetRStr = targetR !== null ? '+' + targetR.toFixed(2) + 'R' : '—';
+    const oneR = (a.seed && a.risk) ? a.seed * a.risk / 100 : null;   // v2.4: 1R 금액
     const goalFmt = sym + Number(a.monthlyGoal).toLocaleString('ko-KR');
     // v2.4: 월중 안내 — 이번 달 거래가 있으면 시드 변경 주의
     const ymNow = curYm();
@@ -2234,7 +2235,7 @@ function renderAccountList() {
           <span class="acct-field-lbl">시드</span>
           <div class="acct-input-wrap">
             <span class="acct-input-prefix">${sym}</span>
-            <input class="acct-field-input acct-input-inner" type="text" id="acct-seed-${a.id}" value="${Number(a.seed).toLocaleString('ko-KR')}" onblur="fmtComma(this);updateTotalGoalDisplay()" oninput="rawNum(this);updateTotalGoalDisplay()">
+            <input class="acct-field-input acct-input-inner" type="text" id="acct-seed-${a.id}" value="${Number(a.seed).toLocaleString('ko-KR')}" onblur="fmtComma(this);updateAcctTargetR('${a.id}')" oninput="rawNum(this);updateAcctTargetR('${a.id}')">
           </div>${seedNote}
         </div>
         <div class="acct-field-col">
@@ -2256,6 +2257,7 @@ function renderAccountList() {
         <div>
           <div class="acct-result-lbl">월 목표 누적 R</div>
           <div class="acct-result-sub" id="acct-goal-sub-${a.id}">${goalFmt} 달성하려면</div>
+          <div class="acct-result-sub" id="acct-1r-${a.id}" style="margin-top:2px;">1R = ${oneR !== null ? sym + fmtAmt(oneR) : '—'}</div>
         </div>
         <span class="acct-result-val" id="acct-targetr-${a.id}">${targetRStr}</span>
       </div>
@@ -2281,6 +2283,8 @@ window.updateAcctTargetR = function(id) {
   const r = goal / (seed * risk / 100);
   const el = ge('acct-targetr-'+id);
   if (el) el.textContent = '+' + r.toFixed(2) + 'R';
+  const oneEl = ge('acct-1r-'+id);   // v2.4: 1R 금액 실시간 갱신
+  if (oneEl) oneEl.textContent = '1R = ' + (a.market==='kor' ? '₩' : '$') + fmtAmt(seed * risk / 100);
   const sub = ge('acct-goal-sub-'+id);
   if (sub) {
     const sym = MKT_SYM[a.market]||'';
@@ -3272,6 +3276,21 @@ window.calcR = function() {
   const usd    = mNum('m-usd')    || getUsdRate();
   const rEl    = ge('r-out');
   const denom  = riskDenom();  // v2.1: 리스크 금액 우선
+
+  // v2.4: 1R 금액 표시 — 분모 출처(리스크 금액 직접 입력 / 시드×risk%)까지 명시
+  const uEl = ge('r-unit-line');
+  if (uEl) {
+    const unit = market==='coin' ? 'USDT' : market==='us' ? '$' : '₩';
+    const ra = mNum('m-riskamt');
+    if (denom) {
+      const src = (!isNaN(ra) && ra > 0)
+        ? '리스크 금액 직접 입력'
+        : `시드 ${fmtAmt(mNum('m-seed'))} × ${currentRisk()}%`;
+      uEl.innerHTML = `1R = <b style="color:var(--text);">${fmtAmt(denom)} ${unit}</b> <span style="opacity:.7;">(${src})</span>`;
+    } else {
+      uEl.innerHTML = `1R = — <span style="opacity:.7;">(시드 또는 리스크 금액 입력 필요)</span>`;
+    }
+  }
 
   if(!isNaN(pnl)&&denom){
     const r=pnl/denom;
