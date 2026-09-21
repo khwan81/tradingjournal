@@ -2288,7 +2288,7 @@ function renderCfEvents() {
     return `<div class="card ev-card" style="--ev-color:${escapeHtml(e.tag.color || '#5b8def')}">
       <div class="card-head"><span style="cursor:pointer;" data-tag-edit="${escapeHtml(e.tag.id)}"><span class="ev-color" style="background:${escapeHtml(e.tag.color || '#5b8def')}"></span>${escapeHtml(e.tag.name)} ${b && e.total > b ? '<span class="badge danger">예산 초과</span>' : ''}</span><small>${range}</small></div>
       ${b ? `<div class="pbar"><i style="width:${pct}%"></i></div>` : ''}
-      <div class="ev-sum"><b>${fmtNum(e.sum)} <span class="dim" style="font-weight:400; font-size:var(--fs-xs);">${monthOf(ym)}월</span></b><span class="dim">누적 ${fmtNum(e.total)}${b ? ` / ${fmtNum(b)}` : ''} · ${all.length}건${months.length > 1 ? ` · ${months.length}개월` : ''}</span></div>
+      <div class="ev-sum"><b>${fmtNum(e.total)}${b ? ` <span class="dim" style="font-weight:400; font-size:var(--fs-xs);">/ ${fmtNum(b)}</span>` : ''}</b><span class="dim">${e.sum ? `${monthOf(ym)}월 ${fmtNum(e.sum)} · ` : ''}${all.length}건${months.length > 1 ? ` · ${months.length}개월` : ''}</span></div>
       ${body}
       <button class="btn-p btn-full" data-spend-new="${escapeHtml(e.tag.id)}">+ 지출 기록</button>
     </div>`;
@@ -2297,7 +2297,7 @@ function renderCfEvents() {
   const othersMap = new Map();
   for (const t of txs) if (t.tagId && !activeIds.has(t.tagId) && String(t.ym).startsWith(year)) { if (!othersMap.has(t.tagId)) othersMap.set(t.tagId, []); othersMap.get(t.tagId).push(t); }
   const others = [...othersMap.entries()].map(([id, list]) => { const total = txs.filter(x => x.tagId === id).reduce((x2, t) => x2 + (Number(t.amount) || 0), 0); const last = list.map(t => t.ym).sort().pop(); return { tag: tagById(id) || { id, name: '(삭제된 이벤트)', color: '#8b909e' }, sum: list.filter(t => t.ym === ym).reduce((x2, t) => x2 + (Number(t.amount) || 0), 0), total, last }; }).sort((a, b2) => b2.last.localeCompare(a.last));
-  const othersSum = others.reduce((x2, e) => x2 + txs.filter(t => t.tagId === e.tag.id && String(t.ym).startsWith(year)).reduce((y, t) => y + (Number(t.amount) || 0), 0), 0);
+  const othersSum = others.reduce((x2, e) => x2 + e.total, 0);   // 월·연 무관 누적 합
   $b.innerHTML = evs.map(e => evCard(e, ym)).join('')
     + (others.length ? `<details class="ev-others"><summary><span>${year}년 다른 이벤트 <span class="muted">${others.length}개</span></span><span>${fmtNum(othersSum)}</span></summary><div class="stack">${others.map(e => evCard(e, e.last)).join('')}</div></details>` : '')
     + `<p class="note-line">카드는 이벤트 전체 내역 · 월별로 접혀 있고 보고 있는 달만 펼쳐집니다. 이달 지출이 없는 올해 이벤트는 "다른 이벤트"에.</p>`;
