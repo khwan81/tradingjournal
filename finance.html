@@ -2487,7 +2487,7 @@ function closeSaveDraft() {
     const d = { savedAt: new Date().toISOString(),
       rows: CL.rows.map(r => ({ id: r.a.id, balance: r.balance, deposit: r.deposit, principal: r.principal, rate: r.rate })),
       liabs: CL.liabRows.map(r => ({ id: r.l.id, balance: r.balance })),
-      salary: CL.salary, extra: CL.extra, incomePrefilled: CL.incomePrefilled, overrides: [...CL.overrides.fixed.entries()] };
+      salary: CL.salary, extra: CL.extra, incomePrefilled: CL.incomePrefilled, applyMaster: !!CL.applyMaster, overrides: [...CL.overrides.fixed.entries()] };
     localStorage.setItem(draftKey(CL.ym), JSON.stringify(d));
   } catch (e) {}
 }
@@ -2504,6 +2504,7 @@ function closeApplyDraft(d) {
   if (d.salary !== undefined && !same(CL.salary, d.salary)) { CL.salary = d.salary; changed = true; }
   if (d.extra !== undefined && !same(CL.extra, d.extra)) { CL.extra = d.extra; changed = true; }
   if (d.incomePrefilled === false) CL.incomePrefilled = false;
+  if (d.applyMaster) { CL.applyMaster = true; changed = true; }
   for (const [k, v] of d.overrides || []) { if (CL.overrides.fixed.get(k) !== v) changed = true; CL.overrides.fixed.set(k, v); }
   return changed;
 }
@@ -2632,14 +2633,24 @@ async function closeSaveStep1() {
 /* 2/2 확인 */
 function closeItems() {
   const ym = CL.ym; const cf = CL.cf;
-  const baseFix = cf ? (cf.fixed || []).map(i => ({ ...i })) : fixedItemsFor(ym);
-  // 마감 수정 시 정기 마스터에 새로 생긴 항목도 추가 (박제 항목은 유지)
-  if (cf) { for (const it of fixedItemsFor(ym)) if (!baseFix.some(b => b.recId === it.recId)) baseFix.push(it); }
+  // 마감 수정 시에도 정기 마스터의 현재값(이름·금액·분류·추가·삭제)이 기준. 박제는 recId 없는 옛 항목만 유지.
+  // 박제와 마스터가 다른 항목은 changes에 담아 2단계에서 안내 → "이번 달만"으로 되돌릴 수 있게.
+  const master = fixedItemsFor(ym); const changes = [];
+  // 뒤에 마감된 달이 있는 과거 월은 박제 유지(소급 방지) — "이 달에 반영" 버튼을 눌러야(CL.applyMaster) 마스터 적용
+  const isPast = cf && allYms.some(y => y > ym && cfByYm.has(y)); const keepStamped = isPast && !CL.applyMaster;
+  let baseFix;
+  if (!cf) baseFix = master;
+  else {
+    const stamped = cf.fixed || [];
+    baseFix = keepStamped ? stamped.map(i => ({ ...i })) : [...master, ...stamped.filter(i => !i.recId).map(i => ({ ...i }))];
+    for (const m of master) { const st = stamped.find(i => i.recId === m.recId); if (st && Number(st.amount) !== m.amount) changes.push({ recId: m.recId, name: m.name, from: Number(st.amount) || 0, to: m.amount }); else if (!st) changes.push({ recId: m.recId, name: m.name, from: null, to: m.amount }); }
+    for (const st of stamped) if (st.recId && !master.some(m => m.recId === st.recId)) changes.push({ recId: st.recId, name: st.name, from: Number(st.amount) || 0, to: null });
+  }
   const fix = baseFix.map(i => ({ ...i, amount: CL.overrides.fixed.has(i.recId) ? CL.overrides.fixed.get(i.recId) : (Number(i.amount) || 0) }));
-  return { fix };
+  return { fix, changes, keepStamped };
 }
 function closeRenderStep2() {
-  const ym = CL.ym; const { fix } = closeItems();
+  const ym = CL.ym; const { fix, changes, keepStamped } = closeItems();
   const incomeSum = (Number(CL.salary) || 0) + (Number(CL.extra) || 0);
   const fixedSum = fix.reduce((s, i) => s + i.amount, 0);
   const saving = CL.rows.filter(r => r.a.trackPerformance).reduce((s, r) => { const c = rowCalc(r); return s + (c && !c.isStart ? c.depKrw : 0); }, 0);
@@ -2652,12 +2663,17 @@ function closeRenderStep2() {
   let html = `<div class="cf-line h"><span class="n">들어온 돈 <span class="badge">직접 입력</span></span><span class="a pos">${fmtSigned(incomeSum)}</span></div>
   <div class="cl-row"><div class="n">급여<small>${CL.incomePrefilled && CL.salary != null ? `전월 ${fmtNum(CL.salary)} 기본 채움` : '이번 달 실수령'}</small></div>${wrapIn('KRW', `<input class="cl-in" id="cl-salary" inputmode="numeric" placeholder="급여" value="${CL.salary != null ? fmtNum(CL.salary) : ''}">`)}</div>
   <div class="cl-row"><div class="n">기타<small>상여 · 환급 · 부업 등 (없으면 비움)</small></div>${wrapIn('KRW', `<input class="cl-in" id="cl-extra" inputmode="numeric" placeholder="0" value="${CL.extra ? fmtNum(CL.extra) : ''}">`)}</div>`;
+  if (changes.length) { const list = changes.map(c => `${escapeHtml(c.name)} ${c.from == null ? `추가 ${fmtNum(c.to)}` : c.to == null ? `삭제 (${fmtNum(c.from)})` : `${fmtNum(c.from)} → ${fmtNum(c.to)}`}`).join(' · ');
+    html += keepStamped
+      ? `<div class="cl-warn"><b>정기 지출이 마감 이후 바뀌었어요</b>${list}<br><span class="dim">과거 달이라 박제값을 유지합니다.</span> <button class="btn-s" id="btn-apply-master" style="height:26px;margin-left:6px;">이 달에 반영</button></div>`
+      : `<div class="cl-warn"><b>정기 지출 변경 반영</b>${list}<br><span class="dim">이 달만 예전 금액으로 두려면 고정 지출 › 이번 달만 에서 수정</span></div>`; }
   html += `<div class="cf-line tap" data-ov="fixed"><span class="n">고정 지출 <span class="badge auto">정기 ${fix.length}건</span><small>${fix.map(i => `${escapeHtml(i.name)}${i.kind === 'event' ? `(${monthOf(ym)}월)` : ''}`).join(' · ') || '정기 지출 없음'}</small></span><span class="a neg">−${fmtNum(fixedSum)}</span><span class="chev">›</span></div>`;
   html += line(`저축·투자로 이동 <span class="badge auto">결산</span>`, '추적 자산 입출금 합', '−' + fmtNum(saving), 'neg');
   html += line('현금성 잔고 변화', cashNow != null && cashPrev != null ? `${fmtNum(cashNow)} − ${fmtNum(cashPrev)}` : cashNow == null ? '현금성 계좌 잔고 없음' : `전월(${ymLabel(prevYm(ym))}) 잔고 없음`, delta != null ? fmtSigned(delta) : '—', delta != null ? (delta >= 0 ? 'pos' : 'neg') : '');
   html += line(`→ 변동 지출 <span class="badge auto">역산</span>`, ev ? `이벤트 ${fmtNum(ev)} · 고정 차액 포함` : '고정 차액 포함', variable != null ? fmtNum(variable) : '—', 'neg', 'tot');
   $('close-summary').innerHTML = html;
   $('close-summary').querySelectorAll('[data-ov]').forEach(el => el.addEventListener('click', () => closeOpenOverride(el.dataset.ov)));
+  const $am = $('btn-apply-master'); if ($am) $am.onclick = () => { CL.applyMaster = true; CL.overrides.fixed.clear(); closeSaveDraft(); closeRenderStep2(); showToast('정기 지출 현재값을 이 달에 반영했어요 — 저장해야 확정'); };
   let incTimer = null;
   const onInc = (id, key) => $(id).addEventListener('input', e => { fmtLive(e.target); CL[key] = parseNum(e.target.value); CL.incomePrefilled = false; closeSaveDraft(); clearTimeout(incTimer); incTimer = setTimeout(() => { const focusId = document.activeElement?.id; closeRenderStep2(); const el = focusId ? $(focusId) : null; if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }, 700); });
   onInc('cl-salary', 'salary'); onInc('cl-extra', 'extra');
