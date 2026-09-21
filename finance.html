@@ -1660,9 +1660,10 @@ html, body { overflow-x: hidden; }
         <div style="display:flex;gap:6px;align-items:center;">
           <select class="select" id="rec-cat" style="flex:1;"></select>
           <button class="btn-s" id="btn-rec-cat-rename" title="이 분류 이름 바꾸기" style="height:40px;padding:0 10px;">✎</button>
+          <button class="btn-s" id="btn-rec-cat-delete" title="이 분류 삭제" style="height:40px;padding:0 10px;">🗑</button>
         </div>
         <input class="input" id="rec-cat-new" placeholder="새 분류 이름 (예: 자녀, 건강)" style="display:none;margin-top:6px;">
-        <div class="hint">현금흐름에서 이 분류로 묶어 소계를 보여줍니다. 이름을 바꾸면 같은 분류의 다른 항목도 함께 바뀝니다.</div>
+        <div class="hint">현금흐름에서 이 분류로 묶어 소계를 보여줍니다. ✎ 이름 변경·🗑 삭제는 같은 분류의 다른 항목에도 적용되고, 삭제된 분류의 항목은 "기타"가 됩니다.</div>
       </div>
       <p class="hint" id="rec-hint">매달 마감 때 이 금액으로 자동 반영됩니다.</p>
     </div>
@@ -2860,7 +2861,7 @@ function openRecModal(id) {
 function recKindChanged() { const k = document.querySelector('input[name="rec-kind"]:checked')?.value; $('rec-cat-wrap').style.display = k === 'event' ? 'none' : ''; if (k === 'event' && !$('rec-month').value) $('rec-month').value = String(monthOf(currentMonth)); $('rec-hint').textContent = k === 'event' ? '그 달 마감 때 고정 지출에 자동 포함됩니다. 적립은 기록하지 않습니다.' : '매달 마감 때 이 금액으로 자동 반영됩니다. 실제 결제액과의 차이는 변동 지출에 포함됩니다.'; }
 document.querySelectorAll('input[name="rec-kind"]').forEach(r => r.addEventListener('change', recKindChanged));
 /* 분류 select: 기본 분류 ∪ 사용 중 분류 + "새 분류 추가…" (iOS는 datalist 미지원이라 select로) */
-function recAllCats() { return [...new Set([...REC_CATS, ...recurring.filter(x => !x.deletedAt).map(x => x.category).filter(Boolean)])]; }
+function recAllCats() { const hidden = new Set(sharedSettings.recCatsHidden || []); const cats = [...new Set([...REC_CATS.filter(c => !hidden.has(c)), ...recurring.filter(x => !x.deletedAt).map(x => x.category).filter(Boolean)])]; if (!cats.includes('기타')) cats.push('기타'); return cats; }
 function recFillCats(sel) {
   const cats = recAllCats(); if (sel && !cats.includes(sel)) cats.push(sel);
   $('rec-cat').innerHTML = cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('') + '<option value="__new__">＋ 새 분류 추가…</option>';
@@ -2875,6 +2876,15 @@ $('btn-rec-cat-rename').addEventListener('click', async () => {
   try { const batch = writeBatch(db); for (const x of targets) batch.set(P.rec(x.id), { category: to, updatedAt: new Date().toISOString() }, { merge: true }); await batch.commit();
     targets.forEach(x => x.category = to); recFillCats(to); showToast(`분류 변경 · ${targets.length}개 항목`); } catch (e) { showToast('변경 실패'); }
 });
+/* 분류 삭제: 그 분류의 정기 항목은 "기타"(category null)로, 기본 분류면 목록에서 숨김(settings.recCatsHidden) */
+$('btn-rec-cat-delete').addEventListener('click', async () => {
+  const c = $('rec-cat').value; if (!c || c === '__new__') return; if (c === '기타') { showToast('"기타"는 삭제할 수 없어요'); return; }
+  const targets = recurring.filter(x => x.category === c && !x.deletedAt);
+  if (!await appConfirm(`"${c}" 분류를 삭제할까요?${targets.length ? `\n이 분류의 정기 항목 ${targets.length}개는 "기타"로 옮겨집니다.` : ''}\n지난 마감의 분류 소계는 그대로 보존됩니다.`)) return;
+  try { const batch = writeBatch(db); for (const x of targets) batch.set(P.rec(x.id), { category: null, updatedAt: new Date().toISOString() }, { merge: true });
+    if (REC_CATS.includes(c)) { const hidden = [...new Set([...(sharedSettings.recCatsHidden || []), c])]; batch.set(P.settings(), { recCatsHidden: hidden }, { merge: true }); sharedSettings.recCatsHidden = hidden; }
+    await batch.commit(); targets.forEach(x => x.category = null); recFillCats('기타'); showToast(`분류 삭제${targets.length ? ` · ${targets.length}개 → 기타` : ''}`); } catch (e) { showToast('삭제 실패'); }
+});
 $('btn-add-rec').addEventListener('click', () => openRecModal(null));
 $('btn-rec-save').addEventListener('click', async () => {
   const name = $('rec-name').value.trim(); const amount = parseNum($('rec-amount').value); const kind = document.querySelector('input[name="rec-kind"]:checked')?.value || 'fixed'; const month = Number($('rec-month').value) || null;
@@ -2882,6 +2892,7 @@ $('btn-rec-save').addEventListener('click', async () => {
   const ex = editingRecId ? recurring.find(x => x.id === editingRecId) : null; const id = editingRecId || genId('rec');
   const catSel = $('rec-cat').value; const category = kind === 'event' ? null : ((catSel === '__new__' ? $('rec-cat-new').value : catSel).trim() || null);
   if (kind !== 'event' && catSel === '__new__' && !category) { showToast('새 분류 이름을 입력하세요'); $('rec-cat-new').focus(); return; }
+  if (category && (sharedSettings.recCatsHidden || []).includes(category)) { const hidden = sharedSettings.recCatsHidden.filter(x => x !== category); try { await setDoc(P.settings(), { recCatsHidden: hidden }, { merge: true }); sharedSettings.recCatsHidden = hidden; } catch (e) {} }   // 숨긴 기본 분류를 다시 쓰면 복구
   try { await setDoc(P.rec(id), sanitize({ id, kind, name, category, amount: Math.round(amount), month, sortOrder: ex?.sortOrder ?? (recurring.reduce((m, r) => Math.max(m, r.sortOrder || 0), 0) + 1), createdAt: ex?.createdAt ?? new Date().toISOString(), updatedAt: new Date().toISOString(), v: 2 })); closeOv('ov-rec'); showToast(ex ? '저장되었습니다 — 다음 마감부터 적용' : '추가되었습니다 — 다음 마감부터 적용'); } catch (e) { showToast('저장 실패'); }
 });
 $('btn-rec-delete').addEventListener('click', async () => { if (!editingRecId) return; if (!await appConfirm('이 정기 항목을 삭제할까요?\n지난 달 마감은 그대로 보존되고, 다음 마감부터 빠집니다.')) return; try { await deleteDoc(P.rec(editingRecId)); closeOv('ov-rec'); showToast('삭제됨'); } catch (e) { showToast('삭제 실패'); } });
