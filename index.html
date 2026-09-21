@@ -2047,6 +2047,7 @@ let logFilter_  = 'all';     // 'all' | accountId | 'long' | 'short' | 'stop' | 
 let delTargetId = null;
 let mEditRisk   = null;      // v2.1: 수정 중인 거래의 박제 risk% (R 소급 변경 방지)
 let mEditAcctId = null;      //       그 거래의 원래 계좌 (계좌 바뀌면 박제 무효)
+let mEditSeed   = null;      // v2.4: 수정 중인 거래의 원래 시드 (계좌 A→B→A 되돌리면 복원)
 let dayNMap     = {};        // v2.1: 렌더 시 계산되는 거래일별 N (tradeId → n)
 let unsubTrades = null;
 let cumMode     = 'r';       // 'r' | 'pnl'
@@ -2135,13 +2136,30 @@ function migrateAccounts(s) {
 
 window.saveSettings = async function() {
   // 계좌 목록에서 현재 입력값 읽기
-  accounts = accounts.map(a => {
+  const ym = curYm();
+  const nextAccounts = accounts.map(a => {
     const seed = parseFloat(ge('acct-seed-'+a.id)?.value?.replace(/,/g,'')||0) || a.seed;
     const goal = parseFloat(ge('acct-goal-'+a.id)?.value?.replace(/,/g,'')||0) || a.monthlyGoal;
     const risk = parseFloat(ge('acct-risk-'+a.id)?.value||0) || a.risk;
     const name = ge('acct-name-'+a.id)?.value || a.name;
-    return { ...a, name, seed, monthlyGoal: goal, risk };
+    // v2.4: 이번 달 스냅샷 박제 (과거 월 키는 건드리지 않음)
+    const monthly = { ...(a.monthly || {}), [ym]: { seed, risk, monthlyGoal: goal } };
+    return { ...a, name, seed, monthlyGoal: goal, risk, monthly };
   });
+  // v2.4: 월중 시드 변경 가드 — 이번 달 청산 거래가 이미 있는 계좌의 시드/risk가 바뀌면 확인
+  //       (1R 단위가 달 안에서 섞여 누적R·목표R 달성률이 왜곡됨. 규칙: 시드는 매달 1일에만 변경)
+  if (new Date().getDate() !== 1) {
+    const changed = nextAccounts.filter(n => {
+      const o = accounts.find(a => a.id === n.id); if (!o) return false;
+      if (o.seed === n.seed && o.risk === n.risk) return false;
+      return trades.some(t => (t.accountId===n.id || (!t.accountId && t.market===n.market)) && t.dateStart?.slice(0,7)===ym && !t.isOpen && t.rVal!==null);
+    });
+    if (changed.length) {
+      const names = changed.map(a => a.name).join(', ');
+      if (!confirm(`[${names}] 계좌는 이번 달 거래가 이미 있습니다.\n월중에 시드/리스크%를 바꾸면 이번 달 누적 R과 목표 R의 단위가 섞입니다.\n(권장: 시드 변경은 매달 1일에만)\n\n그래도 저장할까요?`)) return;
+    }
+  }
+  accounts = nextAccounts;
   const cfg = {
     tether:     Math.round(parseNum('cfg-tether')),
     usdRate:    Math.round(parseNum('cfg-usd')),
@@ -2186,9 +2204,14 @@ function renderAccountList() {
   const list = ge('acct-list'); if (!list) return;
   list.innerHTML = accounts.map(a => {
     const sym = a.market === 'kor' ? '₩' : '$';
-    const targetR = calcTargetRForAccount(a);
+    const targetR = calcTargetRForAccount(a, curYm());
     const targetRStr = targetR !== null ? '+' + targetR.toFixed(2) + 'R' : '—';
     const goalFmt = sym + Number(a.monthlyGoal).toLocaleString('ko-KR');
+    // v2.4: 월중 안내 — 이번 달 거래가 있으면 시드 변경 주의
+    const ymNow = curYm();
+    const monthCnt = trades.filter(t => (t.accountId===a.id || (!t.accountId && t.market===a.market)) && t.dateStart?.slice(0,7)===ymNow && !t.isOpen && t.rVal!==null).length;
+    const seedNote = (monthCnt > 0 && new Date().getDate() !== 1)
+      ? `<div style="font-size:10px;color:var(--amber);margin-top:4px;">이번 달 거래 ${monthCnt}건에 적용 중 · 시드 변경은 매달 1일 권장</div>` : '';
     return `
     <div class="acct-card">
       <div class="acct-card-head">
@@ -2212,7 +2235,7 @@ function renderAccountList() {
           <div class="acct-input-wrap">
             <span class="acct-input-prefix">${sym}</span>
             <input class="acct-field-input acct-input-inner" type="text" id="acct-seed-${a.id}" value="${Number(a.seed).toLocaleString('ko-KR')}" onblur="fmtComma(this);updateTotalGoalDisplay()" oninput="rawNum(this);updateTotalGoalDisplay()">
-          </div>
+          </div>${seedNote}
         </div>
         <div class="acct-field-col">
           <span class="acct-field-lbl">월 목표 수익</span>
@@ -2266,9 +2289,21 @@ window.updateAcctTargetR = function(id) {
   updateTotalGoalDisplay();
 };
 
-function calcTargetRForAccount(a) {
-  if (!a.seed || !a.risk) return null;
-  return a.monthlyGoal / (a.seed * a.risk / 100);
+// v2.4: 월별 스냅샷 — 계좌 설정(시드/risk/월목표)은 저장 시 그 달 키(a.monthly[ym])로 박제된다.
+//       과거 월 보기·모달 목표 박스는 그 달의 스냅샷으로 목표R을 계산해 시드 변경이 과거 월을 소급 오염하지 않는다.
+//       스냅샷이 없는 달(옛 데이터)은 계좌 현재값 폴백. 시드는 "매달 1일에만 변경" 운용 규칙과 함께 사용.
+function acctParamsForMonth(a, month) {
+  const snap = (month && a.monthly && a.monthly[month]) ? a.monthly[month] : null;
+  return {
+    seed:        (snap && snap.seed        != null) ? snap.seed        : a.seed,
+    risk:        (snap && snap.risk        != null) ? snap.risk        : a.risk,
+    monthlyGoal: (snap && snap.monthlyGoal != null) ? snap.monthlyGoal : a.monthlyGoal,
+  };
+}
+function calcTargetRForAccount(a, month) {
+  const p = acctParamsForMonth(a, month || curYm());
+  if (!p.seed || !p.risk) return null;
+  return p.monthlyGoal / (p.seed * p.risk / 100);
 }
 
 function updateTotalGoalDisplay() {
@@ -2663,7 +2698,7 @@ function renderGoalProgressCards(filtered) {
       t.dateStart?.slice(0,7)===thisMonth && !t.isOpen && t.rVal!==null
     );
     const cumR    = acctTrades.reduce((s,t)=>s+(t.rVal||0),0);
-    const targetR = calcTargetRForAccount(a);
+    const targetR = calcTargetRForAccount(a, thisMonth);   // v2.4: 그 달의 스냅샷 기준
     const pct     = (targetR && targetR > 0 && cumR > 0) ? Math.min(Math.round(cumR/targetR*100), 100) : 0;
     const remain  = targetR ? Math.max(0, targetR - cumR) : 0;
     const color   = pct>=80?'var(--accent)':pct>=40?'var(--green)':'var(--amber)';
@@ -3052,6 +3087,7 @@ window.openEdit = function(id,e) {
   if(t.riskAmt)    sv('m-riskamt',fmtAmtIn(t.riskAmt));   // v2.1/v2.3
   mEditRisk   = (t.risk != null) ? t.risk : null;       // v2.1: 옛 거래(risk 미박제)는 null → 계좌 설정 폴백
   mEditAcctId = acctId;
+  mEditSeed   = t.seed || null;                          // v2.4
   if(t.pnl!=null)  sv('m-pnl',    fmtAmtIn(t.pnl));        // v2.3: 콤마 포맷
   if(t.tetherRate) sv('m-tether', fmtAmtIn(t.tetherRate));
   if(t.usdRate)    sv('m-usd',    fmtAmtIn(t.usdRate));
@@ -3072,7 +3108,7 @@ window.bgClose    = function(e) { if(e.target===ge('modal-ov'))closeModal(); };
 function clearModal() {
   ['m-edit-id','m-symbol','m-datetime-start',
    'm-pnl','m-seed','m-riskamt','m-tether','m-usd','m-memo','m-chart-url'].forEach(id=>sv(id,''));
-  mEditRisk = null; mEditAcctId = null;  // v2.1
+  mEditRisk = null; mEditAcctId = null; mEditSeed = null;  // v2.1 / v2.4
   // v2.0: 계좌 프리필 = 이전 입력 계좌 (없거나 삭제됐으면 첫 계좌)
   if(accounts.length){
     let lastAcc = null;
@@ -3198,7 +3234,9 @@ window.onAccountChange = function(fromUser) {
   if (seedCur) seedCur.textContent = market==='coin' ? 'USDT' : market==='us' ? '$' : '₩';
   // 시드 자동입력: 사용자가 계좌를 바꾸면 그 계좌에 설정된 시드로 갱신,
   // 그 외(모달 초기화·거래 수정 로드 등)엔 빈 칸일 때만 채움(수정 중인 시드 보존).
-  if (acct.seed && (fromUser || !v('m-seed'))) sv('m-seed', fmtAmtIn(acct.seed));  // v2.3: 콤마 포맷
+  // v2.4: 수정 모드에서 원래 계좌로 되돌아오면 거래에 박제된 시드 복원 (R 소급 변경 방지)
+  if (fromUser && v('m-edit-id') && mEditSeed && acctId === mEditAcctId) sv('m-seed', fmtAmtIn(mEditSeed));
+  else if (acct.seed && (fromUser || !v('m-seed'))) sv('m-seed', fmtAmtIn(acct.seed));  // v2.3: 콤마 포맷
   calcR();
   updateAutoN();
   updateModalGoalBox();
@@ -3266,11 +3304,11 @@ function updateAutoN() {
 
 function updateModalGoalBox() {
   const acct=accounts.find(a=>a.id===v('m-account')); if(!acct)return;
-  // 의도적으로 글로벌 월이 아닌 실제 오늘 — 새 거래 저장 시 "지금 달" 진행 미리보기가 목적
-  const thisMonth=new Date().toISOString().slice(0,7);
+  // 의도적으로 글로벌 월이 아닌 실제 오늘(로컬) — 새 거래 저장 시 "지금 달" 진행 미리보기가 목적 (v2.4: UTC→로컬)
+  const thisMonth=curYm();
   const acctTrades=trades.filter(t=>(t.accountId===acct.id||(!t.accountId&&t.market===acct.market))&&t.dateStart?.slice(0,7)===thisMonth&&!t.isOpen&&t.rVal!==null);
   const cumR=acctTrades.reduce((s,t)=>s+(t.rVal||0),0);
-  const targetR=calcTargetRForAccount(acct)||0;
+  const targetR=calcTargetRForAccount(acct, thisMonth)||0;   // v2.4
   const pct=(targetR&&targetR>0&&cumR>0)?Math.min(Math.round(cumR/targetR*100),100):0;
 
   const pnl=mNum('m-pnl'), denom=riskDenom();  // v2.1/v2.3
@@ -3486,7 +3524,7 @@ async function downloadBackup() {
     const payload = {
       app: 'trading',
       schemaVersion: 1,
-      appVersion: 'v2.3',
+      appVersion: 'v2.4',
       exportedAt: new Date().toISOString(),
       uid: currentUid,
       data: {
